@@ -6,3 +6,8 @@ runs/
 
 # Generated reports (regenerate with `themis-bench report`)
 reports/
+
+# Normalized responses and validation results (regenerate with
+# `themis-bench evaluate` / `themis-bench validate`)
+responses/
+validation/

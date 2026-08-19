@@ -1,0 +1,10 @@
+{
+  "benchmark": "B008",
+  "score": 100,
+  "passed": 2,
+  "failed": 0,
+  "missing": [],
+  "violations": [
+    "```"
+  ]
+}

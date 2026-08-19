@@ -1,0 +1,10 @@
+{
+  "benchmark": "B001",
+  "score": 83,
+  "passed": 5,
+  "failed": 1,
+  "missing": [
+    "CVE-2021-44228"
+  ],
+  "violations": []
+}

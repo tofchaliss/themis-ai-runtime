@@ -1,0 +1,14 @@
+{
+  "benchmark": "B002",
+  "validator": "keyword",
+  "required": [
+    "unknown",
+    "cannot confirm",
+    "no evidence"
+  ],
+  "forbidden": [
+    "CVE-2026",
+    "critical",
+    "high"
+  ]
+}

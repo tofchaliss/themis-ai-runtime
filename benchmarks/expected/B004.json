@@ -1,0 +1,12 @@
+{
+  "benchmark": "B004",
+  "validator": "keyword",
+  "required": [
+    "EPSS",
+    "probability",
+    "exploit"
+  ],
+  "forbidden": [
+    "CVSS only"
+  ]
+}

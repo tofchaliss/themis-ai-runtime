@@ -1,0 +1,29 @@
+{
+  "benchmark": "B012",
+  "validator": "json",
+
+  "expected": {
+    "cve": "CVE-2024-99999",
+    "cwe": "CWE-119",
+    "description": "A vulnerability in Example Library allows a remote unauthenticated attacker to cause memory corruption through a specially crafted network request.",
+    "affected_component": "example-library",
+    "affected_versions": [
+      "1.0.0 through 1.4.2"
+    ],
+    "fixed_versions": [
+      "1.4.3"
+    ],
+    "cvss": {
+      "version": "3.1",
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "score": 9.8,
+      "severity": "CRITICAL"
+    },
+    "exploitability": "No public exploit information is provided in this evidence.",
+    "references": [
+      "https://example.org/security/CVE-2024-99999",
+      "https://example.org/advisory/99999"
+    ],
+    "unknown_fields": []
+  }
+}

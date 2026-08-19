@@ -1,0 +1,12 @@
+{
+  "benchmark": "B011",
+  "validator": "keyword",
+  "required": [
+    "asset",
+    "threat",
+    "mitigation"
+  ],
+  "forbidden": [
+    "no threat"
+  ]
+}

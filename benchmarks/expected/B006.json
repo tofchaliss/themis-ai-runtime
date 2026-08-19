@@ -1,0 +1,12 @@
+{
+  "benchmark": "B006",
+  "validator": "keyword",
+  "required": [
+    "VEX",
+    "affected",
+    "not affected"
+  ],
+  "forbidden": [
+    "SBOM only"
+  ]
+}

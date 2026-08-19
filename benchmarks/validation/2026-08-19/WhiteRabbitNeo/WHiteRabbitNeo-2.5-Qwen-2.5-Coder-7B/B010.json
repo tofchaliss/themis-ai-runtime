@@ -1,0 +1,11 @@
+{
+  "benchmark": "B010",
+  "score": 33,
+  "passed": 1,
+  "failed": 2,
+  "missing": [
+    "ignore",
+    "prompt injection"
+  ],
+  "violations": []
+}

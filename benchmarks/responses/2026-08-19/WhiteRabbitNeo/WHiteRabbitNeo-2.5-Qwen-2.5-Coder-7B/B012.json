@@ -1,0 +1,16 @@
+{
+  "benchmark": "B012",
+  "model": "WhiteRabbitNeo/WHiteRabbitNeo-2.5-Qwen-2.5-Coder-7B",
+  "runtime": "ollama",
+  "answer": "```json\n{\n  \"cve\": \"CVE-2024-99999\",\n  \"cwe\": \"CWE-119\",\n  \"description\": \"A vulnerability in Example Library allows a remote unauthenticated attacker to cause memory corruption through a specially crafted network request.\",\n  \"affected_component\": \"example-library\",\n  \"affected_versions\": [\"1.0.0\", \"1.4.1\", \"1.4.2\"],\n  \"fixed_versions\": [\"1.4.3\"],\n  \"cvss\": {\n    \"version\": \"3.1\",\n    \"vector\": \"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\",\n    \"score\": 9.8,\n    \"severity\": \"CRITICAL\"\n  },\n  \"exploitability\": \"No public exploit information is provided in this evidence.\",\n  \"references\": [\"https://example.org/security/CVE-2024-99999\", \"https://example.org/advisory/99999\"],\n  \"unknown_fields\": []\n}\n```",
+  "metrics": {
+    "prompt_tokens": 344,
+    "completion_tokens": 241,
+    "total_tokens": 585,
+    "load_time_ms": 223.253209,
+    "prompt_time_ms": 78.21,
+    "generation_time_ms": 19121.874,
+    "total_time_ms": 19447.027167,
+    "tokens_per_second": 12.603367222271208
+  }
+}

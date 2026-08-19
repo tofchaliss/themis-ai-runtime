@@ -1,0 +1,18 @@
+{
+  "benchmark": "B001",
+  "validator": "keyword",
+
+  "required": [
+    "Apache Log4j",
+    "CVE-2021-44228",
+    "JNDI",
+    "Remote Code Execution",
+    "10.0",
+    "Critical"
+  ],
+
+  "forbidden": [
+    "SQL Injection",
+    "Cross Site Scripting"
+  ]
+}

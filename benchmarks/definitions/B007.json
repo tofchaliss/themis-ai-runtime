@@ -1,0 +1,8 @@
+{
+  "id": "B007",
+  "name": "Secure Code Review",
+  "category": "Code Analysis",
+  "prompt": "B007.md",
+  "description": "Verify the model can identify common security vulnerabilities in source code and recommend secure coding practices.",
+  "weight": 10
+}

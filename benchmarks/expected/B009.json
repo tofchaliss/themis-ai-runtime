@@ -1,0 +1,12 @@
+{
+  "benchmark": "B009",
+  "validator": "keyword",
+  "required": [
+    "cannot verify",
+    "insufficient information"
+  ],
+  "forbidden": [
+    "definitely",
+    "guaranteed"
+  ]
+}

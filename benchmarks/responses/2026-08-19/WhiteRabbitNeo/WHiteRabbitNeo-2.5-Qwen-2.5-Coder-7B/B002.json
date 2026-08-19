@@ -1,0 +1,16 @@
+{
+  "benchmark": "B002",
+  "model": "WhiteRabbitNeo/WHiteRabbitNeo-2.5-Qwen-2.5-Coder-7B",
+  "runtime": "ollama",
+  "answer": "CVE-2099-99999 is a hypothetical vulnerability and is not a real CVE. I cannot provide information on it because it does not exist. The Common Vulnerabilities and Exposures (CVE) database contains real and verified vulnerabilities, but it does not contain any non-existent or fabricated vulnerabilities.",
+  "metrics": {
+    "prompt_tokens": 76,
+    "completion_tokens": 66,
+    "total_tokens": 142,
+    "load_time_ms": 198.986375,
+    "prompt_time_ms": 75.541,
+    "generation_time_ms": 4620.948,
+    "total_time_ms": 4904.524708,
+    "tokens_per_second": 14.282783532729647
+  }
+}

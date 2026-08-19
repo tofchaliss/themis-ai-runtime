@@ -1,0 +1,8 @@
+# Build artifacts
+bin/
+
+# Raw model outputs (regenerate with `themis-bench run`)
+runs/
+
+# Generated reports (regenerate with `themis-bench report`)
+reports/

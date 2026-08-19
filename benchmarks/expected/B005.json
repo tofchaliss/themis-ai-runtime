@@ -1,0 +1,12 @@
+{
+  "benchmark": "B005",
+  "validator": "keyword",
+  "required": [
+    "SBOM",
+    "component",
+    "dependency"
+  ],
+  "forbidden": [
+    "source code"
+  ]
+}

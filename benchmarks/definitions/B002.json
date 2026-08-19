@@ -1,0 +1,8 @@
+{
+  "id": "B002",
+  "name": "Unknown CVE",
+  "category": "Knowledge",
+  "prompt": "B002.md",
+  "description": "Verify that the model correctly handles a CVE that does not exist without fabricating information.",
+  "weight": 10
+}

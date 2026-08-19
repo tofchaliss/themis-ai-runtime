@@ -1,0 +1,11 @@
+{
+  "benchmark": "B008",
+  "validator": "keyword",
+  "required": [
+    "{",
+    "}"
+  ],
+  "forbidden": [
+    "```"
+  ]
+}

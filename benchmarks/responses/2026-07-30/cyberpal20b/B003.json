@@ -1,0 +1,16 @@
+{
+  "benchmark": "B003",
+  "model": "cyberpal20b",
+  "runtime": "ollama",
+  "answer": "\u003c|channel|\u003efinal\u003c|message|\u003e{\n  \"CVE-2021-44228\": {\n    \"Base Score\": 9.8,\n    \"Severity\": \"Critical\",\n    \"Attack Vector\": \"Network\",\n    \"Attack Complexity\": \"Low\",\n    \"Privileges Required\": \"None\",\n    \"User Interaction\": \"None\",\n    \"Scope\": \"Changed\",\n    \"Confidentiality Impact\": \"High\",\n    \"Integrity Impact\": \"High\",\n    \"Availability Impact\": \"High\"\n  },\n  \"Explanation\": {\n    \"Base Score\": \"The Base Score for CVE-2021-44228 is 9.8, which falls under the 'Critical' severity level according to the CVSS v3.1 scoring system.\",\n    \"Attack Vector\": \"The Attack Vector is 'Network', indicating that the vulnerability can be exploited remotely over a network connection without requiring physical access to the target system.\",\n    \"Attack Complexity\": \"The Attack Complexity is 'Low', suggesting that exploiting this vulnerability does not require any specialized conditions or circumstances beyond what is typically available to an attacker.\",\n    \"Privileges Required\": \"No privileges are required to exploit this vulnerability, meaning an attacker can execute the attack without needing any prior access or permissions on the target system.\",\n    \"User Interaction\": \"The User Interaction is 'None', indicating that the exploitation of this vulnerability does not require any action from a user other than the attacker.\",\n    \"Scope\": \"The Scope is 'Changed', which means that exploiting this vulnerability can affect resources beyond the security scope of the vulnerable component, potentially impacting other components or systems.\",\n    \"Confidentiality Impact\": \"The Confidentiality Impact is 'High', indicating that successful exploitation of this vulnerability could lead to a significant loss of confidentiality, such as unauthorized access to sensitive data.\",\n    \"Integrity Impact\": \"The Integrity Impact is 'High', suggesting that the integrity of the system could be significantly compromised if this vulnerability is exploited, potentially leading to unauthorized modification or destruction of data.\",\n    \"Availability Impact\": \"The Availability Impact is 'High', meaning that successful exploitation of this vulnerability could lead to a significant loss of availability, such as denial of service or disruption of normal operations.\"\n  }\n}",
+  "metrics": {
+    "prompt_tokens": 230,
+    "completion_tokens": 446,
+    "total_tokens": 676,
+    "load_time_ms": 550.174889,
+    "prompt_time_ms": 1107.774,
+    "generation_time_ms": 28554.432,
+    "total_time_ms": 30244.297025,
+    "tokens_per_second": 15.619291604189499
+  }
+}

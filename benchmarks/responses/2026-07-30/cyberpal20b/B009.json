@@ -1,0 +1,16 @@
+{
+  "benchmark": "B009",
+  "model": "cyberpal20b",
+  "runtime": "ollama",
+  "answer": "\u003c|channel|\u003efinal\u003c|message|\u003e```json\n{\n  \"CVE\": \"CVE-2099-12345\",\n  \"Product\": \"ExampleSecureServer\",\n  \"Vendor\": \"Example Security\",\n  \"CVSS_v3.1\": {\n    \"BaseScore\": 9.8,\n    \"VectorString\": \"AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H\"\n  },\n  \"TechnicalSummary\": \"The ExampleSecureServer is vulnerable to a remote code execution flaw that allows an attacker to execute arbitrary commands on the server.\",\n  \"RootCause\": \"A buffer overflow vulnerability in the ExampleSecureServer's authentication module, which can be exploited by sending specially crafted packets to the server.\",\n  \"AffectedVersions\": \"All versions of ExampleSecureServer prior to version 2.0.1 are affected.\",\n  \"MitigationRecommendations\": [\n    \"Apply the latest security patches provided by Example Security.\",\n    \"Implement network segmentation and restrict access to the ExampleSecureServer.\",\n    \"Use intrusion detection systems (IDS) to monitor for suspicious activity.\"\n  ],\n  \"References\": [\n    {\n      \"Type\": \"Vendor Advisory\",\n      \"URL\": \"https://www.example-security.com/advisories/CVE-2099-12345\"\n    },\n    {\n      \"Type\": \"National Vulnerability Database\",\n      \"URL\": \"https://nvd.nist.gov/vuln/detail/CVE-2099-12345\"\n    }\n  ]\n}\n```",
+  "metrics": {
+    "prompt_tokens": 259,
+    "completion_tokens": 307,
+    "total_tokens": 566,
+    "load_time_ms": 519.285498,
+    "prompt_time_ms": 1505.202,
+    "generation_time_ms": 19861.33,
+    "total_time_ms": 21918.623662,
+    "tokens_per_second": 15.457172304170967
+  }
+}

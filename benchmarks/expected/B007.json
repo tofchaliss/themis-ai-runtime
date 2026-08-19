@@ -1,0 +1,12 @@
+{
+  "benchmark": "B007",
+  "validator": "keyword",
+  "required": [
+    "vulnerability",
+    "input validation",
+    "recommendation"
+  ],
+  "forbidden": [
+    "looks good"
+  ]
+}

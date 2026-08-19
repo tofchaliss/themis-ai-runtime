@@ -1,0 +1,8 @@
+{
+  "id": "B004",
+  "name": "EPSS Assessment",
+  "category": "Knowledge",
+  "prompt": "B004.md",
+  "description": "Verify the model correctly explains the EPSS score and exploitation likelihood for a known vulnerability.",
+  "weight": 10
+}

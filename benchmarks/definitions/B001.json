@@ -1,0 +1,9 @@
+{
+  "id": "B001",
+  "name": "Known CVE Recall",
+  "category": "Knowledge",
+  "expected": "B001.json",
+  "prompt": "B001.md",
+  "description": "Verify knowledge recall of a well-known CVE.",
+  "weight": 10
+}

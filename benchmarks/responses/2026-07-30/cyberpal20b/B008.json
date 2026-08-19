@@ -1,0 +1,16 @@
+{
+  "benchmark": "B008",
+  "model": "cyberpal20b",
+  "runtime": "ollama",
+  "answer": "\u003c|channel|\u003efinal\u003c|message|\u003e{\n  \"cve\": \"CVE-2021-44228\",\n  \"severity\": \"Critical\",\n  \"cvss\": 10.0,\n  \"affected_product\": \"Apache Log4j 2.14.1\",\n  \"summary\": \"The Apache Log4j library is vulnerable to a remote code execution (RCE) attack via the JNDI lookup feature. This vulnerability allows an attacker to execute arbitrary code on the affected system, potentially leading to full compromise of the application or server.\",\n  \"recommendation\": \"Upgrade to Log4j version 2.15.0 or later, which contains a fix for this issue. Additionally, consider implementing network segmentation and access controls to limit exposure to untrusted input.\"\n}",
+  "metrics": {
+    "prompt_tokens": 277,
+    "completion_tokens": 157,
+    "total_tokens": 434,
+    "load_time_ms": 518.587841,
+    "prompt_time_ms": 1689.946,
+    "generation_time_ms": 9996.516,
+    "total_time_ms": 12243.328137,
+    "tokens_per_second": 15.705471786370373
+  }
+}

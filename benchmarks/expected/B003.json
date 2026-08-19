@@ -1,0 +1,13 @@
+{
+  "benchmark": "B003",
+  "validator": "keyword",
+  "required": [
+    "CVSS",
+    "base score",
+    "vector"
+  ],
+  "forbidden": [
+    "guess",
+    "unknown"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "benchmark": "B001",
+  "score": 66,
+  "passed": 4,
+  "failed": 2,
+  "missing": [
+    "JNDI",
+    "Remote Code Execution"
+  ],
+  "violations": []
+}

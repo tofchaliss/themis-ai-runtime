@@ -1,0 +1,9 @@
+{
+  "id": "B012",
+  "name": "CVE Fact Extraction",
+  "category": "Extraction",
+  "expected": "B012.json",
+  "prompt": "B012.md",
+  "description": "Extract vulnerability facts from supplied evidence without relying on outside knowledge.",
+  "weight": 10
+}

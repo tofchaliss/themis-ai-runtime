@@ -1,0 +1,9 @@
+{
+  "id": "B018",
+  "name": "Secrets Exposure Detection",
+  "category": "Analysis",
+  "expected": "B018.json",
+  "prompt": "B018.md",
+  "description": "Find every hardcoded credential in a committed configuration file.",
+  "weight": 10
+}

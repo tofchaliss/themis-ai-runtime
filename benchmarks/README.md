@@ -30,6 +30,7 @@ output from a date/model-scoped directory:
 | Evaluate   | `themis-bench evaluate MODEL` | `runs/DATE/MODEL/`        | `responses/DATE/MODEL/`       |
 | Validate   | `themis-bench validate MODEL` | `responses/`, `expected/` | `validation/DATE/MODEL/`      |
 | Report     | `themis-bench report MODEL`   | `responses/`, `validation/`| `reports/DATE/MODEL.md`      |
+| Compare    | `themis-bench compare`        | all of `responses/`, `validation/` | `reports/comparison.md` |
 
 Run the whole pipeline with one command:
 
@@ -47,6 +48,16 @@ Or run stages individually:
 ./bin/themis-bench validate cyberpal20b
 ./bin/themis-bench report cyberpal20b
 ```
+
+Compare every model you have benchmarked, across dates:
+
+```bash
+./bin/themis-bench compare
+```
+
+This scans all evaluated runs and writes `reports/comparison.md` with a
+per-model summary, a per-benchmark score matrix (latest run of each
+model), and score history for models benchmarked on multiple dates.
 
 ### Flags
 

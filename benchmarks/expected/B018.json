@@ -1,0 +1,16 @@
+{
+  "benchmark": "B018",
+  "validator": "keyword",
+
+  "required": [
+    "DATABASE_URL",
+    "AWS_ACCESS_KEY_ID",
+    "AWS_SECRET_ACCESS_KEY",
+    "STRIPE_API_KEY",
+    "rotate"
+  ],
+
+  "forbidden": [
+    "SESSION_TIMEOUT is a credential"
+  ]
+}

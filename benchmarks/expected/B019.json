@@ -1,0 +1,16 @@
+{
+  "benchmark": "B019",
+  "validator": "keyword",
+
+  "required": [
+    "public",
+    "SSH",
+    "22",
+    "private"
+  ],
+
+  "forbidden": [
+    "no misconfigurations",
+    "no security issues"
+  ]
+}

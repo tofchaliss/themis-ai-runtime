@@ -1,0 +1,16 @@
+{
+  "benchmark": "B020",
+  "validator": "json",
+
+  "expected": {
+    "attack_vector": "Network",
+    "attack_complexity": "Low",
+    "privileges_required": "None",
+    "user_interaction": "Required",
+    "scope": "Changed",
+    "confidentiality": "High",
+    "integrity": "Low",
+    "availability": "None",
+    "base_score": 8.2
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "id": "B019",
+  "name": "Infrastructure Misconfiguration Review",
+  "category": "Analysis",
+  "expected": "B019.json",
+  "prompt": "B019.md",
+  "description": "Find security misconfigurations in a Terraform definition without flagging acceptable settings.",
+  "weight": 10
+}

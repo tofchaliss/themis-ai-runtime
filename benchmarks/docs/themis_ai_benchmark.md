@@ -36,6 +36,9 @@ Report
 Markdown Report
 ```
 
+A separate `compare` command aggregates every evaluated run across all
+models and dates into `reports/comparison.md`.
+
 ---
 
 # Repository Layout
@@ -441,7 +444,4 @@ Planned enhancements include:
 - Semantic validator
 - LLM-as-a-Judge validator
 - Weighted benchmark scoring
-- Benchmark categories
-- Multi-model comparison reports
 - HTML report generation
-- Historical trend analysis

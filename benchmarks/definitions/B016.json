@@ -1,0 +1,9 @@
+{
+  "id": "B016",
+  "name": "CWE Classification",
+  "category": "Analysis",
+  "expected": "B016.json",
+  "prompt": "B016.md",
+  "description": "Classify the weakness class and CWE identifier of a vulnerable code snippet.",
+  "weight": 10
+}

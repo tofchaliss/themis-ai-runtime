@@ -1,0 +1,16 @@
+{
+  "benchmark": "B017",
+  "validator": "keyword",
+
+  "required": [
+    "Path Traversal",
+    "CWE-22",
+    "basename",
+    "realpath"
+  ],
+
+  "forbidden": [
+    "SQL Injection",
+    "CWE-89"
+  ]
+}

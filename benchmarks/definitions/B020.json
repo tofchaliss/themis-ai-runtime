@@ -1,0 +1,9 @@
+{
+  "id": "B020",
+  "name": "CVSS Vector Decoding",
+  "category": "Extraction",
+  "expected": "B020.json",
+  "prompt": "B020.md",
+  "description": "Decode a CVSS v3.1 vector string into its structured components.",
+  "weight": 10
+}

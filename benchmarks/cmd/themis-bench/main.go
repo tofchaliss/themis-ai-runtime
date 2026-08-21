@@ -158,6 +158,36 @@ var reportCmd = &cobra.Command{
 	},
 }
 
+var compareCmd = &cobra.Command{
+	Use:   "compare",
+	Short: "Compare all benchmarked models across dates",
+	Long: "Discover every evaluated run under responses/ and generate a " +
+		"cross-model comparison report with per-benchmark scores and " +
+		"score history.",
+	Args: cobra.NoArgs,
+
+	RunE: func(cmd *cobra.Command, args []string) error {
+
+		c, err := report.Compare(flagRoot)
+		if err != nil {
+			return err
+		}
+
+		outputFile, err := report.WriteComparison(flagRoot, c)
+		if err != nil {
+			return err
+		}
+
+		for _, s := range c.Skipped {
+			fmt.Fprintf(os.Stderr, "⚠ skipped %s\n", s)
+		}
+
+		fmt.Printf("✓ Comparison written: %s\n", outputFile)
+
+		return nil
+	},
+}
+
 func init() {
 	rootCmd.PersistentFlags().StringVar(
 		&flagRoot,
@@ -191,6 +221,7 @@ func init() {
 	rootCmd.AddCommand(evaluateCmd)
 	rootCmd.AddCommand(validateCmd)
 	rootCmd.AddCommand(reportCmd)
+	rootCmd.AddCommand(compareCmd)
 }
 
 func main() {

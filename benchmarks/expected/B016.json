@@ -1,0 +1,16 @@
+{
+  "benchmark": "B016",
+  "validator": "keyword",
+
+  "required": [
+    "SQL Injection",
+    "CWE-89",
+    "parameterized"
+  ],
+
+  "forbidden": [
+    "CWE-79",
+    "Cross-Site Scripting",
+    "Buffer Overflow"
+  ]
+}

@@ -11,18 +11,32 @@ import (
 	"github.com/tofchaliss/themis/benchmarks/internal/runtime"
 )
 
-// RunAll executes every benchmark definition against the model and writes
-// the raw runtime responses under runs/<date>/<model>/.
-func RunAll(
-	ctx context.Context,
-	rt runtime.Runtime,
-	modelName string,
-	root string,
-	date string,
-) error {
+// RunConfig describes one benchmark run of a model.
+type RunConfig struct {
+	Runtime runtime.Runtime
+
+	// Name is what the user calls the model; it names the output
+	// directories and is shared by the later pipeline stages.
+	Name string
+
+	// Model is the identifier sent to the runtime (usually equal to
+	// Name unless the registry aliases it).
+	Model string
+
+	Options model.Options
+
+	Root string
+
+	// Date defaults to today when empty.
+	Date string
+}
+
+// RunAll executes every benchmark definition and writes run envelopes
+// under runs/<date>/<name>/.
+func RunAll(ctx context.Context, cfg RunConfig) error {
 
 	defs, err := LoadDefinitions(
-		filepath.Join(root, "definitions"),
+		filepath.Join(cfg.Root, "definitions"),
 	)
 	if err != nil {
 		return err
@@ -32,6 +46,7 @@ func RunAll(
 		return fmt.Errorf("no benchmark definitions found")
 	}
 
+	date := cfg.Date
 	if date == "" {
 		date = time.Now().Format("2006-01-02")
 	}
@@ -45,7 +60,7 @@ func RunAll(
 		fmt.Printf("Running %s ...\n", d.ID)
 
 		promptFile := filepath.Join(
-			root,
+			cfg.Root,
 			"prompts",
 			d.Prompt,
 		)
@@ -55,24 +70,29 @@ func RunAll(
 			return fmt.Errorf("%s: read prompt: %w", d.ID, err)
 		}
 
-		resp, err := rt.Run(
+		resp, err := cfg.Runtime.Run(
 			ctx,
 			model.Request{
-				Model:  modelName,
-				Prompt: string(prompt),
+				Model:   cfg.Model,
+				Prompt:  string(prompt),
+				Options: cfg.Options,
 			},
 		)
 		if err != nil {
 			return fmt.Errorf("%s: %w", d.ID, err)
 		}
 
-		if err := WriteRawRun(
-			root,
-			date,
-			modelName,
-			d.ID,
-			resp.Raw,
-		); err != nil {
+		record := model.RunRecord{
+			Benchmark: d.ID,
+			Model:     cfg.Name,
+			Runtime:   resp.Runtime,
+			Answer:    resp.Answer,
+			Options:   cfg.Options,
+			Metrics:   resp.Metrics,
+			Raw:       resp.Raw,
+		}
+
+		if err := WriteRun(cfg.Root, date, cfg.Name, record); err != nil {
 			return fmt.Errorf("%s: write run: %w", d.ID, err)
 		}
 

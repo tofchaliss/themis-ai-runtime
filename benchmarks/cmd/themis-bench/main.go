@@ -76,16 +76,46 @@ var runCmd = &cobra.Command{
 		)
 		defer stop()
 
-		rt := runtime.NewOllama(endpoint())
-		rt.Client.Timeout = flagTimeout
+		registry, err := runtime.LoadRegistry(flagRoot)
+		if err != nil {
+			return err
+		}
 
-		return benchmark.RunAll(
-			ctx,
-			rt,
+		rt, modelName, options, err := registry.Resolve(args[0])
+		if err != nil {
+			return err
+		}
+
+		// CLI flags override the registry.
+		switch r := rt.(type) {
+		case *runtime.Ollama:
+			if flagEndpoint != "" || os.Getenv("OLLAMA_HOST") != "" {
+				r.Endpoint = endpoint()
+			}
+			r.Client.Timeout = flagTimeout
+		case *runtime.OpenAI:
+			if flagEndpoint != "" {
+				r.Endpoint = flagEndpoint
+			}
+			r.Client.Timeout = flagTimeout
+		}
+
+		fmt.Printf(
+			"Model %s via %s (temperature=%g seed=%d)\n",
 			args[0],
-			flagRoot,
-			date(),
+			rt.Name(),
+			options.Temperature,
+			options.Seed,
 		)
+
+		return benchmark.RunAll(ctx, benchmark.RunConfig{
+			Runtime: rt,
+			Name:    args[0],
+			Model:   modelName,
+			Options: options,
+			Root:    flagRoot,
+			Date:    date(),
+		})
 	},
 }
 

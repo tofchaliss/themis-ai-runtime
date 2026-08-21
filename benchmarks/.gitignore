@@ -1,6 +1,9 @@
 # Build artifacts
 bin/
 
+# Machine-specific model registry (see models.example.json)
+models.json
+
 # Raw model outputs (regenerate with `themis-bench run`)
 runs/
 

@@ -4,46 +4,38 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+
+	"github.com/tofchaliss/themis/benchmarks/internal/model"
 )
 
-func WriteRawRun(
+// WriteRun writes the run envelope for one benchmark to
+// runs/<date>/<model>/<benchmark>.json.
+func WriteRun(
 	baseDir string,
 	date string,
-	model string,
-	id string,
-	raw []byte,
+	modelName string,
+	record model.RunRecord,
 ) error {
 
 	dir := filepath.Join(
 		baseDir,
 		"runs",
 		date,
-		model,
+		modelName,
 	)
 
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
 
-	var pretty map[string]any
-
-	if json.Unmarshal(raw, &pretty) == nil {
-
-		raw, _ = json.MarshalIndent(
-			pretty,
-			"",
-			"  ",
-		)
+	data, err := json.MarshalIndent(record, "", "  ")
+	if err != nil {
+		return err
 	}
 
-	filename := filepath.Join(
-		dir,
-		id+".json",
-	)
-
 	return os.WriteFile(
-		filename,
-		raw,
+		filepath.Join(dir, record.Benchmark+".json"),
+		data,
 		0644,
 	)
 }

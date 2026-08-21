@@ -1,18 +1,9 @@
 package evaluator
 
-// Metrics contains the normalized execution metrics.
-type Metrics struct {
-	PromptTokens     int `json:"prompt_tokens"`
-	CompletionTokens int `json:"completion_tokens"`
-	TotalTokens      int `json:"total_tokens"`
+import "github.com/tofchaliss/themis/benchmarks/internal/model"
 
-	LoadTimeMS       float64 `json:"load_time_ms"`
-	PromptTimeMS     float64 `json:"prompt_time_ms"`
-	GenerationTimeMS float64 `json:"generation_time_ms"`
-	TotalTimeMS      float64 `json:"total_time_ms"`
-
-	TokensPerSecond float64 `json:"tokens_per_second"`
-}
+// Metrics is the normalized execution metrics of a run.
+type Metrics = model.Metrics
 
 // Result is the normalized benchmark result.
 type Result struct {

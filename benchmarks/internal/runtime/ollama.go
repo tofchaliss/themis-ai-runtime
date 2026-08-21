@@ -43,6 +43,10 @@ func (o *Ollama) Run(
 		"model":  req.Model,
 		"prompt": req.Prompt,
 		"stream": false,
+		"options": map[string]any{
+			"temperature": req.Options.Temperature,
+			"seed":        req.Options.Seed,
+		},
 	}
 
 	b, err := json.Marshal(body)
@@ -96,24 +100,13 @@ func (o *Ollama) Run(
 		return nil, fmt.Errorf("ollama error: %s", r.Error)
 	}
 
-	tps := 0.0
-	if r.EvalDuration > 0 {
-		tps = float64(r.EvalCount) / (float64(r.EvalDuration) / 1e9)
-	}
-
 	return &model.Response{
 		Runtime: o.Name(),
 		Model:   req.Model,
 		Answer:  r.Response,
 		// Preserve the complete raw response.
-		Raw: raw,
-		Metrics: model.Metrics{
-			LoadMS:  r.LoadDuration / 1_000_000,
-			EvalMS:  r.EvalDuration / 1_000_000,
-			TotalMS: r.TotalDuration / 1_000_000,
-			Tokens:  r.EvalCount,
-			TPS:     tps,
-		},
+		Raw:     raw,
+		Metrics: r.Metrics(),
 	}, nil
 }
 

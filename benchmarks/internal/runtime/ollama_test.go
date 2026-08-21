@@ -31,6 +31,17 @@ func TestOllamaRun(t *testing.T) {
 					t.Errorf("stream = %v, want false", req["stream"])
 				}
 
+				options, ok := req["options"].(map[string]any)
+				if !ok {
+					t.Fatalf("options missing from request: %v", req)
+				}
+				if options["temperature"] != 0.0 {
+					t.Errorf("temperature = %v, want 0", options["temperature"])
+				}
+				if options["seed"] != 42.0 {
+					t.Errorf("seed = %v, want 42", options["seed"])
+				}
+
 				json.NewEncoder(w).Encode(map[string]any{
 					"model":         "test-model",
 					"response":      "the answer",
@@ -45,7 +56,11 @@ func TestOllamaRun(t *testing.T) {
 
 		resp, err := NewOllama(server.URL).Run(
 			context.Background(),
-			model.Request{Model: "test-model", Prompt: "question"},
+			model.Request{
+				Model:   "test-model",
+				Prompt:  "question",
+				Options: model.DefaultOptions(),
+			},
 		)
 		if err != nil {
 			t.Fatal(err)
@@ -54,12 +69,12 @@ func TestOllamaRun(t *testing.T) {
 		if resp.Answer != "the answer" {
 			t.Errorf("Answer = %q", resp.Answer)
 		}
-		if resp.Metrics.Tokens != 30 {
-			t.Errorf("Tokens = %d, want 30", resp.Metrics.Tokens)
+		if resp.Metrics.CompletionTokens != 30 {
+			t.Errorf("CompletionTokens = %d, want 30", resp.Metrics.CompletionTokens)
 		}
 		// 30 tokens over 3 seconds.
-		if resp.Metrics.TPS != 10 {
-			t.Errorf("TPS = %f, want 10", resp.Metrics.TPS)
+		if resp.Metrics.TokensPerSecond != 10 {
+			t.Errorf("TokensPerSecond = %f, want 10", resp.Metrics.TokensPerSecond)
 		}
 		if len(resp.Raw) == 0 {
 			t.Error("Raw response not preserved")

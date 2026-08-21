@@ -11,7 +11,9 @@ import (
 	"github.com/tofchaliss/themis/benchmarks/internal/runtime"
 )
 
-// EvaluateRun normalizes a single raw run file.
+// EvaluateRun normalizes a single run file. Run files are runtime-
+// agnostic envelopes (model.RunRecord); raw Ollama payloads written by
+// older versions of the tool are still accepted.
 func EvaluateRun(
 	benchmark string,
 	filename string,
@@ -21,6 +23,33 @@ func EvaluateRun(
 	if err != nil {
 		return nil, err
 	}
+
+	var record model.RunRecord
+
+	if err := json.Unmarshal(data, &record); err != nil {
+		return nil, fmt.Errorf("parse run file %s: %w", filename, err)
+	}
+
+	if record.Runtime != "" && record.Answer != "" {
+		return &Result{
+			Benchmark: benchmark,
+			Model:     record.Model,
+			Runtime:   record.Runtime,
+			Answer:    record.Answer,
+			Metrics:   Metrics(record.Metrics),
+		}, nil
+	}
+
+	return evaluateLegacyRun(benchmark, filename, data)
+}
+
+// evaluateLegacyRun handles pre-envelope run files, which are raw
+// Ollama /api/generate payloads.
+func evaluateLegacyRun(
+	benchmark string,
+	filename string,
+	data []byte,
+) (*Result, error) {
 
 	var raw runtime.OllamaResponse
 
@@ -40,19 +69,25 @@ func EvaluateRun(
 		return nil, fmt.Errorf("invalid run file %s: missing model", filename)
 	}
 
-	resp := &model.Response{
-		Runtime: "ollama",
-		Model:   raw.Model,
-		Answer:  raw.Response,
-		Raw:     data,
+	if !raw.Done {
+		return nil, fmt.Errorf(
+			"%s: run is incomplete (done=false); re-run the benchmark",
+			benchmark,
+		)
 	}
 
-	return Normalize(benchmark, resp)
+	return &Result{
+		Benchmark: benchmark,
+		Model:     raw.Model,
+		Runtime:   "ollama",
+		Answer:    raw.Response,
+		Metrics:   Metrics(raw.Metrics()),
+	}, nil
 }
 
-// EvaluateAll normalizes every raw run for the given date and model.
-// It keeps going when a single run fails and reports all failures at
-// the end.
+// EvaluateAll normalizes every run for the given date and model. It
+// keeps going when a single run fails and reports all failures at the
+// end.
 func EvaluateAll(
 	root string,
 	date string,

@@ -4,9 +4,13 @@ Deterministic benchmark suite for evaluating LLMs on security-related
 tasks (CVE recall, CVSS interpretation, SBOM/VEX understanding, fact
 extraction, hallucination resistance, prompt-injection resistance, …).
 
-Models are served by [Ollama](https://ollama.com). Each benchmark is a
-prompt plus a machine-checkable expectation; scoring is fully
-deterministic — no LLM-as-judge.
+Each benchmark is a prompt plus a machine-checkable expectation; scoring
+is fully deterministic — no LLM-as-judge. Generation is pinned to
+`temperature 0, seed 42` by default for reproducibility.
+
+Models can be served by [Ollama](https://ollama.com) (the default) or
+any OpenAI-compatible endpoint (vLLM, llama.cpp server, LM Studio,
+OpenRouter, hosted OpenAI).
 
 ## Requirements
 
@@ -58,6 +62,36 @@ Compare every model you have benchmarked, across dates:
 This scans all evaluated runs and writes `reports/comparison.md` with a
 per-model summary, a per-benchmark score matrix (latest run of each
 model), and score history for models benchmarked on multiple dates.
+
+### Model registry
+
+Without configuration, every model name resolves to local Ollama. To
+benchmark models on other runtimes, copy `models.example.json` to
+`models.json` (gitignored) and register them:
+
+```json
+{
+  "models": {
+    "gpt-4o": {
+      "runtime": "openai",
+      "endpoint": "https://api.openai.com/v1",
+      "api_key_env": "OPENAI_API_KEY"
+    },
+    "qwen-vllm": {
+      "runtime": "openai",
+      "endpoint": "http://localhost:8000/v1",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507"
+    }
+  }
+}
+```
+
+Entry fields: `runtime` (`ollama` | `openai`), `endpoint`, `model`
+(alias → real identifier), `api_key_env` (env var holding the key —
+keys never go in the file), and optional `temperature`/`seed`
+overrides of the deterministic defaults.
+
+Run files record which runtime and generation options produced them.
 
 ### Flags
 

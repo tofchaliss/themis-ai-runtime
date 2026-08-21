@@ -1,0 +1,31 @@
+{
+  "models": {
+    "cyberpal20b": {
+      "runtime": "ollama",
+      "endpoint": "http://localhost:11434"
+    },
+
+    "gpt-4o": {
+      "runtime": "openai",
+      "endpoint": "https://api.openai.com/v1",
+      "api_key_env": "OPENAI_API_KEY"
+    },
+
+    "qwen-vllm": {
+      "runtime": "openai",
+      "endpoint": "http://localhost:8000/v1",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507"
+    },
+
+    "creative-example": {
+      "runtime": "ollama",
+      "temperature": 0.7,
+      "seed": 7
+    }
+  },
+
+  "defaults": {
+    "runtime": "ollama",
+    "endpoint": "http://localhost:11434"
+  }
+}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/tofchaliss/themis/benchmarks/internal/benchmark"
 	"github.com/tofchaliss/themis/benchmarks/internal/evaluator"
+	"github.com/tofchaliss/themis/benchmarks/internal/gate"
 	"github.com/tofchaliss/themis/benchmarks/internal/report"
 	"github.com/tofchaliss/themis/benchmarks/internal/runtime"
 	"github.com/tofchaliss/themis/benchmarks/internal/validator"
@@ -188,6 +189,52 @@ var reportCmd = &cobra.Command{
 	},
 }
 
+var (
+	flagBaseline string
+	flagMaxDrop  int
+)
+
+var gateCmd = &cobra.Command{
+	Use:   "gate MODEL",
+	Short: "Fail if a model's scores regressed against a baseline date",
+	Long: "Compare the model's validation scores on --date (default " +
+		"today) against --baseline. Exits non-zero when a benchmark " +
+		"disappeared or the average score dropped more than --max-drop " +
+		"points. Intended as a CI quality gate for model, prompt, or " +
+		"quantization changes.",
+	Args: cobra.ExactArgs(1),
+
+	RunE: func(cmd *cobra.Command, args []string) error {
+
+		if _, err := time.Parse("2006-01-02", flagBaseline); err != nil {
+			return fmt.Errorf(
+				"invalid --baseline %q: expected YYYY-MM-DD",
+				flagBaseline,
+			)
+		}
+
+		result, err := gate.Compare(
+			flagRoot,
+			args[0],
+			flagBaseline,
+			date(),
+		)
+		if err != nil {
+			return err
+		}
+
+		fmt.Print(gate.Report(result, flagMaxDrop))
+
+		if !result.Pass(flagMaxDrop) {
+			// The report already explains the failure.
+			cmd.SilenceErrors = true
+			return fmt.Errorf("gate failed")
+		}
+
+		return nil
+	},
+}
+
 var compareCmd = &cobra.Command{
 	Use:   "compare",
 	Short: "Compare all benchmarked models across dates",
@@ -252,6 +299,23 @@ func init() {
 	rootCmd.AddCommand(validateCmd)
 	rootCmd.AddCommand(reportCmd)
 	rootCmd.AddCommand(compareCmd)
+
+	gateCmd.Flags().StringVar(
+		&flagBaseline,
+		"baseline",
+		"",
+		"baseline date to compare against (YYYY-MM-DD, required)",
+	)
+	gateCmd.MarkFlagRequired("baseline")
+
+	gateCmd.Flags().IntVar(
+		&flagMaxDrop,
+		"max-drop",
+		5,
+		"maximum allowed drop of the average score, in points",
+	)
+
+	rootCmd.AddCommand(gateCmd)
 }
 
 func main() {

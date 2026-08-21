@@ -51,6 +51,48 @@ func RunAll(ctx context.Context, cfg RunConfig) error {
 		date = time.Now().Format("2006-01-02")
 	}
 
+	manifest := Manifest{
+		Name:        cfg.Name,
+		Model:       cfg.Model,
+		Runtime:     cfg.Runtime.Name(),
+		Date:        date,
+		StartedAt:   time.Now().UTC(),
+		Options:     cfg.Options,
+		Prompts:     map[string]string{},
+		Definitions: map[string]string{},
+	}
+
+	// Preload every prompt so missing files fail before any model call,
+	// and so the manifest records the exact inputs of the whole run.
+	prompts := make(map[string][]byte, len(defs))
+
+	for _, d := range defs {
+
+		prompt, err := os.ReadFile(
+			filepath.Join(cfg.Root, "prompts", d.Prompt),
+		)
+		if err != nil {
+			return fmt.Errorf("%s: read prompt: %w", d.ID, err)
+		}
+
+		prompts[d.ID] = prompt
+		manifest.Prompts[d.ID] = hashBytes(prompt)
+
+		definitionFile := filepath.Join(
+			cfg.Root,
+			"definitions",
+			d.ID+".json",
+		)
+
+		if data, err := os.ReadFile(definitionFile); err == nil {
+			manifest.Definitions[d.ID] = hashBytes(data)
+		}
+	}
+
+	if err := WriteManifest(cfg.Root, date, cfg.Name, manifest); err != nil {
+		return fmt.Errorf("write manifest: %w", err)
+	}
+
 	for _, d := range defs {
 
 		if err := ctx.Err(); err != nil {
@@ -59,22 +101,11 @@ func RunAll(ctx context.Context, cfg RunConfig) error {
 
 		fmt.Printf("Running %s ...\n", d.ID)
 
-		promptFile := filepath.Join(
-			cfg.Root,
-			"prompts",
-			d.Prompt,
-		)
-
-		prompt, err := os.ReadFile(promptFile)
-		if err != nil {
-			return fmt.Errorf("%s: read prompt: %w", d.ID, err)
-		}
-
 		resp, err := cfg.Runtime.Run(
 			ctx,
 			model.Request{
 				Model:   cfg.Model,
-				Prompt:  string(prompt),
+				Prompt:  string(prompts[d.ID]),
 				Options: cfg.Options,
 			},
 		)

@@ -35,6 +35,7 @@ output from a date/model-scoped directory:
 | Validate   | `themis-bench validate MODEL` | `responses/`, `expected/` | `validation/DATE/MODEL/`      |
 | Report     | `themis-bench report MODEL`   | `responses/`, `validation/`| `reports/DATE/MODEL.md`      |
 | Compare    | `themis-bench compare`        | all of `responses/`, `validation/` | `reports/comparison.md` |
+| Gate       | `themis-bench gate MODEL --baseline DATE` | `validation/` | exit code |
 
 Run the whole pipeline with one command:
 
@@ -62,6 +63,22 @@ Compare every model you have benchmarked, across dates:
 This scans all evaluated runs and writes `reports/comparison.md` with a
 per-model summary, a per-benchmark score matrix (latest run of each
 model), and score history for models benchmarked on multiple dates.
+
+Guard against regressions (e.g. in CI, after changing a prompt, model
+version, or quantization):
+
+```bash
+./bin/themis-bench gate MODEL --baseline 2026-08-19 [--max-drop 5]
+```
+
+The gate exits non-zero when a benchmark validated at the baseline is
+missing from the current date, or when the average score dropped more
+than `--max-drop` points.
+
+Every run directory also contains a `manifest.json` recording the
+runtime, generation options, and SHA-256 hashes of the exact prompts
+and definitions used — so any score is attributable to a specific
+model + prompt combination.
 
 ### Model registry
 

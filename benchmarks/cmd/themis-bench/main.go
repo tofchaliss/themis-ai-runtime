@@ -25,6 +25,7 @@ var (
 	flagDate     string
 	flagEndpoint string
 	flagTimeout  time.Duration
+	flagVariant  string
 )
 
 // date returns the --date flag, defaulting to today.
@@ -101,9 +102,17 @@ var runCmd = &cobra.Command{
 			r.Client.Timeout = flagTimeout
 		}
 
+		// A variant run is named model@variant so every later stage
+		// (evaluate, validate, report, compare, gate) treats it as its
+		// own result series, giving prompt A/B comparison for free.
+		name := args[0]
+		if flagVariant != "" {
+			name = args[0] + "@" + flagVariant
+		}
+
 		fmt.Printf(
 			"Model %s via %s (temperature=%g seed=%d)\n",
-			args[0],
+			name,
 			rt.Name(),
 			options.Temperature,
 			options.Seed,
@@ -111,8 +120,9 @@ var runCmd = &cobra.Command{
 
 		return benchmark.RunAll(ctx, benchmark.RunConfig{
 			Runtime: rt,
-			Name:    args[0],
+			Name:    name,
 			Model:   modelName,
+			Variant: flagVariant,
 			Options: options,
 			Root:    flagRoot,
 			Date:    date(),
@@ -292,6 +302,14 @@ func init() {
 		"timeout",
 		runtime.DefaultTimeout,
 		"per-benchmark generation timeout",
+	)
+
+	runCmd.Flags().StringVar(
+		&flagVariant,
+		"variant",
+		"",
+		"prompt variant to run (prompts/variants/<name>/); results are "+
+			"recorded as MODEL@<name>",
 	)
 
 	rootCmd.AddCommand(runCmd)

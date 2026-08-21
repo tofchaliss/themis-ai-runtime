@@ -119,6 +119,33 @@ Run files record which runtime and generation options produced them.
 - `--timeout DURATION` — per-benchmark generation timeout (`run` only;
   default `10m`)
 
+## Prompt management
+
+Prompts are plain Markdown. Two optional layers sit on top:
+
+**Partials** — shared blocks in `prompts/partials/*.md` (e.g. the Themis
+preamble). A prompt containing Go template directives is rendered before
+sending; `{{template "themis-preamble"}}` includes a partial. Prompts
+without directives are sent byte-for-byte. The manifest records hashes
+of the *rendered* prompts — exactly what the model saw.
+
+**Variants (prompt A/B testing)** — `prompts/variants/<name>/` overlays
+the base prompts: files present there replace the base file of the same
+name (partials can be overridden too, under `variants/<name>/partials/`).
+Run a variant with:
+
+```bash
+make bench MODEL=cyberpal20b VARIANT=json-strict
+```
+
+Results are recorded as `MODEL@<variant>`, so the ordinary tooling does
+the A/B analysis:
+
+```bash
+./bin/themis-bench compare        # base and variant side by side
+./bin/themis-bench gate "MODEL@json-strict" --baseline <date-of-base-run>
+```
+
 ## Benchmarks
 
 Each benchmark consists of three files sharing an ID:

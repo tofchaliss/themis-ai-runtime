@@ -23,6 +23,10 @@ type RunConfig struct {
 	// Name unless the registry aliases it).
 	Model string
 
+	// Variant selects a prompt variant (prompts/variants/<variant>/)
+	// for A/B testing. Empty means the base prompts.
+	Variant string
+
 	Options model.Options
 
 	Root string
@@ -55,6 +59,7 @@ func RunAll(ctx context.Context, cfg RunConfig) error {
 		Name:        cfg.Name,
 		Model:       cfg.Model,
 		Runtime:     cfg.Runtime.Name(),
+		Variant:     cfg.Variant,
 		Date:        date,
 		StartedAt:   time.Now().UTC(),
 		Options:     cfg.Options,
@@ -62,17 +67,21 @@ func RunAll(ctx context.Context, cfg RunConfig) error {
 		Definitions: map[string]string{},
 	}
 
-	// Preload every prompt so missing files fail before any model call,
-	// and so the manifest records the exact inputs of the whole run.
+	loader, err := NewPrompts(cfg.Root, cfg.Variant)
+	if err != nil {
+		return err
+	}
+
+	// Preload every prompt so missing files or broken templates fail
+	// before any model call, and so the manifest records the exact
+	// (rendered) inputs of the whole run.
 	prompts := make(map[string][]byte, len(defs))
 
 	for _, d := range defs {
 
-		prompt, err := os.ReadFile(
-			filepath.Join(cfg.Root, "prompts", d.Prompt),
-		)
+		prompt, err := loader.Load(d.Prompt)
 		if err != nil {
-			return fmt.Errorf("%s: read prompt: %w", d.ID, err)
+			return fmt.Errorf("%s: load prompt: %w", d.ID, err)
 		}
 
 		prompts[d.ID] = prompt

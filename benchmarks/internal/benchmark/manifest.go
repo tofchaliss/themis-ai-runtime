@@ -22,6 +22,7 @@ type Manifest struct {
 	Name    string `json:"name"`
 	Model   string `json:"model"`
 	Runtime string `json:"runtime"`
+	Variant string `json:"variant,omitempty"`
 	Date    string `json:"date"`
 
 	StartedAt time.Time `json:"started_at"`

@@ -1,0 +1,16 @@
+{
+  "benchmark": "B015",
+  "validator": "json",
+
+  "expected": {
+    "finding_id": "F-015-001",
+    "recommended_stance": "affected",
+    "reason": "example-library 1.4.2 is within the supplied affected range 1.0.0 through 1.4.2.",
+    "evidence": [
+      "example-library 1.4.2",
+      "affected versions 1.0.0 through 1.4.2"
+    ],
+    "uncertainty": "",
+    "requires_human_decision": true
+  }
+}

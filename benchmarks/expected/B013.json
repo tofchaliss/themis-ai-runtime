@@ -1,0 +1,19 @@
+{
+  "benchmark": "B013",
+  "validator": "json",
+
+  "expected": {
+    "finding_id": "F-013-001",
+    "recommended_stance": "affected",
+    "confidence": "high",
+    "rationale": "The supplied release evidence shows example-library version 1.4.2 is present in the release, and the supplied vulnerability knowledge states that versions 1.0.0 through 1.4.2 are affected by CVE-2024-99999.",
+    "evidence_basis": [
+      "F-013-001",
+      "example-2.4",
+      "example-library 1.4.2",
+      "CVE-2024-99999",
+      "affected versions 1.0.0 through 1.4.2"
+    ],
+    "requires_human_decision": true
+  }
+}

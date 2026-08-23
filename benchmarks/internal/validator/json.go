@@ -3,7 +3,9 @@ package validator
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -54,7 +56,7 @@ func ValidateJSON(expected *Expected, answer string) (Result, error) {
 
 		value, ok := got[key]
 
-		if ok && jsonEqual(want[key], value) {
+		if ok && jsonEqual(want[key], value, expected.Options) {
 			result.Passed++
 		} else {
 			result.Failed++
@@ -95,18 +97,40 @@ func extractJSON(answer string) (map[string]any, error) {
 }
 
 // jsonEqual deep-compares two values decoded from JSON. Strings are
-// compared after trimming surrounding whitespace.
-func jsonEqual(want, got any) bool {
+// compared after trimming surrounding whitespace; opts can further
+// relax number and string comparison.
+func jsonEqual(want, got any, opts JSONOptions) bool {
 
 	switch w := want.(type) {
 
 	case string:
 		g, ok := got.(string)
-		return ok && strings.TrimSpace(w) == strings.TrimSpace(g)
+		if !ok {
+			return false
+		}
+		ws, gs := strings.TrimSpace(w), strings.TrimSpace(g)
+		if opts.CaseInsensitive {
+			return strings.EqualFold(ws, gs)
+		}
+		return ws == gs
 
 	case float64:
 		g, ok := got.(float64)
-		return ok && w == g
+		if !ok && opts.CoerceNumbers {
+			if s, isString := got.(string); isString {
+				parsed, err := strconv.ParseFloat(
+					strings.TrimSpace(s), 64,
+				)
+				if err != nil {
+					return false
+				}
+				g, ok = parsed, true
+			}
+		}
+		if !ok {
+			return false
+		}
+		return math.Abs(w-g) <= opts.NumberTolerance
 
 	case bool:
 		g, ok := got.(bool)
@@ -121,7 +145,7 @@ func jsonEqual(want, got any) bool {
 			return false
 		}
 		for i := range w {
-			if !jsonEqual(w[i], g[i]) {
+			if !jsonEqual(w[i], g[i], opts) {
 				return false
 			}
 		}
@@ -134,7 +158,7 @@ func jsonEqual(want, got any) bool {
 		}
 		for k, v := range w {
 			gv, ok := g[k]
-			if !ok || !jsonEqual(v, gv) {
+			if !ok || !jsonEqual(v, gv, opts) {
 				return false
 			}
 		}

@@ -2,6 +2,10 @@
   "benchmark": "B020",
   "validator": "json",
 
+  "options": {
+    "coerce_numbers": true
+  },
+
   "expected": {
     "attack_vector": "Network",
     "attack_complexity": "Low",

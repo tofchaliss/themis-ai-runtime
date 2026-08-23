@@ -103,6 +103,57 @@ func TestValidateJSON(t *testing.T) {
 		}
 	})
 
+	t.Run("options relax comparison", func(t *testing.T) {
+
+		exp := jsonExpected(t, `{"score": 9.8, "severity": "CRITICAL"}`)
+		exp.Options = JSONOptions{
+			CoerceNumbers:   true,
+			NumberTolerance: 0.05,
+			CaseInsensitive: true,
+		}
+
+		result, err := ValidateJSON(
+			exp,
+			`{"score": "9.82", "severity": "critical"}`,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if result.Score != 100 {
+			t.Errorf("Score = %d, want 100; missing %v", result.Score, result.Missing)
+		}
+	})
+
+	t.Run("strict defaults reject coercion", func(t *testing.T) {
+
+		result, err := ValidateJSON(
+			jsonExpected(t, `{"score": 9.8}`),
+			`{"score": "9.8"}`,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if result.Score != 0 {
+			t.Errorf("Score = %d, want 0 (string must not match number by default)", result.Score)
+		}
+	})
+
+	t.Run("tolerance rejects values outside the bound", func(t *testing.T) {
+
+		exp := jsonExpected(t, `{"score": 9.8}`)
+		exp.Options = JSONOptions{NumberTolerance: 0.05}
+
+		result, err := ValidateJSON(exp, `{"score": 9.9}`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.Score != 0 {
+			t.Errorf("Score = %d, want 0 (9.9 outside 9.8±0.05)", result.Score)
+		}
+	})
+
 	t.Run("invalid ground truth is an error", func(t *testing.T) {
 		if _, err := ValidateJSON(jsonExpected(t, `not json`), "{}"); err == nil {
 			t.Error("expected error for invalid ground truth")

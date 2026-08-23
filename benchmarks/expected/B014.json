@@ -1,48 +1,19 @@
 {
   "benchmark": "B014",
-  "validator": "json",
+  "validator": "regex",
 
-  "expected": {
-    "relevant_precedents": [
-      {
-        "position_id": "P-301",
-        "relevance": "high",
-        "why_relevant": "It concerns the same component and identifies Security feature X as the key applicability condition."
-      },
-      {
-        "position_id": "P-302",
-        "relevance": "high",
-        "why_relevant": "It concerns the same component and describes the condition where Security feature X is enabled and the vulnerable code path is reachable."
-      },
-      {
-        "position_id": "P-303",
-        "relevance": "high",
-        "why_relevant": "It concerns the same component and uses the same feature-disabled applicability condition as P-301."
-      }
-    ],
-    "precedent_pattern": "Historical decisions for example-security-module depend on whether Security feature X is enabled or disabled. The not_affected decisions occurred when the feature was disabled, while the affected decision occurred when the feature was enabled.",
-    "contradictions": [
-      {
-        "position_ids": [
-          "P-301",
-          "P-302"
-        ],
-        "description": "P-301 records not_affected while P-302 records affected; the difference is explained by the applicability condition for Security feature X."
-      },
-      {
-        "position_ids": [
-          "P-302",
-          "P-303"
-        ],
-        "description": "P-302 records affected while P-303 records not_affected; the difference is explained by the applicability condition for Security feature X."
-      }
-    ],
-    "lessons_for_current_finding": [
-      "The historical not_affected decisions cannot be transferred to the current Finding merely because they have high similarity scores.",
-      "The applicability condition is the critical factor in the historical decisions.",
-      "The current evidence states that Security feature X is enabled, which makes the affected precedent P-302 more applicable than P-301 or P-303."
-    ],
-    "recommendation_impact": "The historical precedent supports further consideration of an affected outcome because the current applicability condition matches the affected historical precedent, but the historical Positions do not establish the current Enterprise Position.",
-    "confidence": "high"
-  }
+  "required": [
+    "P-301",
+    "P-302",
+    "P-303",
+    "(?i)security feature x",
+    "(?i)enabled",
+    "(?i)disabled",
+    "(?i)similarity"
+  ],
+
+  "forbidden": [
+    "P-304",
+    "(?i)position has been established"
+  ]
 }

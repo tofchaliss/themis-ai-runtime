@@ -155,14 +155,22 @@ Each benchmark consists of three files sharing an ID:
 - `prompts/BXXX.md` — the prompt sent to the model
 - `expected/BXXX.json` — validation spec
 
-Two validators are supported:
+Three validators are supported:
 
 - `keyword` — the answer must contain every `required` keyword
   (case-insensitive); `forbidden` keywords are reported as violations.
   Score = passed required checks / total required checks.
+- `regex` — like `keyword`, but `required`/`forbidden` are Go regular
+  expressions (use `(?i)` for case-insensitivity). Use when a correct
+  answer can be phrased several ways (`rotat|revok`) or must reference
+  identifiers inside free text.
 - `json` — the answer must contain a JSON object whose top-level fields
   deep-equal the `expected` ground truth (code fences and surrounding
   prose are tolerated). Score = matching fields / total fields.
+  Comparison is fully strict by default; an `options` object can relax
+  it per benchmark: `coerce_numbers` (accept `"9.8"` for `9.8`),
+  `number_tolerance` (absolute distance), `case_insensitive` (string
+  comparison).
 
 ## Development
 

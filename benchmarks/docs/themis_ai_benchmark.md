@@ -136,8 +136,11 @@ Each file defines a validator type plus its rules.
 Supported validators:
 
 - `keyword` — required keywords (case-insensitive) and forbidden keywords
+- `regex` — required/forbidden Go regular expressions
 - `json` — a ground-truth object under `expected`; each top-level field
-  must deep-equal the field in the model's JSON answer
+  must deep-equal the field in the model's JSON answer (optionally
+  relaxed per benchmark via `options`: number coercion/tolerance,
+  case-insensitive strings)
 
 Example:
 
@@ -157,7 +160,6 @@ Example:
 
 Future validator types may include:
 
-- regex
 - json-schema
 - semantic
 - llm-judge

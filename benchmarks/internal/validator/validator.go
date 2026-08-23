@@ -81,6 +81,15 @@ func validateFile(root, date, model, file string) error {
 			response.Answer,
 		)
 
+	case "regex":
+		result, err = ValidateRegex(
+			expected,
+			response.Answer,
+		)
+		if err != nil {
+			return err
+		}
+
 	case "json":
 		result, err = ValidateJSON(
 			expected,

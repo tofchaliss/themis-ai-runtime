@@ -1,4 +1,4 @@
-package runtime
+package llm
 
 import (
 	"bytes"
@@ -8,8 +8,6 @@ import (
 	"io"
 	"net/http"
 	"time"
-
-	"github.com/tofchaliss/themis/benchmarks/internal/model"
 )
 
 // DefaultTimeout bounds a single generation request. Local models can be
@@ -36,8 +34,8 @@ func (o *Ollama) Name() string {
 
 func (o *Ollama) Run(
 	ctx context.Context,
-	req model.Request,
-) (*model.Response, error) {
+	req Request,
+) (*Response, error) {
 
 	body := map[string]any{
 		"model":  req.Model,
@@ -100,7 +98,7 @@ func (o *Ollama) Run(
 		return nil, fmt.Errorf("ollama error: %s", r.Error)
 	}
 
-	return &model.Response{
+	return &Response{
 		Runtime: o.Name(),
 		Model:   req.Model,
 		Answer:  r.Response,

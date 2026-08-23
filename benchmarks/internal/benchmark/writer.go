@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/tofchaliss/themis/benchmarks/internal/model"
+	"github.com/tofchaliss/themis/internal/llm"
 )
 
 // WriteRun writes the run envelope for one benchmark to
@@ -14,7 +14,7 @@ func WriteRun(
 	baseDir string,
 	date string,
 	modelName string,
-	record model.RunRecord,
+	record llm.RunRecord,
 ) error {
 
 	dir := filepath.Join(

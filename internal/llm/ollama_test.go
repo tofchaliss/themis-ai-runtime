@@ -1,4 +1,4 @@
-package runtime
+package llm
 
 import (
 	"context"
@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/tofchaliss/themis/benchmarks/internal/model"
 )
 
 func TestOllamaRun(t *testing.T) {
@@ -56,10 +54,10 @@ func TestOllamaRun(t *testing.T) {
 
 		resp, err := NewOllama(server.URL).Run(
 			context.Background(),
-			model.Request{
+			Request{
 				Model:   "test-model",
 				Prompt:  "question",
-				Options: model.DefaultOptions(),
+				Options: DefaultOptions(),
 			},
 		)
 		if err != nil {
@@ -91,7 +89,7 @@ func TestOllamaRun(t *testing.T) {
 
 		_, err := NewOllama(server.URL).Run(
 			context.Background(),
-			model.Request{Model: "missing", Prompt: "question"},
+			Request{Model: "missing", Prompt: "question"},
 		)
 		if err == nil {
 			t.Fatal("expected error for 404 response")
@@ -110,7 +108,7 @@ func TestOllamaRun(t *testing.T) {
 
 		_, err := NewOllama(server.URL).Run(
 			context.Background(),
-			model.Request{Model: "m", Prompt: "q"},
+			Request{Model: "m", Prompt: "q"},
 		)
 		if err == nil {
 			t.Fatal("expected error for error payload")
@@ -130,7 +128,7 @@ func TestOllamaRun(t *testing.T) {
 
 		_, err := NewOllama(server.URL).Run(
 			ctx,
-			model.Request{Model: "m", Prompt: "q"},
+			Request{Model: "m", Prompt: "q"},
 		)
 		if err == nil {
 			t.Fatal("expected error for cancelled context")

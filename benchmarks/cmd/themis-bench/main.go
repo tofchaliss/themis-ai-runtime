@@ -14,8 +14,8 @@ import (
 	"github.com/tofchaliss/themis/benchmarks/internal/evaluator"
 	"github.com/tofchaliss/themis/benchmarks/internal/gate"
 	"github.com/tofchaliss/themis/benchmarks/internal/report"
-	"github.com/tofchaliss/themis/benchmarks/internal/runtime"
 	"github.com/tofchaliss/themis/benchmarks/internal/validator"
+	"github.com/tofchaliss/themis/internal/llm"
 )
 
 const defaultEndpoint = "http://localhost:11434"
@@ -78,7 +78,7 @@ var runCmd = &cobra.Command{
 		)
 		defer stop()
 
-		registry, err := runtime.LoadRegistry(flagRoot)
+		registry, err := llm.LoadRegistry(flagRoot)
 		if err != nil {
 			return err
 		}
@@ -90,12 +90,12 @@ var runCmd = &cobra.Command{
 
 		// CLI flags override the registry.
 		switch r := rt.(type) {
-		case *runtime.Ollama:
+		case *llm.Ollama:
 			if flagEndpoint != "" || os.Getenv("OLLAMA_HOST") != "" {
 				r.Endpoint = endpoint()
 			}
 			r.Client.Timeout = flagTimeout
-		case *runtime.OpenAI:
+		case *llm.OpenAI:
 			if flagEndpoint != "" {
 				r.Endpoint = flagEndpoint
 			}
@@ -300,7 +300,7 @@ func init() {
 	runCmd.Flags().DurationVar(
 		&flagTimeout,
 		"timeout",
-		runtime.DefaultTimeout,
+		llm.DefaultTimeout,
 		"per-benchmark generation timeout",
 	)
 

@@ -1,4 +1,4 @@
-module github.com/tofchaliss/themis/benchmarks
+module github.com/tofchaliss/themis
 
 go 1.24
 

@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/tofchaliss/themis/internal/llm"
 )
 
 // ValidateJSON validates a model response by comparing the JSON object in
@@ -40,7 +42,7 @@ func ValidateJSON(expected *Expected, answer string) (Result, error) {
 		)
 	}
 
-	got, err := extractJSON(answer)
+	got, err := llm.ExtractJSON(answer)
 	if err != nil {
 		// The model did not produce parseable JSON: every field fails.
 		result.Failed = len(want)
@@ -67,33 +69,6 @@ func ValidateJSON(expected *Expected, answer string) (Result, error) {
 	result.Score = (result.Passed * 100) / len(want)
 
 	return result, nil
-}
-
-// extractJSON parses the answer as JSON, tolerating surrounding prose or
-// Markdown code fences by falling back to the outermost {...} block.
-func extractJSON(answer string) (map[string]any, error) {
-
-	var obj map[string]any
-
-	if err := json.Unmarshal([]byte(answer), &obj); err == nil {
-		return obj, nil
-	}
-
-	start := strings.Index(answer, "{")
-	end := strings.LastIndex(answer, "}")
-
-	if start == -1 || end <= start {
-		return nil, fmt.Errorf("no JSON object found in answer")
-	}
-
-	if err := json.Unmarshal(
-		[]byte(answer[start:end+1]),
-		&obj,
-	); err != nil {
-		return nil, fmt.Errorf("answer contains malformed JSON: %w", err)
-	}
-
-	return obj, nil
 }
 
 // jsonEqual deep-compares two values decoded from JSON. Strings are

@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/tofchaliss/themis/benchmarks/internal/model"
+	"github.com/tofchaliss/themis/internal/llm"
 )
 
 // ManifestFile is written into each run directory. Its name is reserved:
@@ -27,7 +27,7 @@ type Manifest struct {
 
 	StartedAt time.Time `json:"started_at"`
 
-	Options model.Options `json:"options"`
+	Options llm.Options `json:"options"`
 
 	// Prompts and Definitions map benchmark IDs to the SHA-256 of the
 	// file contents used for this run.

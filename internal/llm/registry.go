@@ -1,4 +1,4 @@
-package runtime
+package llm
 
 import (
 	"encoding/json"
@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"github.com/tofchaliss/themis/benchmarks/internal/model"
 )
 
 // RegistryFile is the optional per-suite model registry.
@@ -69,7 +67,7 @@ func LoadRegistry(root string) (*Registry, error) {
 
 // Resolve returns the runtime, the model identifier to send to it, and
 // the generation options for the named model.
-func (r *Registry) Resolve(name string) (Runtime, string, model.Options, error) {
+func (r *Registry) Resolve(name string) (Runtime, string, Options, error) {
 
 	entry, ok := r.Models[name]
 	if !ok {
@@ -81,7 +79,7 @@ func (r *Registry) Resolve(name string) (Runtime, string, model.Options, error) 
 		modelName = entry.Model
 	}
 
-	options := model.DefaultOptions()
+	options := DefaultOptions()
 	if entry.Temperature != nil {
 		options.Temperature = *entry.Temperature
 	}

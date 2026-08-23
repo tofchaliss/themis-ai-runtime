@@ -1,4 +1,4 @@
-package model
+package llm
 
 // Options are the generation parameters sent to the runtime. Benchmarks
 // pin these for reproducibility.

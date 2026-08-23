@@ -1,4 +1,4 @@
-package runtime
+package llm
 
 import (
 	"bytes"
@@ -8,8 +8,6 @@ import (
 	"io"
 	"net/http"
 	"time"
-
-	"github.com/tofchaliss/themis/benchmarks/internal/model"
 )
 
 // OpenAI talks to any OpenAI-compatible chat-completions endpoint:
@@ -58,8 +56,8 @@ type openAIResponse struct {
 
 func (o *OpenAI) Run(
 	ctx context.Context,
-	req model.Request,
-) (*model.Response, error) {
+	req Request,
+) (*Response, error) {
 
 	body := map[string]any{
 		"model": req.Model,
@@ -137,7 +135,7 @@ func (o *OpenAI) Run(
 	// the observed wall-clock time of the request.
 	elapsedMS := float64(elapsed.Milliseconds())
 
-	metrics := model.Metrics{
+	metrics := Metrics{
 		PromptTokens:     r.Usage.PromptTokens,
 		CompletionTokens: r.Usage.CompletionTokens,
 		TotalTokens:      r.Usage.TotalTokens,
@@ -151,7 +149,7 @@ func (o *OpenAI) Run(
 			float64(metrics.CompletionTokens) / (elapsedMS / 1000)
 	}
 
-	return &model.Response{
+	return &Response{
 		Runtime: o.Name(),
 		Model:   req.Model,
 		Answer:  r.Choices[0].Message.Content,

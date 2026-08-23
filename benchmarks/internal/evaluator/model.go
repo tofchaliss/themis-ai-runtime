@@ -1,9 +1,9 @@
 package evaluator
 
-import "github.com/tofchaliss/themis/benchmarks/internal/model"
+import "github.com/tofchaliss/themis/internal/llm"
 
 // Metrics is the normalized execution metrics of a run.
-type Metrics = model.Metrics
+type Metrics = llm.Metrics
 
 // Result is the normalized benchmark result.
 type Result struct {

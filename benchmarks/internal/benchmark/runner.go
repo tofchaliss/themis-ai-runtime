@@ -7,13 +7,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/tofchaliss/themis/benchmarks/internal/model"
-	"github.com/tofchaliss/themis/benchmarks/internal/runtime"
+	"github.com/tofchaliss/themis/internal/llm"
 )
 
 // RunConfig describes one benchmark run of a model.
 type RunConfig struct {
-	Runtime runtime.Runtime
+	Runtime llm.Runtime
 
 	// Name is what the user calls the model; it names the output
 	// directories and is shared by the later pipeline stages.
@@ -27,7 +26,7 @@ type RunConfig struct {
 	// for A/B testing. Empty means the base prompts.
 	Variant string
 
-	Options model.Options
+	Options llm.Options
 
 	Root string
 
@@ -112,7 +111,7 @@ func RunAll(ctx context.Context, cfg RunConfig) error {
 
 		resp, err := cfg.Runtime.Run(
 			ctx,
-			model.Request{
+			llm.Request{
 				Model:   cfg.Model,
 				Prompt:  string(prompts[d.ID]),
 				Options: cfg.Options,
@@ -122,7 +121,7 @@ func RunAll(ctx context.Context, cfg RunConfig) error {
 			return fmt.Errorf("%s: %w", d.ID, err)
 		}
 
-		record := model.RunRecord{
+		record := llm.RunRecord{
 			Benchmark: d.ID,
 			Model:     cfg.Name,
 			Runtime:   resp.Runtime,

@@ -1,6 +1,4 @@
-package runtime
-
-import "github.com/tofchaliss/themis/benchmarks/internal/model"
+package llm
 
 // OllamaResponse is the subset of the /api/generate response we consume.
 type OllamaResponse struct {
@@ -22,11 +20,11 @@ type OllamaResponse struct {
 }
 
 // Metrics converts Ollama's nanosecond counters into normalized metrics.
-func (r OllamaResponse) Metrics() model.Metrics {
+func (r OllamaResponse) Metrics() Metrics {
 
 	const nsToMS = 1_000_000.0
 
-	m := model.Metrics{
+	m := Metrics{
 		PromptTokens:     r.PromptEvalCount,
 		CompletionTokens: r.EvalCount,
 		TotalTokens:      r.PromptEvalCount + r.EvalCount,

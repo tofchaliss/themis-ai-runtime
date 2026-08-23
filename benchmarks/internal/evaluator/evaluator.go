@@ -7,12 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/tofchaliss/themis/benchmarks/internal/model"
-	"github.com/tofchaliss/themis/benchmarks/internal/runtime"
+	"github.com/tofchaliss/themis/internal/llm"
 )
 
 // EvaluateRun normalizes a single run file. Run files are runtime-
-// agnostic envelopes (model.RunRecord); raw Ollama payloads written by
+// agnostic envelopes (llm.RunRecord); raw Ollama payloads written by
 // older versions of the tool are still accepted.
 func EvaluateRun(
 	benchmark string,
@@ -24,7 +23,7 @@ func EvaluateRun(
 		return nil, err
 	}
 
-	var record model.RunRecord
+	var record llm.RunRecord
 
 	if err := json.Unmarshal(data, &record); err != nil {
 		return nil, fmt.Errorf("parse run file %s: %w", filename, err)
@@ -51,7 +50,7 @@ func evaluateLegacyRun(
 	data []byte,
 ) (*Result, error) {
 
-	var raw runtime.OllamaResponse
+	var raw llm.OllamaResponse
 
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return nil, fmt.Errorf("parse run file %s: %w", filename, err)

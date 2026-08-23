@@ -12,10 +12,9 @@ import (
 
 	"github.com/tofchaliss/themis/benchmarks/internal/benchmark"
 	"github.com/tofchaliss/themis/benchmarks/internal/evaluator"
-	"github.com/tofchaliss/themis/benchmarks/internal/model"
 	"github.com/tofchaliss/themis/benchmarks/internal/report"
-	"github.com/tofchaliss/themis/benchmarks/internal/runtime"
 	"github.com/tofchaliss/themis/benchmarks/internal/validator"
+	"github.com/tofchaliss/themis/internal/llm"
 )
 
 // TestPipelineEndToEnd drives the full pipeline — run, evaluate,
@@ -62,10 +61,10 @@ func TestPipelineEndToEnd(t *testing.T) {
 
 	// Run.
 	err := benchmark.RunAll(context.Background(), benchmark.RunConfig{
-		Runtime: runtime.NewOllama(server.URL),
+		Runtime: llm.NewOllama(server.URL),
 		Name:    "test-model",
 		Model:   "test-model",
-		Options: model.DefaultOptions(),
+		Options: llm.DefaultOptions(),
 		Root:    root,
 		Date:    date,
 	})

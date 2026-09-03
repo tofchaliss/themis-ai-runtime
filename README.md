@@ -15,7 +15,7 @@ Two components share one model layer and are coupled by design:
 
 ```
                     ┌──────────────────────────────┐
-                    │        internal/llm          │
+                    │   src/harness/internal/llm   │
                     │  Ollama + OpenAI-compatible  │
                     │  runtimes, model registry,   │
                     │  pinned generation options   │
@@ -40,22 +40,22 @@ model, prompt, or quantization changes that would degrade the service.
 
 | Component | Binary | Purpose |
 |-----------|--------|---------|
-| [`benchmarks/`](benchmarks/) | `themis-bench` | 20 security benchmarks: run, evaluate, validate, report, compare, gate |
-| `internal/service/` | `themis-serve` | HTTP service: evidence-based extraction and recommendation |
-| `internal/llm/` | — | Shared model layer used by both |
+| [`src/harness/benchmarks/`](src/harness/benchmarks/) | `themis-bench` | 20 security benchmarks: run, evaluate, validate, report, compare, gate |
+| `src/harness/internal/service/` | `themis-serve` | HTTP service: evidence-based extraction and recommendation |
+| `src/harness/internal/llm/` | — | Shared model layer used by both |
 
 ## Quick start
 
 ```bash
 # Build both binaries
-go build -o bin/themis-bench ./benchmarks/cmd/themis-bench
-go build -o bin/themis-serve ./cmd/themis-serve
+go build -o bin/themis-bench ./src/harness/benchmarks/cmd/themis-bench
+go build -o bin/themis-serve ./src/harness/cmd/themis-serve
 
 # Benchmark a local Ollama model (full pipeline, one command)
-cd benchmarks && make bench MODEL=<ollama-model-name>
+cd src/harness/benchmarks && make bench MODEL=<ollama-model-name>
 
 # Start the runtime service (routing driven by benchmark results)
-./bin/themis-serve -addr :8080 -benchmarks-root benchmarks
+./bin/themis-serve -addr :8080 -benchmarks-root src/harness/benchmarks
 ```
 
 See [INSTALLATION.md](INSTALLATION.md) for prerequisites and
@@ -138,23 +138,26 @@ same tooling. Every run writes a manifest recording the runtime,
 options, and SHA-256 of the exact rendered prompts, making every score
 attributable and reproducible.
 
-Full documentation: [benchmarks/README.md](benchmarks/README.md).
+Full documentation: [src/harness/benchmarks/README.md](src/harness/benchmarks/README.md).
 
 ## Repository layout
 
 ```
-cmd/themis-serve/        runtime service binary
-internal/llm/            shared model layer (runtimes, registry, options)
-internal/service/        service: handlers, routing, guardrails, prompts
-benchmarks/
-  cmd/themis-bench/      benchmark CLI
-  internal/              pipeline packages (benchmark, evaluator,
+docs/architecture/       Themis Agent Harness architecture (P0 baseline, layer docs)
+src/harness/             the harness Go module (go.mod lives here)
+  cmd/themis-serve/      runtime service binary
+  internal/llm/          shared model layer (runtimes, registry, options)
+  internal/service/      service: handlers, routing, guardrails, prompts
+  benchmarks/
+    cmd/themis-bench/    benchmark CLI
+    internal/            pipeline packages (benchmark, evaluator,
                          validator, report, gate)
-  definitions/           benchmark definitions (id, category, weight)
-  prompts/               prompts, shared partials, A/B variants
-  expected/              validation specs (keyword | regex | json)
-  runs/ responses/       generated pipeline artifacts (gitignored)
-  validation/ reports/
+    definitions/         benchmark definitions (id, category, weight)
+    prompts/             prompts, shared partials, A/B variants
+    expected/            validation specs (keyword | regex | json)
+    runs/ responses/     generated pipeline artifacts (gitignored)
+    validation/ reports/
+go.work                  workspace root (future modules join here, e.g. src/themis)
 .github/workflows/       CI (fmt, vet, test, build both binaries)
 ```
 

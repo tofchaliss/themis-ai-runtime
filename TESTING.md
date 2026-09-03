@@ -11,13 +11,13 @@ verification workflow at the end.
 From the repo root:
 
 ```bash
-go test ./...            # everything
-go test -cover ./...     # with coverage
-go vet ./...             # static analysis
-gofmt -l .               # formatting (CI fails on any output)
+go test ./src/harness/...          # everything
+go test -cover ./src/harness/...   # with coverage
+go vet ./src/harness/...           # static analysis
+gofmt -l .                         # formatting (CI fails on any output)
 ```
 
-From `benchmarks/`:
+From `src/harness/benchmarks/`:
 
 ```bash
 make check               # fmt + vet + test
@@ -27,13 +27,13 @@ make check               # fmt + vet + test
 
 | Package | Coverage* | What the tests exercise |
 |---------|----------:|-------------------------|
-| `internal/llm` | ~78% | Ollama and OpenAI clients against `httptest` servers: request shape (pinned `temperature 0, seed 42`), status/error/empty-choice handling, context cancellation; registry resolution (defaults, aliases, API-key env, option overrides, malformed files) |
-| `internal/service` | ~84% | Router (best-per-category, latest-run-wins, variant exclusion); guardrails (injection patterns, stance contract, required fields); full HTTP handler tests against a mock backend: happy paths, injection flagging, 502 on malformed model output, 400 on bad requests, forced `requires_human_decision` |
-| `benchmarks/internal/benchmark` | ~81% | Definition loading (missing id/prompt, duplicates, malformed JSON); prompt templating (partials, variant overlay, error cases); **end-to-end pipeline test** (see below) |
-| `benchmarks/internal/evaluator` | ~28%** | Run-envelope parsing, legacy raw-Ollama fallback, error payloads, incomplete runs |
-| `benchmarks/internal/validator` | ~53%** | All three validators: keyword (case-insensitivity, forbidden, scoring), regex (alternation, invalid patterns), json (code-fence tolerance, strict defaults, coerce/tolerance/case options, per-field credit) |
-| `benchmarks/internal/report` | ~89% | Aggregation (validated-only averaging), Markdown rendering (`-` for unvalidated), run discovery with slashed model names, cross-model comparison, slash-safe report writing |
-| `benchmarks/internal/gate` | ~85% | Pass/fail semantics: improvements, tolerated drops, missing-benchmark always fails, new benchmarks informational, report rendering |
+| `src/harness/internal/llm` | ~78% | Ollama and OpenAI clients against `httptest` servers: request shape (pinned `temperature 0, seed 42`), status/error/empty-choice handling, context cancellation; registry resolution (defaults, aliases, API-key env, option overrides, malformed files) |
+| `src/harness/internal/service` | ~84% | Router (best-per-category, latest-run-wins, variant exclusion); guardrails (injection patterns, stance contract, required fields); full HTTP handler tests against a mock backend: happy paths, injection flagging, 502 on malformed model output, 400 on bad requests, forced `requires_human_decision` |
+| `src/harness/benchmarks/internal/benchmark` | ~81% | Definition loading (missing id/prompt, duplicates, malformed JSON); prompt templating (partials, variant overlay, error cases); **end-to-end pipeline test** (see below) |
+| `src/harness/benchmarks/internal/evaluator` | ~28%** | Run-envelope parsing, legacy raw-Ollama fallback, error payloads, incomplete runs |
+| `src/harness/benchmarks/internal/validator` | ~53%** | All three validators: keyword (case-insensitivity, forbidden, scoring), regex (alternation, invalid patterns), json (code-fence tolerance, strict defaults, coerce/tolerance/case options, per-field credit) |
+| `src/harness/benchmarks/internal/report` | ~89% | Aggregation (validated-only averaging), Markdown rendering (`-` for unvalidated), run discovery with slashed model names, cross-model comparison, slash-safe report writing |
+| `src/harness/benchmarks/internal/gate` | ~85% | Pass/fail semantics: improvements, tolerated drops, missing-benchmark always fails, new benchmarks informational, report rendering |
 
 \* Approximate, from `go test -cover`.
 \*\* The uncovered portion of these packages is their `*All` pipeline
@@ -42,7 +42,7 @@ package instead.
 
 ## The end-to-end pipeline test
 
-`benchmarks/internal/benchmark/e2e_test.go` drives the entire pipeline
+`src/harness/benchmarks/internal/benchmark/e2e_test.go` drives the entire pipeline
 — run → evaluate → validate → report — in a temporary suite root
 against an `httptest` mock Ollama server. It asserts:
 
@@ -67,7 +67,7 @@ Code tests protect the harness; the **gate** protects the quality of
 what it measures. After any model, prompt, or quantization change:
 
 ```bash
-cd benchmarks
+cd src/harness/benchmarks
 make bench MODEL=<model>                       # produce today's scores
 ./bin/themis-bench gate <model> --baseline <last-good-date> --max-drop 5
 ```
@@ -84,10 +84,10 @@ With Ollama running and a model pulled:
 
 ```bash
 # 1. Benchmark it end to end
-cd benchmarks && make bench MODEL=<model>
+cd src/harness/benchmarks && make bench MODEL=<model>
 
 # 2. Serve and exercise a routed request
-cd .. && ./bin/themis-serve -addr :8080 -benchmarks-root benchmarks &
+cd .. && ./bin/themis-serve -addr :8080 -benchmarks-root src/harness/benchmarks &
 curl -s localhost:8080/healthz                  # routing table present?
 curl -s localhost:8080/v1/extract -d '{"evidence": "CVE: CVE-2025-1 ..."}'
 ```

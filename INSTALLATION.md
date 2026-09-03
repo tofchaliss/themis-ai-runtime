@@ -7,7 +7,7 @@
 | Go | 1.24+ | the only build dependency |
 | [Ollama](https://ollama.com) | any recent | needed to *run* benchmarks or serve local models; not needed to build or test |
 | An OpenAI-compatible endpoint | optional | vLLM, llama.cpp server, LM Studio, OpenRouter, or hosted OpenAI |
-| `make` | optional | convenience targets in `benchmarks/` |
+| `make` | optional | convenience targets in `src/harness/benchmarks/` |
 
 Everything builds with the standard Go toolchain; the only third-party
 Go dependency is `spf13/cobra` (CLI).
@@ -18,14 +18,14 @@ Go dependency is `spf13/cobra` (CLI).
 git clone https://github.com/tofchaliss/themis-ai-runtime.git
 cd themis-ai-runtime
 
-go build -o bin/themis-bench ./benchmarks/cmd/themis-bench
-go build -o bin/themis-serve ./cmd/themis-serve
+go build -o bin/themis-bench ./src/harness/benchmarks/cmd/themis-bench
+go build -o bin/themis-serve ./src/harness/cmd/themis-serve
 ```
 
-Or, for the benchmark CLI only, from `benchmarks/`:
+Or, for the benchmark CLI only, from `src/harness/benchmarks/`:
 
 ```bash
-cd benchmarks && make build     # -> benchmarks/bin/themis-bench
+cd src/harness/benchmarks && make build     # -> src/harness/benchmarks/bin/themis-bench
 ```
 
 Verify:
@@ -54,8 +54,8 @@ To reach OpenAI-compatible endpoints or customize per-model behavior,
 copy the example registry and edit it:
 
 ```bash
-cp benchmarks/models.example.json benchmarks/models.json   # for themis-bench
-cp benchmarks/models.example.json models.json              # for themis-serve (config-root ".")
+cp src/harness/benchmarks/models.example.json src/harness/benchmarks/models.json   # for themis-bench
+cp src/harness/benchmarks/models.example.json models.json              # for themis-serve (config-root ".")
 ```
 
 `models.json` is gitignored (it is machine-specific; API keys never go
@@ -91,7 +91,7 @@ Entry fields:
 
 ## Running the benchmark suite
 
-From `benchmarks/`:
+From `src/harness/benchmarks/`:
 
 ```bash
 # Full pipeline in one command: run -> evaluate -> validate -> report
@@ -123,7 +123,7 @@ YYYY-MM-DD` (default today); `run` also takes `--endpoint`, `--timeout`
 From the repo root:
 
 ```bash
-./bin/themis-serve -addr :8080 -benchmarks-root benchmarks
+./bin/themis-serve -addr :8080 -benchmarks-root src/harness/benchmarks
 ```
 
 | Flag | Default | Meaning |
@@ -142,7 +142,7 @@ curl -s localhost:8080/healthz
 ```
 
 The service needs at least one completed `validate` run under
-`benchmarks/validation/` to build routes; otherwise pass
+`src/harness/benchmarks/validation/` to build routes; otherwise pass
 `-default-model` or a per-request `"model"` field.
 
 ## Troubleshooting

@@ -20,8 +20,8 @@
 | 1 | Architecture constitution | **Accepted by owner 2026-09-04** — constitution text below |
 | 2 | Claude Code behaviour | **Accepted by owner 2026-09-04** — behaviour standard below |
 | 3 | Security engineering rules | **Accepted by owner 2026-09-04** — twelve boundaries below |
-| 4 | Operations mechanisms (rule → CLAUDE.md / SKILL.md / AGENTS.md / agents / hooks) | Not started |
-| 5 | Commit the final skills | Blocked on 1–4 |
+| 4 | Operations mechanisms (rule → CLAUDE.md / SKILL.md / AGENTS.md / agents / hooks) | **Accepted by owner 2026-09-04** — placement matrix below |
+| 5 | Commit the final skills | **Ready** — assembly per Stages 1–4 |
 
 ---
 
@@ -348,9 +348,92 @@ This text supersedes the earlier §2.3 draft and resolves every §2.4 clarificat
 
 **Stage 3 exit criteria — MET 2026-09-04:** the summary paragraph and the twelve boundaries accepted by the owner; both proposed gap sentences absorbed (3.11 verbatim; 3.12 strengthened — sensitivity is considered independently of authority tier). Every boundary is a candidate for an executable check in Stage 4 (per 3.10).
 
-## Stage 4 — Operations mechanisms *(not started)*
+## Stage 4 — Operations mechanisms — ACCEPTED 2026-09-04
 
-For every rule from Stages 1–3, decide its enforcement home: CLAUDE.md (always-loaded context) vs SKILL.md (loaded for engineering work) vs AGENTS.md (repo instructions for any agent) vs review agents (post-change review) vs hooks (deterministic, cannot be talked out of). Principle to test each rule against: guidance goes in instructions; anything that must never depend on model compliance goes in hooks.
+### The mechanism-separation standard (owner-accepted, verbatim)
+
+> Claude Code development controls shall be separated by mechanism: CLAUDE.md provides repository-level orientation and non-negotiable principles; the Themis Harness Engineering Skill defines engineering behavior; AGENTS.md provides repository and scoped implementation constraints; hooks mechanically enforce applicable safety rules; review agents assess architecture, security, and verification; and human authority remains outside these mechanisms. Rules shall have a single authoritative home wherever practical, and mechanisms shall enforce rather than duplicate architectural/business authority.
+
+### The placement matrix (owner-accepted, verbatim)
+
+| Principle | Primary mechanism | Enforcement |
+| --- | --- | --- |
+| Themis owns security truth | Skill + architecture review | Review |
+| Harness is Themis capability | Skill | Review |
+| Deployment topology remains open | Skill | Stop + ask |
+| Human authority | Skill + workflow | Stop/approval |
+| 11-layer architecture | Skill | Architecture review |
+| Deterministic vs probabilistic | Skill | Architecture review/tests |
+| Model independence | Skill + tests | Review |
+| Inspect before changing | Skill | Claude behavior |
+| Minimal change | Skill + review | Review |
+| Unclear architecture → stop | Skill | Stop |
+| Destructive operation → stop | Hook + skill | Mechanical |
+| Prompt injection | Skill + tests | Security review |
+| Tool authorization | Skill + code/tests | Deterministic |
+| Least privilege | Skill + code/tests | Security review |
+| Secret protection | Hook + tests | Mechanical + review |
+| External-system access | Skill + policy | Deterministic |
+| Supply-chain discipline | Skill + dependency checks | Review |
+| Data redaction | Skill + tests/hooks | Deterministic |
+| Git checkpoint | Skill + hooks | Mechanical |
+| One logical change/commit | Skill + review | Review |
+| History rewrite | Hook/skill | Stop |
+| Shared push | Hook/skill | Stop |
+| Verification | Skill + tests | Mechanical/review |
+
+### The mechanism stack
+
+```
+CLAUDE.md
+     +
+Development Skill
+     +
+AGENTS.md
+     +
+Day-0 policy
+     +
+Hooks
+     +
+Review agents
+```
+
+### Proposed final structure (owner-supplied — explicitly proposed, NOT concrete; finalized in Stage 5)
+
+```
+themis-ai-runtime/
+│
+├── CLAUDE.md
+├── AGENTS.md
+│
+└── .claude/
+    │
+    ├── skills/
+    │   └── themis-harness-engineering/
+    │       └── SKILL.md
+    │
+    ├── policy/
+    │   └── DAY-0.md
+    │
+    ├── agents/
+    │   ├── architecture-reviewer.md
+    │   ├── security-reviewer.md
+    │   └── test-reviewer.md
+    │
+    └── hooks/
+        ├── README.md
+        ├── destructive-command-guard
+        ├── secret-guard
+        └── verification-guard
+```
+
+### Stage-5 implementation notes (Claude Code — flagged for assembly, no sign-off needed since the structure is non-concrete)
+
+1. **Git protections need a mechanical home.** The matrix routes history-rewrite and shared-push to "Hook/skill → Stop"; the proposed hook trio doesn't name a git guard. At assembly, either fold git protections (history rewrite, shared-remote push, Day-0 commit rules) into `destructive-command-guard` or add a fourth `git-guard` — decided by whichever keeps each hook single-purpose.
+2. **Single-home applied to Day-0.** `.claude/policy/DAY-0.md` becomes the authoritative home of the Day-0 rules; CLAUDE.md keeps a one-line reference instead of the full list (currently duplicated there).
+3. **Hook wiring.** Claude Code executes hooks via `settings.json` entries pointing at the scripts in `.claude/hooks/`; the scripts are the enforcement, settings.json is the registration — both land in Stage 5.
+
+**Stage 4 exit criteria — MET 2026-09-04:** the separation standard, placement matrix, and mechanism stack accepted; directory structure recorded as proposed, to be finalized during Stage-5 assembly.
 
 ## Stage 5 — Commit the final skills *(blocked on 1–4)*
 

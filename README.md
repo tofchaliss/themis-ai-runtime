@@ -152,7 +152,7 @@ src/harness/             the harness Go module (go.mod lives here)
     cmd/themis-bench/    benchmark CLI
     internal/            pipeline packages (benchmark, evaluator,
                          validator, report, gate)
-    definitions/         benchmark definitions (id, category, weight)
+    definitions/         benchmark definitions (id, category)
     prompts/             prompts, shared partials, A/B variants
     expected/            validation specs (keyword | regex | json)
     runs/ responses/     generated pipeline artifacts (gitignored)

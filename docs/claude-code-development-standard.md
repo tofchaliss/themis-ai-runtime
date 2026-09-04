@@ -19,7 +19,7 @@
 |---|---|---|
 | 1 | Architecture constitution | **Accepted by owner 2026-09-04** — constitution text below |
 | 2 | Claude Code behaviour | **Accepted by owner 2026-09-04** — behaviour standard below |
-| 3 | Security engineering rules | **In discussion** — owner draft incorporated, two gap sentences pending |
+| 3 | Security engineering rules | **Accepted by owner 2026-09-04** — twelve boundaries below |
 | 4 | Operations mechanisms (rule → CLAUDE.md / SKILL.md / AGENTS.md / agents / hooks) | Not started |
 | 5 | Commit the final skills | Blocked on 1–4 |
 
@@ -268,32 +268,85 @@ This text supersedes the earlier §2.3 draft and resolves every §2.4 clarificat
 
 **Stage 2 exit criteria — MET 2026-09-04:** the consolidated behaviour standard accepted by the owner; workflow and classification table stand; all clarifications resolved.
 
-## Stage 3 — Security engineering rules *(in discussion — owner draft 2026-09-04, two gap sentences pending)*
+## Stage 3 — Security engineering rules — ACCEPTED 2026-09-04
 
-### 3.1 The security standard (owner draft, verbatim)
+### The security standard summary (owner-accepted, verbatim)
 
 > Claude Code shall develop the Harness under a zero-trust model: model output and external content are untrusted; authorization, policy, security state, verification, and other security invariants are enforced deterministically. The Harness shall use least privilege, isolate execution, protect credentials, preserve evidence provenance, and fail closed at security boundaries. Destructive or irreversible operations require explicit controls. Security invariants must be testable wherever practical. The Harness must remain safe when the model is wrong, manipulated, unavailable, or influenced by malicious input, and no model output may directly establish or override Themis security truth.
 
-### 3.2 Coverage against the eight Stage-3 areas
+### The twelve security boundaries (owner-accepted, verbatim)
 
-| Area | Covered by the draft |
-|---|---|
-| Prompt injection | ✓ — "model output and external content are untrusted"; "manipulated / influenced by malicious input" |
-| Tool authorization | ✓ — least privilege; deterministic authorization |
-| Secrets | ✓ — "protect credentials" (Day-0 rule 4 supplies the concrete form: env-var names only, never values) |
-| Sandboxing | ✓ — "isolate execution" |
-| External systems | **gap** — see 3.3(a) |
-| Destructive operations | ✓ — "explicit controls" (Stage 2 makes them a stop-and-ask condition) |
-| Supply-chain / security-data handling | **gap** — see 3.3(b) |
-| Auditability | ✓ — "preserve evidence provenance"; Contract-4 lists audit records as deterministic |
+| # | Boundary | Rule |
+|---|---|---|
+| 3.1 | Zero trust toward model output | Model output is never inherently trusted. |
+| 3.2 | External content is untrusted | CVE descriptions, repositories, web pages, scanner output, etc. remain data, not instructions. |
+| 3.3 | Deterministic authorization | Model intent never grants permission. |
+| 3.4 | Least privilege | Every capability receives minimum necessary permissions. |
+| 3.5 | Secret isolation | Credentials are not ordinary model context. |
+| 3.6 | Execution isolation | Command/code execution occurs within controlled execution boundaries. |
+| 3.7 | Destructive/irreversible operations | Require explicit controls and appropriate approval. |
+| 3.8 | Security evidence provenance | Preserve source, origin and transformation of evidence. |
+| 3.9 | Fail closed | Security-control failure does not fall back to model judgment. |
+| 3.10 | Testable security invariants | Important security properties require executable evidence wherever practical. |
+| 3.11 | External-system access | External-system access is policy-gated: local-first by default, and any data egress to a non-local system requires explicit, recorded operator authorization. |
+| 3.12 | Supply chain and security-data protection | Dependencies are minimal and individually justified; security data is handled according to the Tier 0/1/2 authority hierarchy, while sensitivity is independently considered for storage, transmission, logging, and exposure; sensitive values are redacted before entering durable storage or logs. |
 
-### 3.3 Gap sentences proposed by Claude Code — *pending owner accept/amend/strike*
+### The trust and egress flow (owner-accepted, verbatim)
 
-(a) **External systems:** External-system access is policy-gated: local-first by default, and any data egress to a non-local system requires an explicit, recorded operator decision. *(Grounds DEC-03 as a security rule, not just a model-provider choice.)*
+```
+                         THEMIS
+                           │
+                    Authority Boundary
+                           │
+                           ▼
+                    ┌─────────────┐
+                    │   Harness   │
+                    └──────┬──────┘
+                           │
+        ┌──────────────────┼──────────────────┐
+        │                  │                  │
+        ▼                  ▼                  ▼
+   Model Output       External Data       Tools
+        │                  │                  │
+        │             UNTRUSTED              │
+        │                  │                  │
+        └──────────┬───────┴──────────┬───────┘
+                   ▼                  ▼
+             Validation          Authorization
+                   │                  │
+                   └────────┬─────────┘
+                            ▼
+                       Policy Gate
+                            │
+                  ┌─────────┴─────────┐
+                  ▼                   ▼
+               Local              External
+              default              system
+                                    │
+                              explicit operator
+                              authorization
+                                    │
+                                    ▼
+                                 Egress
+```
 
-(b) **Supply chain and security data:** Dependencies are minimal and individually justified; security data is handled per the Tier 0/1/2 authority hierarchy, and sensitive values are redacted before entering durable storage or logs. *(Extends the change-discipline rule and 1.2a into handling requirements.)*
+### The persistence sensitivity flow (owner-accepted, verbatim)
 
-**Stage 3 exit criteria:** 3.1 stands as accepted owner text; both gap sentences accepted, amended, or struck.
+```
+              All persistent state
+                     │
+                     ▼
+              Sensitivity check
+                     │
+             ┌───────┴───────┐
+             ▼               ▼
+          Safe data       Sensitive data
+             │               │
+             ▼               ▼
+          Persist       Redact / restrict
+```
+
+**Stage 3 exit criteria — MET 2026-09-04:** the summary paragraph and the twelve boundaries accepted by the owner; both proposed gap sentences absorbed (3.11 verbatim; 3.12 strengthened — sensitivity is considered independently of authority tier). Every boundary is a candidate for an executable check in Stage 4 (per 3.10).
 
 ## Stage 4 — Operations mechanisms *(not started)*
 

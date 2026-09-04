@@ -350,9 +350,11 @@ This text supersedes the earlier §2.3 draft and resolves every §2.4 clarificat
 
 ## Stage 4 — Operations mechanisms — ACCEPTED 2026-09-04
 
-### The mechanism-separation standard (owner-accepted, verbatim)
+### The mechanism-separation standard (owner-accepted, verbatim — final form 2026-09-04)
 
-> Claude Code development controls shall be separated by mechanism: CLAUDE.md provides repository-level orientation and non-negotiable principles; the Themis Harness Engineering Skill defines engineering behavior; AGENTS.md provides repository and scoped implementation constraints; hooks mechanically enforce applicable safety rules; review agents assess architecture, security, and verification; and human authority remains outside these mechanisms. Rules shall have a single authoritative home wherever practical, and mechanisms shall enforce rather than duplicate architectural/business authority.
+> Claude Code development controls shall be separated by mechanism: CLAUDE.md provides concise repository orientation; the Themis Harness Engineering Skill defines the engineering constitution; AGENTS.md provides repository and scoped implementation constraints; .claude/policy/DAY-0.md is the authoritative home for Day-0 prohibitions; hooks provide deterministic enforcement; settings.json registers those hooks; review agents assess architecture, security, and verification; and human authority remains outside these mechanisms. Each important rule has one authoritative home, with other mechanisms referencing, enforcing, or reviewing it rather than duplicating it.
+
+*(Supersedes the first accepted wording of the same date. Material refinements: CLAUDE.md is orientation only — the engineering constitution's authoritative home is the Skill, and CLAUDE.md references it; DAY-0.md named as the authoritative home for the Day-0 prohibitions — resolving Stage-5 implementation note 2; settings.json explicitly registers hooks — resolving note 3; the single-home rule now states what the other mechanisms do: reference, enforce, or review — never duplicate.)*
 
 ### The placement matrix (owner-accepted, verbatim)
 

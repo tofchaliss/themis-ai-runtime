@@ -18,7 +18,7 @@
 | Stage | Scope | Status |
 |---|---|---|
 | 1 | Architecture constitution | **Accepted by owner 2026-09-04** — constitution text below |
-| 2 | Claude Code behaviour | Not started |
+| 2 | Claude Code behaviour | **In discussion** — owner draft incorporated, clarifications 2.4 pending |
 | 3 | Security engineering rules | Not started |
 | 4 | Operations mechanisms (rule → CLAUDE.md / SKILL.md / AGENTS.md / agents / hooks) | Not started |
 | 5 | Commit the final skills | Blocked on 1–4 |
@@ -184,9 +184,83 @@ Supporting rules:
 
 ---
 
-## Stage 2 — Claude Code behaviour *(not started)*
+## Stage 2 — Claude Code behaviour *(in discussion — owner draft 2026-09-04, clarifications pending)*
 
-To define: how Claude Code investigates before changing code; the Architecture Decision Gate (what triggers it, who passes it); change classification (e.g. trivial / standard / architectural / security-sensitive, with different rigor per class); coding workflow; testing workflow; verification workflow; git/checkpoint behavior (incl. the Day-0 check-in rules already in CLAUDE.md); and the explicit list of situations where Claude Code must stop and ask.
+### 2.1 The workflow (owner draft, verbatim)
+
+```
+                    User Request
+                         │
+                         ▼
+                  ┌─────────────┐
+                  │  Understand │
+                  └──────┬──────┘
+                         │
+                         ▼
+                   Inspect Code
+                         │
+                         ▼
+                 Identify Owner
+                         │
+                         ▼
+                 Identify Layer
+                         │
+                         ▼
+               Classify the Change
+                         │
+              ┌──────────┴──────────┐
+              │                     │
+         Normal change         Architecture /
+              │                 authority change
+              ▼                     ▼
+           Plan                  STOP + ASK
+              │
+              ▼
+         Threat Model
+              │
+              ▼
+        Minimal Change
+              │
+              ▼
+        Functional Tests
+              │
+              ▼
+         Security Tests
+              │
+              ▼
+       Architecture Review
+              │
+              ▼
+        Evidence / Checkpoint
+              │
+              ▼
+             DONE
+```
+
+### 2.2 Change classification (owner draft, verbatim)
+
+| Change | Claude Code behavior |
+| --- | --- |
+| Local implementation | Proceed |
+| Normal cross-layer | Analyze + proceed if architecture is clear |
+| Security-sensitive | Analyze + verify + proceed where authority is unchanged |
+| Architecture change | **Stop + ask** |
+| Authority change | **Stop + ask** |
+| New deployment topology | **Stop + ask** |
+
+### 2.3 Behaviour summary (owner draft, verbatim)
+
+> Claude Code shall investigate before modifying, identify the responsible Themis/Harness owner and architectural layer, classify the change, and apply the minimum justified implementation. It may autonomously implement changes within established architectural boundaries, including security-sensitive changes where ownership and authority remain unchanged, but must stop for decisions that alter architectural ownership, security authority, trust boundaries, deployment topology, or fundamental model architecture. Every meaningful change must undergo functional, security, and architectural verification, with evidence recorded before completion.
+
+### 2.4 Clarifications proposed by Claude Code — *pending owner accept/amend/strike*
+
+1. **Unclear architecture escalates.** In 2.2, "Normal cross-layer: proceed if architecture is clear" — the implicit inverse becomes explicit: if the owning layer or architectural intent cannot be determined with confidence during investigation, the change is treated as an Architecture change → **stop + ask**. Ambiguity never resolves toward autonomy.
+2. **Proportional rigor for trivial changes.** "Every meaningful change" implies a floor: typo/comment/doc-only changes take the short path (inspect → change → functional verification (build/docs render) → checkpoint), skipping threat model and security tests. Anything touching executable code or configuration is at least "Local implementation" and takes the full pipeline.
+3. **Git/checkpoint behavior made concrete** (Stage-2 item 7): a checkpoint = a commit at a green state (build + tests pass) with its evidence; commits follow the Day-0 check-in rules (no Claude signatures, .gitignore honored, no binaries, no secrets); one logical change per commit; history rewrites, pushes to shared remotes, and branch topology changes are **stop + ask**.
+4. **Review-step mapping.** "Security Tests" and "Architecture Review" in 2.1 are performed via the review agents (security-reviewer/test-reviewer and architecture-reviewer respectively) once Stage 4 finalizes them; until then Claude Code performs the equivalent review inline. (Exact mechanism = Stage-4 decision; this clarification only fixes the intent.)
+5. **The stop+ask list is closed by enumeration.** Stop + ask triggers are exactly: architectural ownership, security authority, trust boundaries, deployment topology, fundamental model architecture (per 2.3), unclear architecture (per clarification 1), destructive/irreversible operations, and anything the Day-0 rules or the constitution prohibit resolving autonomously. Additions to this list are a Stage-2 amendment, not ad-hoc judgment.
+
+**Stage 2 exit criteria:** 2.1–2.3 stand as accepted owner text; each clarification in 2.4 accepted, amended, or struck by the owner.
 
 ## Stage 3 — Security engineering rules *(not started)*
 

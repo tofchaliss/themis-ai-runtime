@@ -1,7 +1,7 @@
 # Themis Agent Harness — Project Report
 
 **Document type:** Project report — the reference document for the harness project
-**Version:** 0.3 (v0.1 reviewed 2026-09-03; v0.2 adds the newcomer architecture diagrams in §3; v0.3 adds DEC-05/DEC-06 — model-agnostic implementation and role-neutral model framing)
+**Version:** 0.4 (v0.1 reviewed 2026-09-03; v0.2 adds the newcomer architecture diagrams in §3; v0.3 adds DEC-05/DEC-06 — model-agnostic implementation and role-neutral model framing; v0.4 widens OPEN-1 to the full runtime-skill design and distinguishes runtime skills from development-time Claude Code skills)
 **Repository:** themis-ai-runtime
 **Baseline:** [`architecture/harness-p0-architecture-v2.md`](architecture/harness-p0-architecture-v2.md) + the 2026-09-03 decisions
 **Review copy:** published as the "Themis Harness Charter" artifact; change requests reference sections by number (§10)
@@ -244,7 +244,7 @@ The Themis inbox contract should be agreed during Phase 2 (Themis already has th
 
 | ID | Decision | Notes |
 |---|---|---|
-| OPEN-1 | **Skill format (L9).** Markdown procedures the model reads, or executable state machines the orchestrator steps through? | Blocks Phase 3. Recommendation: state-machine skeleton whose step bodies are Markdown instructions — checkpoints stay deterministic, procedure text stays cheap to edit. |
+| OPEN-1 | **Runtime skill design (L9) — dedicated discussion required.** Not just the format question (Markdown procedures the model reads vs. executable state machines the orchestrator steps through) but the full design: the skill catalog, structure (inputs, required context, allowed tools, procedure, checkpoints, verification, approval requirements), and how skills are authored, reviewed, and versioned. Note: these runtime skills are distinct from the *development-time* Claude Code skills in `.claude/` that govern how the harness is built. | Blocks Phase 3. Format recommendation stands: state-machine skeleton whose step bodies are Markdown instructions — checkpoints stay deterministic, procedure text stays cheap to edit. |
 | OPEN-2 | **`run_command` policy (L4).** Strict command allowlist, or allow-inside-sandbox with the Docker boundary carrying the risk? | Blocks Phase 4. Recommendation: sandbox-and-allow with a deny-list for egress-capable commands; revisit on evaluation data. |
 | OPEN-3 | **P0 hardware purchase.** Ubuntu 4090 workstation (~€4–6k), Mac Studio 128 GB, or defer until Phase 3 forces the call? | No blocker before Phase 3. |
 | OPEN-4 | **Start date and staffing.** §7 assumes full-time from 2026-09-07. | Confirm or restate; the calendar re-derives from effort. |

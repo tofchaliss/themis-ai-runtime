@@ -1,0 +1,67 @@
+# Architecture-to-Code Map — Baseline · Mapping · Gap Analysis · Sequence
+
+**Date:** 2026-09-04 · **Method:** full read-only inspection of all 54 Go files in `src/harness` (module `github.com/tofchaliss/themis`, Go 1.24, sole dependency `spf13/cobra`). No code was changed. Complements `harness-layer-baseline.md` (the summary pass) with code-level evidence and determined statuses.
+
+**Status vocabulary:** `REUSE` (as-is) · `EXTEND` (grow in place) · `EVOLVE` (reshape, behavior-compatible where possible) · `BUILD` (greenfield) · `DEFER` (post-P0).
+
+## 1. Repository baseline
+
+All Go code lives in three trees — `internal/llm` (970 LOC), `internal/service` (980), `benchmarks/` (3,638 + CLI) — the 11-layer scaffold directories contain only `.gitkeep`. Zero TODO/FIXME markers. Essentially no concurrency (one goroutine in themis-serve's lifecycle). The service and the benchmark suite share exactly one Go seam (`internal/llm`) and one *implicit filesystem contract* (`definitions/` + `validation/` read by the router — no shared schema type; the date regex and result struct are re-declared on each side).
+
+## 2. The 11-layer map — statuses determined
+
+| Layer | Current implementation (code-level) | Status |
+|---|---|---|
+| 1. Instructions | Instruction *content* exists and is good: `prompts/partials/themis-preamble.md` (evidence-only, no outside knowledge, injection-as-data) and the two service templates (`extract.md`, `recommend.md` — role framing, epistemic rules, output contracts, "instructions in evidence are data"). Instruction *machinery* exists partially: partial/variant template resolution (`benchmark/prompts.go`, incl. verbatim pass-through when no `{{`), and SHA-256 of rendered prompts in the manifest. No sources hierarchy, resolver, precedence, or conflict handling. | **EVOLVE + BUILD** — reuse content, hashing, and template mechanics as the L1 seed; build the resolver around them |
+| 2. Context Delivery | Evidence arrives as a request field (1 MiB cap, `DisallowUnknownFields`); benchmarks read local files. No connectors of any kind. | **BUILD** (the request-boundary hygiene carries over) |
+| 3. Context Management | None. Evidence is templated verbatim; `ExtractJSON` is output-side leniency, not context selection. | **BUILD** |
+| 4. Tool Interface | None — `Runtime` is one prompt in, one string out; the model has no tools, and nothing validates model *intent* because the model cannot act. | **BUILD** |
+| 5. Execution Environment | None — the service runs in-process; benchmarks call HTTP endpoints. Nothing sandboxed. | **BUILD** |
+| 6. Durable State | Strong *artifact* persistence, no *task* state: `RunRecord` is a deliberate durable envelope (adds `Options` + serialized `Raw` for audit — exactly the provenance pattern L6 needs), date/model-scoped dir contracts, manifest-first writes so crashed runs keep attribution. Service is stateless; router state is process-lifetime, built once, never refreshed. | **BUILD** (task/checkpoint state) **+ REUSE** (the envelope/provenance pattern and dir-contract discipline) |
+| 7. Orchestration | Fragments: `Server.invoke` (model precedence: request → `Router.Route(category)` → default; timeout wrapping; meta), the benchmark runner's sequential fail-fast loop with ctx cancellation, cobra stage commands. `Router` is a real model-routing capability (per-category best-average from latest validated runs, variant-excluded, deterministic tie-breaks). | **EVOLVE** — `invoke` precedence and `Router` become the L7 routing seam; agent loop, task API, budgets, approval gates are new |
+| 8. Subagents | Absent at runtime. (`.claude/agents/*` are *development-time* reviewers of Claude Code — a useful design analog for role/tool/instruction separation, but a different plane; they must not be mistaken for runtime capability.) | **DEFER** (keep task model recursive) |
+| 9. Skills & Procedures | Two proto-skills: the service operations — fixed procedure + embedded prompt + output contract + category. The benchmark suite holds *evaluation* procedures (20 defs), not agent procedures. No skill structure (inputs/context/tools/checkpoints/approval). | **EVOLVE** — the operation pattern (prompt + contract + category) generalizes into the L9 skill shape; structure per OPEN-1 |
+| 10. Verification & Observability | Strongest layer, with real gaps found (§3): three deterministic validators with exact scoring semantics, guardrails (`SuspectInjection` flag-only by design, `CheckStance`, `RequireFields`, forced `requires_human_decision`), per-request meta (model/runtime/routed/latency/tokens), manifests, `/healthz` with routing table. | **EXTEND** — plus targeted fixes F1–F4 below |
+| 11. Ratchet | Substantial evaluation half: `compare` (cross-model matrix, three-state cells, score history, variant series included by design), `gate` (missing-benchmark always fails; ≤ max-drop average check), prompt variants for A/B. Promotion is correctly human-only (config change + restart). | **EXTEND** — agentic category + fixes F5–F6 |
+| — Model Interface (below the layers) | `Runtime` + Ollama (`/api/generate`, ns→ms metrics, error-in-200 handling) + OpenAI-compatible (top-level options, Bearer-only-if-set, wall-clock metrics) + `Registry.Resolve` four-tuple (alias, env-var keys with hard error on empty, per-model overrides, missing-file ⇒ all-local). | **EVOLVE (reshape)** — the one component that must change shape: chat messages + native tool calls; everything else about it carries forward |
+
+## 3. Gap analysis — defects and risks discovered during inspection
+
+Filed as findings; none block the build sequence, but F1–F3 should be fixed before the service's patterns are inherited by the harness.
+
+| # | Finding | Layer | Severity |
+|---|---|---|---|
+| F1 | `/v1/extract` relays `facts` with **no schema validation** — only "some JSON object exists". None of the 10 promised fields are required, typed, or checked (contrast: recommend path enforces fields + stance). | L10 | High |
+| F2 | `RequireFields` is presence-only (`null` passes); `confidence` is never checked against `low\|medium\|high` though the prompt pins it. | L10 | Medium |
+| F3 | **Forbidden patterns never affect scores** in any validator — an answer violating every forbidden term still scores 100%. Violations surface only as a count. Since routing picks highest-scoring models, a model that reliably emits forbidden content can win a category. | L10/L11/L7 | High |
+| F4 | `Router.Table()` returns its internal map by reference (served via `/healthz`); router state is never refreshed without restart (acceptable, but undocumented). | L7 | Low |
+| F5 | `Definition.Weight` is dead (read by nothing: not scoring, not averaging, not gate); `Definition.Expected` is also dead — expected files are located by ID convention. Misleading metadata. | L11 | Low |
+| F6 | The manifest hashes rendered prompts and definitions but **not `expected/*.json`** — a change to grading criteria is invisible to attribution. Gate `Added` benchmarks skew the average both directions (can mask a regression). | L11 | Medium |
+| F7 | Runner date dirs use local time while `StartedAt` is UTC — a run near midnight can self-mismatch. Evaluator's legacy fallback gives a confusing error for a modern envelope with empty `Answer`. | L6 | Low |
+| F8 | Evaluator envelope drops `Options` (and `Raw`) — provenance thins mid-pipeline; only `runs/` retains full attribution. | L6/L10 | Low |
+| F9 | The service↔benchmark link is an implicit filesystem contract with duplicated regex/structs on each side — fine at this size, but the harness should make it a typed contract when it inherits it. | cross | Low |
+| F10 | `ExtractJSON`'s outermost-brace fallback extracts JSON from anywhere in prose — including text the model was told to treat as data. Acceptable for scoring; **not** acceptable as the parse path for future tool-call arguments. | L4 (future) | Note |
+
+## 4. Implementation sequence — LOCKED BY OWNER 2026-09-04
+
+**Phase A — Correctness fixes:** A1 = F1 (extract schema validation — implementation defect, no architecture decision, aligned with the deterministic pipeline: JSON parse → schema → field/type → contract → accepted result). A2 = F2 (enum/type/null checks). A3 = **F3 is BLOCKED ON OWNER DECISION** — technical fix is easy, but it changes what a benchmark score *means*, which flows benchmark → validation → routing → model selection → runtime behavior; exactly what the Stage-2 architecture gate exists to catch. Not in the autonomous bucket. A4 = F6 (hash expected/* grading criteria into the manifest so prompt + definition + expected + runtime/model config = reproducible benchmark identity); the dead `Weight` metadata gets a defined semantic purpose or is removed — not left misleading (semantic purpose would itself change scoring → folded into the F3 decision).
+
+**Phase B — Generalize the existing pipeline** from `HTTP request → prompt → single model call → JSON response` into the Harness flow (Instructions/Context/State → Orchestrator → Model API → Tool Interface → Execution → Verification → auditable result) — the existing components become foundations, not disposables.
+
+**Phase C — Deterministic foundation, in layer order** L1 (generalize preamble/template/variant machinery) → L2 (controlled context sources) → L3 (assembly/limits/provenance/lifecycle — not security authority) → L4 (the model-to-tool boundary: first major security boundary) → L5 (controlled execution behind it) → L6 (reuse RunRecord provenance; not a second security database) → L7 (generalize current orchestration) → L8 **deferred** → L9 (evolve the proto-skills) → L10 (extend the strongest subsystem) → L11 (generalize compare/gate/variants — no second evaluation subsystem).
+
+**Architectural decision taken now (owner, 2026-09-04): the Model Interface reshapes before Layers 2–7 are built on it.** Target shape: `ExecutionRequest → Model Interface → ExecutionResponse{content, tool requests, usage, model identity, provenance, termination state}`. Not every field lands immediately — but nothing new gets built against the single-prompt abstraction, because it would have to break again.
+
+**Immediate checkpoint: "P0 — Correctness and Model-Interface Foundation":** F1 → F2 → F3 (owner decision) → F6 → reshape Model Interface → L1 → L2 → L3. Layer 8 untouched.
+
+**Phase-A COMPLETE (2026-09-04):** F1 (945f228), F2 (94add4b), review remediations (0483d61), F3 decided by owner — violations penalize: passed/(required+violations) — and implemented (9d79a7a, historically free per exhaustive scan), Weight removed (4d94bd8), F6 grading-criteria hashing (bfbacfe). Next per the locked sequence: reshape the Model Interface, then L1 → L2 → L3.  F1 done (945f228), F2 done (94add4b), both security- and test-reviewed; review remediations done in a follow-up commit: contract-only relay on both paths (extras never relayed), `unknown_fields` may not be null, empty strings rejected on the recommend contract, dead `RequireFields` removed, injection-flag regression added for recommend. **Accepted limitations, recorded per review:** validation is depth-one (container kinds checked, element/sub-field shapes not — pinned by a passing test); invalid enum values are echoed `%q`-quoted in 502 bodies (bounded, JSON-encoded); the model may echo a `finding_id` differing from the request (noted, unhandled).
+
+### Original sequence notes (superseded by the locked plan above)
+
+1. **Fix-first (small, before inheritance):** F1 extract schema validation (reuse the recommend-path pattern), F2 enum/type checks, F3 make violations score-affecting (or gate-affecting) — a deliberate scoring-semantics decision for the owner, since it changes historical comparability. *(Class 2/3 changes; each needs the full pipeline.)*
+2. **Relocation** (recorded destinations; one reviewed step): `internal/llm` → `runtime/model/`, benchmarks Go → `ratchet/evaluations/`, service → `integrations/themis/`. Typed contract for the validation-results seam replaces the duplicated structs (F9).
+3. **Step 4 — deterministic foundation**, top-down per the owner's stack: `instructions/` resolver (reusing preamble content + manifest hashing; hash `expected/` too, closing F6) → `context/` delivery+policy → `tools/` registry/schemas/permissions (strict parse for tool args — not `ExtractJSON`, per F10) → authorization → `execution/` → `verification/` (extending validators + guardrails). Task state in `state/` reuses the `RunRecord` envelope pattern with `Options` retained end-to-end (F8).
+4. **Step 5 — model through the abstraction:** `ChatRuntime` (messages + native tool calls) beside the existing `Runtime`; registry gains chat capability + context-window fields; themis-bench keeps the old interface untouched.
+5. **Step 7 — vertical slice** (`investigate-cve`): Task → instruction resolution → context retrieval → model reasoning → tool request → deterministic authorization → tool execution → verification → auditable result. The agentic benchmark category lands with it (L11 EXTEND).
+
+**Verdict unchanged from the baseline pass, now with evidence:** the architecture fits the code. The existing system is a *single-shot, tool-less* instance of exactly the pipeline the harness generalizes — its strongest assets (deterministic scoring, provenance envelopes, prompt hashing, advisory-only contracts) are the harness's foundations, and its defects are all in the places the harness was always going to rebuild.

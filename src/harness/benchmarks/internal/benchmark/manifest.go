@@ -29,10 +29,15 @@ type Manifest struct {
 
 	Options llm.Options `json:"options"`
 
-	// Prompts and Definitions map benchmark IDs to the SHA-256 of the
-	// file contents used for this run.
+	// Prompts, Definitions, and Expected map benchmark IDs to the
+	// SHA-256 of the file contents used for this run. Expected covers
+	// the grading criteria: a benchmark's identity is prompt +
+	// definition + expected spec + the options above, so a change to
+	// how answers are scored is as visible as a change to what was
+	// asked.
 	Prompts     map[string]string `json:"prompts"`
 	Definitions map[string]string `json:"definitions"`
+	Expected    map[string]string `json:"expected"`
 }
 
 // WriteManifest writes the manifest into runs/<date>/<name>/.

@@ -64,6 +64,7 @@ func RunAll(ctx context.Context, cfg RunConfig) error {
 		Options:     cfg.Options,
 		Prompts:     map[string]string{},
 		Definitions: map[string]string{},
+		Expected:    map[string]string{},
 	}
 
 	loader, err := NewPrompts(cfg.Root, cfg.Variant)
@@ -94,6 +95,18 @@ func RunAll(ctx context.Context, cfg RunConfig) error {
 
 		if data, err := os.ReadFile(definitionFile); err == nil {
 			manifest.Definitions[d.ID] = hashBytes(data)
+		}
+
+		// The expected file is located by ID convention, exactly as
+		// the validate stage locates it.
+		expectedFile := filepath.Join(
+			cfg.Root,
+			"expected",
+			d.ID+".json",
+		)
+
+		if data, err := os.ReadFile(expectedFile); err == nil {
+			manifest.Expected[d.ID] = hashBytes(data)
 		}
 	}
 

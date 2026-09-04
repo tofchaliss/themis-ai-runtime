@@ -90,6 +90,10 @@ func TestPipelineEndToEnd(t *testing.T) {
 	if len(manifest.Prompts) != 1 || manifest.Prompts["B001"] == "" {
 		t.Errorf("manifest prompts = %v", manifest.Prompts)
 	}
+	// The grading criteria are part of the run's identity (F6).
+	if len(manifest.Expected) != 1 || manifest.Expected["B001"] == "" {
+		t.Errorf("manifest expected = %v", manifest.Expected)
+	}
 
 	// Evaluate. The manifest must not be treated as a run.
 	if err := evaluator.EvaluateAll(root, date, "test-model"); err != nil {

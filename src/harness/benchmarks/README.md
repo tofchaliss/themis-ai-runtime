@@ -76,8 +76,8 @@ missing from the current date, or when the average score dropped more
 than `--max-drop` points.
 
 Every run directory also contains a `manifest.json` recording the
-runtime, generation options, and SHA-256 hashes of the exact prompts
-and definitions used — so any score is attributable to a specific
+runtime, generation options, and SHA-256 hashes of the exact prompts,
+definitions, and expected/grading specs used — so any score is attributable to a specific
 model + prompt combination.
 
 ### Model registry

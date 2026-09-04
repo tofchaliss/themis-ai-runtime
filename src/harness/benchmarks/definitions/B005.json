@@ -3,6 +3,5 @@
   "name": "SBOM Analysis",
   "category": "Analysis",
   "prompt": "B005.md",
-  "description": "Verify the model can explain the purpose of an SBOM and identify security risks from its contents.",
-  "weight": 10
+  "description": "Verify the model can explain the purpose of an SBOM and identify security risks from its contents."
 }

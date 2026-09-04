@@ -4,6 +4,5 @@
   "category": "Reasoning",
   "expected": "B013.json",
   "prompt": "B013.md",
-  "description": "Recommend an Enterprise Position for a Finding using only supplied Themis evidence.",
-  "weight": 10
+  "description": "Recommend an Enterprise Position for a Finding using only supplied Themis evidence."
 }

@@ -4,6 +4,5 @@
   "category": "Analysis",
   "expected": "B019.json",
   "prompt": "B019.md",
-  "description": "Find security misconfigurations in a Terraform definition without flagging acceptable settings.",
-  "weight": 10
+  "description": "Find security misconfigurations in a Terraform definition without flagging acceptable settings."
 }

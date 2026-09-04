@@ -4,6 +4,5 @@
   "category": "Analysis",
   "expected": "B018.json",
   "prompt": "B018.md",
-  "description": "Find every hardcoded credential in a committed configuration file.",
-  "weight": 10
+  "description": "Find every hardcoded credential in a committed configuration file."
 }

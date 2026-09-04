@@ -4,6 +4,5 @@
   "category": "Reasoning",
   "expected": "B015.json",
   "prompt": "B015.md",
-  "description": "Evaluate whether the model can produce a complete, evidence-grounded vulnerability recommendation without unnecessary reasoning or unsupported detail.",
-  "weight": 10
+  "description": "Evaluate whether the model can produce a complete, evidence-grounded vulnerability recommendation without unnecessary reasoning or unsupported detail."
 }

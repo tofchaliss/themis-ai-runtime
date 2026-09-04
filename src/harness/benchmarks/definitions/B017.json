@@ -4,6 +4,5 @@
   "category": "Analysis",
   "expected": "B017.json",
   "prompt": "B017.md",
-  "description": "Identify the vulnerability class fixed by a patch and explain the fix.",
-  "weight": 10
+  "description": "Identify the vulnerability class fixed by a patch and explain the fix."
 }

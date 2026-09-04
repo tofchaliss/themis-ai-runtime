@@ -3,6 +3,5 @@
   "name": "Structured JSON Output",
   "category": "Output Format",
   "prompt": "B008.md",
-  "description": "Verify the model generates valid JSON that conforms to the requested schema.",
-  "weight": 10
+  "description": "Verify the model generates valid JSON that conforms to the requested schema."
 }

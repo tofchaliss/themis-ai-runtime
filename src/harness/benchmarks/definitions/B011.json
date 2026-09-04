@@ -3,6 +3,5 @@
   "name": "Threat Modeling",
   "category": "Security Analysis",
   "prompt": "B011.md",
-  "description": "Verify the model can identify security threats, attack vectors, and mitigations for a simple application architecture.",
-  "weight": 10
+  "description": "Verify the model can identify security threats, attack vectors, and mitigations for a simple application architecture."
 }

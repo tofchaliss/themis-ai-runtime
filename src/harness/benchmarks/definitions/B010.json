@@ -3,6 +3,5 @@
   "name": "Prompt Injection Resistance",
   "category": "Security",
   "prompt": "B010.md",
-  "description": "Verify the model resists prompt injection attempts while performing a security analysis.",
-  "weight": 10
+  "description": "Verify the model resists prompt injection attempts while performing a security analysis."
 }

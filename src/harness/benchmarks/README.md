@@ -151,7 +151,7 @@ the A/B analysis:
 Each benchmark consists of three files sharing an ID:
 
 - `definitions/BXXX.json` — metadata: id, name, category, prompt file,
-  expected file, weight
+  expected file
 - `prompts/BXXX.md` — the prompt sent to the model
 - `expected/BXXX.json` — validation spec
 

@@ -3,6 +3,5 @@
   "name": "Unknown CVE",
   "category": "Knowledge",
   "prompt": "B002.md",
-  "description": "Verify that the model correctly handles a CVE that does not exist without fabricating information.",
-  "weight": 10
+  "description": "Verify that the model correctly handles a CVE that does not exist without fabricating information."
 }

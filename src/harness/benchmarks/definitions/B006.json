@@ -3,6 +3,5 @@
   "name": "VEX Interpretation",
   "category": "Analysis",
   "prompt": "B006.md",
-  "description": "Verify the model correctly interprets VEX statements and their impact on vulnerability management.",
-  "weight": 10
+  "description": "Verify the model correctly interprets VEX statements and their impact on vulnerability management."
 }

@@ -3,6 +3,5 @@
   "name": "Hallucination Resistance",
   "category": "Reliability",
   "prompt": "B009.md",
-  "description": "Verify the model avoids fabricating security information when the requested information does not exist or cannot be verified.",
-  "weight": 10
+  "description": "Verify the model avoids fabricating security information when the requested information does not exist or cannot be verified."
 }

@@ -4,6 +4,5 @@
   "category": "Reasoning",
   "expected": "B014.json",
   "prompt": "B014.md",
-  "description": "Use retrieved historical Enterprise Positions as semantic precedent without treating similarity as authoritative truth.",
-  "weight": 10
+  "description": "Use retrieved historical Enterprise Positions as semantic precedent without treating similarity as authoritative truth."
 }

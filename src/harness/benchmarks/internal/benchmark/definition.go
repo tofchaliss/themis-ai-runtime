@@ -8,5 +8,4 @@ type Definition struct {
 	Prompt      string `json:"prompt"`
 	Expected    string `json:"expected"`
 	Description string `json:"description,omitempty"`
-	Weight      int    `json:"weight"`
 }

@@ -3,6 +3,5 @@
   "name": "CVSS Assessment",
   "category": "Knowledge",
   "prompt": "B003.md",
-  "description": "Verify the model correctly explains CVSS scoring and severity for a known vulnerability.",
-  "weight": 10
+  "description": "Verify the model correctly explains CVSS scoring and severity for a known vulnerability."
 }

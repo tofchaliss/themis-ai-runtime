@@ -222,6 +222,48 @@ func TestRecommendEndpoint(t *testing.T) {
 		}
 	})
 
+	t.Run("invalid confidence is a 502", func(t *testing.T) {
+		api, _ := newTestServer(t, strings.Replace(
+			valid, `"high"`, `"absolutely certain"`, 1,
+		))
+
+		status, body := postJSON(t, api.URL+"/v1/recommend-position",
+			`{"finding_id": "F-1", "evidence": "x"}`)
+
+		if status != http.StatusBadGateway {
+			t.Fatalf("status = %d, body %v", status, body)
+		}
+	})
+
+	t.Run("null rationale is a 502", func(t *testing.T) {
+		api, _ := newTestServer(t, strings.Replace(
+			valid, `"version in affected range"`, `null`, 1,
+		))
+
+		status, body := postJSON(t, api.URL+"/v1/recommend-position",
+			`{"finding_id": "F-1", "evidence": "x"}`)
+
+		if status != http.StatusBadGateway {
+			t.Fatalf("status = %d, body %v", status, body)
+		}
+		if !strings.Contains(body["error"].(string), "must not be null") {
+			t.Errorf("error = %v", body["error"])
+		}
+	})
+
+	t.Run("non-array evidence_basis is a 502", func(t *testing.T) {
+		api, _ := newTestServer(t, strings.Replace(
+			valid, `["sbom"]`, `"sbom"`, 1,
+		))
+
+		status, _ := postJSON(t, api.URL+"/v1/recommend-position",
+			`{"finding_id": "F-1", "evidence": "x"}`)
+
+		if status != http.StatusBadGateway {
+			t.Fatalf("status = %d, want 502", status)
+		}
+	})
+
 	t.Run("missing contract field is a 502", func(t *testing.T) {
 		api, _ := newTestServer(t, `{"finding_id": "F-1"}`)
 

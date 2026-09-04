@@ -61,6 +61,69 @@ func RequireFields(obj map[string]any, fields ...string) error {
 	return nil
 }
 
+// validConfidence pins the only confidence levels prompts/recommend.md
+// permits. Anything else from a model is a contract violation.
+var validConfidence = map[string]bool{
+	"low":    true,
+	"medium": true,
+	"high":   true,
+}
+
+// CheckConfidence enforces the recommendation confidence contract.
+func CheckConfidence(confidence string) error {
+	if !validConfidence[confidence] {
+		return fmt.Errorf(
+			"model returned invalid confidence %q (must be low, medium, or high)",
+			confidence,
+		)
+	}
+	return nil
+}
+
+// recommendContract pins the kinds of prompts/recommend.md's output
+// contract. Unlike extraction, no recommendation field may be null:
+// an uncertain model must recommend the "open" stance, not omit its
+// reasoning.
+var recommendContract = map[string]string{
+	"finding_id":         "string",
+	"recommended_stance": "string",
+	"confidence":         "string",
+	"rationale":          "string",
+	"evidence_basis":     "array",
+}
+
+// ValidateRecommendation enforces presence, non-null, kind, and enum
+// constraints on the model's recommendation. Violations are upstream
+// failures and never relayed.
+func ValidateRecommendation(rec map[string]any) error {
+
+	fields := make([]string, 0, len(recommendContract))
+	for f := range recommendContract {
+		fields = append(fields, f)
+	}
+	sort.Strings(fields)
+
+	for _, f := range fields {
+		v, ok := rec[f]
+		if !ok {
+			return fmt.Errorf("model answer is missing required field %q", f)
+		}
+		if v == nil {
+			return fmt.Errorf("model answer field %q must not be null", f)
+		}
+		if err := checkKind(f, recommendContract[f], v); err != nil {
+			return err
+		}
+	}
+
+	stance, _ := rec["recommended_stance"].(string)
+	if err := CheckStance(stance); err != nil {
+		return err
+	}
+	confidence, _ := rec["confidence"].(string)
+	return CheckConfidence(confidence)
+}
+
 // extractContract pins the output contract of prompts/extract.md: every
 // field must be present, and a non-null value must be of the pinned
 // kind. The prompt requires null (plus a listing in unknown_fields) for

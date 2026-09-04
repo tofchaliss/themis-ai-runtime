@@ -164,20 +164,7 @@ func (s *Server) handleRecommend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := RequireFields(
-		recommendation,
-		"finding_id",
-		"recommended_stance",
-		"confidence",
-		"rationale",
-		"evidence_basis",
-	); err != nil {
-		writeError(w, http.StatusBadGateway, err.Error())
-		return
-	}
-
-	stance, _ := recommendation["recommended_stance"].(string)
-	if err := CheckStance(stance); err != nil {
+	if err := ValidateRecommendation(recommendation); err != nil {
 		writeError(w, http.StatusBadGateway, err.Error())
 		return
 	}

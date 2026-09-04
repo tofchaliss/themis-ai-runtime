@@ -15,6 +15,62 @@ func factsFromJSON(t *testing.T, raw string) map[string]any {
 	return m
 }
 
+func TestValidateRecommendation(t *testing.T) {
+
+	valid := `{
+		"finding_id": "F-1", "recommended_stance": "open",
+		"confidence": "low", "rationale": "insufficient evidence",
+		"evidence_basis": []}`
+
+	tests := []struct {
+		name    string
+		rec     string
+		wantErr string
+	}{
+		{name: "valid recommendation passes", rec: valid},
+		{
+			name:    "missing confidence fails",
+			rec:     `{"finding_id": "F-1", "recommended_stance": "open", "rationale": "r", "evidence_basis": []}`,
+			wantErr: `missing required field "confidence"`,
+		},
+		{
+			name:    "null field fails",
+			rec:     strings.Replace(valid, `"F-1"`, `null`, 1),
+			wantErr: `field "finding_id" must not be null`,
+		},
+		{
+			name:    "bad stance fails",
+			rec:     strings.Replace(valid, `"open"`, `"maybe"`, 1),
+			wantErr: "invalid stance",
+		},
+		{
+			name:    "bad confidence fails",
+			rec:     strings.Replace(valid, `"low"`, `"certain"`, 1),
+			wantErr: "invalid confidence",
+		},
+		{
+			name:    "non-string stance fails on kind",
+			rec:     strings.Replace(valid, `"open"`, `true`, 1),
+			wantErr: `field "recommended_stance" must be a string`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateRecommendation(factsFromJSON(t, tt.rec))
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Errorf("error = %v, want containing %q", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestValidateExtractFacts(t *testing.T) {
 
 	tests := []struct {

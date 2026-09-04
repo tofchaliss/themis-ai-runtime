@@ -65,9 +65,12 @@ func LoadRegistry(root string) (*Registry, error) {
 	return &r, nil
 }
 
-// Resolve returns the runtime, the model identifier to send to it, and
-// the generation options for the named model.
-func (r *Registry) Resolve(name string) (Runtime, string, Options, error) {
+// Lookup resolves the registry entry, wire model identifier, API key,
+// and generation options for the named model, without constructing a
+// runtime. It is the shared resolution step behind Resolve and the
+// chat-layer resolver; the API key is read from the entry's named
+// environment variable and an empty variable is a hard error.
+func (r *Registry) Lookup(name string) (Entry, string, string, Options, error) {
 
 	entry, ok := r.Models[name]
 	if !ok {
@@ -91,12 +94,24 @@ func (r *Registry) Resolve(name string) (Runtime, string, Options, error) {
 	if entry.APIKeyEnv != "" {
 		apiKey = os.Getenv(entry.APIKeyEnv)
 		if apiKey == "" {
-			return nil, "", options, fmt.Errorf(
+			return entry, "", "", options, fmt.Errorf(
 				"model %s: environment variable %s is not set",
 				name,
 				entry.APIKeyEnv,
 			)
 		}
+	}
+
+	return entry, modelName, apiKey, options, nil
+}
+
+// Resolve returns the runtime, the model identifier to send to it, and
+// the generation options for the named model.
+func (r *Registry) Resolve(name string) (Runtime, string, Options, error) {
+
+	entry, modelName, apiKey, options, err := r.Lookup(name)
+	if err != nil {
+		return nil, "", options, err
 	}
 
 	switch entry.Runtime {

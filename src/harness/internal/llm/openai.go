@@ -17,7 +17,7 @@ type OpenAI struct {
 	Endpoint string
 
 	// APIKey is sent as a Bearer token when non-empty.
-	APIKey string
+	APIKey string `json:"-"` // secret: never serialized
 
 	Client *http.Client
 }

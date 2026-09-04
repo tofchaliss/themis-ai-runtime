@@ -38,9 +38,15 @@ echo "$CMD" | grep -Eq 'git[[:space:]]+(rebase|filter-branch|filter-repo)([[:spa
 echo "$CMD" | grep -Eq 'git[[:space:]]+reset[[:space:]]+[^;|&]*--hard' \
   && block "reset --hard discards work irreversibly."
 
-# Shared-remote pushes
-echo "$CMD" | grep -Eq 'git[[:space:]]+push([[:space:]]|$)' \
-  && block "pushing to a shared remote requires owner approval."
+# Shared-remote pushes: blocked unless the command carries the explicit
+# owner-approval marker. Policy: Claude Code may add the marker only when
+# the owner has approved the push in the current conversation — the marker
+# in the command text is the recorded approval artifact. Force pushes are
+# never allowed, marker or not (checked below).
+if echo "$CMD" | grep -Eq 'git[[:space:]]+push([[:space:]]|$)'; then
+  echo "$CMD" | grep -q 'THEMIS_PUSH_APPROVED=1' \
+    || block "pushing to a shared remote requires owner approval (approved pushes run as: THEMIS_PUSH_APPROVED=1 git push ...)."
+fi
 
 # Branch-topology destruction
 echo "$CMD" | grep -Eq 'git[[:space:]]+branch[[:space:]]+[^;|&]*-(D|d)([[:space:]]|$)' \

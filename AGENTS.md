@@ -53,3 +53,4 @@ Testing style: table-driven `t.Run`; helpers take `t.Helper()`; HTTP via `httpte
 3. Never commit binaries that bloat the repo (built artifacts, model files, archives).
 4. Never commit API keys or tokens.
 5. Documents lint clean before check-in: staged Markdown must have no merge-conflict markers, no unbalanced code fences, and no broken relative links (mechanically enforced by `doc-lint-guard`; run `.claude/hooks/doc-lint-guard --all` to check staged docs manually).
+6. Never commit dot-prefixed directories — editor/tool artifacts (`.idea/`, `.vscode/`, `.venv/`, `.cache/`, …) stay out of history. Sanctioned exceptions: `.claude/` and `.github/`. Dot *files* (`.gitignore`, `.gitkeep`) are fine. (Mechanically enforced by `git-guard`.)

@@ -1,186 +1,85 @@
-# Themis System Architecture
+# Themis AI Runtime — Architecture
 
-**Authoritative.** This file is the single authoritative description of the system architecture — components, boundaries, ownership, and data/control flows. It does not contain Claude Code operating procedure (that is `.claude/skills/themis-harness-engineering/SKILL.md`, which references and operationalizes this file without duplicating it). Architecture changes once, here — development instructions adapt to it. Detailed baselines: `docs/architecture/` and `docs/harness-project-report.md`.
+## Purpose
+Themis is the security application and system of record. The AI Harness is an execution capability of Themis, architecturally owned and governed by Themis.
 
-## A. System purpose
+## Deployment Boundary
+The AI Harness is an execution capability of Themis—architecturally owned and governed by Themis, whether deployed in-process or as a separate Themis-controlled process/node. Deployment topology is an explicit architecture decision.
 
-The Themis Agent Harness exists so that Themis — the security application and system of record — can delegate real engineering and security tasks to an AI agent, have them performed inside a controlled computer environment, and receive independently verifiable evidence back. The Harness supplies everything the model cannot be trusted to own: rules, context selection, controlled tools, an isolated workplace, durable state, orchestration, verification, and audit.
+## Harness Capability Layers
+1. Instructions
+2. Context Delivery
+3. Context Management
+4. Tool Interface
+5. Execution Environment
+6. Durable State
+7. Orchestration
+8. Subagents
+9. Skills and Procedures
+10. Verification and Observability
+11. Ratchet
 
-## B. System boundary
+These are capability/ownership boundaries, not a requirement for eleven source-code directories.
 
-```
-                    ┌─────────────────────────┐
-                    │         Themis          │
-                    │ Security System of       │
-                    │ Record / Authority       │
-                    └────────────┬────────────┘
-                                 │
-                         authorized boundary
-                                 │
-                    ┌────────────▼────────────┐
-                    │      AI Harness          │
-                    │                          │
-                    │  11 capability layers   │
-                    │                          │
-                    │  Instructions            │
-                    │  Context Delivery        │
-                    │  Context Management      │
-                    │  Tool Interface          │
-                    │  Execution Environment   │
-                    │  Durable State           │
-                    │  Orchestration           │
-                    │  Subagents               │
-                    │  Skills / Procedures     │
-                    │  Verification / Obs.     │
-                    │  Ratchet                 │
-                    └────────────┬────────────┘
-                                 │
-                         model abstraction
-                                 │
-                    ┌────────────▼────────────┐
-                    │       Model(s)           │
-                    │ replaceable reasoning    │
-                    │ component                │
-                    └─────────────────────────┘
-```
+## Ownership
+### Themis owns
+Security truth, Findings, Enterprise Positions, Security Governance, Enterprise Knowledge through the Knowledge Builder, and authorized security workflows.
 
-**This diagram does not imply deployment topology.** The Harness may eventually be in-process, a separate process, or another Themis-controlled deployment unit. That remains an architectural decision (a stop+ask condition) — never something to infer.
+### Harness owns
+AI execution/runtime coordination, context handling, authorized tool invocation, orchestration, runtime execution controls, and verification/observability of Harness execution.
 
-A layer **owns a capability**; it does not merely contain code related to that capability. If a capability's decisions are made outside its layer, the boundary is broken regardless of where the files sit.
+### Model adapter owns
+Model-specific protocol integration and transport concerns.
 
-## C. Security authority
+### Model owns
+Probabilistic reasoning only.
 
-```
-                    SECURITY AUTHORITY
-                           │
-                           ▼
-              ┌────────────────────────┐
-              │ Tier 0                 │
-              │ Immutable security     │
-              │ facts                   │
-              │ SBOM / artifacts /     │
-              │ observed facts         │
-              └───────────┬────────────┘
-                          ▼
-              ┌────────────────────────┐
-              │ Tier 1                 │
-              │ Deterministic security │
-              │ feeds                   │
-              │ CVE / VEX / scanner /  │
-              │ vendor security data   │
-              └───────────┬────────────┘
-                          ▼
-              ┌────────────────────────┐
-              │ Tier 2                 │
-              │ Derived enterprise     │
-              │ knowledge              │
-              └───────────┬────────────┘
-                          ▼
-              ┌────────────────────────┐
-              │ AI reasoning           │
-              │ interpretation /       │
-              │ hypothesis / analysis  │
-              └───────────┬────────────┘
-                          ▼
-              ┌────────────────────────┐
-              │ Presentation            │
-              └────────────────────────┘
-```
+The Harness must not become a second vulnerability-management or security-governance system.
 
-Tiers 0–1 are authoritative; Tier 2 is derived from them deterministically. AI reasoning consumes the tiers and produces advisory output; it can never write upward into any tier. Presentation displays; it establishes nothing. Sensitivity is independent of tier: every datum is separately assessed for storage, transmission, logging, and exposure.
+## Security Evidence and Authority
+Authority and sensitivity are separate dimensions.
 
-## D. Architectural ownership
+Authority hierarchy:
+1. Tier 0 — immutable security facts
+2. Tier 1 — deterministic security feeds
+3. Tier 2 — derived enterprise knowledge
+4. AI reasoning
+5. Presentation
 
-```
-Themis
- ├── Security Truth
- ├── Findings
- ├── Enterprise Positions
- ├── Security Governance
- ├── Knowledge Builder
- └── Authorized Security Workflows
-          │
-          ▼
-       Harness
-          │
-          ├── reasoning
-          ├── orchestration
-          ├── tool invocation
-          ├── context management
-          ├── verification
-          └── runtime execution
-          │
-          ▼
-        Model
-```
+External content is untrusted input even when it is authoritative evidence for a specific security fact. Provenance must be preserved.
 
-The Harness reads/writes authoritative state only through Themis-owned interfaces — never direct database access. Human authority is final: all AI output is advisory, and acceptance into security truth requires the appropriate human or governed Themis decision.
+## Deterministic / Probabilistic Boundary
+Deterministic mechanisms own authorization, permissions, policy, schema validation, state transitions, version comparisons, hashes, provenance, audit, verification, and security invariants.
 
-## E. Model boundary
+Probabilistic reasoning may provide interpretation, contextual analysis, hypotheses, summarization, and explanation.
 
-```
-Harness
-   │
-   │ Model Interface
-   ▼
-┌───────────────┐
-│ Model Adapter │
-└───────┬───────┘
-        │
-        ▼
-     Model
-```
+Model output is never security authority.
 
-The model (DeepSeek or any provider) is a replaceable reasoning component. Nothing above the Model Interface may know which provider is configured; provider-specific behavior lives only in the adapter/registry. The model is never told it is the security system — it reasons over supplied context with neutral role framing.
+Required flow:
+Model output -> validation -> policy -> authorization -> execution -> verification -> governed result.
 
-## F. Deterministic / probabilistic boundary
+## Authority Separation
+- Instruction != Context
+- Context != Authority
+- Tool != Authority
+- Model output != Authority
+- Harness state != Themis security truth
 
-One of the strongest architecture rules.
+The Harness may write to Themis only through explicit Themis-owned interfaces/workflows. It must not directly establish competing security truth.
 
-**Deterministic** (never model-based): authorization · permissions · policy · schema validation · state transitions · version comparison · hashing · provenance · audit · verification · security invariants.
+## External Systems
+External-system access is policy-gated and local-first by default. Data egress to a non-local system requires explicit, recorded operator authorization.
 
-**Probabilistic** (model territory): interpretation · contextual reasoning · hypothesis generation · summarization · explanation · analytical assistance.
+## Security Data Protection
+Dependencies are minimal and individually justified. Sensitivity is independently considered for storage, transmission, logging, and exposure. Sensitive values are redacted before durable storage or logs.
 
-Therefore every model output passes the deterministic pipeline before anything Themis-owned exists:
+## Failure and Safety
+The system must remain safe when models, external content, tools, dependencies, or external systems behave unexpectedly or maliciously.
 
-```
-Model output
-     │
-     ▼
-Validate
-     │
-     ▼
-Policy
-     │
-     ▼
-Authorize
-     │
-     ▼
-Execute
-     │
-     ▼
-Verify
-     │
-     ▼
-Themis-owned result
-```
+Security controls fail closed. Model confidence never substitutes for authorization. Secrets are not ordinary model context. Execution is isolated and constrained according to risk. Destructive or irreversible operations require deterministic policy controls, required approval, and verification.
 
-The model may *propose* crossing any boundary; only deterministic machinery may *effect* it. Model scoring/evaluation is deterministic (no LLM-as-judge in any gate path).
+## Decision Authority
+All AI output is advisory. Acceptance into security truth requires the appropriate human or governed Themis decision. A governed automated decision is not AI self-authority.
 
-## G. External boundary system
-
-External-system access is policy-gated, local-first by default, and data egress to non-local systems requires explicit, recorded operator authorization. This applies broadly:
-
-- remote models
-- web intelligence
-- external APIs
-- repositories
-- scanners
-- external security services
-- remote execution environments
-
-This boundary exists so the system is never accidentally redesigned into a web-enabled autonomous agent without recognizing that a trust boundary was crossed.
-
-## H. Where this lives
-
-This repository is a monorepo: the harness Go module is at `src/harness/` (root `go.work`); the Themis application is expected to join under `src/`. Existing components — `src/harness/internal/llm` (model layer) and `src/harness/benchmarks` (themis-bench) — are the foundations of the Model Adapter and the Ratchet's evaluation half (L11) respectively.
+## Architecture Changes
+Changes to architectural ownership, security authority, trust boundaries, deployment topology, or fundamental model architecture are explicit architecture decisions and must not be inferred by development tooling.

@@ -151,14 +151,4 @@ func TestGuardrails(t *testing.T) {
 		}
 	})
 
-	t.Run("required fields", func(t *testing.T) {
-		obj := map[string]any{"a": 1}
-
-		if err := RequireFields(obj, "a"); err != nil {
-			t.Error("present field reported missing")
-		}
-		if err := RequireFields(obj, "a", "b"); err == nil {
-			t.Error("missing field not reported")
-		}
-	})
 }

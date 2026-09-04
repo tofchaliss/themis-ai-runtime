@@ -53,6 +53,11 @@ func TestValidateRecommendation(t *testing.T) {
 			rec:     strings.Replace(valid, `"open"`, `true`, 1),
 			wantErr: `field "recommended_stance" must be a string`,
 		},
+		{
+			name:    "empty rationale fails",
+			rec:     strings.Replace(valid, `"insufficient evidence"`, `"  "`, 1),
+			wantErr: `field "rationale" must not be empty`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -68,6 +73,18 @@ func TestValidateRecommendation(t *testing.T) {
 				t.Errorf("error = %v, want containing %q", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestContractFields(t *testing.T) {
+	in := factsFromJSON(t, `{"finding_id": "F-1", "verified_by_themis": true}`)
+	out := ContractFields(in, recommendContract)
+
+	if _, ok := out["verified_by_themis"]; ok {
+		t.Error("extra model-supplied field survived the whitelist")
+	}
+	if out["finding_id"] != "F-1" {
+		t.Errorf("contract field lost: %v", out)
 	}
 }
 
@@ -105,6 +122,18 @@ func TestValidateExtractFacts(t *testing.T) {
 			name:    "object field with array fails",
 			facts:   strings.Replace(nullFacts, `"cvss": null`, `"cvss": [9.8]`, 1),
 			wantErr: `field "cvss" must be a object`,
+		},
+		{
+			name:    "null unknown_fields fails",
+			facts:   strings.Replace(nullFacts, `"unknown_fields": [`, `"unknown_fields": null, "ignored": [`, 1),
+			wantErr: `field "unknown_fields" must not be null`,
+		},
+		{
+			// Depth-one scope, pinned deliberately: container kinds are
+			// checked, element/sub-field shapes are not (accepted
+			// limitation recorded in the architecture-code map).
+			name:  "empty cvss object passes (depth-one scope)",
+			facts: strings.Replace(completeFacts, `{"score": 6.1}`, `{}`, 1),
 		},
 	}
 

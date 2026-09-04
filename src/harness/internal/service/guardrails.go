@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strings"
 )
 
 // injectionPatterns are deterministic markers of prompt-injection
@@ -46,17 +47,6 @@ func CheckStance(stance string) error {
 			"model returned invalid stance %q (must be affected, not_affected, or open)",
 			stance,
 		)
-	}
-	return nil
-}
-
-// RequireFields enforces that the model's JSON answer contains every
-// field of the operation's output contract.
-func RequireFields(obj map[string]any, fields ...string) error {
-	for _, f := range fields {
-		if _, ok := obj[f]; !ok {
-			return fmt.Errorf("model answer is missing required field %q", f)
-		}
 	}
 	return nil
 }
@@ -114,6 +104,9 @@ func ValidateRecommendation(rec map[string]any) error {
 		if err := checkKind(f, recommendContract[f], v); err != nil {
 			return err
 		}
+		if s, isString := v.(string); isString && strings.TrimSpace(s) == "" {
+			return fmt.Errorf("model answer field %q must not be empty", f)
+		}
 	}
 
 	stance, _ := rec["recommended_stance"].(string)
@@ -122,6 +115,20 @@ func ValidateRecommendation(rec map[string]any) error {
 	}
 	confidence, _ := rec["confidence"].(string)
 	return CheckConfidence(confidence)
+}
+
+// ContractFields returns a copy of the model's answer containing only
+// the operation's contract fields. Model output outside the contract is
+// never relayed: a model (or injected evidence steering it) must not be
+// able to add authoritative-looking sibling keys to a service response.
+func ContractFields(obj map[string]any, contract map[string]string) map[string]any {
+	out := make(map[string]any, len(contract))
+	for f := range contract {
+		if v, ok := obj[f]; ok {
+			out[f] = v
+		}
+	}
+	return out
 }
 
 // extractContract pins the output contract of prompts/extract.md: every
@@ -156,6 +163,11 @@ func ValidateExtractFacts(facts map[string]any) error {
 		v, ok := facts[f]
 		if !ok {
 			return fmt.Errorf("model answer is missing required field %q", f)
+		}
+		// unknown_fields is the one field that may never be null: it is
+		// the ledger that makes the other fields' nulls meaningful.
+		if f == "unknown_fields" && v == nil {
+			return fmt.Errorf("model answer field %q must not be null", f)
 		}
 		if err := checkKind(f, extractContract[f], v); err != nil {
 			return err

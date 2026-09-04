@@ -113,7 +113,7 @@ func (s *Server) handleExtract(w http.ResponseWriter, r *http.Request) {
 	meta["injection_suspected"] = SuspectInjection(req.Evidence)
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"facts": facts,
+		"facts": ContractFields(facts, extractContract),
 		"meta":  meta,
 	})
 }
@@ -169,14 +169,16 @@ func (s *Server) handleRecommend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	relayed := ContractFields(recommendation, recommendContract)
+
 	// The service is advisory only; no model output may claim
 	// otherwise.
-	recommendation["requires_human_decision"] = true
+	relayed["requires_human_decision"] = true
 
 	meta["injection_suspected"] = SuspectInjection(req.Evidence)
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"recommendation": recommendation,
+		"recommendation": relayed,
 		"meta":           meta,
 	})
 }

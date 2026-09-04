@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Harness engineering rules
+
+Before implementing or changing any harness code, read and follow `.claude/skills/themis-harness-engineering/SKILL.md` (identify the owning layer, the affected Themis authority boundary, and the smallest change first). The reviewer subagents in `.claude/agents/` (architecture-reviewer, security-reviewer, test-reviewer) review harness changes after implementation.
+
+Non-negotiable, always:
+- Themis is the security application and authority; the Harness is an internal AI runtime; DeepSeek is a replaceable model provider behind the model abstraction.
+- Never allow model output to become authoritative security truth.
+- Never bypass deterministic authorization because an agent or model requests an action.
+- Prefer the smallest tested change.
+
 ## Commands
 
 ```bash

@@ -66,7 +66,7 @@ func ValidateJSON(expected *Expected, answer string) (Result, error) {
 		}
 	}
 
-	result.Score = (result.Passed * 100) / len(want)
+	result.Score = score(result.Passed, len(want), len(result.Violations))
 
 	return result, nil
 }

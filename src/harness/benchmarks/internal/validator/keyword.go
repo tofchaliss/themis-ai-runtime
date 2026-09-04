@@ -34,10 +34,7 @@ func ValidateKeyword(expected *Expected, answer string) Result {
 		}
 	}
 
-	// Calculate score
-	if len(expected.Required) > 0 {
-		result.Score = (result.Passed * 100) / len(expected.Required)
-	}
+	result.Score = score(result.Passed, len(expected.Required), len(result.Violations))
 
 	return result
 }

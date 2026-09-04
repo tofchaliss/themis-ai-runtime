@@ -48,3 +48,15 @@ type Result struct {
 	Missing    []string `json:"missing"`
 	Violations []string `json:"violations"`
 }
+
+// score computes a benchmark score as passed checks over the total of
+// required checks plus violations: forbidden content an answer emits
+// counts against it exactly like a failed required check (owner
+// decision F3, 2026-09-04). Zero total yields zero.
+func score(passed, required, violations int) int {
+	total := required + violations
+	if total == 0 {
+		return 0
+	}
+	return (passed * 100) / total
+}

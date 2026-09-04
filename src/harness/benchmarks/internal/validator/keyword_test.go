@@ -51,6 +51,11 @@ func TestValidateKeyword(t *testing.T) {
 		if !reflect.DeepEqual(result.Violations, []string{"SQL Injection"}) {
 			t.Errorf("Violations = %v", result.Violations)
 		}
+		// F3: violations penalize the score — 3 passed of 3 required
+		// plus 1 violation = 300/4.
+		if result.Score != 75 {
+			t.Errorf("Score = %d, want 75 (violation penalty)", result.Score)
+		}
 	})
 
 	t.Run("matching is case-insensitive", func(t *testing.T) {

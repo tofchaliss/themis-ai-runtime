@@ -11,7 +11,7 @@
            Skill       Agents        Hooks
 ```
 
-**Status: the final standard is ASSEMBLED and INSTALLED (Stage 5 executed 2026-09-04).** The draft pack (ab554c9) is fully superseded. The live standard: `ARCHITECTURE.md` (authoritative architecture) · `CLAUDE.md` (orientation) · `AGENTS.md` (repo conventions) · `.claude/policy/DAY-0.md` (authoritative prohibitions, 8 areas) · `.claude/skills/themis-harness-engineering/SKILL.md` (engineering constitution, 30 sections) · three review agents · four hooks (destructive-command-guard, git-guard, secret-guard, verification-guard) registered in `.claude/settings.json` — 31/31 hook tests passing at assembly.
+**Status: the final standard is ASSEMBLED and INSTALLED (Stage 5 executed 2026-09-04).** The draft pack (ab554c9) is fully superseded. The live standard: `ARCHITECTURE.md` (authoritative architecture) · `CLAUDE.md` (orientation) · `AGENTS.md` (repo conventions) · `.claude/policy/DAY-0.md` (authoritative prohibitions, 8 areas) · `.claude/skills/themis-harness-engineering/SKILL.md` (engineering constitution, 30 sections) · three review agents · five hooks (destructive-command-guard, git-guard, secret-guard, verification-guard, and doc-lint-guard — the owner-mandated document-linting check-in rule of 2026-09-04) registered in `.claude/settings.json` — 31/31 + 7/7 hook tests passing.
 
 **Process rule:** a stage closes only by explicit owner sign-off; later stages may reopen earlier ones, but only with a recorded reason.
 

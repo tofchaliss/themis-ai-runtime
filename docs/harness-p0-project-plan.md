@@ -1,7 +1,7 @@
 # Themis Agent Harness — P0 Project Plan
 
 **Status:** Draft for discussion
-**Baseline:** [`architecture/harness-p0-architecture-v2.md`](architecture/harness-p0-architecture-v2.md), as amended by the 2026-09-03 decisions (Go; grown in this repo; local-default models with policy-gated hosted DeepSeek; thin-vertical-slice P0)
+**Baseline:** [`architecture/harness/00-p0-architecture-v2.md`](architecture/harness/00-p0-architecture-v2.md), as amended by the 2026-09-03 decisions (Go; grown in this repo; local-default models with policy-gated hosted DeepSeek; thin-vertical-slice P0)
 **Assumed staffing:** one senior engineer working with AI assistance (estimates below are in that unit; scale accordingly)
 
 ---

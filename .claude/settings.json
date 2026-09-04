@@ -6,7 +6,8 @@
         "hooks": [
           { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/destructive-command-guard" },
           { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/git-guard" },
-          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/secret-guard" }
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/secret-guard" },
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/doc-lint-guard" }
         ]
       }
     ],

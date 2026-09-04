@@ -79,4 +79,3 @@ themis-ai-runtime/
 - **Go tests** live beside their packages (Go idiom, existing 2,000 test LOC); `tests/` holds only cross-cutting integration and evaluation suites.
 - **`src/themis/` interior** is not scaffolded — the application arrives with its own tree.
 - Layer documents follow `docs/architecture/harness/NN-<layer>.md` (01–11).
-```

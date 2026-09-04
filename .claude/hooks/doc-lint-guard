@@ -1,0 +1,83 @@
+#!/bin/bash
+# doc-lint-guard — document linting is a check-in rule (owner-mandated
+# 2026-09-04): staged Markdown must lint clean before any git commit.
+# Deterministic, dependency-free (python3 stdlib). Checks staged .md content:
+#   1. merge-conflict markers
+#   2. unbalanced code fences
+#   3. broken relative links (target file must exist in the repo)
+# Registered in .claude/settings.json (PreToolUse: Bash). Exit 2 blocks.
+# Manual run: .claude/hooks/doc-lint-guard --all   (lints staged .md files)
+set -uo pipefail
+
+if [ "${1:-}" = "--all" ]; then
+  CMD="git commit"
+else
+  INPUT=$(cat)
+  CMD=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null) || exit 0
+  [ -z "$CMD" ] && exit 0
+fi
+
+# Only act on git commit
+echo "$CMD" | grep -Eq '(^|[;&|][[:space:]]*)git[[:space:]]+([^;|&]*[[:space:]])?commit([[:space:]]|$)' || exit 0
+
+cd "${CLAUDE_PROJECT_DIR:-.}" 2>/dev/null || exit 0
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
+
+STAGED_MD=$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null | grep -E '\.md$' || true)
+[ -z "$STAGED_MD" ] && exit 0
+
+FINDINGS=$(echo "$STAGED_MD" | python3 -c '
+import sys, os, re, subprocess
+
+problems = []
+link_re = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
+
+for path in [l.strip() for l in sys.stdin if l.strip()]:
+    try:
+        content = subprocess.run(["git", "show", ":" + path],
+                                 capture_output=True, check=True).stdout.decode("utf-8")
+    except (subprocess.CalledProcessError, UnicodeDecodeError):
+        problems.append(f"{path}: staged content unreadable as UTF-8")
+        continue
+
+    lines = content.splitlines()
+
+    # 1. merge-conflict markers
+    for i, line in enumerate(lines, 1):
+        if re.match(r"^(<{7}( |$)|={7}$|>{7}( |$))", line):
+            problems.append(f"{path}:{i}: merge-conflict marker")
+
+    # 2. unbalanced code fences (``` at line start, ignoring indented ones in lists >3 spaces deep is fine to count too)
+    fences = sum(1 for l in lines if l.lstrip().startswith("```"))
+    if fences % 2 != 0:
+        problems.append(f"{path}: unbalanced code fences ({fences} fence lines)")
+
+    # 3. broken relative links — checked outside code fences
+    in_fence = False
+    for i, line in enumerate(lines, 1):
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        for target in link_re.findall(line):
+            if re.match(r"^(https?:|mailto:|#|/)", target):
+                continue
+            rel = target.split("#")[0]
+            if not rel:
+                continue
+            resolved = os.path.normpath(os.path.join(os.path.dirname(path), rel))
+            if not os.path.exists(resolved):
+                problems.append(f"{path}:{i}: broken relative link -> {target}")
+
+print("\n".join(problems[:12]))
+' 2>/dev/null || true)
+
+if [ -n "$FINDINGS" ]; then
+  echo "BLOCKED (doc-lint-guard): staged Markdown fails document linting:
+$FINDINGS
+Fix the documents (or their staged versions) and retry the commit." >&2
+  exit 2
+fi
+
+exit 0

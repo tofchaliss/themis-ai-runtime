@@ -12,6 +12,13 @@ Non-negotiable, always:
 - Never bypass deterministic authorization because an agent or model requests an action.
 - Prefer the smallest tested change.
 
+## Check-in rules (Day-0, user-mandated)
+
+1. Never add a Claude signature or co-author/session trailer to any commit.
+2. Always honor `.gitignore` — never force-add ignored paths.
+3. Never check in binaries that bloat the repo (built artifacts, model files, archives).
+4. Never check in API keys or tokens; registry entries reference keys only by environment-variable name (`api_key_env`).
+
 ## Commands
 
 ```bash

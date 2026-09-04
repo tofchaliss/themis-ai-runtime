@@ -27,20 +27,54 @@
 
 ## Stage 1 — Architecture constitution
 
-Finalize the constitutional facts every rule in Stages 2–4 derives from. Draft positions below are assembled from the project report (v0.4), DEC-01…06, and the architecture baseline; each needs explicit accept/amend/strike.
+Finalize the constitutional facts every rule in Stages 2–4 derives from. Draft positions below are assembled from the project report (v0.4), DEC-01…06, the architecture baseline, and the owner's contracts (supplied 2026-09-04); each needs explicit accept/amend/strike.
 
-### 1.1 Themis vs Harness ownership — *draft*
+> **Vocabulary note:** Contract-3's "Layer 0/1/2" are **data-authority tiers** (where security truth comes from), *not* the harness's 11 runtime layers. To keep the two vocabularies apart, this document writes them as **Tier 0/1/2**.
+
+### 1.1 Themis vs Harness ownership (Contract-1) — *draft*
 
 - Themis owns security & business truth: Findings, Enterprise Positions, security decisions, workflows, enterprise knowledge, SBOM/scan/release/product data.
 - The Harness is an internal AI runtime capability of Themis: it executes authorized work and produces evidence; it owns task state, traces, and skill procedures — never enterprise truth.
 - The Harness reads/writes authoritative state only through Themis-owned interfaces; no direct database access.
 - This repo (monorepo) hosts the harness at `src/harness/`; Themis joins under `src/` later.
 
-### 1.2 11-layer responsibilities — *draft*
+### 1.2 11-layer responsibilities (Contract-2) — *draft*
 
 - The layer table in the project report §4 is the responsibility contract: L1 Instructions, L2 Context Delivery, L3 Context Management, L4 Tool Interface, L5 Execution Environment, L6 Durable State, L7 Orchestration, L8 Subagents, L9 Skills, L10 Verification & Observability, L11 Ratchet.
+- **A layer owns a capability; it does not merely contain code related to that capability.** If a capability's decisions are made outside its layer, the boundary is broken regardless of where the files sit.
 - Every change identifies exactly one owning layer before implementation; cross-layer changes name each affected layer explicitly.
 - Layer boundaries that must never blur: Instructions ≠ Context (rules vs facts), Instructions ≠ Permissions (guidance vs enforcement), Verification ≠ model claims.
+
+### 1.2a Security-data authority hierarchy (Contract-3) — *draft*
+
+Where security truth comes from, in strict order — AI reasoning sits *below* every deterministic tier and above only presentation:
+
+```
+                 SECURITY AUTHORITY
+                       ▲
+                       │
+              ┌────────┴────────┐
+              │                 │
+           Tier 0            Tier 1
+       Immutable facts   Deterministic feeds
+        (e.g. SBOM)      (security data)
+              │                 │
+              └────────┬────────┘
+                       │
+                       ▼
+                    Tier 2
+              Derived knowledge
+                       │
+                       ▼
+                 AI reasoning
+                       │
+                       ▼
+                 Presentation
+```
+
+- Tier 0 (immutable facts, e.g. SBOM contents) and Tier 1 (deterministic security feeds) are authoritative; Tier 2 (derived knowledge) is built from them deterministically.
+- AI reasoning consumes the tiers and produces advisory output; it can never write upward into any tier.
+- Presentation (Communication) displays; it establishes nothing.
 
 ### 1.3 Authority model — *draft*
 
@@ -49,23 +83,83 @@ Finalize the constitutional facts every rule in Stages 2–4 derives from. Draft
 - The approval gate before any commit by the harness's agent is not removable by configuration.
 - The Ratchet may only make permanent changes through human/policy approval.
 
-### 1.4 Deterministic vs probabilistic boundary — *draft*
+### 1.4 Deterministic vs probabilistic boundary (Contract-4) — *draft*
 
-- Deterministic (never model-based): instruction resolution, policy/authorization, schema validation, verification (build/test/scan), audit, budgets, injection flagging.
-- Probabilistic (model territory): reasoning, proposing actions, drafting analysis and recommendations.
+**Deterministic — never model-based:**
+authorization · schema validation · state transitions · version comparison · hash calculation · policy enforcement · tool permissions · approval requirements · evidence provenance · audit records · verification. *(Plus, from prior drafts: instruction resolution, budgets, injection flagging.)*
+
+**Probabilistic — model territory:**
+interpretation · reasoning · hypothesis generation · classification assistance · summarization · contextual analysis · natural-language explanation.
+
+The flow between them is one-directional and always mediated:
+
+```
+             DeepSeek (or any provider)
+                │
+                │ probabilistic
+                ▼
+          Agent reasoning
+                │
+                ▼
+       ┌─────────────────┐
+       │ Deterministic   │
+       │ validation      │
+       │ policy          │
+       │ verification    │
+       └────────┬────────┘
+                │
+                ▼
+             Themis
+```
+
+- Nothing probabilistic reaches Themis except through the deterministic block.
 - The model may *propose* crossing any boundary; only deterministic machinery may *effect* it.
 - Scoring/evaluation of models is deterministic (themis-bench philosophy: no LLM-as-judge in the gate path).
 
-### 1.5 DeepSeek / model abstraction — *draft*
+### 1.5 DeepSeek / model abstraction (Contract: DeepSeek is behind the harness) — *draft*
 
-- DEC-05: implementation is model-agnostic; DeepSeek is a deployment/config choice behind the adapter + registry; tests run on mocks.
+The containment chain — each level reaches the model only through the next:
+
+```
+Themis
+  │
+  ▼
+Harness
+  │
+  ▼
+Agent Runtime
+  │
+  ▼
+Model Interface
+  │
+  └── DeepSeek (or any provider)
+```
+
+- DEC-05: implementation is model-agnostic; DeepSeek is a deployment/config choice behind the adapter + registry; tests run on mocks. Nothing above the Model Interface may know which provider is configured.
 - DEC-03: local-first serving; hosted API only via recorded per-task egress decision with brokered credentials.
 - DEC-06: the model is never told it is the security system; role framing is neutral.
 - One stable chat+tool-call interface serves all providers (Ollama and OpenAI-compatible).
 
-### 1.6 Instruction / context / tool / authority separation — *draft*
+### 1.6 Instruction / context / tool / authority separation (Contract-5) — *draft*
 
-- Instructions = rules (how to behave). Context = facts (what is true for this task). Tools = capability (what can be done, policy-checked). Authority = who decides (Themis + humans).
+Four distinct concepts, defined by what they do:
+
+| Concept | Role |
+|---|---|
+| **Instruction** | Tells the agent what/how to behave |
+| **Context** | Provides information to reason about |
+| **Tool** | Provides capability to act or retrieve information |
+| **Authority** | Determines what the system accepts as truth/state |
+
+Therefore, as inviolable inequalities:
+
+- **Instruction ≠ Context** — rules are not facts
+- **Context ≠ Authority** — knowing something does not make it true for the enterprise
+- **Tool ≠ Authority** — being able to act does not decide what is accepted
+- **Model output ≠ Authority** — ever
+
+Supporting rules:
+
 - Only explicitly recognized instruction sources participate in instruction resolution; repository content, CVE text, scanner output, tool results, and web content are untrusted data, never instructions.
 - Instruction precedence is deterministic and resolved outside the model; protected (safety/domain) instructions cannot be overridden by lower scopes.
 - Secrets never enter model context; credentials flow only tool → broker → short-lived scoped credential.

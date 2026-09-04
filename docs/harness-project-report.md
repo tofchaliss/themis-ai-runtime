@@ -1,7 +1,7 @@
 # Themis Agent Harness — Project Report
 
 **Document type:** Project report — the reference document for the harness project
-**Version:** 0.2 (v0.1 reviewed 2026-09-03; v0.2 adds the newcomer architecture diagrams in §3)
+**Version:** 0.3 (v0.1 reviewed 2026-09-03; v0.2 adds the newcomer architecture diagrams in §3; v0.3 adds DEC-05/DEC-06 — model-agnostic implementation and role-neutral model framing)
 **Repository:** themis-ai-runtime
 **Baseline:** [`architecture/harness-p0-architecture-v2.md`](architecture/harness-p0-architecture-v2.md) + the 2026-09-03 decisions
 **Review copy:** published as the "Themis Harness Charter" artifact; change requests reference sections by number (§10)
@@ -38,6 +38,8 @@ Settled 2026-09-03; these supersede the architecture v2 document where they conf
 | DEC-02 | It grows **inside this repository**, restructured as a monorepo: the Go module lives at `src/harness/`, and the Themis application is expected to join under `src/` later (root `go.work` in place) | Done — commit 570226c, history preserved as renames. |
 | DEC-03 | Models are **local-first**: DeepSeek-family open weights served locally (Ollama) by default; the hosted DeepSeek API is allowed only per-task via an explicit, recorded policy/egress decision with brokered credentials | Honors Themis's no-silent-egress rule while keeping the strongest model reachable when a human approves it. |
 | DEC-04 | P0 is delivered as a **thin vertical slice** through all layers, not a horizontal layer-by-layer build-out | Proves the P0 proposition earliest; every layer exists but only as deep as the current slice needs. |
+| DEC-05 | **Implementation is model-agnostic.** DeepSeek is the planned P0 provider, but no code, prompt, schema, or test may assume DeepSeek specifically; provider-specific behavior lives only behind the model adapter and registry, and the test suite runs entirely on mocks | DeepSeek is a deployment choice, not an architectural dependency; the provider must be swappable by configuration alone. (2026-09-04) |
+| DEC-06 | **The model is never told it is the security system.** Prompts frame the model's role neutrally; it reasons over context supplied by Themis/the harness without being granted authority framing | Came out of the architecture discussions: a model that believes it holds security authority is more likely to act like it does. Authority lives in Themis and in deterministic policy — the framing must match. (2026-09-04) |
 
 **Standing constraints** (inherited from Themis decision records — not renegotiable here):
 
@@ -110,7 +112,7 @@ Full detail lives in [`architecture/harness-p0-architecture-v2.md`](architecture
 
 | # | Layer | Question it answers | P0 scope | First needed |
 |---|---|---|---|---|
-| L1 | Instructions | How must the agent behave? | Deterministic resolver over harness + Themis + task instruction sources; precedence; SHA-256 of the effective set. Conflict detection limited to protected-category checks (semantic detection deferred). | Slice 1 |
+| L1 | Instructions | How must the agent behave? | Deterministic resolver over harness + Themis + task instruction sources; precedence; SHA-256 of the effective set. Conflict detection limited to protected-category checks (semantic detection deferred). Role framing is neutral per DEC-06 — the model is never told it is the security system. | Slice 1 |
 | L2 | Context delivery | What information is available? | Themis API, git, filesystem, SBOM, scan results. No direct database access, ever. | Slice 1 |
 | L3 | Context management | What is relevant? | Lexical retrieval (ripgrep), metadata filtering, token-budgeted prompt assembly. No vector DB in P0. | Slice 1 |
 | L4 | Tool interface | What can the agent do? | Tool registry with JSON-schema args, per-skill allowlist policy, audit event per call. Read-only tools first; write/build/scan tools in Slice 2. *Open decision on `run_command` — §9.* | Slice 1 |

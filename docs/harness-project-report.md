@@ -3,7 +3,7 @@
 **Document type:** Project report — the reference document for the harness project
 **Version:** 0.4 (v0.1 reviewed 2026-09-03; v0.2 adds the newcomer architecture diagrams in §3; v0.3 adds DEC-05/DEC-06 — model-agnostic implementation and role-neutral model framing; v0.4 widens OPEN-1 to the full runtime-skill design and distinguishes runtime skills from development-time Claude Code skills)
 **Repository:** themis-ai-runtime
-**Baseline:** [`architecture/harness-p0-architecture-v2.md`](architecture/harness-p0-architecture-v2.md) + the 2026-09-03 decisions
+**Baseline:** [`architecture/harness/00-p0-architecture-v2.md`](architecture/harness/00-p0-architecture-v2.md) + the 2026-09-03 decisions
 **Review copy:** published as the "Themis Harness Charter" artifact; change requests reference sections by number (§10)
 
 ---
@@ -108,7 +108,7 @@ Key ideas to hold onto:
 
 ## 4. Architecture — the 11 layers and their P0 scope
 
-Full detail lives in [`architecture/harness-p0-architecture-v2.md`](architecture/harness-p0-architecture-v2.md) and the per-layer documents (`architecture/layer-NN-*.md`). This table is the P0 contract per layer, tagged with the slice that first needs it (§6).
+Full detail lives in [`architecture/harness/00-p0-architecture-v2.md`](architecture/harness/00-p0-architecture-v2.md) and the per-layer documents (`architecture/layer-NN-*.md`). This table is the P0 contract per layer, tagged with the slice that first needs it (§6).
 
 | # | Layer | Question it answers | P0 scope | First needed |
 |---|---|---|---|---|
@@ -255,4 +255,4 @@ Every section — including the decisions in §2 — is open to challenge. Refer
 
 ---
 
-*Sources: `architecture/harness-p0-architecture-v2.md`, `architecture/layer-01-instructions.md`, `harness-p0-project-plan.md`, Themis EDR constraints.*
+*Sources: `architecture/harness/00-p0-architecture-v2.md`, `architecture/harness/01-instructions.md`, `harness-p0-project-plan.md`, Themis EDR constraints.*

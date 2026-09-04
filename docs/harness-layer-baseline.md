@@ -39,7 +39,7 @@ The service's two operations are effectively **proto-skills running without a ha
 
 1. ✅ Baseline the actual repository (this document, §1)
 2. ✅ Map existing code to the 11 layers (§2)
-3. Establish the Harness P0 skeleton — **open structural question:** the skeleton sketch places the harness at `src/themis/ai/` (inside Themis), while code today lives at `src/harness/` and the Themis application has not yet joined the repo. Owner decision needed before moving code (Class 4: structural ownership).
+3. ✅ Establish the Harness P0 skeleton — done 2026-09-04: owner-defined target map at `docs/architecture/repository-structure.md`; full skeleton created (112 placeholder directories); harness stays at `src/harness/` beside a reserved `src/themis/`; existing-code destinations recorded (relocation is its own reviewed step).
 4. Implement the deterministic foundation first: Instructions → Context/Policy → Tool Interface → Authorization → Execute → Verify → Themis workflow
 5. Bring DeepSeek in through the abstraction (Harness → Model Interface → Model Adapter → DeepSeek)
 6. Add Claude Code enforcement — hooks and review agents. **Status: already implemented and live** (four guards registered in `.claude/settings.json`, 31/31 behavior tests; review agents installed). Remaining: keep them aligned as the code grows.

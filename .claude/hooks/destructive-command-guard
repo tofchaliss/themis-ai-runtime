@@ -1,0 +1,38 @@
+#!/bin/bash
+# destructive-command-guard — DAY-0 §4: no destructive/irreversible operation
+# without explicit approval. Registered in .claude/settings.json (PreToolUse: Bash).
+# Exit 2 blocks the tool call; stderr is shown to Claude Code.
+set -uo pipefail
+
+INPUT=$(cat)
+CMD=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null) || exit 0
+[ -z "$CMD" ] && exit 0
+
+block() {
+  echo "BLOCKED (destructive-command-guard, DAY-0 §4): $1 Ask the owner for explicit approval." >&2
+  exit 2
+}
+
+# Filesystem destruction outside a safe scope
+echo "$CMD" | grep -Eq 'rm[[:space:]]+-[a-zA-Z]*[rf][a-zA-Z]*[rf][a-zA-Z]*[[:space:]]+("?/"?|~/?|\$HOME)([[:space:]]|$)' \
+  && block "recursive delete of / or the home directory."
+echo "$CMD" | grep -Eq 'rm[[:space:]]+(-[a-zA-Z]+[[:space:]]+)*[^[:space:]]*\.git([[:space:]]|/|$)' \
+  && block "deleting a .git directory destroys history."
+echo "$CMD" | grep -Eq '(^|[;&|][[:space:]]*)git[[:space:]]+clean([[:space:]]|$)' \
+  && block "git clean removes untracked/ignored files (models.json, local state)."
+
+# Privilege escalation and system-level destruction
+echo "$CMD" | grep -Eq '(^|[;&|][[:space:]]*)sudo([[:space:]]|$)' \
+  && block "sudo is never run autonomously."
+echo "$CMD" | grep -Eq 'mkfs|/dev/(sd|disk|nvme)|dd[[:space:]]+[^|;]*of=/dev/' \
+  && block "raw-device operation."
+echo "$CMD" | grep -Eq '(^|[;&|][[:space:]]*)(shutdown|reboot|halt)([[:space:]]|$)' \
+  && block "system power operation."
+echo "$CMD" | grep -Eq 'chmod[[:space:]]+(-[a-zA-Z]+[[:space:]]+)*777' \
+  && block "world-writable permissions."
+
+# Untrusted remote code execution (zero trust, boundary 3.2)
+echo "$CMD" | grep -Eq '(curl|wget)[^|;]*\|[[:space:]]*(ba|z|da)?sh([[:space:]]|$)' \
+  && block "piping a downloaded script into a shell executes untrusted content."
+
+exit 0

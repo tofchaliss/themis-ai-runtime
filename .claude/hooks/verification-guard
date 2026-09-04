@@ -1,0 +1,42 @@
+#!/bin/bash
+# verification-guard — SKILL.md §24/§27: state-changing implementation work
+# requires verification before completion. Three modes, selected by $1:
+#   mark  (PostToolUse Edit|Write)  — Go source changed: verification now pending
+#   clear (PostToolUse Bash)        — a go test run clears the pending flag
+#   check (Stop)                    — block finishing while verification is pending
+# Registered in .claude/settings.json. Exit 2 blocks; stderr is shown to Claude.
+set -uo pipefail
+
+MODE="${1:-check}"
+MARKER="${CLAUDE_PROJECT_DIR:-.}/.claude/.verification-pending"
+INPUT=$(cat)
+
+case "$MODE" in
+  mark)
+    FILE=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null) || exit 0
+    case "$FILE" in
+      *.go) touch "$MARKER" 2>/dev/null || true ;;
+    esac
+    exit 0
+    ;;
+  clear)
+    CMD=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null) || exit 0
+    if echo "$CMD" | grep -Eq '(^|[;&|][[:space:]]*)go[[:space:]]+test([[:space:]]|$)'; then
+      rm -f "$MARKER" 2>/dev/null || true
+    fi
+    exit 0
+    ;;
+  check)
+    # Avoid blocking loops: if we already blocked this stop, let it through.
+    ACTIVE=$(printf '%s' "$INPUT" | jq -r '.stop_hook_active // false' 2>/dev/null) || ACTIVE=false
+    [ "$ACTIVE" = "true" ] && exit 0
+    if [ -f "$MARKER" ]; then
+      echo "verification-guard: Go source was modified but 'go test' has not run since. Run go test ./src/harness/... (and gofmt/go vet) before finishing — SKILL.md §24 requires executable verification." >&2
+      exit 2
+    fi
+    exit 0
+    ;;
+  *)
+    exit 0
+    ;;
+esac

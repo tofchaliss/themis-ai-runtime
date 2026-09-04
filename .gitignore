@@ -1,2 +1,5 @@
 # Build artifacts
 bin/
+
+# Claude Code transient state
+.claude/.verification-pending

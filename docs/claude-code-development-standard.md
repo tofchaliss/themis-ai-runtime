@@ -11,7 +11,7 @@
            Skill       Agents        Hooks
 ```
 
-**Status of the currently installed pack** (`.claude/`, commit ab554c9): **draft input** to Stage 5 — it stays active as interim guidance but is superseded by whatever Stages 1–4 finalize.
+**Status: the final standard is ASSEMBLED and INSTALLED (Stage 5 executed 2026-09-04).** The draft pack (ab554c9) is fully superseded. The live standard: `ARCHITECTURE.md` (authoritative architecture) · `CLAUDE.md` (orientation) · `AGENTS.md` (repo conventions) · `.claude/policy/DAY-0.md` (authoritative prohibitions, 8 areas) · `.claude/skills/themis-harness-engineering/SKILL.md` (engineering constitution, 30 sections) · three review agents · four hooks (destructive-command-guard, git-guard, secret-guard, verification-guard) registered in `.claude/settings.json` — 31/31 hook tests passing at assembly.
 
 **Process rule:** a stage closes only by explicit owner sign-off; later stages may reopen earlier ones, but only with a recorded reason.
 
@@ -21,7 +21,7 @@
 | 2 | Claude Code behaviour | **Accepted by owner 2026-09-04** — behaviour standard below |
 | 3 | Security engineering rules | **Accepted by owner 2026-09-04** — twelve boundaries below |
 | 4 | Operations mechanisms (rule → CLAUDE.md / SKILL.md / AGENTS.md / agents / hooks) | **Accepted by owner 2026-09-04** — placement matrix below |
-| 5 | Commit the final skills | **Ready** — assembly per Stages 1–4 |
+| 5 | Commit the final skills | **Executed 2026-09-04** — the standard is installed and enforced |
 
 ---
 
@@ -437,6 +437,26 @@ themis-ai-runtime/
 
 **Stage 4 exit criteria — MET 2026-09-04:** the separation standard, placement matrix, and mechanism stack accepted; directory structure recorded as proposed, to be finalized during Stage-5 assembly.
 
-## Stage 5 — Commit the final skills *(blocked on 1–4)*
+## Stage 5 — Commit the final skills — EXECUTED 2026-09-04
 
-Replace the draft pack in `.claude/` with the finalized standard: instructions skill, review agents, enforcement hooks (settings.json), plus AGENTS.md. From then on the standard is versioned like the project report — amendments only with recorded reasons.
+Assembled exactly per the owner's final structure (with ARCHITECTURE.md at the root as authoritative system architecture and git-guard as the fourth hook):
+
+```
+themis-ai-runtime/
+├── ARCHITECTURE.md                 ← system architecture (authoritative)
+├── CLAUDE.md                       ← Claude Code entry point (orientation only)
+├── AGENTS.md                       ← repository conventions
+└── .claude/
+    ├── policy/DAY-0.md             ← authoritative prohibitions (8 areas)
+    ├── skills/themis-harness-engineering/SKILL.md  ← engineering constitution (30 sections)
+    ├── agents/{architecture,security,test}-reviewer.md
+    ├── hooks/{destructive-command-guard, git-guard, secret-guard, verification-guard}
+    └── settings.json               ← hook registration
+```
+
+- SKILL.md follows the owner's 30-section outline; Stages 1–3 accepted texts embedded verbatim; references ARCHITECTURE.md and DAY-0.md rather than duplicating (single-home rule).
+- DAY-0.md covers the owner's eight prohibition areas: security authority, external egress, secrets, destructive operations, git operations, architecture changes, model boundary, security-control bypass.
+- Hooks: destructive-command-guard (root/home deletes, .git deletion, git clean, sudo, raw devices, curl|sh); git-guard (amend, rebase, filter-branch, reset --hard, push, force ops, branch -D, add -f); secret-guard (on commit: staged secret patterns, binaries, models.json — api_key_env exempted); verification-guard (mark on .go edit → block Stop until `go test` runs; loop-safe via stop_hook_active).
+- Verified at assembly: 31/31 hook behavior tests pass; `go test ./src/harness/...` green; gofmt clean; settings.json valid. The destructive-command-guard live-blocked a real command during testing — enforcement confirmed active.
+
+From here the standard is versioned like the project report — amendments only with recorded reasons.

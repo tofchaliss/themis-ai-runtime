@@ -1,0 +1,41 @@
+#!/bin/bash
+# git-guard — DAY-0 §5: history rewrites, shared-remote pushes, branch-topology
+# changes, and .gitignore violations require owner approval.
+# Registered in .claude/settings.json (PreToolUse: Bash). Exit 2 blocks.
+set -uo pipefail
+
+INPUT=$(cat)
+CMD=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null) || exit 0
+[ -z "$CMD" ] && exit 0
+
+# Only inspect commands that invoke git at all
+echo "$CMD" | grep -Eq '(^|[;&|][[:space:]]*)git[[:space:]]' || exit 0
+
+block() {
+  echo "BLOCKED (git-guard, DAY-0 §5): $1 Ask the owner for approval." >&2
+  exit 2
+}
+
+# History rewrites
+echo "$CMD" | grep -Eq 'git[[:space:]]+[^;|&]*--amend' \
+  && block "commit --amend rewrites history."
+echo "$CMD" | grep -Eq 'git[[:space:]]+(rebase|filter-branch|filter-repo)([[:space:]]|$)' \
+  && block "history rewrite (rebase/filter)."
+echo "$CMD" | grep -Eq 'git[[:space:]]+reset[[:space:]]+[^;|&]*--hard' \
+  && block "reset --hard discards work irreversibly."
+
+# Shared-remote pushes
+echo "$CMD" | grep -Eq 'git[[:space:]]+push([[:space:]]|$)' \
+  && block "pushing to a shared remote requires owner approval."
+
+# Branch-topology destruction
+echo "$CMD" | grep -Eq 'git[[:space:]]+branch[[:space:]]+[^;|&]*-(D|d)([[:space:]]|$)' \
+  && block "branch deletion changes topology."
+echo "$CMD" | grep -Eq 'git[[:space:]]+push[[:space:]]+[^;|&]*(--force|-f)([[:space:]]|$)' \
+  && block "force push rewrites shared history."
+
+# .gitignore violations
+echo "$CMD" | grep -Eq 'git[[:space:]]+add[[:space:]]+[^;|&]*(-f|--force)([[:space:]]|$)' \
+  && block "force-adding ignored paths violates .gitignore."
+
+exit 0

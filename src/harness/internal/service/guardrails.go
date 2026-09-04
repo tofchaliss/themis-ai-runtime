@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"regexp"
+	"sort"
 )
 
 // injectionPatterns are deterministic markers of prompt-injection
@@ -56,6 +57,69 @@ func RequireFields(obj map[string]any, fields ...string) error {
 		if _, ok := obj[f]; !ok {
 			return fmt.Errorf("model answer is missing required field %q", f)
 		}
+	}
+	return nil
+}
+
+// extractContract pins the output contract of prompts/extract.md: every
+// field must be present, and a non-null value must be of the pinned
+// kind. The prompt requires null (plus a listing in unknown_fields) for
+// anything the evidence does not establish, so null satisfies any kind.
+var extractContract = map[string]string{
+	"cve":                "string",
+	"cwe":                "string",
+	"description":        "string",
+	"affected_component": "string",
+	"affected_versions":  "array",
+	"fixed_versions":     "array",
+	"cvss":               "object",
+	"exploitability":     "string",
+	"references":         "array",
+	"unknown_fields":     "array",
+}
+
+// ValidateExtractFacts enforces the extraction output contract on the
+// model's parsed answer. Model output violating the contract is treated
+// as an upstream failure and never relayed.
+func ValidateExtractFacts(facts map[string]any) error {
+
+	fields := make([]string, 0, len(extractContract))
+	for f := range extractContract {
+		fields = append(fields, f)
+	}
+	sort.Strings(fields)
+
+	for _, f := range fields {
+		v, ok := facts[f]
+		if !ok {
+			return fmt.Errorf("model answer is missing required field %q", f)
+		}
+		if err := checkKind(f, extractContract[f], v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// checkKind verifies a non-null contract value against its pinned kind.
+func checkKind(field, kind string, v any) error {
+	if v == nil {
+		return nil
+	}
+	var ok bool
+	switch kind {
+	case "string":
+		_, ok = v.(string)
+	case "array":
+		_, ok = v.([]any)
+	case "object":
+		_, ok = v.(map[string]any)
+	}
+	if !ok {
+		return fmt.Errorf(
+			"model answer field %q must be a %s or null, got %T",
+			field, kind, v,
+		)
 	}
 	return nil
 }

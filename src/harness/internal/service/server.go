@@ -105,6 +105,11 @@ func (s *Server) handleExtract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := ValidateExtractFacts(facts); err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+
 	meta["injection_suspected"] = SuspectInjection(req.Evidence)
 
 	writeJSON(w, http.StatusOK, map[string]any{

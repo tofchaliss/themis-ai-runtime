@@ -19,7 +19,7 @@
 |---|---|---|
 | 1 | Architecture constitution | **Accepted by owner 2026-09-04** — constitution text below |
 | 2 | Claude Code behaviour | **Accepted by owner 2026-09-04** — behaviour standard below |
-| 3 | Security engineering rules | Not started |
+| 3 | Security engineering rules | **In discussion** — owner draft incorporated, two gap sentences pending |
 | 4 | Operations mechanisms (rule → CLAUDE.md / SKILL.md / AGENTS.md / agents / hooks) | Not started |
 | 5 | Commit the final skills | Blocked on 1–4 |
 
@@ -268,9 +268,32 @@ This text supersedes the earlier §2.3 draft and resolves every §2.4 clarificat
 
 **Stage 2 exit criteria — MET 2026-09-04:** the consolidated behaviour standard accepted by the owner; workflow and classification table stand; all clarifications resolved.
 
-## Stage 3 — Security engineering rules *(not started)*
+## Stage 3 — Security engineering rules *(in discussion — owner draft 2026-09-04, two gap sentences pending)*
 
-To define: prompt-injection handling; tool authorization; secrets; sandboxing; external systems; destructive operations; supply-chain and security-data handling; auditability.
+### 3.1 The security standard (owner draft, verbatim)
+
+> Claude Code shall develop the Harness under a zero-trust model: model output and external content are untrusted; authorization, policy, security state, verification, and other security invariants are enforced deterministically. The Harness shall use least privilege, isolate execution, protect credentials, preserve evidence provenance, and fail closed at security boundaries. Destructive or irreversible operations require explicit controls. Security invariants must be testable wherever practical. The Harness must remain safe when the model is wrong, manipulated, unavailable, or influenced by malicious input, and no model output may directly establish or override Themis security truth.
+
+### 3.2 Coverage against the eight Stage-3 areas
+
+| Area | Covered by the draft |
+|---|---|
+| Prompt injection | ✓ — "model output and external content are untrusted"; "manipulated / influenced by malicious input" |
+| Tool authorization | ✓ — least privilege; deterministic authorization |
+| Secrets | ✓ — "protect credentials" (Day-0 rule 4 supplies the concrete form: env-var names only, never values) |
+| Sandboxing | ✓ — "isolate execution" |
+| External systems | **gap** — see 3.3(a) |
+| Destructive operations | ✓ — "explicit controls" (Stage 2 makes them a stop-and-ask condition) |
+| Supply-chain / security-data handling | **gap** — see 3.3(b) |
+| Auditability | ✓ — "preserve evidence provenance"; Contract-4 lists audit records as deterministic |
+
+### 3.3 Gap sentences proposed by Claude Code — *pending owner accept/amend/strike*
+
+(a) **External systems:** External-system access is policy-gated: local-first by default, and any data egress to a non-local system requires an explicit, recorded operator decision. *(Grounds DEC-03 as a security rule, not just a model-provider choice.)*
+
+(b) **Supply chain and security data:** Dependencies are minimal and individually justified; security data is handled per the Tier 0/1/2 authority hierarchy, and sensitive values are redacted before entering durable storage or logs. *(Extends the change-discipline rule and 1.2a into handling requirements.)*
+
+**Stage 3 exit criteria:** 3.1 stands as accepted owner text; both gap sentences accepted, amended, or struck.
 
 ## Stage 4 — Operations mechanisms *(not started)*
 

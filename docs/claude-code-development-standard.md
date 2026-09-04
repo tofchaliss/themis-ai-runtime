@@ -460,3 +460,48 @@ themis-ai-runtime/
 - Verified at assembly: 31/31 hook behavior tests pass; `go test ./src/harness/...` green; gofmt clean; settings.json valid. The destructive-command-guard live-blocked a real command during testing — enforcement confirmed active.
 
 From here the standard is versioned like the project report — amendments only with recorded reasons.
+
+### Stage-5 final formalization (owner-accepted, 2026-09-04)
+
+**The mechanism-boundary standard (verbatim):**
+
+> The Claude Code development environment shall have explicit mechanism boundaries and a single authoritative home for each important rule. ARCHITECTURE.md defines the authoritative system architecture; CLAUDE.md provides concise repository orientation; AGENTS.md defines repository and implementation conventions; the Themis Harness Engineering Skill defines Claude Code's development behavior; DAY-0.md defines absolute prohibitions; hooks provide deterministic enforcement; review agents provide architecture, security, and verification review; and settings.json wires the mechanisms together. No development mechanism may redefine Themis security authority or architectural ownership.
+
+**The ownership matrix (verbatim):**
+
+| File / mechanism | Owns | Must NOT own |
+| --- | --- | --- |
+| `ARCHITECTURE.md` | System architecture, components, boundaries, ownership, data/control flows | Claude Code operating procedure |
+| `CLAUDE.md` | Entry-point orientation and pointers | Full architecture / full constitution |
+| `AGENTS.md` | Go/repository implementation conventions | Security constitution |
+| `.claude/skills/.../SKILL.md` | Development behavior, workflow, decision gates | Architecture definition |
+| `.claude/policy/DAY-0.md` | Absolute prohibitions | General development guidance |
+| `.claude/agents/*` | Review criteria and review behavior | Authoritative architecture/security truth |
+| `.claude/hooks/*` | Deterministic enforcement | Human judgment / architectural decisions |
+| `.claude/settings.json` | Mechanism wiring | Policy definitions |
+| Human approval | Decisions explicitly reserved for humans | Automated enforcement |
+
+**The hierarchy:**
+
+```
+                 WHAT THE SYSTEM IS
+                         │
+                         ▼
+                 ARCHITECTURE.md
+                         │
+                         │
+                 HOW TO BUILD IT
+                         │
+                         ▼
+                   SKILL.md
+                         │
+              ┌──────────┼──────────┐
+              ▼          ▼          ▼
+           Hooks      Reviewers   AGENTS
+              │          │          │
+              └──────────┼──────────┘
+                         ▼
+                    Claude Code
+```
+
+**ARCHITECTURE.md brought to the owner's specification** (same date): §A system purpose, §B system boundary with the explicit no-topology-implication disclaimer, §C security-authority tiers (Tier 0 = SBOM/artifacts/observed facts; Tier 1 = CVE/VEX/scanner/vendor data; Tier 2 = derived knowledge), §D architectural ownership chain, §E model boundary (Model Interface → Adapter → Model), §F deterministic/probabilistic boundary with the Validate → Policy → Authorize → Execute → Verify → Themis-owned-result pipeline, §G external boundary system (remote models, web intelligence, external APIs, repositories, scanners, external security services, remote execution environments — all policy-gated, local-first, recorded operator authorization for egress).

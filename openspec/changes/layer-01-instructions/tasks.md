@@ -33,13 +33,14 @@ Not tasks; constraints. Recorded in design.md §6: atomic resolution (no partial
 - [x] Exemption record type: all pins mandatory (operator, task, pattern id, policy hash, instruction hash, reason, timestamp, expiry); Config carries TaskID + Now (clock as deterministic input); invalid/stale/expired/task-mismatched ⇒ abort; content-pin mismatch ⇒ does not apply, rejection stands
 - [x] Security review done; all findings remediated: HIGH-1 exemption no longer short-circuits scanning (continue-scan, every match independently exempted), boundary tier evaluated first (evidence never downgraded), decoy duplicate-id abort, mandatory pins, expiry/task binding, policy floors, trailing-bytes rejection. **Recorded for owner at M4 content review (LOW-8):** boundary patterns are broad for security-analysis phrasings ("analyze whether an attacker could bypass X") — remedy exists via exemption; consider growing must_pass before tightening. Known accepted evasions (LOW-9): >50-char gap padding, zero-width chars, "requires human decision" spelled with spaces — defense-in-depth limitations, not sole enforcement.
 
-## 3. L1-M3 — Versioning, hashing, atomic resolution (Class 2)
+## 3. L1-M3 — Versioning, hashing, atomic resolution (Class 2) — **DONE 2026-09-05**
 
-- [ ] Canonical serialization of the ordered set
-- [ ] Per-body SHA-256 + EIS hash; `SourceHashes`, `Sources` recorded
-- [ ] `ResolutionStatus`: `completed` / `completed_with_conflicts` / `failed_resolution` / `failed_intake` — conflicts never look like ordinary success
-- [ ] Determinism property tests; golden hash; byte-change sensitivity; source-argument-order independence
-- [ ] Trace-metadata shape documented for L6: `{EISHash, SourceHashes, Sources, Conflicts, PatternPolicyHash, Exemptions}`
+- [x] Canonical serialization (`themis-eis-v1`, separator-injective via validate(); spec test independently derives the bytes)
+- [x] Per-body SHA-256 + EIS hash; `SourceHashes`, `Sources` recorded; hash covers delivered content only (conflicts/exemptions are trace data)
+- [x] `ResolutionStatus` wired: `Resolve` sets completed/completed_with_conflicts; `StatusOf(err)` maps `ErrIntake`-wrapped (payload/exemption) failures → failed_intake, trusted/registration failures → failed_resolution; per-sentinel both-direction table tests
+- [x] Determinism: golden hash literal + independent canonical spec, byte/protected/id sensitivity, source-argument-order independence (hash, instructions, sources, conflicts, exemptions), same-kind-root tiebreaks
+- [x] Trace shape = `EffectiveSet{Hash, SourceHashes, Sources, Conflicts, PolicyHash, ExemptionsApplied, Status}` documented for L6
+- [x] Test review passed; findings closed: Resolve failure-path atomicity, exemptions-through-Resolve evidence, multi-conflict determinism, source-registration errors reclassified as resolution failures (orchestrator config ≠ task payload), zero-source resolution fails closed (empty EIS is not a valid environment)
 
 ## 4. L1-M4 — Rendering and shipped content (Class 2 + owner content review)
 

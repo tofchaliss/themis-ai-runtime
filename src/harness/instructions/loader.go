@@ -32,28 +32,42 @@ func Load(cfg Config, sources ...Source) (*LoadResult, error) {
 		return nil, fmt.Errorf("%w: no validated pattern policy configured — resolution without the configured detector does not happen", ErrPolicyInvalid)
 	}
 	if err := cfg.validateExemptions(); err != nil {
-		return nil, err
+		// Exemption records arrive with the task configuration:
+		// their invalidity is the caller's problem.
+		return nil, fmt.Errorf("%w: %w", ErrIntake, err)
 	}
 	res := &LoadResult{PolicyHash: cfg.Policy.Hash}
 	seen := map[string]string{} // id -> SourceRef
 	for _, src := range sources {
+		// Failures arising from untrusted sources are intake
+		// failures; trusted-environment failures are resolution
+		// failures. StatusOf maps the distinction.
+		wrap := func(err error) error {
+			if err != nil && !trustedKinds[src.Kind] {
+				return fmt.Errorf("%w: %w", ErrIntake, err)
+			}
+			return err
+		}
+		// Source registration is orchestrator configuration, not the
+		// task payload: a bad registration is a resolution failure,
+		// never an intake failure.
 		if err := checkSource(src); err != nil {
 			return nil, err
 		}
 		insts, err := loadSource(src)
 		if err != nil {
-			return nil, err
+			return nil, wrap(err)
 		}
 		// A registered source is expected to contribute; a source with
 		// nothing to say is omitted by the caller, so an empty yield is
 		// a configuration discrepancy, not a valid quiet state.
 		if len(insts) == 0 {
-			return nil, fmt.Errorf("%w: source %s yielded no instructions", ErrSourceUnavailable, src.Kind)
+			return nil, wrap(fmt.Errorf("%w: source %s yielded no instructions", ErrSourceUnavailable, src.Kind))
 		}
 		for _, inst := range insts {
 			conflict, err := validate(inst, src)
 			if err != nil {
-				return nil, err
+				return nil, wrap(err)
 			}
 			if conflict != nil {
 				// Ownership rejection: the id belongs to another
@@ -66,8 +80,8 @@ func Load(cfg Config, sources ...Source) (*LoadResult, error) {
 			// its id, so a decoy body cannot convert a structural
 			// duplicate abort into run-continues.
 			if prev, dup := seen[inst.ID]; dup {
-				return nil, fmt.Errorf("%w: %q declared by %s and %s",
-					ErrDuplicateID, inst.ID, prev, inst.SourceRef)
+				return nil, wrap(fmt.Errorf("%w: %q declared by %s and %s",
+					ErrDuplicateID, inst.ID, prev, inst.SourceRef))
 			}
 			seen[inst.ID] = inst.SourceRef
 			if !trustedKinds[src.Kind] {

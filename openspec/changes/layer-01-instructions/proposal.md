@@ -1,7 +1,7 @@
 # Proposal: Layer 1 — Instructions
 
-**Change ID:** layer-01-instructions · **Status:** DRAFT for grilling · 2026-09-04
-**Owner gate:** this change ships only after the grill session closes the design's open questions (Q-L1-1…8 in design.md).
+**Change ID:** layer-01-instructions · **Status:** GRILLED 2026-09-05 — all questions closed (design.md §6); pending owner acceptance of the folded change (tasks.md gate 0)
+**Owner gate:** implementation starts when the owner accepts the post-grill proposal/design/tasks.
 
 ## Why
 
@@ -16,8 +16,9 @@ A deterministic instruction system at `src/harness/instructions`:
 - Pipeline per the owner's reference flow: Sources → Loader → Representation → Validator → Conflict Detector → Resolver → **EffectiveInstructionSet** {version, hash, sources} → Context Delivery
 - Deterministic validation (ids, scopes, categories, secret scan, size caps) and mechanical conflict detection (ID shadowing, protected-directive patterns); semantic conflict detection stays deferred per the accepted Stage-1 limitation
 - Content-hash versioning (per-instruction body hash + canonical set hash), the proven manifest pattern
-- The shipped initial instruction content (`instructions/global/`, `instructions/themis/`), authored from the accepted constitution and existing prompts
+- The shipped initial instruction content (`instructions/global/` incl. the protected `harness.system.role`, `instructions/themis/`), authored from the accepted constitution and existing prompts
 - Delivery contract: L1 produces the EIS; **Context Delivery (L2) composes it into the model payload** — L1 never calls the model
+- Grill-added (2026-09-05, design.md §6): namespace ownership with a trusted registry; three conflict classes; atomic resolution with explicit `ResolutionStatus`; the directive-pattern policy as a versioned artifact with must-reject/must-pass corpora; a final validation pass on the rendered EIS (reject/record, never rewrite); immutable resolution epochs with change as recorded succession
 
 ## What this change does NOT do
 
@@ -29,4 +30,4 @@ A deterministic instruction system at `src/harness/instructions`:
 
 ## Success criteria
 
-Every acceptance criterion of `docs/architecture/harness/01-instructions.md` §17 that is in scope maps to a named test; resolution is byte-deterministic (same sources ⇒ same EIS hash); a protected instruction provably cannot be overridden by any lower scope; the EIS is reconstructable from its recorded hashes and sources.
+Every acceptance criterion of `docs/architecture/harness/01-instructions.md` §17 that is in scope maps to a named test; resolution is byte-deterministic (same sources ⇒ same EIS hash); a protected instruction provably cannot be overridden by any lower scope; the EIS is reconstructable from its recorded hashes and sources; every grill invariant in design.md §6 is traceable to a named test (tasks.md §6); the deferred dependencies (tasks.md §7) remain dependencies — none is silently pulled into Layer-1 scope.

@@ -1,50 +1,70 @@
 # Tasks: Layer 2 — Context Delivery
 
-Execution starts only after the grill closes Q-L2-1…8 and the owner accepts. Every milestone review states **three independent verdicts**: architecture-conformant · test-evidenced (coverage-verified on the claimed lines) · operationally proven. An editing command or commit message is never evidence.
+Post-grill 2026-09-05: all ten grill questions closed in design.md §3, which governs where the draft decisions conflict. **Implementation has NOT started and does not start until the owner accepts this folded change (gate 0).** Every milestone review states three independent verdicts: architecture-conformant · test-evidenced (coverage-verified on the claimed lines) · operationally proven. An editing command or commit message is never evidence.
 
 ## 0. Gate
 
-- [ ] Grill session held; each Q-L2-n answered and recorded in design.md
-- [ ] Design accepted by owner
+- [x] Grill session held 2026-09-05; Q-L2-1…10 closed and recorded in design.md §3
+- [ ] Owner reviews the folded proposal/design/tasks; acceptance clears this gate
+- [ ] Owner decides the four implementation-planning items (recommendations inline):
+  - **Filesystem confinement root:** orchestrator-supplied root per task (workspace dir); any path escaping it ⇒ hard refusal. (Recommend: yes, refuse symlink escapes too.)
+  - **Caps (v1 constants):** recommend 256 KiB/item, 1 MiB total context, fail closed; revisit when L3 owns budgets.
+  - **Themis connector:** recommend typed stub contract v1 (real wiring waits for the recorded `internal/service` → `integrations/themis` relocation).
+  - **Operational-proof gate:** recommend mock-provider composition proof required + one live local-model run of a full L1+L2 payload (conversation only; tools-capable model still absent).
 
-## 1. L2-M1 — ContextItem, trust classes, registered sources (Class 2)
+## Binding architecture constraints (from the grill — govern all implementation below)
 
-- [ ] `ContextItem`, `TrustClass`, `ContextSource` types; hash on construction; byte-exact content
-- [ ] Source registration + unrecognized-kind hard error; trust class fixed per source (per Q-L2-1/4 decisions)
-- [ ] Inline task-fact source (envelope data half); filesystem source with confinement root (per Q-L2-5)
-- [ ] Caps per Q-L2-7 — fail closed
-- [ ] Table tests: negative paths, determinism, caller-supplied hash/trust overwritten
+Not tasks; constraints. Recorded in design.md §3: Themis workflow contract is the ceiling (`Plan ⊆ Contract`, fail closed) · L7 considers, L4 authorizes, L2 fulfills — no retrieval-time judgment, no second permission table, uniform L4 gate for planned and expanded context · contract-declared mechanical closure is the only expansion · typed absence (delivered/unavailable/not_applicable/withheld_by_contract; source-status ≠ delivery-status) · withholding governed truth only where the contract permits, marker = minimum epistemic metadata, never behavioral · verbatim evidence, no sanitization, no directive-pattern detection on the data plane · dual-reader framing (length-framed canonical record; delimiter-rendered model view with collision refusal; framing ≠ authentication) · L2 re-encodes, never creates propositions; derived propositions only from registered computations with complete computational provenance (incl. config hash) · four authority classes by authorship + governance treatment, fail-closed classification, immutable origin, transport carries zero authority weight · delivery + tool-execution traces jointly reconstruct every model-visible byte.
 
-## 2. L2-M2 — Composition + delimiter integrity (Class 3 — security-sensitive)
+## 1. L2-M1 — ContextItem, envelope, classification (Class 2)
 
-- [ ] Deterministic Compose: EIS system message verbatim (hash-bound), single structured user message, sorted item order
-- [ ] Hash-derived fences; collision ⇒ refuse (detect/refuse only, never rewrite) per Q-L2-3 decision
-- [ ] Structural separation proof: no context byte reachable in instruction text
-- [ ] PayloadHash canonical serialization + golden; item-order independence
-- [ ] Security review (framing, spoof defense, fail-closed paths)
+- [ ] `ContextItem` {kind, provenance{origin, source, author}, authority_class, producer, sensitivity, version/as-of, evidence bytes, hash}; `ContextEnvelope` {task_id, slot, source_status, delivery_status, delivery.mechanism}
+- [ ] Four-class `AuthorityClass` enum; classification derived from source/producer registration only; fail-closed default `external-untrusted`; caller-supplied class/hash overwritten
+- [ ] `ContextAvailability` vocabulary (4 states) + source-status/delivery-status split
+- [ ] Registered source kinds: inline task facts, confined filesystem, Themis connector (per gate-0 decision); unrecognized ⇒ hard error
+- [ ] Caps per gate-0 decision — fail closed
+- [ ] Table tests: negative paths, determinism, classification defaults, immutable-origin property
 
-## 3. L2-M3 — Trace + epoch boundary (Class 2)
+## 2. L2-M2 — Workflow context contract (Class 3 — security-sensitive)
 
-- [ ] Delivery trace {EISHash, RenderHash, PayloadHash, ContextHashes, Sources, TrustClasses} documented for L6
-- [ ] No append-to-conversation API; fresh-composition epoch test (no instruction-bearing inheritance)
-- [ ] StatusOf-style error classification consistent with L1's intake/resolution split
+- [ ] `ContextContract` artifact {version, hash, permitted classes, required/optional, authority classification, sensitivity ceiling, closure rules, expansion ceiling} — versioned file, hash in trace (pattern-policy posture)
+- [ ] `Plan ⊆ Contract` enforcement, fail closed; required-missing ⇒ composition failure, no model call; optional-missing ⇒ typed unavailable
+- [ ] Withholding: `withheld_by_contract` only where the contract permits; marker carries existence + state only, never content or behavioral guidance
+- [ ] Mechanical closure rules executed, never interpreted; expansion ceiling enforced
+- [ ] Security review (contract enforcement, withholding, fail-closed paths)
 
-## 4. L2-M4 — Delivery proof (Class 2)
+## 3. L2-M3 — Composition, framing, delivery integrity (Class 3 — security-sensitive)
 
+- [ ] Deterministic Compose: EIS system message verbatim (policy-hash-bound via L1 seam) + structured context rendering; sorted item order; byte-determinism golden + hash
+- [ ] Dual-reader framing: length-framed canonical record (ground truth for reconstruction) + delimiter-rendered model view with content-bound fences and collision refusal (refuse, never rewrite/encode; collision ≠ attack signal; refusal trace-visible only)
+- [ ] Frame metadata descriptive only — no behavioral text in L2 furniture (renderer-furniture rule, data-plane edition)
+- [ ] Hash-attributability: every delivered context byte belongs to an item's verbatim content or its lossless re-encoding — no L2-authored propositions (structural test)
+- [ ] No append-to-conversation API; fresh composition per epoch
+- [ ] Security review (framing integrity, proposition boundary, refusal paths)
+
+## 4. L2-M4 — Trace + delivery proof (Class 2)
+
+- [ ] Delivery trace {ContractHash, EISHash, RenderHash, PayloadHash, per-item: provenance/class/hashes/statuses/mechanism} documented for L6; joint delivery+tool-trace reconstruction contract stated for L7/L4 era
+- [ ] Error classification consistent with L1's intake/resolution split
 - [ ] Mock-provider proof: composed payload byte-identical through `model.ExecutionRequest`
-- [ ] Operational proof per Q-L2-8 decision (live local model if required)
-- [ ] Traceability table: design invariants → test names, coverage-verified
+- [ ] Operational proof per gate-0 decision
+- [ ] Traceability table: grill invariants → test names, coverage-verified
 
-## 5. Deferred dependencies (NOT L2 scope)
+## 5. L1 content dependency (executes with L2-M1, owner content review required)
+
+- [ ] Revise `instructions/themis/tier-behavior.md` to the four-class vocabulary (`governed-external` placed explicitly: storage attestation governed, content external prose) — Class 2 + owner content review
+
+## 6. Deferred dependencies (NOT L2 scope)
 
 - **L3:** selection/rank/dedup/compression/token budgets
-- **L4/L5:** tool execution, sandboxed retrieval, worktrees
-- **L7:** epoch succession, mandatory-root + source registration policy, the model-call loop
-- **integrations/themis:** real Themis API read paths (per Q-L2-6 decision)
-- **External web/browser connectors:** controlled/later per layer doc
+- **L4:** capability registry + authorization for model-requested expansion (L2 defines the fulfillment seam only)
+- **L5:** worktrees/sandboxed retrieval; pinned-ref provenance
+- **L7:** plan instantiation, sequencing, epoch succession, expansion consideration, mandatory registration policy
+- **integrations/themis:** real Themis API read paths (per gate-0 stub decision)
+- **Registered analyzers** (`derived`-class producers) beyond v1 built-ins; external web/browser connectors
 
-## 6. Close
+## 7. Close
 
-- [ ] Architecture + security + test review, three-state verdicts each
+- [ ] Architecture + security + test review on the full change, three-state verdicts each
 - [ ] Architecture-to-code map updated (L2 → done)
-- [ ] Green checkpoints pushed on owner approval
+- [ ] Green checkpoints pushed on owner approval; archive change on close

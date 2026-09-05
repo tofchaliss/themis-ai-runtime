@@ -1,7 +1,7 @@
 # Proposal: Layer 2 — Context Delivery
 
-**Change ID:** layer-02-context-delivery · **Status:** DRAFT for grilling · 2026-09-05
-**Owner gate:** ships only after the grill closes Q-L2-1…8 (design.md) and the owner accepts.
+**Change ID:** layer-02-context-delivery · **Status:** GRILLED 2026-09-05 — all ten questions closed (design.md §3); pending owner acceptance of the folded change (tasks.md gate 0). **Implementation not started.**
+**Owner gate:** implementation starts when the owner accepts the post-grill proposal/design/tasks and decides the four gate-0 planning items.
 
 ## Why
 

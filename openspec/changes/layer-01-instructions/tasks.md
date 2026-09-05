@@ -11,16 +11,17 @@ Post-grill 2026-09-05: all grill questions closed in design.md §6, which govern
 
 Not tasks; constraints. Recorded in design.md §6: atomic resolution (no partial/degraded/fallback EIS) · namespace ownership with a trusted registry · three conflict classes (`shadowed`, `rejected-pattern`, `rejected-prohibited`) · immutable resolution epochs, change as recorded succession · no runtime data may alter resolved instruction text · pattern policy as a versioned security artifact with dual corpora · exemption ≠ authorization · role text as protected instruction `harness.system.role` · `ScopeRepository` in the enum, repository Sources rejected in v1 · renderer owns furniture, never rules.
 
-## 1. L1-M1 — Representation and loading (Class 2)
+## 1. L1-M1 — Representation and loading (Class 2) — **DONE 2026-09-05**
 
-- [ ] `Instruction`, `Scope` (seven ordered values), `Category`, `Source`, `Conflict` (three classes), `ResolutionStatus` types
-- [ ] **Namespace registry** (trusted configuration): namespace → owning source kind; unknown namespace ⇒ abort
-- [ ] Frontmatter + body parser (deterministic, fail-closed on malformed files)
-- [ ] Loader: filename-sorted root walking, byte-exact bodies
-- [ ] Validation: id namespaced **and namespace-owned by the declaring source**, scope-legal-for-source, category, non-empty body
-- [ ] Secret scan on bodies (secret-guard pattern family) — load-time hard error
-- [ ] Size caps: 8 KiB/instruction, 64 KiB/rendered EIS — fail closed
-- [ ] `Resolve` rejects `Source{Kind: ScopeRepository}` as unrecognized (v1 decision, Q-L1-1)
+- [x] `Instruction`, `Scope` (seven ordered values), `Category`, `Source`, `Conflict` (three classes), `ResolutionStatus` types
+- [x] **Namespace registry** (trusted configuration): namespace → owning source kind; unknown namespace ⇒ abort
+- [x] Frontmatter + body parser (deterministic restricted subset, fail-closed on malformed files)
+- [x] Loader: path-sorted recursive root walking, byte-exact bodies
+- [x] Validation: id namespaced **and namespace-owned by the declaring source**, scope-legal-for-source, category, non-empty body
+- [x] Secret scan on bodies (secret-guard pattern family, with must-pass prose evidence) — load-time hard error
+- [x] Size caps: 8 KiB/instruction (64 KiB EIS constant defined for M4) — fail closed
+- [x] `Load` rejects `ScopeRepository`/`ScopeDirectory`/`ScopeSkill` sources as unrecognized (v1 decision, Q-L1-1)
+- [x] Test review passed (99.2% coverage); blocking findings remediated: `\b`-anchored `sk-` pattern (prose false positive), untrusted-path abort table, multi-source atomicity, `ErrSourceUnavailable` sentinel, untrusted `protected:` declaration aborts (fail-closed decision), inline provenance overwrite pinned, scope-order regression guard
 
 ## 2. L1-M2 — Conflict detection and pattern policy (Class 3 — security-sensitive)
 

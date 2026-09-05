@@ -50,7 +50,7 @@ Not tasks; constraints. Recorded in design.md §6: atomic resolution (no partial
 - [x] Delivered-payload hash surfaced (`Render`/`SystemMessage` return it) for per-call trace recording
 - [x] `instructions/global/` authored: role (DEC-06 neutral) + 6 protected safety instructions
 - [x] `instructions/themis/` authored: 5 themis-domain instructions (3 protected)
-- [ ] **Owner review of instruction content** (the agent's constitution-in-prompt) — PENDING; also review the LOW-8 pattern-breadth note (M2)
+- [x] **Owner review of instruction content** — PASSED 2026-09-05 (incl. the M2 LOW-8 pattern-breadth note)
 
 ## 5. L1-M5 — Delivery seam (Class 2) — **DONE 2026-09-05**
 
@@ -79,4 +79,5 @@ Not tasks; constraints. Recorded in design.md §6: atomic resolution (no partial
 
 - [x] Architecture + test review on the full change (2026-09-05): architecture verdict "faithful, disciplined realization; no boundary violations"; both reviews' findings remediated or recorded (design §2 amendments F1/F2 pending owner confirmation)
 - [x] Architecture-to-code map updated (L1 → DONE)
-- [ ] Green checkpoint commits pushed on owner approval; owner confirms design §2 amendments + M4 content review
+- [x] Owner confirmed the design §2 implementation-driven amendments and passed the M4 content review (2026-09-05)
+- [x] Green checkpoint commits pushed to origin/main on owner approval (2026-09-05) — **LAYER 1 CLOSED**

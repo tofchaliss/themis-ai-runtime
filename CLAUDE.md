@@ -29,5 +29,3 @@ The five canonical triage labels are used verbatim (needs-triage, needs-info, re
 
 ### Domain docs
 Multi-context layout: `CONTEXT-MAP.md` at the root; ADRs live in `docs/decisions/` (system-wide) and `src/<context>/docs/decisions/`. See `docs/agents/domain.md`.
-
-## Prompts response

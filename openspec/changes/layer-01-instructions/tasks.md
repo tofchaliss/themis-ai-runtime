@@ -42,41 +42,41 @@ Not tasks; constraints. Recorded in design.md §6: atomic resolution (no partial
 - [x] Trace shape = `EffectiveSet{Hash, SourceHashes, Sources, Conflicts, PolicyHash, ExemptionsApplied, Status}` documented for L6
 - [x] Test review passed; findings closed: Resolve failure-path atomicity, exemptions-through-Resolve evidence, multi-conflict determinism, source-registration errors reclassified as resolution failures (orchestrator config ≠ task payload), zero-source resolution fails closed (empty EIS is not a valid environment)
 
-## 4. L1-M4 — Rendering and shipped content (Class 2 + owner content review)
+## 4. L1-M4 — Rendering and shipped content (Class 2 + owner content review) — **DONE 2026-09-05** (owner content review pending)
 
-- [ ] Deterministic renderer: role-first, fixed category headings, verbatim bodies; golden file
-- [ ] **Renderer furniture rule** enforced in review: no behavioral directives in renderer-owned text
-- [ ] **Final rendered-EIS validation pass**: secret + pattern scan on the exact delivered artifact; reject/record only — never rewrite (what was scanned = what the model received)
-- [ ] Delivered-payload hash surfaced for per-call trace recording
-- [ ] `instructions/global/` authored: `harness.system.role` (DEC-06 neutral), evidence-only, untrusted-data, no-credential, verification, advisory-only, worktree confinement
-- [ ] `instructions/themis/` authored: security truth, release context, advisory-unless-governed, not-a-second-VAMS, Tier behavior
-- [ ] Owner review of instruction content (the agent's constitution-in-prompt)
+- [x] Deterministic renderer: role-first, fixed category headings, verbatim bodies; golden file (`testdata/render.golden`) + section-order and completeness assertions
+- [x] **Renderer furniture rule** enforced structurally: H2 lines reserved for the renderer — a body containing "## " refuses delivery at any scope (counterfeit-furniture defense); unknown categories refuse rather than silently omit; empty sets refuse
+- [x] **Final rendered-EIS validation pass** (scoping per the recorded design §2 amendment): size + secret scan on full delivered bytes; directive patterns on untrusted-body composition; detect/refuse only, never rewrite
+- [x] Delivered-payload hash surfaced (`Render`/`SystemMessage` return it) for per-call trace recording
+- [x] `instructions/global/` authored: role (DEC-06 neutral) + 6 protected safety instructions
+- [x] `instructions/themis/` authored: 5 themis-domain instructions (3 protected)
+- [ ] **Owner review of instruction content** (the agent's constitution-in-prompt) — PENDING; also review the LOW-8 pattern-breadth note (M2)
 
-## 5. L1-M5 — Delivery seam (Class 2)
+## 5. L1-M5 — Delivery seam (Class 2) — **DONE 2026-09-05**
 
-- [ ] `Render()` / `SystemMessage()` convenience; EIS → Context Delivery contract documented, incl. per-call EIS-hash recording
-- [ ] Delivery proof: EIS through `model.ExecutionRequest` against the mock providers (optional live proof if a model is available)
-- [ ] Traceability table: layer-doc §17 acceptance criteria **and design §6 grill invariants** → test names
+- [x] `Render(p)` / `SystemMessage(p)` with policy-hash binding; EIS → L2 contract documented in resolver.go/render.go
+- [x] Delivery proof: rendered EIS through `model.ExecutionRequest` to a mock Ollama provider, byte-identical system message, exactly system+user in the payload, unicode/escaping round-trip
+- [x] Traceability table: `traceability.md` — §17 criteria and grill invariants → test names (spot-checked honest by test review)
 
-## 6. Verification obligations (cross-cutting; test-reviewer gate)
+## 6. Verification obligations (cross-cutting; test-reviewer gate) — **DONE 2026-09-05**
 
-- [ ] Namespace violations: foreign claim, byte-identical-body claim, attacker-source-identical-body claim — all rejected identically
-- [ ] Aborts: unknown namespace, trusted-root duplicate, missing registered root, unloadable pattern policy, cap breach — all yield no EIS
-- [ ] Atomicity: partial source availability never yields an EIS
-- [ ] All three conflict classes recorded with id, sources, scopes, body hashes, resolution class
-- [ ] Dual-corpus CI gates green; adding a corpus-violating pattern fails CI
-- [ ] Golden render + golden EIS hash; final-pass scan operates on delivered bytes
+- [x] Namespace violations: foreign claim, byte-identical-body claim — rejected identically (content confers no ownership)
+- [x] Aborts: unknown namespace, trusted-root duplicate, missing registered root, unloadable pattern policy, cap breach — all yield no EIS
+- [x] Atomicity: partial source availability never yields an EIS; Resolve failure path atomic
+- [x] All three conflict classes recorded with id, scope, source, body hash, reason
+- [x] Dual-corpus CI gates green; corpus-violating policy cannot activate
+- [x] Golden render + golden EIS hash + independent canonical spec; final-pass scoping per design §2 amendment
 
 ## 7. Deferred dependencies (recorded, NOT Layer-1 implementation scope)
 
 - **L5:** pinned-ref provenance machinery — precondition for activating the repository-source contract (design §6 Q-L1-1)
 - **L9:** immutable registered skill identity binding `skill.<id>.*` namespaces; skill sources wired then
-- **L2/L7:** epoch context boundaries, succession triggers, resolution-boundary state machine, emergency epoch termination
+- **L2/L7:** epoch context boundaries, succession triggers, resolution-boundary state machine, emergency epoch termination; **mandatory-root registration contract** (production tasks must register the shipped safety/system/themis roots — role presence is orchestrator configuration, per the recorded F2 decision in design §2)
 - **L6:** durable storage of trace metadata (EIS/conflict/exemption records)
 - **Governance plane:** authenticated exemption-granting channel with the full record fields (design §6 Q-L1-2)
 
 ## 8. Close
 
-- [ ] Architecture + test review on the full change
-- [ ] Architecture-to-code map updated (L1 status EVOLVE+BUILD → done)
-- [ ] Green checkpoint commits pushed on owner approval
+- [x] Architecture + test review on the full change (2026-09-05): architecture verdict "faithful, disciplined realization; no boundary violations"; both reviews' findings remediated or recorded (design §2 amendments F1/F2 pending owner confirmation)
+- [x] Architecture-to-code map updated (L1 → DONE)
+- [ ] Green checkpoint commits pushed on owner approval; owner confirms design §2 amendments + M4 content review

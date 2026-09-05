@@ -15,6 +15,7 @@ Themis is the security system of record. The AI Harness is an execution capabili
 - External-system access is policy-gated and local-first.
 - Do not infer architecture when it is unclear.
 - Do not bypass Themis-owned security workflows or establish competing security truth.
+- When reporting information to me, be extermly concise and sarifice grammar for the sake of concision 
 
 Follow the authoritative documents rather than duplicating their rules here.
 
@@ -28,3 +29,5 @@ The five canonical triage labels are used verbatim (needs-triage, needs-info, re
 
 ### Domain docs
 Multi-context layout: `CONTEXT-MAP.md` at the root; ADRs live in `docs/decisions/` (system-wide) and `src/<context>/docs/decisions/`. See `docs/agents/domain.md`.
+
+## Prompts response

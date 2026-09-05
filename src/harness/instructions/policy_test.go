@@ -73,7 +73,7 @@ func TestShippedPolicyCorpus(t *testing.T) {
 	if p.Hash == "" || p.Version < 1 || len(p.Patterns) == 0 {
 		t.Fatalf("shipped policy incomplete: %+v", p)
 	}
-	if len(p.MustReject) < 10 || len(p.MustPass) < 10 {
+	if len(p.MustReject) < 12 || len(p.MustPass) < 12 {
 		t.Fatalf("dual corpus too thin: %d reject, %d pass", len(p.MustReject), len(p.MustPass))
 	}
 }

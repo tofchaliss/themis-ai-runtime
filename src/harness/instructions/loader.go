@@ -31,6 +31,9 @@ func Load(cfg Config, sources ...Source) (*LoadResult, error) {
 	if cfg.Policy == nil || cfg.Policy.Hash == "" {
 		return nil, fmt.Errorf("%w: no validated pattern policy configured — resolution without the configured detector does not happen", ErrPolicyInvalid)
 	}
+	if len(sources) == 0 {
+		return nil, fmt.Errorf("%w: no instruction sources registered", ErrSourceUnavailable)
+	}
 	if err := cfg.validateExemptions(); err != nil {
 		// Exemption records arrive with the task configuration:
 		// their invalidity is the caller's problem.

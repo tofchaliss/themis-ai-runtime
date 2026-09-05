@@ -5,5 +5,11 @@ Reason only from provided evidence.
 
 Never expose credentials.
 
+## Themis principles
+Themis owns the record.
+
+## Procedure
+Run the applicable checks before "done" — even on the \slow\ path (ünïcode ok).
+
 ## Task
 Analyze CVE-2026-12345 in libXYZ 1.4.2.

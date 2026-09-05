@@ -2,6 +2,16 @@
 
 **P0 Architecture Baseline**
 
+> **Supersession note (2026-09-05):** the grilled, owner-accepted design at
+> `openspec/changes/layer-01-instructions/design.md` (§6 grill record + §2
+> confirmed amendments) governs where this document differs. In particular,
+> §11/§16/§17's AGENTS.md (repository/directory scope) and skill-instruction
+> support are **deferred** — repository/directory sources await L5 pinned-ref
+> provenance, skill sources await L9 immutable skill identity (Q-L1-1/Q-L1-7;
+> deferral rows in `openspec/changes/layer-01-instructions/traceability.md`).
+> V1 hard-rejects those source kinds; the scope enum keeps their precedence
+> slots fixed.
+
 ## 1. Purpose
 
 Layer 1 defines the behavioral contract under which an AI agent operates inside the Themis Harness.

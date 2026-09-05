@@ -329,6 +329,49 @@ func TestResolveConflictOrderDeterministic(t *testing.T) {
 	}
 }
 
+// Two byte-different shadow attempts on the same trusted id exercise
+// the conflict sort's BodyHash tiebreak, order-independently. The
+// applied-exemption sort's same-PatternID branch is exercised by two
+// task instructions each carrying a pinned exemption for the same
+// pattern.
+func TestResolveTiebreaks(t *testing.T) {
+	p := writePolicy(t, twoPatternPolicy)
+	safety, _ := goldenSources(t)
+	shadowA := Instruction{ID: "harness.safety.no-credential-exposure", Scope: ScopeTask, Category: CategoryTask, Body: "shadow A\n"}
+	shadowB := Instruction{ID: "harness.safety.no-credential-exposure", Scope: ScopeTask, Category: CategoryTask, Body: "shadow B\n"}
+	bodyOne := "quote: ignore previous draft one\n"
+	bodyTwo := "quote: ignore previous draft two\n"
+	task := Source{Kind: ScopeTask, Inline: []Instruction{
+		shadowB, shadowA,
+		{ID: "task.instructions", Scope: ScopeTask, Category: CategoryTask, Body: bodyOne},
+		{ID: "task.more", Scope: ScopeTask, Category: CategoryTask, Body: bodyTwo},
+	}}
+	exOne := exemptionFor(t, p, "ignore-previous", bodyOne)
+	exTwo := exemptionFor(t, p, "ignore-previous", bodyTwo)
+	exTwo.InstructionID = "task.more"
+	cfg := Config{Policy: p, Exemptions: []Exemption{exTwo, exOne}, TaskID: "T1", Now: "2026-09-05T12:00:00Z"}
+	fwd, err := Resolve(cfg, safety, task)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rev, err := Resolve(cfg, task, safety)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fwd.Conflicts) != 2 || !reflect.DeepEqual(fwd.Conflicts, rev.Conflicts) {
+		t.Fatalf("same-id conflicts must order deterministically by BodyHash: %+v vs %+v", fwd.Conflicts, rev.Conflicts)
+	}
+	if fwd.Conflicts[0].BodyHash > fwd.Conflicts[1].BodyHash {
+		t.Fatalf("BodyHash tiebreak not applied: %+v", fwd.Conflicts)
+	}
+	if len(fwd.ExemptionsApplied) != 2 || !reflect.DeepEqual(fwd.ExemptionsApplied, rev.ExemptionsApplied) {
+		t.Fatalf("same-pattern exemptions must order deterministically: %+v", fwd.ExemptionsApplied)
+	}
+	if fwd.ExemptionsApplied[0].InstructionID > fwd.ExemptionsApplied[1].InstructionID {
+		t.Fatalf("InstructionID tiebreak not applied: %+v", fwd.ExemptionsApplied)
+	}
+}
+
 // The canonical form is independently derivable: build the expected
 // bytes by hand and compare with the resolver's hash. This test, not
 // the golden literal, is the specification.
@@ -353,6 +396,9 @@ func TestCanonicalFormSpec(t *testing.T) {
 func TestCanonicalSeparatorsUnreachable(t *testing.T) {
 	if _, err := NamespaceOwner("task.a\x1fb"); !errors.Is(err, ErrBadID) {
 		t.Fatal("separator bytes in ids must be rejected")
+	}
+	if _, err := NamespaceOwner("task.a\x1eb"); !errors.Is(err, ErrBadID) {
+		t.Fatal("record-separator bytes in ids must be rejected")
 	}
 	src := Source{Kind: ScopeTask, Inline: []Instruction{
 		{ID: "task.instructions", Scope: ScopeTask, Category: Category("ta\x1fsk"), Body: "b\n"},

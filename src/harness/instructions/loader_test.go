@@ -46,7 +46,7 @@ func TestLoadHappyPath(t *testing.T) {
 	task := Source{Kind: ScopeTask, Inline: []Instruction{
 		{ID: "task.instructions", Scope: ScopeTask, Category: CategoryTask, Body: "Analyze CVE-2026-12345.\n"},
 	}}
-	res, err := Load(src, task)
+	res, err := Load(testConfig(t), src, task)
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestLoadDeterministicOrder(t *testing.T) {
 	src := safetySource(t, files)
 	var prev []string
 	for run := 0; run < 3; run++ {
-		res, err := Load(src)
+		res, err := Load(testConfig(t), src)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -122,7 +122,7 @@ func TestLoadTrustedFailuresAbort(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			src := safetySource(t, map[string]string{"x.md": tc.content})
-			res, err := Load(src)
+			res, err := Load(testConfig(t), src)
 			if !errors.Is(err, tc.wantErr) {
 				t.Fatalf("want %v, got %v", tc.wantErr, err)
 			}
@@ -138,20 +138,20 @@ func TestLoadDuplicateIDAborts(t *testing.T) {
 		"a.md": file("harness.safety.x", "harness-safety", "safety", "one\n"),
 		"b.md": file("harness.safety.x", "harness-safety", "safety", "two\n"),
 	})
-	if _, err := Load(src); !errors.Is(err, ErrDuplicateID) {
+	if _, err := Load(testConfig(t), src); !errors.Is(err, ErrDuplicateID) {
 		t.Fatalf("want ErrDuplicateID, got %v", err)
 	}
 	// Across two sources of the same trusted kind: same abort, no winner rule.
 	one := safetySource(t, map[string]string{"a.md": file("harness.safety.x", "harness-safety", "safety", "one\n")})
 	two := safetySource(t, map[string]string{"b.md": file("harness.safety.x", "harness-safety", "safety", "two\n")})
-	if _, err := Load(one, two); !errors.Is(err, ErrDuplicateID) {
+	if _, err := Load(testConfig(t), one, two); !errors.Is(err, ErrDuplicateID) {
 		t.Fatalf("want ErrDuplicateID across sources, got %v", err)
 	}
 }
 
 func TestLoadMissingRootAborts(t *testing.T) {
 	src := Source{Kind: ScopeHarnessSafety, Root: filepath.Join(t.TempDir(), "absent")}
-	res, err := Load(src)
+	res, err := Load(testConfig(t), src)
 	if !errors.Is(err, ErrSourceUnavailable) {
 		t.Fatalf("want ErrSourceUnavailable, got %v", err)
 	}
@@ -162,16 +162,16 @@ func TestLoadMissingRootAborts(t *testing.T) {
 
 func TestLoadUnrecognizedSourceKinds(t *testing.T) {
 	for _, kind := range []Scope{ScopeRepository, ScopeDirectory, ScopeSkill} {
-		if _, err := Load(Source{Kind: kind, Root: t.TempDir()}); !errors.Is(err, ErrUnrecognizedSource) {
+		if _, err := Load(testConfig(t), Source{Kind: kind, Root: t.TempDir()}); !errors.Is(err, ErrUnrecognizedSource) {
 			t.Fatalf("%s source must be rejected in v1, got %v", kind, err)
 		}
 	}
 	// Exactly one of Root or Inline; inline is the task payload only.
-	if _, err := Load(Source{Kind: ScopeHarnessSafety}); !errors.Is(err, ErrUnrecognizedSource) {
+	if _, err := Load(testConfig(t), Source{Kind: ScopeHarnessSafety}); !errors.Is(err, ErrUnrecognizedSource) {
 		t.Fatal("source with neither Root nor Inline must be rejected")
 	}
 	bad := Source{Kind: ScopeHarnessSafety, Root: t.TempDir(), Inline: []Instruction{{}}}
-	if _, err := Load(bad); !errors.Is(err, ErrUnrecognizedSource) {
+	if _, err := Load(testConfig(t), bad); !errors.Is(err, ErrUnrecognizedSource) {
 		t.Fatal("source with both Root and Inline must be rejected")
 	}
 }
@@ -190,7 +190,7 @@ func TestTaskNamespaceViolationRejectedAndRecorded(t *testing.T) {
 			{ID: "harness.safety.verify", Scope: ScopeTask, Category: CategoryTask, Body: body},
 			{ID: "task.instructions", Scope: ScopeTask, Category: CategoryTask, Body: "Analyze.\n"},
 		}}
-		res, err := Load(src, task)
+		res, err := Load(testConfig(t), src, task)
 		if err != nil {
 			t.Fatalf("untrusted violation must not abort: %v", err)
 		}

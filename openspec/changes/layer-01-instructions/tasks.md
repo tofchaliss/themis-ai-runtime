@@ -23,15 +23,15 @@ Not tasks; constraints. Recorded in design.md §6: atomic resolution (no partial
 - [x] `Load` rejects `ScopeRepository`/`ScopeDirectory`/`ScopeSkill` sources as unrecognized (v1 decision, Q-L1-1)
 - [x] Test review passed (99.2% coverage); blocking findings remediated: `\b`-anchored `sk-` pattern (prose false positive), untrusted-path abort table, multi-source atomicity, `ErrSourceUnavailable` sentinel, untrusted `protected:` declaration aborts (fail-closed decision), inline provenance overwrite pinned, scope-order regression guard
 
-## 2. L1-M2 — Conflict detection and pattern policy (Class 3 — security-sensitive)
+## 2. L1-M2 — Conflict detection and pattern policy (Class 3 — security-sensitive) — **DONE 2026-09-05**
 
-- [ ] Ownership-violation rejection: foreign-namespace claim ⇒ `rejected-shadow` + Conflict record, **regardless of body content** (no content-based dedup)
-- [ ] Trusted-root duplicate id / trusted-root namespace violation ⇒ abort (no winner rule)
-- [ ] Pattern engine loading `policies/security/instruction-directive-patterns` (versioned; content hash recorded in trace); unloadable policy ⇒ abort
-- [ ] Initial pattern family authored: ignore/disregard-previous, reveal-system-prompt, persona-switch, disable/bypass-a-control, preset-governance/authority-attributes
-- [ ] **Dual corpus** as CI gates: must-reject (incl. "set requires_human_decision=false", "skip the verification guard") and must-pass (incl. "give me an independent assessment without repeating the Enterprise Position")
-- [ ] Exemption record type per design §6 Q-L1-2 (consumed from task configuration; granting channel is a deferred dependency)
-- [ ] Security review (rejection semantics, pattern list family membership, fail-closed paths)
+- [x] Ownership-violation rejection: foreign-namespace claim ⇒ `shadowed` + Conflict record, **regardless of body content** (delivered in M1)
+- [x] Trusted-root duplicate id / trusted-root namespace violation ⇒ abort (delivered in M1)
+- [x] Pattern engine loading `policies/security/instruction-directive-patterns.json` (versioned; hash on every LoadResult); unloadable/invalid/hollow policy ⇒ abort; nil/unvalidated policy ⇒ abort
+- [x] Initial pattern family authored: 3 hygiene + 3 boundary (disable/bypass-control, preset-authority-attributes, exfiltrate-secrets); tier maps to conflict class only — per accepted design, patterns of any tier are exemptable, controls never are
+- [x] **Dual corpus** (12 must-reject / 12 must-pass, grill-seeded), versioned in the policy file, re-verified at every load — a corpus-violating policy cannot activate
+- [x] Exemption record type: all pins mandatory (operator, task, pattern id, policy hash, instruction hash, reason, timestamp, expiry); Config carries TaskID + Now (clock as deterministic input); invalid/stale/expired/task-mismatched ⇒ abort; content-pin mismatch ⇒ does not apply, rejection stands
+- [x] Security review done; all findings remediated: HIGH-1 exemption no longer short-circuits scanning (continue-scan, every match independently exempted), boundary tier evaluated first (evidence never downgraded), decoy duplicate-id abort, mandatory pins, expiry/task binding, policy floors, trailing-bytes rejection. **Recorded for owner at M4 content review (LOW-8):** boundary patterns are broad for security-analysis phrasings ("analyze whether an attacker could bypass X") — remedy exists via exemption; consider growing must_pass before tightening. Known accepted evasions (LOW-9): >50-char gap padding, zero-width chars, "requires human decision" spelled with spaces — defense-in-depth limitations, not sole enforcement.
 
 ## 3. L1-M3 — Versioning, hashing, atomic resolution (Class 2)
 

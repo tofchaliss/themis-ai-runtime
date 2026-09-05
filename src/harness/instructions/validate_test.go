@@ -24,7 +24,7 @@ func TestSecretScanMustPass(t *testing.T) {
 		src := safetySource(t, map[string]string{
 			"x.md": file("harness.safety.x", "harness-safety", "safety", body),
 		})
-		if _, err := Load(src); err != nil {
+		if _, err := Load(testConfig(t), src); err != nil {
 			t.Errorf("benign body aborted load: %q: %v", body, err)
 		}
 	}
@@ -64,7 +64,7 @@ func TestLoadUntrustedFailuresAbort(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			res, err := Load(tc.src)
+			res, err := Load(testConfig(t), tc.src)
 			if !errors.Is(err, tc.wantErr) {
 				t.Fatalf("want %v, got %v", tc.wantErr, err)
 			}
@@ -96,7 +96,7 @@ func TestLoadMultiSourceAtomicity(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			res, err := Load(good, tc.second)
+			res, err := Load(testConfig(t), good, tc.second)
 			if !errors.Is(err, tc.wantErr) {
 				t.Fatalf("want %v, got %v", tc.wantErr, err)
 			}
@@ -115,7 +115,7 @@ func TestInlineProvenanceOverwritten(t *testing.T) {
 		ID: "task.instructions", Scope: ScopeTask, Category: CategoryTask,
 		Body: "Analyze.\n", BodyHash: "forged", SourceRef: "forged",
 	}}}
-	res, err := Load(task)
+	res, err := Load(testConfig(t), task)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,7 +138,7 @@ func TestConflictRecordsRealBodyHash(t *testing.T) {
 		{ID: "harness.safety.verify", Scope: ScopeTask, Category: CategoryTask, Body: body},
 		{ID: "task.instructions", Scope: ScopeTask, Category: CategoryTask, Body: "Analyze.\n"},
 	}}
-	res, err := Load(src, task)
+	res, err := Load(testConfig(t), src, task)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,7 +194,7 @@ func TestLoadFullResultDeterminism(t *testing.T) {
 		{ID: "harness.safety.bravo", Scope: ScopeTask, Category: CategoryTask, Body: "shadow attempt\n"},
 		{ID: "task.instructions", Scope: ScopeTask, Category: CategoryTask, Body: "Analyze.\n"},
 	}}
-	first, err := Load(src, task)
+	first, err := Load(testConfig(t), src, task)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -207,7 +207,7 @@ func TestLoadFullResultDeterminism(t *testing.T) {
 		t.Fatalf("walk/order wrong: %+v", first.Instructions)
 	}
 	for run := 0; run < 3; run++ {
-		again, err := Load(src, task)
+		again, err := Load(testConfig(t), src, task)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -234,7 +234,7 @@ func TestFrontmatterLineMalformations(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			src := safetySource(t, map[string]string{"x.md": tc.content})
-			if _, err := Load(src); !errors.Is(err, tc.wantErr) {
+			if _, err := Load(testConfig(t), src); !errors.Is(err, tc.wantErr) {
 				t.Fatalf("want %v, got %v", tc.wantErr, err)
 			}
 		})
@@ -246,7 +246,7 @@ func TestLoadEdgeCasesPinned(t *testing.T) {
 	src := safetySource(t, map[string]string{
 		"x.md": file("harness.safety.x", "harness-safety", "safety", "b\n", "protected: false"),
 	})
-	res, err := Load(src)
+	res, err := Load(testConfig(t), src)
 	if err != nil || res.Instructions[0].Protected {
 		t.Fatalf("protected: false must load unprotected: %v %+v", err, res)
 	}
@@ -254,7 +254,7 @@ func TestLoadEdgeCasesPinned(t *testing.T) {
 	atCap := safetySource(t, map[string]string{
 		"y.md": file("harness.safety.y", "harness-safety", "safety", strings.Repeat("a", MaxInstructionBytes)),
 	})
-	if _, err := Load(atCap); err != nil {
+	if _, err := Load(testConfig(t), atCap); err != nil {
 		t.Fatalf("body at exactly MaxInstructionBytes must pass: %v", err)
 	}
 	// A body containing "---" lines stays byte-exact.
@@ -262,7 +262,7 @@ func TestLoadEdgeCasesPinned(t *testing.T) {
 	verbatim := safetySource(t, map[string]string{
 		"z.md": file("harness.safety.z", "harness-safety", "safety", body),
 	})
-	res, err = Load(verbatim)
+	res, err = Load(testConfig(t), verbatim)
 	if err != nil || res.Instructions[0].Body != body {
 		t.Fatalf("body with --- lines not byte-exact: %v %q", err, res.Instructions[0].Body)
 	}
@@ -273,12 +273,12 @@ func TestLoadEdgeCasesPinned(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chmod(filepath.Join(dir, "x.md"), 0o644) })
-	if _, err := Load(Source{Kind: ScopeHarnessSafety, Root: dir}); !errors.Is(err, ErrSourceUnavailable) {
+	if _, err := Load(testConfig(t), Source{Kind: ScopeHarnessSafety, Root: dir}); !errors.Is(err, ErrSourceUnavailable) {
 		t.Fatalf("unreadable file must abort as unavailable, got %v", err)
 	}
 	// Inline on a non-task source without Root: rejected for the right reason.
 	bad := Source{Kind: ScopeHarnessSafety, Inline: []Instruction{{ID: "harness.safety.i", Scope: ScopeHarnessSafety, Category: CategorySafety, Body: "b\n"}}}
-	if _, err := Load(bad); !errors.Is(err, ErrUnrecognizedSource) {
+	if _, err := Load(testConfig(t), bad); !errors.Is(err, ErrUnrecognizedSource) {
 		t.Fatalf("inline non-task source must be rejected: %v", err)
 	}
 }

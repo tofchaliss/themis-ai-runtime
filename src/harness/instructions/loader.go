@@ -9,22 +9,32 @@ import (
 	"strings"
 )
 
-// LoadResult carries the validated instructions and the conflicts
-// recorded while loading. Load is atomic over trusted configuration:
+// LoadResult carries the validated instructions, the conflicts
+// recorded while loading, and the security-configuration identities
+// that judged the load. Load is atomic over trusted configuration:
 // any trusted-source failure yields (nil, error) — there is no
 // partial, degraded, or fallback instruction environment.
 type LoadResult struct {
-	Instructions []Instruction
-	Conflicts    []Conflict
+	Instructions      []Instruction
+	Conflicts         []Conflict
+	PolicyHash        string      // which pattern policy judged this load
+	ExemptionsApplied []Exemption // suppressed detection decisions, on the record
 }
 
-// Load reads and validates every registered source. Determinism: root
-// files are discovered in sorted path order, bodies are byte-exact,
-// and identical inputs produce identical results. Untrusted-content
-// violations (a task instruction claiming a foreign namespace) are
-// dropped and recorded as Conflicts; everything else fails closed.
-func Load(sources ...Source) (*LoadResult, error) {
-	res := &LoadResult{}
+// Load reads and validates every registered source under the given
+// security configuration. Determinism: root files are discovered in
+// sorted path order, bodies are byte-exact, and identical inputs
+// produce identical results. Untrusted-content violations (a foreign
+// namespace claim, a directive-pattern match) are dropped and
+// recorded as Conflicts; everything else fails closed.
+func Load(cfg Config, sources ...Source) (*LoadResult, error) {
+	if cfg.Policy == nil || cfg.Policy.Hash == "" {
+		return nil, fmt.Errorf("%w: no validated pattern policy configured — resolution without the configured detector does not happen", ErrPolicyInvalid)
+	}
+	if err := cfg.validateExemptions(); err != nil {
+		return nil, err
+	}
+	res := &LoadResult{PolicyHash: cfg.Policy.Hash}
 	seen := map[string]string{} // id -> SourceRef
 	for _, src := range sources {
 		if err := checkSource(src); err != nil {
@@ -46,14 +56,32 @@ func Load(sources ...Source) (*LoadResult, error) {
 				return nil, err
 			}
 			if conflict != nil {
+				// Ownership rejection: the id belongs to another
+				// source, so it does not enter duplicate accounting.
 				res.Conflicts = append(res.Conflicts, *conflict)
 				continue
 			}
+			// Duplicate accounting happens before pattern checks: a
+			// pattern-rejected instruction still legitimately claimed
+			// its id, so a decoy body cannot convert a structural
+			// duplicate abort into run-continues.
 			if prev, dup := seen[inst.ID]; dup {
 				return nil, fmt.Errorf("%w: %q declared by %s and %s",
 					ErrDuplicateID, inst.ID, prev, inst.SourceRef)
 			}
 			seen[inst.ID] = inst.SourceRef
+			if !trustedKinds[src.Kind] {
+				// Directive patterns run over untrusted bodies only:
+				// trusted roots are reviewed content, and the corpus
+				// protects legitimate phrasing at the scopes where
+				// untrusted callers write.
+				patternConflict, applied := cfg.checkPatterns(inst)
+				res.ExemptionsApplied = append(res.ExemptionsApplied, applied...)
+				if patternConflict != nil {
+					res.Conflicts = append(res.Conflicts, *patternConflict)
+					continue
+				}
+			}
 			res.Instructions = append(res.Instructions, inst)
 		}
 	}

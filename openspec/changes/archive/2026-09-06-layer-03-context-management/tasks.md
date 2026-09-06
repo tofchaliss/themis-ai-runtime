@@ -62,4 +62,4 @@ Class-3 review with compiled PoCs. Verdict: the authority boundary holds — no 
 - [x] Architecture + security + test review complete, three-state verdicts recorded (§4a, §5b)
 - [x] Code map updated (L3 → done)
 - [x] Owner resolved F1 (CONFORM, 2026-09-06)
-- [ ] Green checkpoints pushed on owner approval; archive on close
+- [x] Green checkpoints pushed on owner approval 2026-09-06 — **LAYER 3 CLOSED**; change archived

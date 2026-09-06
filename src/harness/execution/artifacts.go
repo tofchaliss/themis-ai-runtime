@@ -197,7 +197,9 @@ func parseSpec(raw []byte, src string) (*ProvisionSpec, error) {
 	// confinement layer (defense in depth, M1 security review LOW).
 	for _, seg := range strings.Split(s.Repo, "/") {
 		if seg == "." || seg == ".." {
-			return nil, fmt.Errorf("%w: bad repository name %q", ErrSpecInvalid, s.Repo)
+			// Distinct message from the regex branch so tests pin THIS
+			// branch (the regex admits dot segments; test review).
+			return nil, fmt.Errorf("%w: traversal segment in repository name %q", ErrSpecInvalid, s.Repo)
 		}
 	}
 	if !pinnedSHA.MatchString(s.PinnedSHA) {

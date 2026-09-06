@@ -161,6 +161,48 @@ func TestApplyPatchTransactional(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(ws, "d.go")); !os.IsNotExist(err) {
 		t.Fatal("transaction must apply NOTHING on failure")
 	}
+	// Phase-2 rollback (test review HIGH): both deletes validate in
+	// phase 1 (the file exists), the SECOND fails mid-apply (already
+	// deleted) — the journal must restore the first delete and remove
+	// the applied write, leaving the pre-patch state exactly.
+	writeFile(t, ws, "victim.go", "package victim // ORIGINAL\n")
+	audit = apply(`{"ops":[
+	  {"op":"write","path":"rolled.go","content":"package rolled\n"},
+	  {"op":"delete","path":"victim.go"},
+	  {"op":"delete","path":"victim.go"}]}`)
+	if audit.Decision != "error" || audit.ErrClass != ErrWriteRefused {
+		t.Fatalf("mid-apply failure must refuse: %+v", audit)
+	}
+	if _, err := os.Stat(filepath.Join(ws, "rolled.go")); !os.IsNotExist(err) {
+		t.Fatal("rollback must remove the applied write")
+	}
+	b, err := os.ReadFile(filepath.Join(ws, "victim.go"))
+	if err != nil || string(b) != "package victim // ORIGINAL\n" {
+		t.Fatalf("rollback must restore the deleted file byte-exactly: %v %q", err, b)
+	}
+	// Same shape through rename: second rename's source vanished
+	// mid-apply; the first rename must be undone (moved file removed,
+	// source restored).
+	writeFile(t, ws, "r1.go", "package r1\n")
+	writeFile(t, ws, "r2.go", "package r2\n")
+	audit = apply(`{"ops":[
+	  {"op":"rename","from":"r1.go","to":"moved1.go"},
+	  {"op":"rename","from":"r2.go","to":"moved2.go"},
+	  {"op":"rename","from":"r2.go","to":"moved3.go"}]}`)
+	if audit.Decision != "error" || audit.ErrClass != ErrWriteRefused {
+		t.Fatalf("mid-apply rename failure must refuse: %+v", audit)
+	}
+	for _, gone := range []string{"moved1.go", "moved2.go", "moved3.go"} {
+		if _, err := os.Stat(filepath.Join(ws, gone)); !os.IsNotExist(err) {
+			t.Fatalf("rollback must remove applied rename target %s", gone)
+		}
+	}
+	for _, back := range []string{"r1.go", "r2.go"} {
+		if _, err := os.Stat(filepath.Join(ws, back)); err != nil {
+			t.Fatalf("rollback must restore rename source %s: %v", back, err)
+		}
+	}
+
 	// Rename into .git*, unknown op, unknown field: refused whole.
 	for _, bad := range []string{
 		`{"ops":[{"op":"rename","from":"c.go","to":".git/hooks/x"}]}`,

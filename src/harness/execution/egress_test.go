@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tofchaliss/themis/tools"
 )
 
 func provisioned(t *testing.T) (*Env, *WorkspaceExecutionCeiling, *ProvisionSpec, string) {
@@ -253,6 +255,148 @@ func TestEgressEncodedArtifactBound(t *testing.T) {
 	env.Teardown()
 }
 
+// Persistence failure fails closed (Q-L5-11, test review HIGH): no
+// acknowledgment, typed outcome, no retained workspace — teardown
+// proceeds and the work is lost by design.
+func TestEgressPersistenceFailure(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("permission-based fixture is void under root")
+	}
+	env, ceiling, spec, _ := provisioned(t)
+	ws := env.Workspace()
+	if err := os.WriteFile(filepath.Join(ws.Root, "change.go"), []byte("package c\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	store, err := NewArtifactStore(filepath.Join(t.TempDir(), "s"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(store.Dir, 0o555); err != nil { // Put cannot create
+		t.Fatal(err)
+	}
+	defer os.Chmod(store.Dir, 0o755)
+	if err := env.Seal(SealTaskComplete); err != nil {
+		t.Fatal(err)
+	}
+	_, err = env.Egress(ceiling, spec, store)
+	if !errors.Is(err, ErrPersist) {
+		t.Fatalf("store failure must be artifact-persistence-failed: %v", err)
+	}
+	tr := env.Trace()
+	if tr.ArtifactAddress != "" || tr.EgressOutcome != "persistence-failed" {
+		t.Fatalf("no acknowledgment on persistence failure: %+v", tr.EgressOutcome)
+	}
+	if env.State() != StateEgressing {
+		t.Fatalf("failure leaves EGRESSING for teardown: %s", env.State())
+	}
+	if st := env.Teardown(); st != StateDestroyed {
+		t.Fatalf("teardown proceeds, workspace not retained: %s", st)
+	}
+	if _, err := os.Stat(ws.Root); !os.IsNotExist(err) {
+		t.Fatal("workspace must not be preserved for recovery")
+	}
+}
+
+// The remaining observed egress bounds (test review MED): file_count
+// and disk_bytes refusals, spec-narrowed.
+func TestEgressCountAndTotalBounds(t *testing.T) {
+	mirrorRoot, repo, sha := mkMirror(t)
+	ceiling := testCeiling(t, mirrorRoot)
+	p, err := NewLocalProvider(gitBin(t), t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// disk_bytes narrowed by spec: two files summing over the bound.
+	spec := testSpec(t, repo, sha, `{"dimension":"disk_bytes","value":30,"strength":"observed"}`)
+	env, err := p.Provision(ceiling, spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ws := env.Workspace()
+	for _, f := range []string{"a.txt", "b.txt"} {
+		if err := os.WriteFile(filepath.Join(ws.Root, f), []byte(strings.Repeat("y", 20)), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	store, _ := NewArtifactStore(filepath.Join(t.TempDir(), "s1"))
+	if err := env.Seal(SealTaskComplete); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.Egress(ceiling, spec, store); !errors.Is(err, ErrEgress) || !strings.Contains(err.Error(), "disk_bytes") {
+		t.Fatalf("total over spec disk_bytes must refuse typed: %v", err)
+	}
+	env.Teardown()
+
+	// file_count: a tiny ceiling makes three changed files too many.
+	body := `{"version":1,"mirror_root":"` + mirrorRoot + `","max_wall_deadline_sec":120,"max_file_bytes":1048576,"max_total_bytes":10485760,"max_file_count":2,"max_mem_bytes":1073741824,"max_cpu_time_sec":600,"max_proc_count":64}`
+	smallCeiling, err := LoadCeiling(writeTemp(t, "count.json", body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	spec2 := testSpec(t, repo, sha, "")
+	env2, err := p.Provision(smallCeiling, spec2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []string{"c.txt", "d.txt", "e.txt"} {
+		if err := os.WriteFile(filepath.Join(env2.Workspace().Root, f), []byte("z"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	store2, _ := NewArtifactStore(filepath.Join(t.TempDir(), "s2"))
+	if err := env2.Seal(SealTaskComplete); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env2.Egress(smallCeiling, spec2, store2); !errors.Is(err, ErrEgress) || !strings.Contains(err.Error(), "file_count") {
+		t.Fatalf("count over ceiling must refuse typed: %v", err)
+	}
+	env2.Teardown()
+}
+
+// .git*-component paths are excluded-and-noted by the CONTRACT, not
+// by git's own listing (Q-L5-10; test review MED).
+func TestEgressVCSExcludedAndNoted(t *testing.T) {
+	env, ceiling, spec, _ := provisioned(t)
+	ws := env.Workspace()
+	if err := os.MkdirAll(filepath.Join(ws.Root, ".github"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ws.Root, ".github", "w.yml"), []byte("on: push\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ws.Root, "ok.go"), []byte("package ok\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	store, _ := NewArtifactStore(filepath.Join(t.TempDir(), "s"))
+	if err := env.Seal(SealTaskComplete); err != nil {
+		t.Fatal(err)
+	}
+	addr, err := env.Egress(ceiling, spec, store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := store.Get(addr)
+	var m ArtifactManifest
+	if err := json.Unmarshal(raw, &m); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range m.Changes {
+		if strings.Contains(c.Path, ".github") {
+			t.Fatalf(".git* content must never ship: %+v", c)
+		}
+	}
+	noted := false
+	for _, x := range m.ExcludedVCS {
+		if strings.Contains(x, ".github") {
+			noted = true
+		}
+	}
+	if !noted {
+		t.Fatalf("exclusion must be noted: %+v", m.ExcludedVCS)
+	}
+	env.Teardown()
+}
+
 // Store contract: content-addressed, write-once, verify-on-read.
 func TestArtifactStoreImmutability(t *testing.T) {
 	store, err := NewArtifactStore(filepath.Join(t.TempDir(), "s"))
@@ -304,13 +448,14 @@ func TestNoPushStructuralProof(t *testing.T) {
 			t.Errorf("%q must be outside the vocabulary: %v", sub, err)
 		}
 	}
-	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "policies", "tools", "registry-v2.json"))
+	reg, err := tools.LoadRegistry(filepath.Join("..", "..", "..", "policies", "tools", "registry-v2.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, forbidden := range []string{"push", "commit", "run_command", "shell"} {
-		if strings.Contains(string(raw), `"name": "`+forbidden+`"`) {
-			t.Errorf("registry-v2 must not declare %q", forbidden)
+	for _, td := range reg.Tools {
+		switch td.Name {
+		case "push", "commit", "run_command", "shell", "git_push":
+			t.Errorf("registry-v2 must not declare %q", td.Name)
 		}
 	}
 	for _, kv := range (&Env{homeDir: "/h", tmpDir: "/t"}).allowEnv() {

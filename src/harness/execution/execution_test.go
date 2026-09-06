@@ -127,7 +127,7 @@ func TestSpecFailsClosed(t *testing.T) {
 		{"no-deadline", `{"version":1,"task_id":"T","repo":"r","pinned_sha":"` + sha + `","limits":[{"dimension":"mem_bytes","value":5,"strength":"observed"}]}`, "wall_deadline_s is mandatory"},
 		{"observed-deadline", `{"version":1,"task_id":"T","repo":"r","pinned_sha":"` + sha + `","limits":[{"dimension":"wall_deadline_s","value":5,"strength":"observed"}]}`, "enforced strength"},
 		{"unknown-field", `{"version":1,"task_id":"T","repo":"r","pinned_sha":"` + sha + `","network":"all","limits":[{"dimension":"wall_deadline_s","value":5}]}`, "unknown field"},
-		{"dotdot-repo", `{"version":1,"task_id":"T","repo":"a/../../x","pinned_sha":"` + sha + `","limits":[{"dimension":"wall_deadline_s","value":5}]}`, "bad repository name"},
+		{"dotdot-repo", `{"version":1,"task_id":"T","repo":"a/../../x","pinned_sha":"` + sha + `","limits":[{"dimension":"wall_deadline_s","value":5}]}`, "traversal segment in repository name"},
 	}
 	for _, c := range cases {
 		_, err := parseSpec([]byte(c.body), c.name)
@@ -304,6 +304,60 @@ func TestLifecycleReachability(t *testing.T) {
 	}
 }
 
+// The FULL edge product (test review MED): every one of the 8×8
+// state pairs is asserted against the declared legal set, so any
+// added edge — forward or backward — fails this test, making
+// "invariants hold by reachability" itself regression-proof.
+func TestLifecycleEdgeProductExhaustive(t *testing.T) {
+	all := []State{StateProvisioning, StateActive, StateSealed, StateEgressing,
+		StateAcknowledged, StateTeardown, StateDestroyed, StateTeardownAnomalous}
+	legal := map[State]map[State]bool{
+		StateProvisioning: {StateActive: true, StateTeardown: true},
+		StateActive:       {StateSealed: true},
+		StateSealed:       {StateEgressing: true, StateTeardown: true},
+		StateEgressing:    {StateAcknowledged: true, StateTeardown: true},
+		StateAcknowledged: {StateTeardown: true},
+		StateTeardown:     {StateDestroyed: true, StateTeardownAnomalous: true},
+	}
+	for _, from := range all {
+		for _, to := range all {
+			e := &Env{state: from}
+			err := e.transition(to, "probe")
+			if legal[from][to] {
+				if err != nil {
+					t.Errorf("%s -> %s must be legal: %v", from, to, err)
+				}
+			} else if !errors.Is(err, ErrLifecycle) {
+				t.Errorf("%s -> %s must be illegal", from, to)
+			}
+		}
+	}
+}
+
+// Budget drained DURING an op auto-seals with the typed deadline
+// reason (test review LOW: the mid-drain branch, not just pre-exec).
+func TestBudgetMidDrainAutoSeals(t *testing.T) {
+	mirrorRoot, repo, sha := mkMirror(t)
+	p, err := NewLocalProvider(gitBin(t), t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	env, err := p.Provision(testCeiling(t, mirrorRoot), testSpec(t, repo, sha, ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.Teardown()
+	env.mu.Lock()
+	env.remaining = time.Millisecond // drains during the next spawn
+	env.mu.Unlock()
+	if _, err := env.ExecGit(30*time.Second, "log"); err == nil {
+		t.Fatal("draining op must fail")
+	}
+	if env.State() != StateSealed || env.Trace().SealReason != SealDeadline {
+		t.Fatalf("mid-op drain must auto-seal env-deadline: %s %q", env.State(), env.Trace().SealReason)
+	}
+}
+
 // --- attestation and endpoint refusal -------------------------------
 
 func TestAttestation(t *testing.T) {
@@ -408,11 +462,14 @@ func TestTraceIsDeepCopy(t *testing.T) {
 	e := &Env{state: StateActive}
 	e.trace.Provider = LocalDeclaration()
 	e.trace.Ops = []OpRecord{{Argv: []string{"status"}}}
+	e.trace.Transitions = []Transition{{From: StateProvisioning, To: StateActive, Reason: "provisioned"}}
 	tr := e.Trace()
 	tr.Provider.Limits[DimWallDeadlineS] = StrengthObserved
 	tr.Ops[0].Argv[0] = "mutated"
+	tr.Transitions[0].Reason = "forged"
 	tr2 := e.Trace()
-	if tr2.Provider.Limits[DimWallDeadlineS] != StrengthEnforced || tr2.Ops[0].Argv[0] != "status" {
+	if tr2.Provider.Limits[DimWallDeadlineS] != StrengthEnforced || tr2.Ops[0].Argv[0] != "status" ||
+		tr2.Transitions[0].Reason != "provisioned" {
 		t.Fatal("trace must be a deep copy")
 	}
 }
@@ -499,10 +556,11 @@ func TestProvisionFailurePaths(t *testing.T) {
 	if err == nil {
 		t.Fatal("provision of nonexistent repo must fail")
 	}
-	if env != nil {
-		if st := env.State(); st != StateDestroyed {
-			t.Fatalf("failed provision must reach a verified terminal: %s", st)
-		}
+	if env == nil {
+		t.Fatal("post-resource provision failure must return the env with its trace")
+	}
+	if st := env.State(); st != StateDestroyed {
+		t.Fatalf("failed provision must reach a verified terminal: %s", st)
 	}
 	// SHA not in repo: post-checkout failure path.
 	bogus := strings.Repeat("12", 20)
@@ -510,8 +568,8 @@ func TestProvisionFailurePaths(t *testing.T) {
 	if err == nil {
 		t.Fatal("provision at unknown SHA must fail")
 	}
-	if env2 != nil && env2.State() != StateDestroyed {
-		t.Fatalf("failed provision must tear down: %s", env2.State())
+	if env2 == nil || env2.State() != StateDestroyed {
+		t.Fatalf("failed provision must tear down with a trace: %+v", env2)
 	}
 	// Traversal repo name: confined before any resource exists.
 	s := testSpec(t, "a", sha, "")

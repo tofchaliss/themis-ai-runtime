@@ -88,24 +88,26 @@ func jstr(s string) string {
 // rule — checked here, not promised.
 func TestNoAmbientEnvInExecutorSources(t *testing.T) {
 	forbidden := []string{"os.Getenv", "os.Environ", "os.Setenv", "os.LookupEnv", "os.ExpandEnv", "syscall.Environ"}
-	for _, dir := range []string{".", "../tools"} {
-		entries, err := os.ReadDir(dir)
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, e := range entries {
-			if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") || strings.HasSuffix(e.Name(), "_test.go") {
-				continue
+	for _, root := range []string{".", "../tools", "../confine"} {
+		// Recursive walk: a future executor subpackage must not be
+		// silently skipped (test review).
+		err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+			if err != nil || d.IsDir() || !strings.HasSuffix(d.Name(), ".go") || strings.HasSuffix(d.Name(), "_test.go") {
+				return err
 			}
-			b, err := os.ReadFile(filepath.Join(dir, e.Name()))
+			b, err := os.ReadFile(path)
 			if err != nil {
-				t.Fatal(err)
+				return err
 			}
 			for _, f := range forbidden {
 				if strings.Contains(string(b), f) {
-					t.Errorf("%s/%s uses %s — executors receive (entry, args, target), never ambient environment", dir, e.Name(), f)
+					t.Errorf("%s uses %s — executors receive (entry, args, target), never ambient environment", path, f)
 				}
 			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
 		}
 	}
 }

@@ -6,7 +6,7 @@ Execution starts only after the grill closes Q-L4-1…9 and the owner accepts. E
 
 - [x] Grill session held 2026-09-06; Q-L4-1..9 closed and recorded in design.md §3
 - [x] Design accepted by owner (gate taken as accepted 2026-09-06 with "I am waiting on it" following the proposed accept→smoke→build→proof course; explicitly recorded per arch review F8 — say the word if this reading was wrong)
-- [x] Owner decision: pull qwen2.5-coder:7b (authorized 2026-09-06) — **pulled; FAILED the tool-protocol smoke** (tool JSON as content, structured tool_calls null; recorded in design §3 Q-L4-9). Live proof re-pending a new owner model decision (qwen2.5:7b / llama3.1:8b / defer)
+- [x] Owner decision: pull qwen2.5-coder:7b (authorized 2026-09-06) — **pulled; FAILED the tool-protocol smoke** (tool JSON as content, structured tool_calls null; recorded in design §3 Q-L4-9). Owner authorized qwen2.5:7b 2026-09-06 — pulled, smoke PASSED (structured tool_calls), **live proof PASSED** (see M4)
 
 ## 1. L4-M1 — Registry + grants (Class 3) — **DONE 2026-09-06**
 
@@ -42,12 +42,12 @@ Class-3 review with PoCs. Verified holding: anti-oracle check order (availabilit
 
 **Architecture review:** conformant, no boundary violations. Remediated: timeout was asserted-but-dead config → enforced per call with typed `timeout` error (goroutine-linger recorded as L5 deferral); requires-approval reservation made code; purity claim amended (input-bounded except confinement's necessary filesystem consult); grant⊆registry at-use asymmetry recorded as deliberate; M1 checkbox narrowed honestly. **PENDING OWNER: ARCHITECTURE.md gate-ordering reconciliation (design §3 Q-L4-9 note) — architecture-authority class.**
 
-## 4. L4-M4 — Seams + proof (Class 2)
+## 4. L4-M4 — Seams + proof (Class 2) — **DONE 2026-09-06**
 
 - [x] Model Interface loop: `TestProviderRoundTrip` — scripted provider emits structured tool_calls → parse → Authorize → execute → tool message → second-turn completion, through the real seam
-- [ ] Capability-fetch mechanism wired to the L2 envelope (`MechanismCapabilityFetch` gets its producer); joint trace reconstruction stated
-- [ ] Operational proof per Q-L4-9 owner decision
-- [ ] Traceability table, coverage-verified
+- [x] Capability-fetch mechanism has its producer (`ToolEvidence` carries MechanismCapabilityFetch, trust, hash); joint delivery+tool trace reconstruction stated in audit shape; full L2 envelope framing of tool results joins the L7 loop era
+- [x] Operational proof DONE 2026-09-06: `TestLiveToolProof` vs live qwen2.5:7b — authorized call (sentinel cited in completion), live not-available denial (class-only body), prompted target-refused, typed file-unreadable error, invalid-args(follow_symlinks), result as classified capability-fetch evidence. PASS 13.66s
+- [x] Traceability table (`traceability.md`), coverage-verified (97.4%)
 
 ## 5. Deferred dependencies (NOT L4 scope)
 

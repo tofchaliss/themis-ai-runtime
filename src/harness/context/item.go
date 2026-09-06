@@ -168,3 +168,7 @@ var (
 	ErrMetadataInvalid     = errors.New("metadata field unsafe for frame rendering")
 	ErrCompose             = errors.New("composition refused")
 )
+
+// EvidenceHash is the exported content-hash helper shared with Layer
+// 4 (tool evidence uses the same SHA-256 identity as context items).
+func EvidenceHash(b []byte) string { return evidenceHash(b) }

@@ -317,3 +317,11 @@ func confinedPath(root, rel string) (string, error) {
 	}
 	return resolved, nil
 }
+
+// ConfinePath is the exported confinement check for other harness
+// layers (L4 executors): resolves rel under root, refusing absolute
+// paths, "..", and symlink escapes. Single implementation — tool
+// target validation and context gathering must never drift apart.
+func ConfinePath(root, rel string) (string, error) {
+	return confinedPath(root, rel)
+}

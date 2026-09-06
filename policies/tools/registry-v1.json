@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "tools": [
+    {"name": "read_file", "description": "Read one file from the task workspace.",
+     "params": [{"name": "path", "type": "string", "required": true, "description": "workspace-relative path", "target": true}],
+     "target": "workspace-path", "timeout_sec": 10, "trust": "external-untrusted"},
+    {"name": "list_directory", "description": "List one directory in the task workspace.",
+     "params": [{"name": "path", "type": "string", "required": true, "description": "workspace-relative path", "target": true}],
+     "target": "workspace-path", "timeout_sec": 10, "trust": "external-untrusted"},
+    {"name": "search_code", "description": "Search workspace files for a literal substring; returns matching paths.",
+     "params": [{"name": "path", "type": "string", "required": true, "description": "workspace-relative root to search", "target": true},
+                {"name": "query", "type": "string", "required": true, "description": "literal substring"}],
+     "target": "workspace-path", "timeout_sec": 30, "trust": "external-untrusted"},
+    {"name": "get_finding", "description": "Fetch a Themis finding by id.",
+     "params": [{"name": "id", "type": "string", "required": true, "description": "finding id", "target": true}],
+     "target": "themis-id", "timeout_sec": 10, "trust": "governed-record"},
+    {"name": "get_product", "description": "Fetch a Themis product record by id.",
+     "params": [{"name": "id", "type": "string", "required": true, "description": "product id", "target": true}],
+     "target": "themis-id", "timeout_sec": 10, "trust": "governed-record"}
+  ]
+}

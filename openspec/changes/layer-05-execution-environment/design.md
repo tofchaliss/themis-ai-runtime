@@ -85,6 +85,18 @@ Answer: **C** — pluggable provider seam with a minimum isolation contract; the
 
 Tier-2 implication preserved: entering the vocabulary requires registered computation + bounded proposition vocabulary + Q-L2-6 provenance + appropriate tier + satisfying provider. Container ≠ authorization ≠ derived authority ≠ computation registration. Both discovered vectors (provision-time git hooks, post-teardown VCS persistence) are invisible to runtime containers — the recorded reason "container" is never the boundary.
 
+### Q-L5-3 — Provisioning vs execution (CLOSED WITH AMENDMENT)
+
+Owner-locked:
+
+> Provisioning is execution and is never trusted merely because it is infrastructure. Provisioning is authorized by a governed execution ceiling instantiated into a validated execution-specific specification. In v1, the test harness/caller may perform the future L7 orchestration role, but it cannot define or widen the governed ceiling. ProvisionSpec ⊄ WorkspaceExecutionCeiling fails closed before provisioning. **The governed ceiling artifact is a v1 dependency; L7 implementation is not.**
+
+Locked structure: **there is no trusted-by-position execution** — everything that executes runs inside a declared envelope under a closed vocabulary with audit; the planes differ only in authorizer (L4 grant vs governed spec). Two v1 artifacts ship: `WorkspaceExecutionCeiling` {allowed repository universe, ref policy, resource maxima, process limit, deadline maximum, required provider capabilities; version/hash/owner/provenance, fail-closed loader} and `ProvisionSpec` {repository, pinned SHA (immutable commit identity MANDATORY — never a branch), workspace binding, limits, deadline, provider requirements}. Well-formed ≠ authorized: structural validation never substitutes for the subset check. L5 enforces spec ⊆ ceiling mechanically; it never judges whether the ceiling is good policy (jurisdiction ≠ enforcement).
+
+Five provisioning controls: (1) Tier-1 subprocess in its own envelope (forced termination available and required); (2) neutralization profile as hard floor (hooks/config/helpers not expressible); (3) same audit plane as tool calls; (4) post-condition verification (worktree matches pinned SHA, hooks state empty, no unexpected executables); (5) **authorization ceiling before any external effect**. Network floor applies to provisioning: v1 provisions from local mirrors only; remote fetch is a future governed egress capability (§3.11 + the floor-migration rule).
+
+**Cross-layer principle (owner-named, to be recorded architecture-wide):** *a caller/orchestrator may instantiate or narrow a governed ceiling, but cannot define the ceiling* — L2 ContextPlan ⊆ ContextContract · L3 behavior ⊆ ManagementPolicy · L4 ExecutionGrant ⊆ WorkflowCeiling · L5 ProvisionSpec ⊆ WorkspaceExecutionCeiling.
+
 ## 3x. Open questions for the grill (Q-L5-n)
 
 1. **Q-L5-1 — Isolation strength for v1:** is OS-level process isolation (separate process, rlimits, cleared env, cwd jail) an acceptable first provider, or is Docker mandatory before any mutating tool activates? (Hardware/OPEN-3 constraints apply.)

@@ -4,9 +4,9 @@ Execution starts only after the grill closes Q-L4-1…9 and the owner accepts. E
 
 ## 0. Gate
 
-- [ ] Grill session held; each Q-L4-n answered and recorded in design.md
+- [x] Grill session held 2026-09-06; Q-L4-1..9 closed and recorded in design.md §3
 - [ ] Design accepted by owner
-- [ ] **Owner decision: tools-capable local model** (pull/download for live proof vs mock-only v1) — Q-L4-9
+- [x] Owner decision: pull qwen2.5-coder:7b for the live seam proof (Q-L4-9, authorized 2026-09-06; test equipment, not standardization)
 
 ## 1. L4-M1 — Registry + grants (Class 3 — security-sensitive)
 

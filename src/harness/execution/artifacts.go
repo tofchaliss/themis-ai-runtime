@@ -71,8 +71,35 @@ type WorkspaceExecutionCeiling struct {
 	MaxFileBytes  int64 `json:"max_file_bytes"`
 	MaxTotalBytes int64 `json:"max_total_bytes"`
 	MaxFileCount  int64 `json:"max_file_count"`
+	// Ceilings for the remaining closed-vocabulary dimensions, so
+	// spec ⊆ ceiling is total — a future enforced-memory provider
+	// must not inherit an unconstrained dimension (M1 security
+	// review LOW).
+	MaxMemBytes   int64 `json:"max_mem_bytes"`
+	MaxCPUTimeSec int64 `json:"max_cpu_time_sec"`
+	MaxProcCount  int64 `json:"max_proc_count"`
 
 	Hash string `json:"-"`
+}
+
+// max returns the ceiling bound for a limit dimension; containment
+// is total over the closed vocabulary.
+func (c *WorkspaceExecutionCeiling) max(dim string) int64 {
+	switch dim {
+	case DimWallDeadlineS:
+		return c.MaxWallDeadlineSec
+	case DimFileBytes:
+		return c.MaxFileBytes
+	case DimDiskBytes:
+		return c.MaxTotalBytes
+	case DimMemBytes:
+		return c.MaxMemBytes
+	case DimCPUTimeS:
+		return c.MaxCPUTimeSec
+	case DimProcCount:
+		return c.MaxProcCount
+	}
+	return 0 // unknown dimension: no headroom, fail closed
 }
 
 // LoadCeiling: fail-closed governed-artifact posture.
@@ -96,7 +123,8 @@ func LoadCeiling(path string) (*WorkspaceExecutionCeiling, error) {
 	if !filepath.IsAbs(c.MirrorRoot) {
 		return nil, fmt.Errorf("%w: mirror root must be absolute", ErrCeilingInvalid)
 	}
-	if c.MaxWallDeadlineSec <= 0 || c.MaxFileBytes <= 0 || c.MaxTotalBytes <= 0 || c.MaxFileCount <= 0 {
+	if c.MaxWallDeadlineSec <= 0 || c.MaxFileBytes <= 0 || c.MaxTotalBytes <= 0 ||
+		c.MaxFileCount <= 0 || c.MaxMemBytes <= 0 || c.MaxCPUTimeSec <= 0 || c.MaxProcCount <= 0 {
 		return nil, fmt.Errorf("%w: all ceiling bounds must be positive", ErrCeilingInvalid)
 	}
 	sum := sha256.Sum256(raw)
@@ -164,6 +192,14 @@ func parseSpec(raw []byte, src string) (*ProvisionSpec, error) {
 	if !repoName.MatchString(s.Repo) {
 		return nil, fmt.Errorf("%w: bad repository name %q", ErrSpecInvalid, s.Repo)
 	}
+	// The character class admits "." and ".." as segments; refuse
+	// them explicitly so traversal dies here, not only at the
+	// confinement layer (defense in depth, M1 security review LOW).
+	for _, seg := range strings.Split(s.Repo, "/") {
+		if seg == "." || seg == ".." {
+			return nil, fmt.Errorf("%w: bad repository name %q", ErrSpecInvalid, s.Repo)
+		}
+	}
 	if !pinnedSHA.MatchString(s.PinnedSHA) {
 		return nil, fmt.Errorf("%w: pinned_sha must be a full 40-hex commit SHA, got %q — branch names are not pins", ErrSpecInvalid, s.PinnedSHA)
 	}
@@ -213,18 +249,15 @@ func (s *ProvisionSpec) Limit(dim string) (LimitReq, bool) {
 	return LimitReq{}, false
 }
 
-// ValidateAgainst checks spec ⊆ ceiling. Refusal here is the
+// ValidateAgainst checks spec ⊆ ceiling — total over the closed
+// dimension vocabulary. Refusal here is the
 // environment-provision-failed class: L5 refusing an environment,
 // never a request.
 func (s *ProvisionSpec) ValidateAgainst(c *WorkspaceExecutionCeiling) error {
-	if l, ok := s.Limit(DimWallDeadlineS); ok && l.Value > c.MaxWallDeadlineSec {
-		return fmt.Errorf("%w: wall_deadline_s %d exceeds ceiling %d", ErrSpecInvalid, l.Value, c.MaxWallDeadlineSec)
-	}
-	if l, ok := s.Limit(DimFileBytes); ok && l.Value > c.MaxFileBytes {
-		return fmt.Errorf("%w: file_bytes %d exceeds ceiling %d", ErrSpecInvalid, l.Value, c.MaxFileBytes)
-	}
-	if l, ok := s.Limit(DimDiskBytes); ok && l.Value > c.MaxTotalBytes {
-		return fmt.Errorf("%w: disk_bytes %d exceeds ceiling %d", ErrSpecInvalid, l.Value, c.MaxTotalBytes)
+	for _, l := range s.Limits {
+		if m := c.max(l.Dimension); l.Value > m {
+			return fmt.Errorf("%w: %s %d exceeds ceiling %d", ErrSpecInvalid, l.Dimension, l.Value, m)
+		}
 	}
 	return nil
 }

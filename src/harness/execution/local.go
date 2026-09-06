@@ -10,7 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -44,7 +44,7 @@ func LocalDeclaration() ProviderDeclaration {
 		HostServices:    DeniedByConstruction,
 		Termination:     TerminationGroupKill,
 		Limits: map[string]Strength{
-			DimWallDeadlineS: StrengthEnforced, // group kill at deadline
+			DimWallDeadlineS: StrengthEnforced, // env budget + group kill
 			DimMemBytes:      StrengthObserved, // post-hoc rusage max-RSS
 			DimDiskBytes:     StrengthObserved, // measured at egress
 			DimFileBytes:     StrengthObserved, // per-file scan at egress
@@ -84,14 +84,19 @@ func NewLocalProvider(gitPath, baseDir string) (*LocalProvider, error) {
 	return &LocalProvider{GitPath: gitPath, BaseDir: baseDir, decl: LocalDeclaration(), binary: att}, nil
 }
 
-// Declaration returns the provider's property declaration.
-func (p *LocalProvider) Declaration() ProviderDeclaration { return p.decl }
+// Declaration returns a copy of the provider's property declaration.
+func (p *LocalProvider) Declaration() ProviderDeclaration {
+	d := p.decl
+	d.Limits = copyLimits(p.decl.Limits)
+	return d
+}
 
 // attestBinary records the executable's identity and refuses
 // privilege-carrying or tamper-exposed binaries: setuid/setgid,
 // world-writable file, world-writable containing directory
 // (Q-L5-6). The digest is evidence of what was executed, not proof
-// of trustworthy behavior.
+// of trustworthy behavior; the attest→exec window is a documented
+// threat-model residual, not a closed one.
 func attestBinary(path string) (BinaryAttestation, error) {
 	info, err := os.Lstat(path)
 	if err != nil {
@@ -130,17 +135,25 @@ func attestBinary(path string) (BinaryAttestation, error) {
 	return BinaryAttestation{Path: path, Digest: hex.EncodeToString(h.Sum(nil)), Mode: info.Mode().String()}, nil
 }
 
-// endpointShape refuses argv values that name a network endpoint: URL
-// schemes and scp-style remotes. This is the deterministically
-// testable half of denied-by-construction (Q-L5-7): a network request
-// dies as a typed refusal at argv construction, never as a downstream
-// git network error. Defense in depth — the invocation vocabulary
-// never constructs such an argument.
-var scpLike = regexp.MustCompile(`^[^/@]+@[^/@]+:`)
-
+// refuseEndpoints rejects argv values that could name a network
+// endpoint or transport helper — the deterministically testable half
+// of denied-by-construction (Q-L5-7): a network-shaped input dies as
+// a typed refusal at argv construction, never as a downstream git
+// network error. Rules (M1 security review MED-1):
+//   - "://"        — URL schemes;
+//   - "::"         — ext::/transport-helper syntax (arbitrary command
+//     execution via protocol.ext);
+//   - a ":" with no "/" before it — git's own scp-remote heuristic
+//     (host:path, with or without user@).
+//
+// Defense in depth — the invocation vocabulary never constructs such
+// an argument.
 func refuseEndpoints(argv []string) error {
 	for _, a := range argv {
-		if strings.Contains(a, "://") || scpLike.MatchString(a) {
+		if strings.Contains(a, "://") || strings.Contains(a, "::") {
+			return fmt.Errorf("%w: %q", ErrEndpoint, a)
+		}
+		if i := strings.IndexByte(a, ':'); i >= 0 && !strings.Contains(a[:i], "/") {
 			return fmt.Errorf("%w: %q", ErrEndpoint, a)
 		}
 	}
@@ -172,13 +185,19 @@ func (p *LocalProvider) Provision(ceiling *WorkspaceExecutionCeiling, spec *Prov
 		return nil, err
 	}
 
+	deadline, _ := spec.Limit(DimWallDeadlineS)
 	e := &Env{
 		state:    StateProvisioning,
 		provider: p,
+		// One wall-clock budget for the whole environment:
+		// provisioning and active ops draw it down together, so the
+		// declared wall_deadline_s bounds the envelope, not each call
+		// (M1 security review MED-3).
+		remaining: time.Duration(deadline.Value) * time.Second,
 		trace: Trace{
 			CeilingHash: ceiling.Hash,
 			SpecHash:    spec.Hash,
-			Provider:    p.decl,
+			Provider:    p.Declaration(),
 			Binary:      att,
 			Workspace:   Workspace{Repo: spec.Repo, PinnedSHA: spec.PinnedSHA},
 		},
@@ -207,21 +226,17 @@ func (p *LocalProvider) Provision(ceiling *WorkspaceExecutionCeiling, spec *Prov
 	e.trace.Workspace.Root = worktree
 	e.mu.Unlock()
 
-	deadline, _ := spec.Limit(DimWallDeadlineS)
 	// Provisioning is execution (Q-L5-3): the same neutralized,
 	// audited invocation path as active-phase ops.
-	if _, err := e.runGit("provision", time.Duration(deadline.Value)*time.Second,
-		p.BaseDir, "clone", "--no-hardlinks", mirror, worktree); err != nil {
+	if _, err := e.runGit("provision", e.budget(), p.BaseDir, "clone", "--no-hardlinks", mirror, worktree); err != nil {
 		return fail(err)
 	}
-	if _, err := e.runGit("provision", time.Duration(deadline.Value)*time.Second,
-		worktree, "-c", "advice.detachedHead=false", "checkout", "--detach", spec.PinnedSHA); err != nil {
+	if _, err := e.runGit("provision", e.budget(), worktree, "-c", "advice.detachedHead=false", "checkout", "--detach", spec.PinnedSHA); err != nil {
 		return fail(err)
 	}
 	// Post-condition verification (Q-L5-3): the checkout IS at the
 	// pinned SHA — asserted, not assumed.
-	head, err := e.runGit("provision", time.Duration(deadline.Value)*time.Second,
-		worktree, "rev-parse", "HEAD")
+	head, err := e.runGit("provision", e.budget(), worktree, "rev-parse", "HEAD")
 	if err != nil {
 		return fail(err)
 	}
@@ -232,6 +247,12 @@ func (p *LocalProvider) Provision(ceiling *WorkspaceExecutionCeiling, spec *Prov
 		return fail(err)
 	}
 	return e, nil
+}
+
+func (e *Env) budget() time.Duration {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.remaining
 }
 
 // allowEnv is the entire execution environment: empty by default,
@@ -249,30 +270,73 @@ func (e *Env) allowEnv() []string {
 	}
 }
 
+// activeVocabulary is the closed set of git subcommands an ACTIVE
+// environment exposes to callers. ExecGit is not a general git seam:
+// caller arguments may not be flags, so `-c`, `-C`, `--git-dir`,
+// `--exec-path`, `--upload-pack` and every other behavior-altering
+// switch is structurally outside the caller vocabulary (M1 security
+// review MED-2). The vocabulary widens only by deliberate edit here.
+var activeVocabulary = map[string]bool{
+	"status": true, "log": true, "diff": true, "show": true,
+	"rev-parse": true, "ls-files": true,
+}
+
 // ExecGit runs one active-phase git operation inside the environment.
 // Refused unless the environment is ACTIVE — a sealed environment
-// refuses all further executions, typed (Q-L5-12).
-func (e *Env) ExecGit(deadline time.Duration, args ...string) (string, error) {
+// refuses all further executions, typed (Q-L5-12). The call draws
+// down the environment's wall-clock budget; exhaustion seals the
+// environment with SealDeadline.
+func (e *Env) ExecGit(deadline time.Duration, sub string, args ...string) (string, error) {
+	if !activeVocabulary[sub] {
+		return "", fmt.Errorf("%w: subcommand %q is outside the active invocation vocabulary", ErrExec, sub)
+	}
+	for _, a := range args {
+		if strings.HasPrefix(a, "-") {
+			return "", fmt.Errorf("%w: flag argument %q is not caller vocabulary", ErrExec, a)
+		}
+	}
 	e.mu.Lock()
 	if e.state != StateActive {
 		st := e.state
 		e.mu.Unlock()
 		return "", fmt.Errorf("%w: execution refused in state %s", ErrLifecycle, st)
 	}
+	if e.remaining <= 0 {
+		_ = e.sealLocked(SealDeadline)
+		e.mu.Unlock()
+		return "", fmt.Errorf("%w: environment wall-clock budget exhausted", ErrExec)
+	}
 	root := e.trace.Workspace.Root
+	e.inflight++
 	e.mu.Unlock()
-	return e.runGit("active", deadline, root, args...)
+	out, err := e.runGit("active", deadline, root, append([]string{sub}, args...)...)
+	e.mu.Lock()
+	e.inflight--
+	if e.remaining <= 0 && e.state == StateActive && e.inflight == 0 {
+		_ = e.sealLocked(SealDeadline)
+	}
+	e.mu.Unlock()
+	return out, err
 }
 
 // runGit is the single subprocess invocation path: pinned absolute
 // binary, endpoint-refused argv, hooks neutralized, empty allowlist
-// environment, execution-owned process group, group-killed at
-// deadline. There is no second, more convenient path.
+// environment, execution-owned process group, group-killed at the
+// effective deadline (min of the requested deadline and the
+// environment's remaining budget). There is no second, more
+// convenient path.
 func (e *Env) runGit(phase string, deadline time.Duration, dir string, args ...string) (string, error) {
 	argv := append([]string{"-c", "core.hooksPath=" + e.hooksDir}, args...)
 	if err := refuseEndpoints(argv); err != nil {
 		e.record(OpRecord{Phase: phase, Argv: argv, Exit: -1, Outcome: "endpoint-refused"})
 		return "", err
+	}
+	if rem := e.budget(); deadline > rem {
+		deadline = rem
+	}
+	if deadline <= 0 {
+		e.record(OpRecord{Phase: phase, Argv: argv, Exit: -1, Outcome: "budget-exhausted"})
+		return "", fmt.Errorf("%w: environment wall-clock budget exhausted", ErrExec)
 	}
 	cmd := exec.Command(e.provider.GitPath, argv...)
 	cmd.Dir = dir
@@ -281,6 +345,7 @@ func (e *Env) runGit(phase string, deadline time.Duration, dir string, args ...s
 	var out, errb bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &errb
 
+	start := time.Now()
 	if err := cmd.Start(); err != nil {
 		e.record(OpRecord{Phase: phase, Argv: argv, Exit: -1, Outcome: "start-failed"})
 		return "", fmt.Errorf("%w: %v", ErrExec, err)
@@ -298,9 +363,17 @@ func (e *Env) runGit(phase string, deadline time.Duration, dir string, args ...s
 		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 		werr = <-done
 	}
+	e.mu.Lock()
+	e.remaining -= time.Since(start)
+	e.mu.Unlock()
+
 	rec := OpRecord{Phase: phase, Argv: argv, Exit: cmd.ProcessState.ExitCode()}
 	if ru, ok := cmd.ProcessState.SysUsage().(*syscall.Rusage); ok {
-		rec.MaxRSSByte = int64(ru.Maxrss) // observed accounting, never a bound
+		rss := int64(ru.Maxrss) // bytes on darwin, kilobytes on linux
+		if runtime.GOOS == "linux" {
+			rss *= 1024
+		}
+		rec.MaxRSSByte = rss // observed accounting, never a bound
 	}
 	switch {
 	case timedOut:
@@ -334,14 +407,25 @@ func firstLineOf(s string) string {
 	return s
 }
 
-// Teardown drives SEALED/ACKNOWLEDGED (or failed states already in
-// TEARDOWN) to a verified terminal. DESTROYED requires the
-// host-cleanliness assertions to pass; anything else is
+// Teardown drives the environment to a verified terminal. It is
+// never refusable in a way that retains a workspace (M1 security
+// review MED-5): an ACTIVE environment is force-sealed as
+// caller-abort first — teardown always occurs (D-L5-9). DESTROYED
+// requires the host-cleanliness assertions to pass; anything else is
 // TEARDOWN_ANOMALOUS — uncertainty is never converted into a success
 // assertion (Q-L5-12).
 func (e *Env) Teardown() State {
 	e.mu.Lock()
-	if e.state != StateTeardown {
+	if e.state == StateActive {
+		_ = e.sealLocked(SealCallerAbort)
+	}
+	switch e.state {
+	case StateDestroyed, StateTeardownAnomalous:
+		st := e.state
+		e.mu.Unlock()
+		return st // already terminal — idempotent
+	case StateTeardown:
+	default:
 		if err := e.transitionLocked(StateTeardown, "teardown"); err != nil {
 			st := e.state
 			e.mu.Unlock()

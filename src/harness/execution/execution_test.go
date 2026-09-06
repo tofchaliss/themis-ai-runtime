@@ -63,9 +63,11 @@ func mkMirror(t *testing.T) (string, string, string) {
 	return root, "themis-demo", sha
 }
 
+const ceilingBounds = `"max_wall_deadline_sec":120,"max_file_bytes":1048576,"max_total_bytes":10485760,"max_file_count":500,"max_mem_bytes":1073741824,"max_cpu_time_sec":600,"max_proc_count":64`
+
 func testCeiling(t *testing.T, mirrorRoot string) *WorkspaceExecutionCeiling {
 	t.Helper()
-	body := `{"version":1,"mirror_root":"` + mirrorRoot + `","max_wall_deadline_sec":120,"max_file_bytes":1048576,"max_total_bytes":10485760,"max_file_count":500}`
+	body := `{"version":1,"mirror_root":"` + mirrorRoot + `",` + ceilingBounds + `}`
 	c, err := LoadCeiling(writeTemp(t, "ceiling.json", body))
 	if err != nil {
 		t.Fatal(err)
@@ -91,11 +93,12 @@ func testSpec(t *testing.T, repo, sha, extraLimits string) *ProvisionSpec {
 
 func TestCeilingFailsClosed(t *testing.T) {
 	cases := []struct{ name, body, wantErr string }{
-		{"unknown-field", `{"version":1,"mirror_root":"/m","max_wall_deadline_sec":9,"max_file_bytes":1,"max_total_bytes":1,"max_file_count":1,"extra":true}`, "unknown field"},
-		{"trailing", `{"version":1,"mirror_root":"/m","max_wall_deadline_sec":9,"max_file_bytes":1,"max_total_bytes":1,"max_file_count":1}{}`, "trailing content"},
-		{"no-version", `{"mirror_root":"/m","max_wall_deadline_sec":9,"max_file_bytes":1,"max_total_bytes":1,"max_file_count":1}`, "version required"},
-		{"relative-root", `{"version":1,"mirror_root":"mirrors","max_wall_deadline_sec":9,"max_file_bytes":1,"max_total_bytes":1,"max_file_count":1}`, "must be absolute"},
-		{"zero-bound", `{"version":1,"mirror_root":"/m","max_wall_deadline_sec":0,"max_file_bytes":1,"max_total_bytes":1,"max_file_count":1}`, "must be positive"},
+		{"unknown-field", `{"version":1,"mirror_root":"/m",` + ceilingBounds + `,"extra":true}`, "unknown field"},
+		{"trailing", `{"version":1,"mirror_root":"/m",` + ceilingBounds + `}{}`, "trailing content"},
+		{"no-version", `{"mirror_root":"/m",` + ceilingBounds + `}`, "version required"},
+		{"relative-root", `{"version":1,"mirror_root":"mirrors",` + ceilingBounds + `}`, "must be absolute"},
+		{"zero-bound", `{"version":1,"mirror_root":"/m","max_wall_deadline_sec":0,"max_file_bytes":1,"max_total_bytes":1,"max_file_count":1,"max_mem_bytes":1,"max_cpu_time_sec":1,"max_proc_count":1}`, "must be positive"},
+		{"missing-new-bound", `{"version":1,"mirror_root":"/m","max_wall_deadline_sec":9,"max_file_bytes":1,"max_total_bytes":1,"max_file_count":1}`, "must be positive"},
 	}
 	for _, c := range cases {
 		_, err := LoadCeiling(writeTemp(t, c.name+".json", c.body))
@@ -121,6 +124,7 @@ func TestSpecFailsClosed(t *testing.T) {
 		{"no-deadline", `{"version":1,"task_id":"T","repo":"r","pinned_sha":"` + sha + `","limits":[{"dimension":"mem_bytes","value":5,"strength":"observed"}]}`, "wall_deadline_s is mandatory"},
 		{"observed-deadline", `{"version":1,"task_id":"T","repo":"r","pinned_sha":"` + sha + `","limits":[{"dimension":"wall_deadline_s","value":5,"strength":"observed"}]}`, "enforced strength"},
 		{"unknown-field", `{"version":1,"task_id":"T","repo":"r","pinned_sha":"` + sha + `","network":"all","limits":[{"dimension":"wall_deadline_s","value":5}]}`, "unknown field"},
+		{"dotdot-repo", `{"version":1,"task_id":"T","repo":"a/../../x","pinned_sha":"` + sha + `","limits":[{"dimension":"wall_deadline_s","value":5}]}`, "bad repository name"},
 	}
 	for _, c := range cases {
 		_, err := parseSpec([]byte(c.body), c.name)
@@ -150,6 +154,11 @@ func TestSpecCeilingContainment(t *testing.T) {
 	s3 := testSpec(t, "r", sha, `{"dimension":"disk_bytes","value":99999999999,"strength":"observed"}`)
 	if err := s3.ValidateAgainst(c); err == nil || !strings.Contains(err.Error(), "disk_bytes") {
 		t.Fatalf("disk_bytes above ceiling must refuse: %v", err)
+	}
+	// Containment is total over the closed vocabulary: mem_bytes too.
+	s4 := testSpec(t, "r", sha, `{"dimension":"mem_bytes","value":9999999999999,"strength":"observed"}`)
+	if err := s4.ValidateAgainst(c); err == nil || !strings.Contains(err.Error(), "mem_bytes") {
+		t.Fatalf("mem_bytes above ceiling must refuse: %v", err)
 	}
 }
 
@@ -267,10 +276,19 @@ func TestLifecycleReachability(t *testing.T) {
 	if err := e3.transition(StateAcknowledged, "x"); !errors.Is(err, ErrLifecycle) {
 		t.Fatalf("SEALED->ACKNOWLEDGED must be illegal: %v", err)
 	}
-	// Teardown() from ACTIVE is refused by the machine: state unchanged.
+	// Teardown() is never refusable in a way that retains a
+	// workspace: from ACTIVE it force-seals as caller-abort and
+	// proceeds (M1 security review MED-5).
 	eA := &Env{state: StateActive}
-	if st := eA.Teardown(); st != StateActive {
-		t.Fatalf("Teardown from ACTIVE must be refused, got %s", st)
+	if st := eA.Teardown(); st != StateDestroyed {
+		t.Fatalf("Teardown from ACTIVE must force-seal and destroy, got %s", st)
+	}
+	if eA.Trace().SealReason != SealCallerAbort {
+		t.Fatalf("forced seal must be typed caller-abort: %q", eA.Trace().SealReason)
+	}
+	// And it is idempotent at a terminal.
+	if st := eA.Teardown(); st != StateDestroyed {
+		t.Fatalf("Teardown at terminal must stay terminal, got %s", st)
 	}
 	// Terminal states have no exits.
 	for _, term := range []State{StateDestroyed, StateTeardownAnomalous} {
@@ -318,13 +336,81 @@ func TestAttestation(t *testing.T) {
 }
 
 func TestEndpointRefusal(t *testing.T) {
-	for _, bad := range []string{"https://github.com/x", "git://h/x", "ssh://h/x", "git@github.com:x/y.git", "file://local"} {
-		if err := refuseEndpoints([]string{"clone", bad}); !errors.Is(err, ErrEndpoint) {
-			t.Errorf("%q must be refused as endpoint-naming", bad)
+	bad := []string{
+		"https://github.com/x", "git://h/x", "ssh://h/x", "file://local", // schemes
+		"git@github.com:x/y.git",  // scp with user
+		"example.com:repo",        // scp without user — git's own heuristic (MED-1)
+		"host:path",               // ditto
+		"ext::sh -c evil",         // protocol.ext transport helper (MED-1)
+		"fd::17",                  // transport-helper syntax
+	}
+	for _, a := range bad {
+		if err := refuseEndpoints([]string{"clone", a}); !errors.Is(err, ErrEndpoint) {
+			t.Errorf("%q must be refused as endpoint-naming", a)
 		}
 	}
-	if err := refuseEndpoints([]string{"clone", "/local/mirror/repo", "worktree"}); err != nil {
-		t.Errorf("plain local paths must pass: %v", err)
+	// Plain local paths pass; a colon after the first slash is a
+	// local filename, not a remote.
+	for _, ok := range []string{"/local/mirror/repo", "worktree", "dir/file:name"} {
+		if err := refuseEndpoints([]string{"clone", ok}); err != nil {
+			t.Errorf("%q must pass: %v", ok, err)
+		}
+	}
+}
+
+// The ACTIVE seam is a closed vocabulary, not a general git CLI
+// (MED-2): unknown subcommands and ALL caller flags refuse typed.
+func TestExecVocabularyClosed(t *testing.T) {
+	e := &Env{state: StateActive, remaining: time.Minute}
+	for _, sub := range []string{"clone", "fetch", "push", "config", "submodule", "remote"} {
+		if _, err := e.ExecGit(time.Second, sub); err == nil || !strings.Contains(err.Error(), "outside the active invocation vocabulary") {
+			t.Errorf("subcommand %q must be outside the vocabulary: %v", sub, err)
+		}
+	}
+	for _, flag := range []string{"-c", "--git-dir=/x", "--exec-path=/x", "--upload-pack=/x", "-C", "--porcelain"} {
+		if _, err := e.ExecGit(time.Second, "status", flag); err == nil || !strings.Contains(err.Error(), "not caller vocabulary") {
+			t.Errorf("flag %q must be refused: %v", flag, err)
+		}
+	}
+}
+
+// SEALED means stable by mechanism: Seal refuses while an execution
+// is in flight (MED-4).
+func TestSealRefusesInflight(t *testing.T) {
+	e := &Env{state: StateActive, inflight: 1}
+	if err := e.Seal(SealTaskComplete); !errors.Is(err, ErrLifecycle) || !strings.Contains(err.Error(), "in flight") {
+		t.Fatalf("seal with in-flight execution must refuse: %v", err)
+	}
+	e.inflight = 0
+	if err := e.Seal(SealTaskComplete); err != nil {
+		t.Fatalf("seal with no in-flight execution must pass: %v", err)
+	}
+}
+
+// The wall-clock budget is enforced at the envelope: exhaustion
+// seals the environment with the typed deadline reason (MED-3).
+func TestBudgetExhaustionSeals(t *testing.T) {
+	e := &Env{state: StateActive, remaining: 0}
+	if _, err := e.ExecGit(time.Second, "status"); err == nil || !strings.Contains(err.Error(), "budget exhausted") {
+		t.Fatalf("exhausted budget must refuse typed: %v", err)
+	}
+	if e.State() != StateSealed || e.Trace().SealReason != SealDeadline {
+		t.Fatalf("exhaustion must seal with env-deadline: %s %q", e.State(), e.Trace().SealReason)
+	}
+}
+
+// The trace is a copy: consumers cannot mutate the provider
+// declaration or recorded argv through it (LOW).
+func TestTraceIsDeepCopy(t *testing.T) {
+	e := &Env{state: StateActive}
+	e.trace.Provider = LocalDeclaration()
+	e.trace.Ops = []OpRecord{{Argv: []string{"status"}}}
+	tr := e.Trace()
+	tr.Provider.Limits[DimWallDeadlineS] = StrengthObserved
+	tr.Ops[0].Argv[0] = "mutated"
+	tr2 := e.Trace()
+	if tr2.Provider.Limits[DimWallDeadlineS] != StrengthEnforced || tr2.Ops[0].Argv[0] != "status" {
+		t.Fatal("trace must be a deep copy")
 	}
 }
 
@@ -364,7 +450,7 @@ func TestLocalProvisionLifecycle(t *testing.T) {
 		t.Fatalf("checkout content missing: %v", err)
 	}
 	// Active-phase execution works.
-	if _, err := env.ExecGit(30*time.Second, "status", "--porcelain"); err != nil {
+	if _, err := env.ExecGit(30*time.Second, "status"); err != nil {
 		t.Fatalf("active exec failed: %v", err)
 	}
 	// Trace carries attestation, hashes, and provisioning ops.

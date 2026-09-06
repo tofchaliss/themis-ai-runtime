@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 )
 
 var ErrLifecycle = errors.New("illegal lifecycle transition")
@@ -56,6 +57,18 @@ type Env struct {
 	state State
 	trace Trace
 
+	// inflight counts executions currently running. Seal refuses
+	// while any are live: SEALED means the workspace is stable, and
+	// that must hold by mechanism, not by orchestrator discipline
+	// (M1 security review MED-4).
+	inflight int
+	// remaining is the environment's wall-clock budget
+	// (wall_deadline_s). Provisioning and active ops all draw from
+	// the one budget; exhaustion seals the environment with
+	// SealDeadline — the envelope-level enforcement the declaration
+	// claims (M1 security review MED-3).
+	remaining time.Duration
+
 	provider *LocalProvider
 	// env-owned dirs (workspace root lives in trace.Workspace)
 	homeDir, tmpDir, hooksDir, baseDir string
@@ -68,14 +81,29 @@ func (e *Env) State() State {
 	return e.state
 }
 
-// Trace returns a copy of the durable environment record.
+// Trace returns a deep copy of the durable environment record —
+// consumers can never mutate the provider declaration or recorded
+// argv through it (M1 security review LOW).
 func (e *Env) Trace() Trace {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	t := e.trace
+	t.Provider.Limits = copyLimits(e.trace.Provider.Limits)
 	t.Transitions = append([]Transition(nil), e.trace.Transitions...)
-	t.Ops = append([]OpRecord(nil), e.trace.Ops...)
+	t.Ops = make([]OpRecord, len(e.trace.Ops))
+	for i, op := range e.trace.Ops {
+		op.Argv = append([]string(nil), op.Argv...)
+		t.Ops[i] = op
+	}
 	return t
+}
+
+func copyLimits(m map[string]Strength) map[string]Strength {
+	out := make(map[string]Strength, len(m))
+	for k, v := range m {
+		out[k] = v
+	}
+	return out
 }
 
 // Workspace returns the provisioned workspace identity.
@@ -105,7 +133,8 @@ func (e *Env) transitionLocked(to State, reason string) error {
 // Seal is the one-way end of execution: after it, the environment
 // refuses all further executions, typed. Only a sealed environment
 // may be read by the Artifact Egress Contract (Q-L5-12: the object
-// being copied is stable before inspection begins).
+// being copied is stable before inspection begins) — which is also
+// why Seal refuses while an execution is in flight.
 func (e *Env) Seal(reason SealReason) error {
 	switch reason {
 	case SealTaskComplete, SealDeadline, SealFatalBreach, SealCallerAbort:
@@ -114,6 +143,13 @@ func (e *Env) Seal(reason SealReason) error {
 	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
+	if e.inflight > 0 {
+		return fmt.Errorf("%w: %d execution(s) in flight — a sealed workspace must be stable", ErrLifecycle, e.inflight)
+	}
+	return e.sealLocked(reason)
+}
+
+func (e *Env) sealLocked(reason SealReason) error {
 	if err := e.transitionLocked(StateSealed, string(reason)); err != nil {
 		return err
 	}

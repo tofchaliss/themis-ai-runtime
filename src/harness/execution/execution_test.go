@@ -57,6 +57,9 @@ func mkMirror(t *testing.T) (string, string, string) {
 	if err := os.WriteFile(filepath.Join(repo, "parser.go"), []byte("package parser // SENTINEL-L5\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(repo, "README.md"), []byte("# demo\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	run(repo, "add", ".")
 	run(repo, "commit", "-q", "-m", "seed")
 	sha := strings.TrimSpace(run(repo, "rev-parse", "HEAD"))

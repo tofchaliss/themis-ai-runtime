@@ -68,6 +68,11 @@ func NewExecutorTable(reg *Registry, seam ThemisSeam) (map[string]Executor, erro
 		"search_code":    execSearchCode,
 		"get_finding":    themisExec(seam, "finding"),
 		"get_product":    themisExec(seam, "product"),
+		// Mutating executors (registry-v2 era, D-L5-4): present in the
+		// table, live only when a registry declares them AND a grant
+		// carries the mutating visibility flag.
+		"write_file":  execWriteFile,
+		"apply_patch": execApplyPatch,
 	}
 	for _, t := range reg.Tools {
 		if _, ok := table[t.Name]; !ok {

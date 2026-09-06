@@ -73,6 +73,14 @@ func Authorize(reg *Registry, grant *Grant, toolName string, rawArgs json.RawMes
 	if entry == nil {
 		return deny(DenialNotAvailable, "", "not-granted: absent from execution grant")
 	}
+	if def.Mutating && !entry.Mutating {
+		// A mutating capability granted without the explicit mutating
+		// visibility flag is not granted (D-L5-4): the grant is the
+		// review surface, and invisible write authority must be
+		// structurally impossible. Availability-class denial: zero
+		// model detail.
+		return deny(DenialNotAvailable, "", "mutating-not-visible: grant lacks mutating flag for mutating tool")
+	}
 	if state.Calls[toolName] >= entry.MaxCalls {
 		return deny(DenialNotAvailable, "", fmt.Sprintf("quota-exhausted: tool cap %d reached", entry.MaxCalls))
 	}

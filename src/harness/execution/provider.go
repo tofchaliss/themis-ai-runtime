@@ -118,6 +118,12 @@ type Trace struct {
 	Transitions []Transition
 	Ops         []OpRecord
 	SealReason  SealReason
+	// EgressOutcome: "acknowledged" or the typed refusal/failure —
+	// recorded for the durable minimum (Q-L5-12).
+	EgressOutcome string
+	// ArtifactAddress: the content address the store acknowledged;
+	// empty when no artifact was produced.
+	ArtifactAddress string
 	// TeardownVerified: true only when post-teardown host-cleanliness
 	// assertions passed. DESTROYED is never declared without it.
 	TeardownVerified bool

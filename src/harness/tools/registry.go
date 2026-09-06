@@ -69,6 +69,11 @@ type ToolDef struct {
 	Params      []ParamDef  `json:"params"`
 	Target      TargetClass `json:"target"`
 	TimeoutSec  int         `json:"timeout_sec"`
+	// Mutating marks capabilities that change workspace state
+	// (registry-v2 / D-L5-4). A grant must carry the matching
+	// mutating:true visibility or the tool is not-available — a
+	// mutating capability can never be granted invisibly.
+	Mutating bool `json:"mutating,omitempty"`
 	// Trust is the result trust class fixed at registration
 	// (Q-L4-3). "derived" is structurally rejected in v1: no tool may
 	// self-declare computational provenance it does not carry.
@@ -194,6 +199,11 @@ type GrantEntry struct {
 	// grant authors use delimiter-terminated prefixes ("FIND-1:") for
 	// exact families (F8, documented convention).
 	ThemisScope []string `json:"themis_scope,omitempty"`
+	// Mutating is the explicit review surface for mutating grants
+	// (D-L5-4): granting a mutating tool requires this flag, so a
+	// reviewer reading the grant sees every write capability at a
+	// glance.
+	Mutating bool `json:"mutating,omitempty"`
 }
 
 // Grant is the execution-scoped allowlist: ExecutionGrant ⊆

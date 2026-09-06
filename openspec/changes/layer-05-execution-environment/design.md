@@ -55,7 +55,21 @@ Interface defined ({scope, ttl} → credential), no implementation; v1 provision
 ### D-L5-7 — run_command stays out
 Even sandboxed, arbitrary shell is OPEN-2's own grill (command policy, allowlists, output classification). The sandbox is necessary but not sufficient.
 
-## 3. Open questions for the grill (Q-L5-n)
+## 3. Grill record (2026-09-06)
+
+### Q-L5-1 — Execution-envelope ownership (CLOSED, locked)
+
+Owner-locked five principles:
+
+1. **Three ownership categories:** L5 hard floors · governed execution parameters (Themis ceiling → L7 narrowing) · capability-intrinsic constraints (L4 registry, Class-3).
+2. **Hard-floor definition (mechanical):** a hard floor is a security invariant **outside the execution-envelope configuration vocabulary** — no contract/grant/task field can even express weakening it; weakening requires a Class-4 architecture change. v1 floors: network deny, path-resolution semantics (symlink refusal, VCS-metadata write deny-list), environment scrubbing, process identity, I/O capture mechanics. Principle: *capacity is never authority; configuration is never de-isolation.*
+3. **Floor migration is an architecture-authority change, not a parameter edit** — it introduces a new expressible capability into the vocabulary and therefore **enters through the authorization boundary**: future network access arrives as a governed capability (Themis ceiling → L7 → L4 authorization → L5 enforcement, per Stage-3 §3.11), never as `L5: network=true`.
+4. **Provider capability:** effective capability = requested execution tier ∩ provider isolation capability; incompatible tools are excluded from the dispatch vocabulary before requests exist (closed-vocabulary principle; no runtime provider judgment).
+5. **L5 boundary:** L5 may reject an impossible/incompatible environment during provisioning (`environment-provision-failed` — not an authorization denial); after successful provisioning and L4 authorization, L5 only enforces declared constraints, never authorizes. *L5 can refuse an environment; it can never refuse a request.*
+
+Ownership model: Themis ceiling → L7 narrowing → {L4 authorization ∥ L5 environment (floors + provider limits)} → execute. The model supplies the request; governed artifacts supply the binding; L5 supplies the floors; the model overrides none.
+
+## 3x. Open questions for the grill (Q-L5-n)
 
 1. **Q-L5-1 — Isolation strength for v1:** is OS-level process isolation (separate process, rlimits, cleared env, cwd jail) an acceptable first provider, or is Docker mandatory before any mutating tool activates? (Hardware/OPEN-3 constraints apply.)
 2. **Q-L5-2 — Network default:** none-by-default is proposed; is *any* v1 executor allowed egress (e.g. future advisory fetch), and is network a per-tool grant dimension or an environment-level switch?

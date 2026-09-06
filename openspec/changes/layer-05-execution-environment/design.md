@@ -108,6 +108,20 @@ The single-mode predicate applied to writes is demonstrably escapable (nonexiste
 5. **TOCTOU is a threat-model statement, not a code comment:** v1 confinement guarantees hold against the defined non-concurrent-local-attacker model; kernel-enforced resolution (openat2/RESOLVE_BENEATH) and namespace/mount isolation are provider-strength mitigations, never an implicit v1 claim.
 6. **No inode/hard-link restriction in v1** — hard-link aliasing does not violate the pathname-confinement invariant actually being protected; expanding the predicate beyond its invariant is rejected.
 
+### Q-L5-5 — Environment and secret boundary (CLOSED WITH AMENDMENT)
+
+Owner-locked, with the "credential contamination handling" reframe replacing "redaction":
+
+1. **Empty environment by default.** An L5 execution starts with an empty environment; only explicitly declared, non-secret variables may be injected (v1 set: HOME/TMPDIR → env-owned tmp, LC_ALL=C, git config neutralizers). **No PATH** — executables are invoked by pinned absolute path. Declared injection values are validated non-secret at artifact load (the envelope is hashed and traced; a secret in it is a secret in the audit log forever).
+2. **In-process executors receive no ambient environment access** — executors get `(entry, args, target)` only; `os.Getenv`/`os.Environ` forbidden in executor packages, mechanically enforced (CI lint, dispatch-completeness enforcement style). The boundary is an API surface, not a fake process sandbox.
+3. **Secrets never enter static/versioned/hashed execution artifacts.** Future credentials enter ONLY through the broker path at execution time: ceiling declares permissible scopes → grant narrows → Class-3 credentialed-capability registration → broker issues short-lived scoped credential (every issuance audited). Broker is governance-plane, never model-addressable.
+4. **Credential contamination handling, not redaction.** A broker-issued credential is a protected secret object whose exact byte representation must not cross the evidence boundary. The capture boundary may replace ONLY exact broker-issued secret byte sequences — never semantic, pattern, contextual, or heuristic judgment. Typed contamination event in trace; hashes computed post-handling; post-handling bytes are ordinary L2 evidence and thereafter byte-exact. Secret-pattern scanning stays defense-in-depth flagging, never transformation authority.
+5. **Pre-contamination bytes must never exist in durable observability** — no debug-log/telemetry/crash-diagnostic branch before the contamination boundary; ordering is process output → capture → contamination boundary → {evidence, trace, hash}.
+6. **Partial/transformed credential leakage is a documented residual** — exact-value handling prevents the exact issued value crossing; it does not detect transformations. Mitigated by broker discipline (short TTL, narrow scope, non-echoed credential types, memory-only where possible), never by turning L5 into a general secret detector. Stronger guarantees require a dedicated security review when the credential class arrives.
+7. **Future in-process credentials must not use `os.Setenv`/ambient process state** — subprocess credential injection and in-process secret capability are distinct designs; the latter requires a memory-scoped interface (part of the future credential design, not v1).
+
+**Locked principle:** *L5 may remove its own secret contamination before the evidence boundary; L5 may never sanitize external evidence.* Resolves the L2-5.1 tension: the byte-exact rule applies once something has become evidence; a Themis-issued secret in output is contamination, not evidence.
+
 ## 3x. Open questions for the grill (Q-L5-n)
 
 1. **Q-L5-1 — Isolation strength for v1:** is OS-level process isolation (separate process, rlimits, cleared env, cwd jail) an acceptable first provider, or is Docker mandatory before any mutating tool activates? (Hardware/OPEN-3 constraints apply.)

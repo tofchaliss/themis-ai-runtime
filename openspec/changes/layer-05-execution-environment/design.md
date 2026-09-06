@@ -136,17 +136,25 @@ Owner-locked:
 
 **Locked principle:** *v1's actual security boundary is construction (argv, environment, binary, cwd, network), not identity — and the trace must present it as exactly that.*
 
-## 3x. Open questions for the grill (Q-L5-n)
+### Q-L5-7 — Network boundary (CLOSED WITH AMENDMENT)
 
-1. **Q-L5-1 — Isolation strength for v1:** is OS-level process isolation (separate process, rlimits, cleared env, cwd jail) an acceptable first provider, or is Docker mandatory before any mutating tool activates? (Hardware/OPEN-3 constraints apply.)
-2. **Q-L5-2 — Network default:** none-by-default is proposed; is *any* v1 executor allowed egress (e.g. future advisory fetch), and is network a per-tool grant dimension or an environment-level switch?
-3. **Q-L5-3 — Who provisions:** L7 will own provisioning eventually; v1 has no L7 — does the test harness/caller provision directly, and is that seam shaped now?
-4. **Q-L5-4 — Repository instruction activation:** does activating `ScopeRepository` sources (per the archived Q-L1-1 contract) belong in this change, or its own follow-up once pins exist?
-5. **Q-L5-5 — Mutating-tool review surface:** what makes a mutating grant reviewable enough — `mutating: true` flags, separate grant artifact, or a distinct registry section?
-6. **Q-L5-6 — Limit semantics:** what do CPU/RAM/time limits mean per provider, what's typed to the model on breach (`error(timeout)` precedent), and what's trace-only?
-7. **Q-L5-7 — Teardown guarantees:** what is *asserted* clean (worktree removed, temp dirs, processes reaped) vs best-effort, and what happens on teardown failure (fail closed how)?
-8. **Q-L5-8 — Diff artifact shape:** what exactly is the governed hand-off object {diff, provenance, tool audit trail}?
-9. **Q-L5-9 — Operational proof:** proposed — live model drives a mutating call (`write_file`) inside a provisioned worktree; assertions: change exists in worktree, host untouched, escape attempts refused, teardown clean.
+Owner-locked:
+
+1. **Network isolation is a declared-strength property:** `denied-by-construction` (v1 local) vs `denied-by-enforcement` (stronger provider capability). v1 claims no kernel-level network isolation; its evidence is the deterministic absence/refusal of network-capable inputs and ambient network configuration — typed refusal of endpoint-naming input (URL schemes, scp-syntax) at argv construction, never a downstream git network error; invocation profile contains no remote-capable operation; sources are plain local paths under the governed mirror root; empty env kills proxy/SSH/agent channels; neutralized config kills `url.insteadOf`/credential helpers.
+2. **The network property includes all address families and loopback.** "No Internet" is never an acceptable synonym for "network denied" (loopback is the classic hole — a netns-style provider leaving `localhost:11434` reachable would expose our own model endpoint under a "denied" declaration).
+3. **Host-service isolation is a separate declared property from network isolation** — they fail independently (denied netns + bind-mounted `/var/run/docker.sock` = total escape under "network: denied"). v1 declares both `denied-by-construction`, sharing the Q-L5-6 trusted/attested-binary residual by reference.
+4. **No channel blocklist is the security boundary.** Enumeration belongs to the property definition and its test corpus; the construction mechanism is fundamentally deny-by-not-providing (no input names an endpoint; no ambient state can discover one).
+5. **Stronger network/host-service isolation is a precondition** to arbitrary-execution capabilities (run_command / OPEN-2) entering the vocabulary.
+
+**Locked principle:** *A provider's declared isolation strength describes what it can guarantee; absence of an enforcement mechanism must never be represented as enforcement.*
+
+## 3x. Open questions for the grill (remaining, owner-ordered)
+
+1. **Q-L5-8 — Repository-instruction activation timing:** when does the provisioned/pinned repository become eligible to influence L1? (The archived Q-L1-1 `ScopeRepository` contract meets L5's verified workspace.)
+2. **Q-L5-9 — Limit semantics:** what exactly constitutes CPU/memory/disk/process-count/file-size/deadline enforcement; what does a provider declaring a dimension actually guarantee; what's typed to the model on breach vs trace-only?
+3. **Q-L5-10 — Teardown:** what must be verified after execution, and what remains outside L5's claim; failure behavior.
+4. **Q-L5-11 — Diff/hand-off artifact:** what L5 returns after mutation/provisioning; how workspace state becomes L2 evidence without L5 becoming a security interpreter.
+5. **Q-L5-12 — Operational proof gate:** what must be exercised against the v1 local provider before L5 receives the same three-state verdict as L4.
 
 ## 4. Test plan (three-state discipline)
 

@@ -35,7 +35,7 @@ Grill closed 2026-09-06 (Q-L5-1..12, all CLOSED; design.md §3 is the record, §
 
 - [x] Identity-bound registration artifact; four-control eligibility chain wired to L1 (D-L5-8, root AGENTS.md only)
 - [x] Unregistered-file invisibility + symlink-refusal tests
-- [ ] Security review
+- [x] Security review (1 MED sealed-files + 3 LOW, remediated in 79e0205; INFO residuals recorded)
 
 ## 5. L5-M5 — Operational proof + close (Class 2)
 

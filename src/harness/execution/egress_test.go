@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tofchaliss/themis/runtime/model"
 	"github.com/tofchaliss/themis/tools"
 )
 
@@ -395,6 +396,105 @@ func TestEgressVCSExcludedAndNoted(t *testing.T) {
 		t.Fatalf("exclusion must be noted: %+v", m.ExcludedVCS)
 	}
 	env.Teardown()
+}
+
+// The seal is an OS-level mechanism (architecture review F8): after
+// SEALED, mutation fails at the filesystem through EVERY channel —
+// direct writes and L4 mutating dispatch alike, not just ExecGit.
+func TestSealedWorkspaceReadOnly(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("permission-based mechanism is void under root")
+	}
+	env, ceiling, spec, _ := provisioned(t)
+	ws := env.Workspace()
+	if err := os.WriteFile(filepath.Join(ws.Root, "pre.go"), []byte("package pre\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.Seal(SealTaskComplete); err != nil {
+		t.Fatal(err)
+	}
+	// Direct overwrite and direct create both fail at the OS.
+	if err := os.WriteFile(filepath.Join(ws.Root, "pre.go"), []byte("mutated"), 0o644); err == nil {
+		t.Fatal("post-seal overwrite must fail at the filesystem")
+	}
+	if err := os.WriteFile(filepath.Join(ws.Root, "post.go"), []byte("x"), 0o644); err == nil {
+		t.Fatal("post-seal create must fail at the filesystem")
+	}
+	// L4 mutating dispatch fails typed, without consulting L5 state.
+	reg, err := tools.LoadRegistry(filepath.Join("..", "..", "..", "policies", "tools", "registry-v2.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	gp := filepath.Join(t.TempDir(), "g.json")
+	if err := os.WriteFile(gp, []byte(`{"version":1,"task_id":"S","total_max_calls":5,"entries":[{"tool":"write_file","max_calls":2,"workspace":`+jstr(ws.Root)+`,"mutating":true}]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	grant, err := tools.LoadGrant(gp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	table, err := tools.NewExecutorTable(reg, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, audit := tools.Handle(reg, grant, table, mkToolCall("write_file", `{"path":"pre.go","content":"hijack"}`), tools.CallState{Calls: map[string]int{}})
+	if audit.Decision != "error" || audit.ErrClass != tools.ErrWriteRefused {
+		t.Fatalf("post-seal L4 mutation must be write-refused by mechanism: %+v", audit)
+	}
+	// Egress still reads the sealed tree; teardown restores and
+	// destroys verified.
+	store, _ := NewArtifactStore(filepath.Join(t.TempDir(), "s"))
+	if _, err := env.Egress(ceiling, spec, store); err != nil {
+		t.Fatalf("egress must read a sealed workspace: %v", err)
+	}
+	if st := env.Teardown(); st != StateDestroyed {
+		t.Fatalf("teardown must restore permissions and destroy: %s", st)
+	}
+}
+
+// The observed mem_bytes dimension has a deterministic consumer
+// (architecture review F13): a breach refuses egress typed.
+func TestEgressMemObservedGate(t *testing.T) {
+	mirrorRoot, repo, sha := mkMirror(t)
+	ceiling := testCeiling(t, mirrorRoot)
+	spec := testSpec(t, repo, sha, `{"dimension":"mem_bytes","value":1,"strength":"observed"}`)
+	p, err := NewLocalProvider(gitBin(t), t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	env, err := p.Provision(ceiling, spec) // provisioning git ops observe RSS >> 1 byte
+	if err != nil {
+		t.Fatal(err)
+	}
+	store, _ := NewArtifactStore(filepath.Join(t.TempDir(), "s"))
+	if err := env.Seal(SealTaskComplete); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.Egress(ceiling, spec, store); !errors.Is(err, ErrEgress) || !strings.Contains(err.Error(), "mem_bytes") {
+		t.Fatalf("observed mem_bytes breach must refuse egress typed: %v", err)
+	}
+	env.Teardown()
+}
+
+// The store must lie outside the provider boundary — checked, not
+// assumed (architecture review F10).
+func TestEgressStoreInsideEnvRefused(t *testing.T) {
+	env, ceiling, spec, _ := provisioned(t)
+	store, err := NewArtifactStore(filepath.Join(env.baseDir, "store"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.Seal(SealTaskComplete); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.Egress(ceiling, spec, store); !errors.Is(err, ErrEgress) || !strings.Contains(err.Error(), "inside the environment") {
+		t.Fatalf("nested store must refuse: %v", err)
+	}
+	env.Teardown()
+}
+
+func mkToolCall(name, args string) model.ToolCall {
+	return model.ToolCall{ID: "c", Name: name, Arguments: json.RawMessage(args)}
 }
 
 // Store contract: content-addressed, write-once, verify-on-read.

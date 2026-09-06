@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -614,21 +615,22 @@ func TestTeardownAnomalous(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if runtime.GOOS != "darwin" {
+		t.Skip("uchg immutable-flag fixture is darwin-specific")
+	}
 	ws := env.Workspace()
-	// An unremovable entry: directory without write permission
-	// containing a file (unlink requires parent write).
-	locked := filepath.Join(ws.Root, "locked")
-	if err := os.Mkdir(locked, 0o755); err != nil {
+	// An unremovable entry: the immutable flag survives teardown's
+	// permission-restore walk (a plain 0555 dir would not — the walk
+	// exists so the OS-level seal can be undone before RemoveAll).
+	pinned := filepath.Join(ws.Root, "pinned")
+	if err := os.WriteFile(pinned, []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(locked, "pin"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chmod(locked, 0o555); err != nil {
-		t.Fatal(err)
+	if out, err := exec.Command("/usr/bin/chflags", "uchg", pinned).CombinedOutput(); err != nil {
+		t.Skipf("cannot set uchg: %v %s", err, out)
 	}
 	defer func() {
-		_ = os.Chmod(locked, 0o755)
+		_ = exec.Command("/usr/bin/chflags", "nouchg", pinned).Run()
 		_ = os.RemoveAll(env.baseDir)
 	}()
 	if err := env.Seal(SealCallerAbort); err != nil {

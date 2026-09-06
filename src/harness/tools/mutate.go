@@ -3,7 +3,7 @@ package tools
 // Mutating executors (registry-v2, L5-M3 / D-L5-4). Both run behind
 // the identical L4 gate — the environment adds containment, never a
 // second permission system. All mutation targets pass CreateMode
-// confinement (hctx.ConfineCreatePath): no symlink anywhere in the
+// confinement (cfn.CreatePath): no symlink anywhere in the
 // write path, broad .git* deny-list, parent chain must exist. Results
 // record {path, old_hash, new_hash} so the trace can prove exactly
 // what changed.
@@ -15,7 +15,7 @@ import (
 	"os"
 	"strings"
 
-	hctx "github.com/tofchaliss/themis/context"
+	cfn "github.com/tofchaliss/themis/confine"
 )
 
 // ErrWriteRefused joins the bounded executor error vocabulary for the
@@ -46,7 +46,7 @@ func execWriteFile(entry *GrantEntry, args map[string]any, target string) Outcom
 	if len(content) > maxToolEvidence {
 		return Outcome{ErrClass: ErrOversized}
 	}
-	abs, err := hctx.ConfineCreatePath(entry.Workspace, target)
+	abs, err := cfn.CreatePath(entry.Workspace, target)
 	if err != nil {
 		return Outcome{ErrClass: ErrWriteRefused}
 	}
@@ -105,13 +105,13 @@ func execApplyPatch(entry *GrantEntry, args map[string]any, target string) Outco
 		r := resolvedOp{patchOp: op}
 		switch op.Op {
 		case "write":
-			abs, err := hctx.ConfineCreatePath(entry.Workspace, op.Path)
+			abs, err := cfn.CreatePath(entry.Workspace, op.Path)
 			if err != nil {
 				return Outcome{ErrClass: ErrWriteRefused}
 			}
 			r.abs = abs
 		case "delete":
-			abs, err := hctx.ConfineCreatePath(entry.Workspace, op.Path)
+			abs, err := cfn.CreatePath(entry.Workspace, op.Path)
 			if err != nil {
 				return Outcome{ErrClass: ErrWriteRefused}
 			}
@@ -120,7 +120,7 @@ func execApplyPatch(entry *GrantEntry, args map[string]any, target string) Outco
 			}
 			r.abs = abs
 		case "rename":
-			from, err := hctx.ConfineCreatePath(entry.Workspace, op.From)
+			from, err := cfn.CreatePath(entry.Workspace, op.From)
 			if err != nil {
 				return Outcome{ErrClass: ErrWriteRefused}
 			}
@@ -129,7 +129,7 @@ func execApplyPatch(entry *GrantEntry, args map[string]any, target string) Outco
 			}
 			// Destination is create-mode too: rename-onto-symlink and
 			// rename into .git* fail before any mutation.
-			to, err := hctx.ConfineCreatePath(entry.Workspace, op.To)
+			to, err := cfn.CreatePath(entry.Workspace, op.To)
 			if err != nil {
 				return Outcome{ErrClass: ErrWriteRefused}
 			}

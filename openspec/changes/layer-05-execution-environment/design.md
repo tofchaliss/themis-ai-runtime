@@ -214,6 +214,16 @@ Canonical machine and consequences locked as D-L5-9. Owner-locked enforcement-by
 
 **Grill complete: Q-L5-1..12 all CLOSED (2026-09-06). No open architecture questions remain.**
 
+### Implementation amendments (architecture review, 2026-09-06)
+
+1. **Confinement home (F1):** the canonical two-mode implementation lives in the layer-neutral leaf package `src/harness/confine` (forced by the context→instructions import cycle), consumed by L1 activation, L2 gathering, L4 executors, and L5 provisioning/egress. "The L5 confinement implementation" in Q-L5-8.6 reads as "the canonical implementation L5 mandated". Changes to `confine/` are Class-3 security-sensitive regardless of the calling layer.
+2. **Seal is an OS-level mechanism (F8):** SEALED chmods the task-content tree read-only (dirs 0555, files 0444; `.git` subtree exempt — mechanism state, deny-listed and egress-excluded; symlinks untouched), restored at teardown before removal. Post-seal mutation through ANY channel — including L4 mutating dispatch, which deliberately does not consult L5 state — fails at the filesystem: reachability, not discipline, without coupling L4 to the lifecycle.
+3. **Q-L5-9 matrix corrections (F11):** shipped local provider declares `cpu_time_s` ABSENT (Go cannot set a child rlimit portably pre-exec; declaring without a mechanism is the exact lie the principle forbids — principle governs the matrix row). `file_bytes` Tier-0 is observed-at-egress, not enforced-at-tool-boundary (the executor's fixed evidence cap is not the spec's bound).
+4. **mem_bytes observed has its deterministic consumer (F13):** peak per-op rusage max-RSS gates egress against a spec `mem_bytes` bound — observation as control input, never decorative telemetry (Q-L5-9.5 honored in code).
+5. **Termination declaration scope (F12):** `TerminationGroupKill` describes the subprocess tier only; Tier-0 in-process remains cooperative per the Q-L5-2 amendment. A per-tier declaration lands when Tier-0 executors route through the seam.
+6. **Ceiling metadata (F6):** the ceiling artifact carries version + hash; owner/provenance metadata fields join the governance-era artifact schema (recorded, not built).
+7. **Store disjointness (F10):** egress refuses a store located inside the provider boundary — checked, not assumed.
+
 ## 4. Test plan (three-state discipline)
 
 Provision/teardown determinism + host-cleanliness assertions; escape suite (symlink, `..`, absolute, `.git*`, race where testable) against the environment boundary; limit-breach typed terminations per the Q-L5-9 matrix (enforced dimensions terminate typed; observed dimensions gate egress); mutating-tool old/new hash records; no-push structural proof (no credential, no remote); pinned-SHA recording + binary attestation; state-machine reachability tests (no ACTIVE→egress, no post-seal execution, no unverified DESTROYED); the L4 decision-table rerun inside the environment.

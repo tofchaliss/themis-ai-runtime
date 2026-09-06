@@ -15,7 +15,7 @@ import (
 	"syscall"
 	"time"
 
-	hctx "github.com/tofchaliss/themis/context"
+	"github.com/tofchaliss/themis/confine"
 )
 
 var (
@@ -176,7 +176,7 @@ func (p *LocalProvider) Provision(ceiling *WorkspaceExecutionCeiling, spec *Prov
 	// Repository identity resolves under the governed mirror root only
 	// (Q-L5-3: local mirrors only); confinement reuses the canonical
 	// implementation.
-	mirror, err := hctx.ConfinePath(ceiling.MirrorRoot, spec.Repo)
+	mirror, err := confine.ResolvePath(ceiling.MirrorRoot, spec.Repo)
 	if err != nil {
 		return nil, fmt.Errorf("%w: repository %q: %v", ErrProvision, spec.Repo, err)
 	}
@@ -391,6 +391,61 @@ func (e *Env) runGit(phase string, deadline time.Duration, dir string, args ...s
 	}
 }
 
+// sealWorkspace makes the task-content tree read-only (dirs 0555,
+// regular files 0444; symlinks untouched — chmod would follow them).
+// The .git subtree is skipped: it is provider mechanism state, deny-
+// listed from every tool mutation and excluded from egress, and git's
+// own read commands need their opportunistic index writes. Errors are
+// best-effort here; egress and teardown verification catch what
+// matters.
+func (e *Env) sealWorkspace() {
+	root := e.trace.Workspace.Root
+	if root == "" {
+		return
+	}
+	_ = filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() && d.Name() == ".git" && p != root {
+			return filepath.SkipDir
+		}
+		info, ierr := d.Info()
+		if ierr != nil || info.Mode()&os.ModeSymlink != 0 {
+			return nil
+		}
+		if d.IsDir() {
+			_ = os.Chmod(p, 0o555)
+		} else {
+			_ = os.Chmod(p, 0o444)
+		}
+		return nil
+	})
+}
+
+// unsealWorkspace restores write permission so teardown's RemoveAll
+// can do its job; failures surface as TEARDOWN_ANOMALOUS.
+func (e *Env) unsealWorkspace() {
+	if e.baseDir == "" {
+		return
+	}
+	_ = filepath.WalkDir(e.baseDir, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		info, ierr := d.Info()
+		if ierr != nil || info.Mode()&os.ModeSymlink != 0 {
+			return nil
+		}
+		if d.IsDir() {
+			_ = os.Chmod(p, 0o755)
+		} else {
+			_ = os.Chmod(p, 0o644)
+		}
+		return nil
+	})
+}
+
 func (e *Env) record(op OpRecord) {
 	e.mu.Lock()
 	e.trace.Ops = append(e.trace.Ops, op)
@@ -440,6 +495,7 @@ func (e *Env) teardown() State {
 	verified := true
 	var removeErr error
 	if e.baseDir != "" { // nothing was created before the failure
+		e.unsealWorkspace()
 		removeErr = os.RemoveAll(e.baseDir)
 		verified = removeErr == nil
 		if verified {

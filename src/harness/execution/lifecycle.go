@@ -154,6 +154,11 @@ func (e *Env) sealLocked(reason SealReason) error {
 		return err
 	}
 	e.trace.SealReason = reason
+	// The seal is a MECHANISM, not a convention (architecture review
+	// F8): the workspace becomes OS-level read-only, so a post-seal
+	// mutation through ANY channel — L4 executor dispatch included —
+	// fails at the filesystem, not merely at ExecGit's state check.
+	e.sealWorkspace()
 	return nil
 }
 

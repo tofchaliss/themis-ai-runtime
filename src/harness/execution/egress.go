@@ -78,6 +78,30 @@ func (e *Env) Egress(ceiling *WorkspaceExecutionCeiling, spec *ProvisionSpec, st
 	if err := e.beginEgress(); err != nil {
 		return "", err
 	}
+	// "Outside the provider boundary" is checked, not assumed
+	// (architecture review F10): a store nested under the environment
+	// would be destroyed by teardown.
+	if e.baseDir != "" && strings.HasPrefix(store.Dir+string(filepath.Separator), e.baseDir+string(filepath.Separator)) {
+		e.setEgress("refused: store inside provider boundary")
+		return "", fmt.Errorf("%w: artifact store %q lies inside the environment", ErrEgress, store.Dir)
+	}
+	// The observed mem_bytes dimension gates acceptance here — its
+	// one deterministic consumer; observation is a control input,
+	// never decorative telemetry (Q-L5-9.5; architecture review F13).
+	if l, ok := spec.Limit(DimMemBytes); ok {
+		var peak int64
+		e.mu.Lock()
+		for _, op := range e.trace.Ops {
+			if op.MaxRSSByte > peak {
+				peak = op.MaxRSSByte
+			}
+		}
+		e.mu.Unlock()
+		if peak > l.Value {
+			e.setEgress("refused: mem_bytes observed breach")
+			return "", fmt.Errorf("%w: observed mem_bytes %d exceeds bound %d", ErrEgress, peak, l.Value)
+		}
+	}
 	manifest, err := e.buildManifest(ceiling, spec)
 	if err != nil {
 		e.setEgress("refused: " + err.Error())

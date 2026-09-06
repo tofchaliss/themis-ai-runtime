@@ -50,7 +50,7 @@ Not tasks; constraints. Recorded in design.md §3: Themis workflow contract is t
 - [x] Operational proof per gate-0 decision
 - [x] Traceability table: grill invariants → test names, coverage-verified
 
-## 5. L1 content dependency — **DONE 2026-09-06, owner content review PENDING**
+## 5. L1 content dependency — **DONE 2026-09-06; owner content review PASSED 2026-09-06** (accepted with push approval)
 
 - [x] Revise `instructions/themis/tier-behavior.md` to the four-class vocabulary (`governed-external` placed explicitly: storage attestation governed, content external prose) — Class 2 + owner content review
 
@@ -75,4 +75,4 @@ Class-3 review ran with adversarial PoCs. Three HIGHs found and remediated: **HI
 
 - [x] Reviews complete 2026-09-06 with three-state verdicts. **Security (Class 3):** 3 HIGHs remediated (§5a). **Test:** architecture-conformant YES / test-evidenced MOSTLY→closed (real fence-scan coverage, total-byte cap, non-inline metadata directions, Gather-path classification, order independence, golden payload hash d8ead1c5…, contract crumbs — all added; 97.9% coverage) / operationally proven YES (live run + evidence-echo starvation guard added). **Architecture:** conformant, no boundary violations; F1/F2/F4 record-honesty items resolved above; F3 contract slot-name checkMeta added; F5 withheld SourceStatus convention documented.
 - [x] Architecture-to-code map updated (L2 → done)
-- [ ] Green checkpoints pushed on owner approval; archive change on close
+- [x] Green checkpoints pushed on owner approval 2026-09-06; fence-mechanism supersession accepted with push approval — **LAYER 2 CLOSED**; change archived

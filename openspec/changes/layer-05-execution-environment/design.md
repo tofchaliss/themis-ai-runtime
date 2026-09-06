@@ -97,6 +97,17 @@ Five provisioning controls: (1) Tier-1 subprocess in its own envelope (forced te
 
 **Cross-layer principle (owner-named, to be recorded architecture-wide):** *a caller/orchestrator may instantiate or narrow a governed ceiling, but cannot define the ceiling* — L2 ContextPlan ⊆ ContextContract · L3 behavior ⊆ ManagementPolicy · L4 ExecutionGrant ⊆ WorkflowCeiling · L5 ProvisionSpec ⊆ WorkspaceExecutionCeiling.
 
+### Q-L5-4 — Filesystem confinement (CLOSED, locked)
+
+The single-mode predicate applied to writes is demonstrably escapable (nonexistent-target lexical fallback + symlinked parent ⇒ out-of-workspace write) — the mode split is mandatory. Owner-locked:
+
+1. **One canonical confinement implementation, two explicit modes** — ResolveMode (reads: shipped semantics) and CreateMode (mutations) — sharing lexical normalization, absolute/`..` rejection, root canonicalization, containment, VCS deny-list, and error construction; differing only where existence semantics genuinely differ. Never `safeReadPath()`/`safeWritePath()` twins.
+2. **CreateMode refuses symlinks anywhere in the write path** — including intermediate components and even links resolving inside the workspace; parent chain must exist, fully resolved, non-symlink; final target non-symlink. Symlinks are read-legitimate, write-refused. Monorepo symlink needs trigger a provider-strength/design review, never a silent weakening.
+3. **`.git*` deny-list stays deliberately broad** (any component named or prefixed `.git`) and applies to EVERY mutation mechanism — write, delete, rename-from, rename-to, patch. Classifying which `.git*` files are "safe" would itself become a security-maintenance surface. `.gitignore` edits are an accepted v1 usability cost.
+4. **`apply_patch` is a transaction:** parse whole patch → validate ALL operations (renames: source resolve-mode + confined + deny-list; destination create-mode; rename-onto-symlink fails before mutation) → any failure applies NOTHING.
+5. **TOCTOU is a threat-model statement, not a code comment:** v1 confinement guarantees hold against the defined non-concurrent-local-attacker model; kernel-enforced resolution (openat2/RESOLVE_BENEATH) and namespace/mount isolation are provider-strength mitigations, never an implicit v1 claim.
+6. **No inode/hard-link restriction in v1** — hard-link aliasing does not violate the pathname-confinement invariant actually being protected; expanding the predicate beyond its invariant is rejected.
+
 ## 3x. Open questions for the grill (Q-L5-n)
 
 1. **Q-L5-1 — Isolation strength for v1:** is OS-level process isolation (separate process, rlimits, cleared env, cwd jail) an acceptable first provider, or is Docker mandatory before any mutating tool activates? (Hardware/OPEN-3 constraints apply.)

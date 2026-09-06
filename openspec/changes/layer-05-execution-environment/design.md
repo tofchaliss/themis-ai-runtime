@@ -181,10 +181,19 @@ Owner-locked ownership: execution-completed (L5/provider) → eligible-to-egress
 
 **Locked principle:** *Execution completion is a provider outcome; egress eligibility is a deterministic structural contract owned by L5; evidence authority is L2's; acceptance is governance's. The egress gate is content-neutral — structure, provenance, and bounds, never meaning — and produces either a complete, hashed, provenance-bound artifact from a clean terminal state, or nothing.*
 
-## 3x. Open questions for the grill (remaining, owner-ordered)
+### Q-L5-11 — Artifact lifecycle and durability (CLOSED)
 
-1. **Q-L5-11 — Artifact lifecycle and durability:** custody after egress; immutability guarantee; persistence-failure behavior; teardown ordering; the execution-local → Themis-owned transition point.
-2. **Q-L5-12 — Teardown / operational proof gate:** teardown verification claims and what must be exercised against the v1 local provider before L5 receives the three-state verdict.
+Owner-locked. Three lifecycle transitions, only the first belonging to L5: ArtifactStore **acknowledgment** (execution-local bytes → Themis-owned durable record) → L2 delivery (record → evidence, classified external-untrusted) → governance decision (evidence → accepted change).
+
+**Locked sequence:** egress passes → materialize directly into ArtifactStore staging (no L5-retained artifact state, no third custody location) → store commit → fsync → **ACKNOWLEDGMENT (authoritative L5 custody boundary)** → trace records artifact address → teardown permitted → L2 may consume by address.
+
+**Key invariant:** teardown is permitted iff no artifact is expected or the ArtifactStore has acknowledged. Locked consequences: no L2 consumption pre-acknowledgment; persistence failure → typed `artifact-persistence-failed`, fails closed, **does not preserve the workspace** (teardown proceeds; work lost is an accepted v1 cost — provisioning is deterministic from the pinned SHA, so re-execution is an orchestration decision, never an L5 auto-retry); post-acknowledgment immutability is structural (content-addressed, write-once, `O_CREAT|O_EXCL`, no overwrite path in code) never procedural; artifact address bound into trace; v1 retention retain-all with retention/GC an explicit L6 IOU; **the store is outside the execution provider boundary** — teardown structurally cannot delete or mutate durable artifacts. v1 store contract: write-once + content-addressed + acknowledge-then-immutable + addressable retrieval.
+
+**Locked custody invariant:** *L5's custody of an artifact ends at ArtifactStore acknowledgment. Before acknowledgment, no teardown and no evidence delivery are permitted. Persistence failure fails the execution closed and does not create a retained-workspace state. After acknowledgment, immutability is structural through content-addressed, write-once storage. L5 participates only in the write/acknowledgment seam; durable lifecycle belongs to L6.*
+
+## 3x. Open questions for the grill (remaining)
+
+1. **Q-L5-12 — Final boundary audit:** the complete monotonic L5 state machine; legal transitions; teardown verification claims; then the operational proof gate.
 
 ## 4. Test plan (three-state discipline)
 

@@ -70,10 +70,13 @@ func ResolvePath(root, rel string) (string, error) {
 // .gitmodules all refuse. Classifying which .git* files are "safe"
 // would itself become a security-maintenance surface. Applies to
 // every mutation mechanism: write, delete, rename-from, rename-to,
-// patch.
+// patch. The comparison is case-folded: on case-insensitive
+// filesystems (default APFS/NTFS) ".GIT/config" IS ".git/config",
+// and a case-sensitive deny-list is a bypass (M2/M3 security review
+// HIGH, PoC-confirmed).
 func vcsDenied(rel string) bool {
 	for _, seg := range strings.Split(filepath.ToSlash(filepath.Clean(rel)), "/") {
-		if strings.HasPrefix(seg, ".git") {
+		if strings.HasPrefix(strings.ToLower(seg), ".git") {
 			return true
 		}
 	}

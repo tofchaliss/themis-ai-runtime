@@ -41,6 +41,8 @@ type ChangeEntry struct {
 	// touching the (destroyed) workspace.
 	Content string `json:"content,omitempty"`
 	Target  string `json:"target,omitempty"` // symlink target string, as data
+	// OldPath carries the rename source for renamed entries.
+	OldPath string `json:"old_path,omitempty"`
 }
 
 // ArtifactManifest is the governed hand-off object. Its canonical
@@ -86,6 +88,14 @@ func (e *Env) Egress(ceiling *WorkspaceExecutionCeiling, spec *ProvisionSpec, st
 		e.setEgress("refused: manifest encoding")
 		return "", fmt.Errorf("%w: %v", ErrEgress, err)
 	}
+	// The ceiling's total bound governs the ENCODED artifact too —
+	// JSON escaping expands raw bytes, and the store artifact is what
+	// actually persists; a bound over source bytes alone would not
+	// bound what egresses (M2/M3 security review MED).
+	if int64(len(raw)) > ceiling.MaxTotalBytes {
+		e.setEgress("refused: encoded artifact exceeds total bound")
+		return "", fmt.Errorf("%w: encoded manifest %d bytes exceeds total bound %d", ErrEgress, len(raw), ceiling.MaxTotalBytes)
+	}
 	addr, err := store.Put(raw)
 	if err != nil {
 		// Persistence failure fails closed: no acknowledgment, no
@@ -123,6 +133,11 @@ func effectiveBound(ceiling int64, spec *ProvisionSpec, dim string) int64 {
 }
 
 func (e *Env) buildManifest(ceiling *WorkspaceExecutionCeiling, spec *ProvisionSpec) (*ArtifactManifest, error) {
+	// The egress read runs ONLY in EGRESSING — asserted by mechanism,
+	// not by the current call graph (M2/M3 security review LOW).
+	if st := e.State(); st != StateEgressing {
+		return nil, fmt.Errorf("%w: manifest build refused in state %s", ErrEgress, st)
+	}
 	e.mu.Lock()
 	ws := e.trace.Workspace
 	m := &ArtifactManifest{
@@ -144,19 +159,35 @@ func (e *Env) buildManifest(ceiling *WorkspaceExecutionCeiling, spec *ProvisionS
 	maxFile := effectiveBound(ceiling.MaxFileBytes, spec, DimFileBytes)
 	maxTotal := effectiveBound(ceiling.MaxTotalBytes, spec, DimDiskBytes)
 
-	for _, entry := range strings.Split(out, "\x00") {
+	segs := strings.Split(out, "\x00")
+	for i := 0; i < len(segs); i++ {
+		entry := segs[i]
 		if len(entry) < 4 {
 			continue
 		}
 		code, rel := entry[:2], entry[3:]
+		// Rename/copy entries carry a SECOND NUL-separated field (the
+		// source path); consume it so it is never mis-parsed as an
+		// independent change (M2/M3 security review MED). Unreachable
+		// in the v1 flow (nothing stages), but the parser must not
+		// corrupt if it appears.
+		oldPath := ""
+		if code[0] == 'R' || code[0] == 'C' || code[1] == 'R' || code[1] == 'C' {
+			if i+1 < len(segs) {
+				oldPath = segs[i+1]
+				i++
+			}
+		}
 		// Defense in depth: .git* components never ship (git does not
 		// list them, but the exclusion is the contract's, not git's).
 		if vcsComponent(rel) {
 			m.ExcludedVCS = append(m.ExcludedVCS, rel)
 			continue
 		}
-		ce := ChangeEntry{Path: rel}
+		ce := ChangeEntry{Path: rel, OldPath: oldPath}
 		switch {
+		case oldPath != "":
+			ce.Type = "renamed"
 		case code == "??":
 			ce.Type = "added"
 		case strings.Contains(code, "D"):
@@ -164,7 +195,15 @@ func (e *Env) buildManifest(ceiling *WorkspaceExecutionCeiling, spec *ProvisionS
 		default:
 			ce.Type = "modified"
 		}
-		if ce.Type != "added" {
+		switch ce.Type {
+		case "added":
+		case "renamed":
+			oldHash, err := e.pinnedBlobHash(ws.Root, oldPath)
+			if err != nil {
+				return nil, err
+			}
+			ce.OldHash = oldHash
+		default:
 			oldHash, err := e.pinnedBlobHash(ws.Root, rel)
 			if err != nil {
 				return nil, err
@@ -235,9 +274,11 @@ func (e *Env) pinnedBlobHash(root, rel string) (string, error) {
 	return hashHex([]byte(blob)), nil
 }
 
+// vcsComponent is case-folded for the same reason as the confinement
+// deny-list: case-insensitive filesystems alias ".GIT" to ".git".
 func vcsComponent(rel string) bool {
 	for _, seg := range strings.Split(filepath.ToSlash(rel), "/") {
-		if strings.HasPrefix(seg, ".git") {
+		if strings.HasPrefix(strings.ToLower(seg), ".git") {
 			return true
 		}
 	}

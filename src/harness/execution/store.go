@@ -1,10 +1,13 @@
 package execution
 
-// ArtifactStore (Q-L5-11): write-once, content-addressed,
-// acknowledge-then-immutable, addressable retrieval. The store sits
-// OUTSIDE the execution provider boundary — teardown code
-// structurally cannot reach it. Durable lifecycle (retention, GC) is
-// L6's; v1 retains everything.
+// ArtifactStore (Q-L5-11): write-once, content-addressed, addressable
+// retrieval. Immutability is structural, never procedural: the write
+// path has no overwrite branch, and Get verifies content against the
+// address — tampering is DETECTED at read (a local operator can still
+// rewrite bytes on disk; the trusted-local-operator model applies).
+// The store sits OUTSIDE the execution provider boundary — teardown
+// code structurally cannot reach it. Durable lifecycle (retention,
+// GC) is L6's; v1 retains everything.
 
 import (
 	"crypto/sha256"

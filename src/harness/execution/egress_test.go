@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -156,6 +157,100 @@ func TestEgressObservedBreachRefuses(t *testing.T) {
 	if entries, _ := os.ReadDir(store.Dir); len(entries) != 0 {
 		t.Fatal("refused egress must persist nothing")
 	}
+}
+
+// Case-fold regression for the egress-side VCS exclusion (M2/M3
+// security review HIGH sibling): .GIT aliases .git on APFS.
+func TestVCSComponentCaseFold(t *testing.T) {
+	for _, rel := range []string{".GIT/config", ".Git/hooks/x", "a/.GitHub/y", ".gitignore"} {
+		if !vcsComponent(rel) {
+			t.Errorf("%q must be excluded as a VCS component", rel)
+		}
+	}
+	if vcsComponent("src/main.go") {
+		t.Error("ordinary paths must not be excluded")
+	}
+}
+
+// A staged rename emits a two-field porcelain entry; the parser must
+// consume both fields as ONE change (M2/M3 security review MED).
+func TestEgressStagedRename(t *testing.T) {
+	env, ceiling, spec, _ := provisioned(t)
+	ws := env.Workspace()
+	if err := os.Rename(filepath.Join(ws.Root, "README.md"), filepath.Join(ws.Root, "RENAMED.md")); err != nil {
+		t.Fatal(err)
+	}
+	// Stage it with raw git (test equipment, outside the vocabulary)
+	// so status emits the R two-field form.
+	cmd := exec.Command(gitBin(t), "add", "-A")
+	cmd.Dir = ws.Root
+	cmd.Env = []string{"GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null"}
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("stage: %v: %s", err, out)
+	}
+	store, _ := NewArtifactStore(filepath.Join(t.TempDir(), "s"))
+	if err := env.Seal(SealTaskComplete); err != nil {
+		t.Fatal(err)
+	}
+	addr, err := env.Egress(ceiling, spec, store)
+	if err != nil {
+		t.Fatalf("rename egress must succeed: %v", err)
+	}
+	raw, _ := store.Get(addr)
+	var m ArtifactManifest
+	if err := json.Unmarshal(raw, &m); err != nil {
+		t.Fatal(err)
+	}
+	var ren *ChangeEntry
+	for i := range m.Changes {
+		if m.Changes[i].Path == "RENAMED.md" {
+			ren = &m.Changes[i]
+		}
+		if strings.Contains(m.Changes[i].Path, "EADME") && m.Changes[i].Path != "README.md" {
+			t.Fatalf("mis-sliced phantom entry: %+v", m.Changes[i])
+		}
+	}
+	if ren == nil || ren.Type != "renamed" || ren.OldPath != "README.md" || ren.OldHash == "" || ren.NewHash == "" {
+		t.Fatalf("staged rename must be one typed entry with both paths and hashes: %+v", m.Changes)
+	}
+	env.Teardown()
+}
+
+// The encoded artifact is bounded by the ceiling's total bound —
+// source bytes passing the observed check must not smuggle an
+// oversized store artifact (M2/M3 security review MED).
+func TestEgressEncodedArtifactBound(t *testing.T) {
+	mirrorRoot, repo, sha := mkMirror(t)
+	body := `{"version":1,"mirror_root":"` + mirrorRoot + `","max_wall_deadline_sec":120,"max_file_bytes":1048576,"max_total_bytes":700,"max_file_count":500,"max_mem_bytes":1073741824,"max_cpu_time_sec":600,"max_proc_count":64}`
+	ceiling, err := LoadCeiling(writeTemp(t, "tiny.json", body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	spec := testSpec(t, repo, sha, "")
+	p, err := NewLocalProvider(gitBin(t), t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	env, err := p.Provision(ceiling, spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 600 source bytes: under the 700 total, but the encoded manifest
+	// (provenance + hashes + escaped content) exceeds it.
+	if err := os.WriteFile(filepath.Join(env.Workspace().Root, "big.txt"), []byte(strings.Repeat("x", 600)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	store, _ := NewArtifactStore(filepath.Join(t.TempDir(), "s"))
+	if err := env.Seal(SealTaskComplete); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.Egress(ceiling, spec, store); err == nil || !strings.Contains(err.Error(), "encoded manifest") {
+		t.Fatalf("oversized encoded artifact must refuse typed: %v", err)
+	}
+	if entries, _ := os.ReadDir(store.Dir); len(entries) != 0 {
+		t.Fatal("nothing may persist on refusal")
+	}
+	env.Teardown()
 }
 
 // Store contract: content-addressed, write-once, verify-on-read.

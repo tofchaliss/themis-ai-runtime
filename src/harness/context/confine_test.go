@@ -49,6 +49,11 @@ func TestConfineCreatePath(t *testing.T) {
 		{"git-dir", ".git/config", ".git* is never a mutation target"},
 		{"gitignore", ".gitignore", ".git*"},
 		{"github-nested", "a/.github/w.yml", ".git*"},
+		// Case-fold regression (M2/M3 security review HIGH): on
+		// case-insensitive filesystems .GIT IS .git.
+		{"git-upper", ".GIT/config", ".git*"},
+		{"git-mixed", ".Git/hooks/pre-commit", ".git*"},
+		{"github-upper-nested", "a/.GitHub/w.yml", ".git*"},
 		{"symlink-parent-outside", "evil/payload.go", "symlink in write path"},
 		{"symlink-parent-inside", "inlink/f.go", "symlink in write path"},
 		{"missing-parent", "new/dir/f.go", "parent chain must exist"},

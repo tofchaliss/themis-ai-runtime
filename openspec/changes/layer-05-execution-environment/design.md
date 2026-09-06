@@ -160,13 +160,24 @@ Owner-locked:
 6. **Instruction path must resolve to a regular file without symlink traversal**, reusing the L5 confinement implementation (ResolveMode + stricter no-symlink rule) — no instruction-specific filesystem predicate.
 7. **v1 scope:** activation ships in this change as the final milestone, minimal — registration artifact + eligibility check + root `AGENTS.md` only, four-control chain wired end-to-end (closes the Q-L1-1 IOU).
 
+### Q-L5-9 — Limit semantics (CLOSED WITH AMENDMENTS)
+
+Owner-locked:
+
+1. **"Supported" is removed from the contract vocabulary.** Per dimension a provider declares exactly one of: `enforced` (deterministic typed enforcement at breach, at declared granularity — always, not usually) | `observed` (measurement recorded in trace, available to a subsequent deterministic acceptance decision; no claim the execution was stopped) | absent (no claim exists). ProvisionSpec requirements default to `enforced`; a requirement for strength the provider cannot deliver fails closed at provision.
+2. **No bare dimensions.** Explicit semantics and units: `wall_deadline_s`, `cpu_time_s`, `mem_bytes`, `disk_bytes`, `file_bytes`, `proc_count`. "CPU = 2 cores" (cpu-rate) is a different dimension from cpu-time and is absent in v1.
+3. **Deadline is not a single guarantee:** effect enforcement (no result crosses the boundary post-deadline; typed timeout) vs consumption enforcement (execution stops consuming) — Tier-0 delivers effect-only (cooperative consumption, preserving the Q-L5-2 bounded-termination amendment); Tier-1 delivers both (group kill).
+4. **v1 matrix:** wall_deadline_s: T0 enforced-effect/cooperative-consumption, T1 enforced (group kill) · cpu_time_s: T0 absent, T1 enforced (RLIMIT_CPU) · mem_bytes: T0 absent, T1 **observed** (post-hoc rusage max-RSS; RLIMIT_AS/DATA unreliable on macOS — the "we support memory limits" lie refused in writing) · disk_bytes: T0 absent, T1 observed · file_bytes: T0 enforced at tool boundary (pre-write byte check), T1 observed at hand-off scan · proc_count: **deliberately absent** (RLIMIT_NPROC is per-UID under `inherited` identity — enforcement mechanism could damage the developer's session/host; fork-bombs stay in the trusted-binary residual).
+5. **Observation is a control input, not decorative telemetry:** an observed breach deterministically gates downstream artifact acceptance at hand-off; it is never retrospectively represented as execution enforcement.
+6. **Model-visible breach typing:** outcome class + dimension only (`error(timeout)`, `error(resource-exceeded:{dimension})`); observed usage numbers never echo to the model; trace records {declared limit, observed usage, enforcement action}.
+
+**Locked principle:** *A limit dimension may be claimed only at the strength actually delivered: enforced means deterministic typed enforcement at breach; observed means measurement recorded in the trace and available to a subsequent deterministic acceptance decision; absent means the provider makes no claim. Every dimension has explicit semantics and units. A provisioning requirement for a strength the provider cannot deliver fails closed at provisioning.*
+
 ## 3x. Open questions for the grill (remaining, owner-ordered)
 
-1. **Q-L5-8 — Repository-instruction activation timing:** when does the provisioned/pinned repository become eligible to influence L1? (The archived Q-L1-1 `ScopeRepository` contract meets L5's verified workspace.)
-2. **Q-L5-9 — Limit semantics:** what exactly constitutes CPU/memory/disk/process-count/file-size/deadline enforcement; what does a provider declaring a dimension actually guarantee; what's typed to the model on breach vs trace-only?
-3. **Q-L5-10 — Teardown:** what must be verified after execution, and what remains outside L5's claim; failure behavior.
-4. **Q-L5-11 — Diff/hand-off artifact:** what L5 returns after mutation/provisioning; how workspace state becomes L2 evidence without L5 becoming a security interpreter.
-5. **Q-L5-12 — Operational proof gate:** what must be exercised against the v1 local provider before L5 receives the same three-state verdict as L4.
+1. **Q-L5-10 — Artifact boundary:** where "execution completed" ends and "eligible to leave the environment" begins; egress contract ownership.
+2. **Q-L5-11 — Teardown:** what must be verified after execution, and what remains outside L5's claim; failure behavior.
+3. **Q-L5-12 — Operational proof gate:** what must be exercised against the v1 local provider before L5 receives the same three-state verdict as L4.
 
 ## 4. Test plan (three-state discipline)
 

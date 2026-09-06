@@ -40,7 +40,7 @@ Class-3 review with PoCs. Verified holding: anti-oracle check order (availabilit
 
 **Test review:** architecture-conformant PASS · test-evidenced FAIL→closed: the headline was the no-op lesson in new form — 9/14 loader fail-closed cases passed on the wrong branch (tool name "a" died at the ≥2-char name regex first), so the derived-trust hard rule and F5 stems had zero real evidence. Rewritten with per-case branch-substring assertions + a ≥2-char pin; all vocabulary branches (integer/boolean/optional/TargetNone), seam/scope/cap edges, CallState immutability, timeout enforcement, bound() rune-split, granted-but-unregistered, and the provider round-trip added. 97.4% coverage. · operationally proven PENDING (honest; see gate 0).
 
-**Architecture review:** conformant, no boundary violations. Remediated: timeout was asserted-but-dead config → enforced per call with typed `timeout` error (goroutine-linger recorded as L5 deferral); requires-approval reservation made code; purity claim amended (input-bounded except confinement's necessary filesystem consult); grant⊆registry at-use asymmetry recorded as deliberate; M1 checkbox narrowed honestly. **PENDING OWNER: ARCHITECTURE.md gate-ordering reconciliation (design §3 Q-L4-9 note) — architecture-authority class.**
+**Architecture review:** conformant, no boundary violations. Remediated: timeout was asserted-but-dead config → enforced per call with typed `timeout` error (goroutine-linger recorded as L5 deferral); requires-approval reservation made code; purity claim amended (input-bounded except confinement's necessary filesystem consult); grant⊆registry at-use asymmetry recorded as deliberate; M1 checkbox narrowed honestly. **ARCHITECTURE.md gate-ordering reconciliation CONFIRMED by owner 2026-09-06 (design §3).**
 
 ## 4. L4-M4 — Seams + proof (Class 2) — **DONE 2026-09-06**
 
@@ -58,5 +58,6 @@ Class-3 review with PoCs. Verified holding: anti-oracle check order (availabilit
 
 ## 6. Close
 
-- [ ] Architecture + security + test review, three-state verdicts
-- [ ] Code map updated; layer-status doc extended to L4; green checkpoints pushed on owner approval; archive on close
+- [x] Architecture + security + test reviews complete with three-state verdicts (§3a, §3b); live operational proof PASSED (qwen2.5:7b)
+- [x] Code map updated; L1-L4 review artifact updated with layer-hit use-case mapping
+- [x] Owner confirmed the reconciliation; pushed on approval 2026-09-06 — **LAYER 4 CLOSED**; change archived

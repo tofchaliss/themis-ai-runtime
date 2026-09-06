@@ -122,6 +122,20 @@ Owner-locked, with the "credential contamination handling" reframe replacing "re
 
 **Locked principle:** *L5 may remove its own secret contamination before the evidence boundary; L5 may never sanitize external evidence.* Resolves the L2-5.1 tension: the byte-exact rule applies once something has become evidence; a Themis-issued secret in output is contamination, not evidence.
 
+### Q-L5-6 — Process and privilege boundary (CLOSED WITH AMENDMENT)
+
+Owner-locked:
+
+1. **Identity floor = non-elevation, not privilege isolation:** effective privilege(execution) ≤ effective privilege(harness). v1 checks: no elevation wrapper, reject setuid/setgid executable, assert real/effective UID relationship, reject world-writable executable or containing directory.
+2. **v1 provider identity is honestly declared `inherited`** (`process_identity: inherited | dedicated-user | namespaced`), recorded in provider declaration and trace — the slogan is structurally impossible because the artifact says "inherited" in writing.
+3. **Non-elevation is defined at the property level** ("the provider must not introduce privilege elevation relative to the harness execution context"); UID equality is an implementation *check*, never the complete architectural definition (setgid, supplementary groups, fs capabilities, privileged wrappers all exist). Implementation evidence states exactly which mechanisms it checks.
+4. **Every out-of-process execution belongs to an execution-owned process group/session** L5 can terminate as a unit — property requirement (bounded termination depends on it), not platform mechanism.
+5. **Executable identity is pinned + attested:** resolved path, observed cryptographic digest, mode/permission metadata recorded at provision. **Attestation ≠ behavioral trust** — the digest is evidence of what was executed, not proof it is trustworthy.
+6. **Threat-model residual (explicit):** v1 subprocess isolation is behavioral confinement of a trusted pinned binary, not privilege confinement of an untrusted one; a hostile/compromised git binary operates with the developer's existing privileges. Bounded by the capability vocabulary: no run_command, no model-controlled executable, no arbitrary command strings, no dependency installation ⇒ no v1 ingress for attacker-directed subprocess code. Vocabulary expansion (OPEN-2) MUST revisit this assumption; future capabilities requiring stronger privilege isolation declare it as a provider/capability requirement, never silently inherit `inherited`.
+7. **Supplementary-group handling stays mechanism-level** — never an independent L5 contract property (checkbox-security refusal).
+
+**Locked principle:** *v1's actual security boundary is construction (argv, environment, binary, cwd, network), not identity — and the trace must present it as exactly that.*
+
 ## 3x. Open questions for the grill (Q-L5-n)
 
 1. **Q-L5-1 — Isolation strength for v1:** is OS-level process isolation (separate process, rlimits, cleared env, cwd jail) an acceptable first provider, or is Docker mandatory before any mutating tool activates? (Hardware/OPEN-3 constraints apply.)

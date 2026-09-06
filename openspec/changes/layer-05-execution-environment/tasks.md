@@ -41,6 +41,8 @@ Grill closed 2026-09-06 (Q-L5-1..12, all CLOSED; design.md §3 is the record, §
 
 - [x] Live proof per the design.md §4 proof gate (PASSED vs qwen2.5:7b, 7.84s) (six stages, clean + failure paths)
 - [x] Test review: 2 HIGH evidence gaps (rollback, persistence-failure) + MED/LOW remediated in ab1632c; coverage 88.6%% execution, 97.8%% instructions
+- [x] Architecture review: 15 findings — 2 MED deviations remediated with mechanisms (f3858d4: OS-level seal, mem_bytes gate), amendments 1-7 recorded in design.md; everything else CONFORM
+
 - [ ] Code map + status doc + artifact updates; push/archive on owner approval
 
 ## 6. Deferred (NOT L5 scope — recorded IOUs)

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	hctx "github.com/tofchaliss/themis/context"
 	"github.com/tofchaliss/themis/runtime/model"
@@ -26,7 +27,14 @@ const (
 	ErrFileUnreadable  ErrorClass = "file-unreadable"
 	ErrSeamUnavailable ErrorClass = "seam-unavailable"
 	ErrOversized       ErrorClass = "oversized"
+	ErrTimeout         ErrorClass = "timeout"
 )
+
+// DecisionRequiresApproval is the RESERVED governance-era decision
+// state (Q-L4-6): nothing in v1 produces it; when the approval channel
+// exists it renders to the model as not-available (Q-L4-5 §9). The
+// constant exists so the vocabulary reservation is code, not prose.
+const DecisionRequiresApproval = "requires-approval"
 
 // Outcome is one executed call's result: evidence bytes under the
 // registered trust class, or a typed error — never silent, never
@@ -257,7 +265,19 @@ func Handle(reg *Registry, grant *Grant, table map[string]Executor, call model.T
 		content, _ := json.Marshal(map[string]string{"error": string(ErrSeamUnavailable)})
 		return model.Message{Role: model.RoleTool, Content: string(content), ToolCallID: call.ID}, nil, audit
 	}
-	out := exec(grant.entry(call.Name), d.Args, d.Target)
+	// Registry timeout enforced per call (arch review F1: an asserted
+	// control must exist): the executor runs under its declared
+	// deadline; overrun is a typed timeout error. The goroutine may
+	// linger until its syscall returns — process-level isolation is
+	// the L5 sandbox's job, recorded deferral.
+	outCh := make(chan Outcome, 1)
+	go func() { outCh <- exec(grant.entry(call.Name), d.Args, d.Target) }()
+	var out Outcome
+	select {
+	case out = <-outCh:
+	case <-time.After(time.Duration(def.TimeoutSec) * time.Second):
+		out = Outcome{ErrClass: ErrTimeout}
+	}
 	audit.SkippedOversized = out.SkippedOversized
 	if out.ErrClass != "" {
 		audit.Decision, audit.ErrClass = "error", out.ErrClass

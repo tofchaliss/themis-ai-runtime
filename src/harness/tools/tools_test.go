@@ -1,13 +1,18 @@
 package tools
 
 import (
+	stdctx "context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	hctx "github.com/tofchaliss/themis/context"
 	"github.com/tofchaliss/themis/runtime/model"
@@ -71,23 +76,30 @@ func args(t *testing.T, m map[string]any) json.RawMessage {
 
 func TestRegistryFailsClosed(t *testing.T) {
 	cases := []struct {
-		name string
-		body string
+		name   string
+		body   string
+		errSub string // the case must fail on ITS branch, not an earlier one
 	}{
-		{"invalid json", `{`},
-		{"unknown field", `{"version":1,"tools":[],"extra":1}`},
-		{"no tools", `{"version":1,"tools":[]}`},
-		{"trailing", `{"version":1,"tools":[{"name":"a","description":"d","params":[],"target":"none","timeout_sec":1,"trust":"external-untrusted"}]} X`},
-		{"bad name", `{"version":1,"tools":[{"name":"Run-Shell!","description":"d","params":[],"target":"none","timeout_sec":1,"trust":"external-untrusted"}]}`},
-		{"duplicate tool", `{"version":1,"tools":[{"name":"a","description":"d","params":[],"target":"none","timeout_sec":1,"trust":"external-untrusted"},{"name":"a","description":"d","params":[],"target":"none","timeout_sec":1,"trust":"external-untrusted"}]}`},
-		{"zero timeout", `{"version":1,"tools":[{"name":"a","description":"d","params":[],"target":"none","timeout_sec":0,"trust":"external-untrusted"}]}`},
-		{"unknown target class", `{"version":1,"tools":[{"name":"a","description":"d","params":[],"target":"database","timeout_sec":1,"trust":"external-untrusted"}]}`},
-		{"unknown trust", `{"version":1,"tools":[{"name":"a","description":"d","params":[],"target":"none","timeout_sec":1,"trust":"tool-output"}]}`},
-		{"self-declared derived", `{"version":1,"tools":[{"name":"a","description":"d","params":[],"target":"none","timeout_sec":1,"trust":"derived"}]}`},
-		{"authority-disposition param", `{"version":1,"tools":[{"name":"a","description":"d","params":[{"name":"requires_human_decision","type":"boolean","description":"x"}],"target":"none","timeout_sec":1,"trust":"external-untrusted"}]}`},
-		{"target param wrong type", `{"version":1,"tools":[{"name":"a","description":"d","params":[{"name":"p","type":"integer","description":"x","target":true}],"target":"workspace-path","timeout_sec":1,"trust":"external-untrusted"}]}`},
-		{"target class without target param", `{"version":1,"tools":[{"name":"a","description":"d","params":[],"target":"workspace-path","timeout_sec":1,"trust":"external-untrusted"}]}`},
-		{"target param without class", `{"version":1,"tools":[{"name":"a","description":"d","params":[{"name":"p","type":"string","description":"x","target":true}],"target":"none","timeout_sec":1,"trust":"external-untrusted"}]}`},
+		{"invalid json", `{`, "invalid"},
+		{"unknown field", `{"version":1,"tools":[],"extra":1}`, "unknown field"},
+		{"no tools", `{"version":1,"tools":[]}`, "at least one tool"},
+		{"trailing", `{"version":1,"tools":[{"name":"aa","description":"d","params":[],"target":"none","timeout_sec":1,"trust":"external-untrusted"}]} X`, "trailing"},
+		{"bad name", `{"version":1,"tools":[{"name":"Run-Shell!","description":"d","params":[],"target":"none","timeout_sec":1,"trust":"external-untrusted"}]}`, "bad tool name"},
+		{"single-char name", `{"version":1,"tools":[{"name":"a","description":"d","params":[],"target":"none","timeout_sec":1,"trust":"external-untrusted"}]}`, "bad tool name"},
+		{"duplicate tool", `{"version":1,"tools":[{"name":"aa","description":"d","params":[],"target":"none","timeout_sec":1,"trust":"external-untrusted"},{"name":"aa","description":"d","params":[],"target":"none","timeout_sec":1,"trust":"external-untrusted"}]}`, "duplicate tool"},
+		{"zero timeout", `{"version":1,"tools":[{"name":"aa","description":"d","params":[],"target":"none","timeout_sec":0,"trust":"external-untrusted"}]}`, "positive timeout"},
+		{"unknown target class", `{"version":1,"tools":[{"name":"aa","description":"d","params":[],"target":"database","timeout_sec":1,"trust":"external-untrusted"}]}`, "unknown target class"},
+		{"unknown trust", `{"version":1,"tools":[{"name":"aa","description":"d","params":[],"target":"none","timeout_sec":1,"trust":"tool-output"}]}`, "unknown trust class"},
+		{"self-declared derived", `{"version":1,"tools":[{"name":"aa","description":"d","params":[],"target":"none","timeout_sec":1,"trust":"derived"}]}`, "derived"},
+		{"authority-disposition param", `{"version":1,"tools":[{"name":"aa","description":"d","params":[{"name":"requires_human_decision","type":"boolean","description":"x"}],"target":"none","timeout_sec":1,"trust":"external-untrusted"}]}`, "authority-disposition"},
+		{"forbidden stem approved", `{"version":1,"tools":[{"name":"aa","description":"d","params":[{"name":"approved","type":"boolean","description":"x"}],"target":"none","timeout_sec":1,"trust":"external-untrusted"}]}`, "authority-disposition"},
+		{"forbidden stem trust_class", `{"version":1,"tools":[{"name":"aa","description":"d","params":[{"name":"trust_class","type":"string","description":"x"}],"target":"none","timeout_sec":1,"trust":"external-untrusted"}]}`, "authority-disposition"},
+		{"forbidden stem human_approved", `{"version":1,"tools":[{"name":"aa","description":"d","params":[{"name":"human_approved","type":"boolean","description":"x"}],"target":"none","timeout_sec":1,"trust":"external-untrusted"}]}`, "authority-disposition"},
+		{"unknown param type", `{"version":1,"tools":[{"name":"aa","description":"d","params":[{"name":"pp","type":"float","description":"x"}],"target":"none","timeout_sec":1,"trust":"external-untrusted"}]}`, "unknown type"},
+		{"target param wrong type", `{"version":1,"tools":[{"name":"aa","description":"d","params":[{"name":"pp","type":"integer","description":"x","target":true}],"target":"workspace-path","timeout_sec":1,"trust":"external-untrusted"}]}`, "target param must be a string"},
+		{"target class without target param", `{"version":1,"tools":[{"name":"aa","description":"d","params":[],"target":"workspace-path","timeout_sec":1,"trust":"external-untrusted"}]}`, "exactly one target param"},
+		{"target param without class", `{"version":1,"tools":[{"name":"aa","description":"d","params":[{"name":"pp","type":"string","description":"x","target":true}],"target":"none","timeout_sec":1,"trust":"external-untrusted"}]}`, "no target class"},
+		{"duplicate param", `{"version":1,"tools":[{"name":"aa","description":"d","params":[{"name":"pp","type":"string","description":"x"},{"name":"pp","type":"string","description":"x"}],"target":"none","timeout_sec":1,"trust":"external-untrusted"}]}`, "bad or duplicate param"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -95,8 +107,12 @@ func TestRegistryFailsClosed(t *testing.T) {
 			if err := os.WriteFile(path, []byte(tc.body), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := LoadRegistry(path); !errors.Is(err, ErrRegistryInvalid) {
+			_, err := LoadRegistry(path)
+			if !errors.Is(err, ErrRegistryInvalid) {
 				t.Fatalf("want ErrRegistryInvalid, got %v", err)
+			}
+			if !strings.Contains(err.Error(), tc.errSub) {
+				t.Fatalf("case must fail on its own branch: want %q in %q", tc.errSub, err.Error())
 			}
 		})
 	}
@@ -447,5 +463,271 @@ func TestSecurityReviewRegressions(t *testing.T) {
 	}
 	if !strings.Contains(msgD.Content, "../etc/passwd") {
 		t.Fatalf("target echo missing: %q", msgD.Content)
+	}
+}
+
+// Close-out review gaps: synthetic-registry vocabulary branches,
+// seam/scope/cap edges, CallState immutability, timeout, and the real
+// provider round-trip.
+
+const synthRegistry = `{"version":1,"tools":[
+  {"name":"probe","description":"d","target":"none","timeout_sec":1,"trust":"external-untrusted",
+   "params":[{"name":"count","type":"integer","required":true,"description":"n"},
+             {"name":"deep","type":"boolean","description":"b"}]}]}`
+
+func loadRegistryBody(t *testing.T, body string) *Registry {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "r.json")
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	r, err := LoadRegistry(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return r
+}
+
+func loadGrantBody(t *testing.T, body string) *Grant {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "g.json")
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	g, err := LoadGrant(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return g
+}
+
+func TestVocabularyBranches(t *testing.T) {
+	reg := loadRegistryBody(t, synthRegistry)
+	grant := loadGrantBody(t, `{"version":1,"task_id":"T","total_max_calls":9,"entries":[{"tool":"probe","max_calls":9}]}`)
+	state := CallState{Calls: map[string]int{}}
+	// integer + optional-boolean + TargetNone allow path.
+	d := Authorize(reg, grant, "probe", args(t, map[string]any{"count": 3}), state)
+	if !d.Allow {
+		t.Fatalf("integer + optional omitted must allow: %+v", d)
+	}
+	d = Authorize(reg, grant, "probe", args(t, map[string]any{"count": 3, "deep": true}), state)
+	if !d.Allow {
+		t.Fatalf("boolean must allow: %+v", d)
+	}
+	// integer rejects float and string.
+	for _, bad := range []any{3.5, "3"} {
+		d = Authorize(reg, grant, "probe", args(t, map[string]any{"count": bad}), state)
+		if d.Allow || d.Denial != DenialInvalidArgs || d.ModelDetail != "count" {
+			t.Fatalf("non-integer must be invalid-args(count): %+v", d)
+		}
+	}
+	// boolean rejects string.
+	d = Authorize(reg, grant, "probe", args(t, map[string]any{"count": 1, "deep": "yes"}), state)
+	if d.Allow || d.ModelDetail != "deep" {
+		t.Fatalf("non-boolean must be invalid-args(deep): %+v", d)
+	}
+	// trailing content after args object.
+	d = Authorize(reg, grant, "probe", json.RawMessage(`{"count":1} X`), state)
+	if d.Allow || d.Denial != DenialInvalidArgs {
+		t.Fatalf("trailing args content must be invalid-args: %+v", d)
+	}
+	// quota exhausted + invalid args must still be bare not-available.
+	d = Authorize(reg, grant, "probe", args(t, map[string]any{"bogus": 1}),
+		CallState{Calls: map[string]int{"probe": 9}})
+	if d.Denial != DenialNotAvailable || d.ModelDetail != "" {
+		t.Fatalf("quota is availability — bad args must not leak: %+v", d)
+	}
+}
+
+func TestSeamAndScopeEdges(t *testing.T) {
+	reg := shippedRegistry(t)
+	// Nil seam: documented v1 stub -> seam-unavailable through Handle.
+	grant := loadGrantBody(t, `{"version":1,"task_id":"T","total_max_calls":9,"entries":[{"tool":"get_finding","max_calls":9,"themis_scope":["FIND-"]}]}`)
+	table, err := NewExecutorTable(reg, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, ev, audit := Handle(reg, grant, table, model.ToolCall{ID: "s1", Name: "get_finding",
+		Arguments: args(t, map[string]any{"id": "FIND-1"})}, CallState{Calls: map[string]int{}})
+	if ev != nil || audit.Decision != "error" || audit.ErrClass != ErrSeamUnavailable {
+		t.Fatalf("nil seam must be typed seam-unavailable: %+v", audit)
+	}
+	// Empty themis_scope grants nothing.
+	g2 := loadGrantBody(t, `{"version":1,"task_id":"T","total_max_calls":9,"entries":[{"tool":"get_finding","max_calls":9}]}`)
+	d := Authorize(reg, g2, "get_finding", args(t, map[string]any{"id": "FIND-1"}), CallState{Calls: map[string]int{}})
+	if d.Allow || d.Denial != DenialTargetRefused {
+		t.Fatalf("empty scope must refuse every id: %+v", d)
+	}
+	// Granted-but-unregistered tool: not-available (traceability row 1).
+	g3 := loadGrantBody(t, `{"version":1,"task_id":"T","total_max_calls":9,"entries":[{"tool":"run_command","max_calls":9}]}`)
+	d = Authorize(reg, g3, "run_command", args(t, map[string]any{}), CallState{Calls: map[string]int{}})
+	if d.Allow || d.Denial != DenialNotAvailable || d.ModelDetail != "" {
+		t.Fatalf("granted-but-unregistered must be bare not-available: %+v", d)
+	}
+	// Grant missing file.
+	if _, err := LoadGrant(filepath.Join(t.TempDir(), "absent.json")); !errors.Is(err, ErrGrantInvalid) {
+		t.Fatal("missing grant must fail closed")
+	}
+}
+
+func TestExecutorEdges(t *testing.T) {
+	ws := t.TempDir()
+	writeFile(t, ws, "sub/inner.go", "package inner\n")
+	writeFile(t, ws, "top.go", "package top\n")
+	// list_directory: subdirectory marker + listing a regular file errors.
+	out := execListDirectory(&GrantEntry{Workspace: ws}, nil, ".")
+	if !strings.Contains(string(out.Evidence), "sub/") || !strings.Contains(string(out.Evidence), "top.go") {
+		t.Fatalf("dir marker missing: %q", out.Evidence)
+	}
+	if out := execListDirectory(&GrantEntry{Workspace: ws}, nil, "top.go"); out.ErrClass != ErrFileUnreadable {
+		t.Fatalf("listing a file must error typed: %+v", out)
+	}
+	// read_file oversized cap.
+	writeFile(t, ws, "big.bin", strings.Repeat("x", maxToolEvidence+1))
+	if out := execReadFile(&GrantEntry{Workspace: ws}, nil, "big.bin"); out.ErrClass != ErrOversized {
+		t.Fatalf("oversized read must refuse: %+v", out)
+	}
+	// themis oversized cap.
+	big := fakeSeam{data: map[string]string{"finding/F": strings.Repeat("y", maxToolEvidence+1)}}
+	if out := themisExec(big, "finding")(&GrantEntry{}, nil, "F"); out.ErrClass != ErrOversized {
+		t.Fatalf("oversized themis record must refuse: %+v", out)
+	}
+	// search_code: in-workspace symlink -> non-regular refusal.
+	ws2 := t.TempDir()
+	writeFile(t, ws2, "ok.go", "needle\n")
+	if err := os.Symlink(filepath.Join(ws2, "ok.go"), filepath.Join(ws2, "link.go")); err != nil {
+		t.Fatal(err)
+	}
+	if out := execSearchCode(&GrantEntry{Workspace: ws2}, map[string]any{"query": "needle"}, "."); out.ErrClass != ErrFileUnreadable {
+		t.Fatalf("in-workspace symlink must abort search typed: %+v", out)
+	}
+	// search_code: over-64 hits refusal.
+	ws3 := t.TempDir()
+	for i := 0; i < 70; i++ {
+		writeFile(t, ws3, fmt.Sprintf("f%02d.go", i), "needle\n")
+	}
+	if out := execSearchCode(&GrantEntry{Workspace: ws3}, map[string]any{"query": "needle"}, "."); out.ErrClass != ErrOversized {
+		t.Fatalf("over-64 hits must refuse: %+v", out)
+	}
+}
+
+// CallState immutability: Handle never mutates supplied state.
+func TestCallStateImmutable(t *testing.T) {
+	reg := shippedRegistry(t)
+	ws := t.TempDir()
+	writeFile(t, ws, "a.go", "x\n")
+	grant := testGrant(t, ws)
+	table, _ := NewExecutorTable(reg, nil)
+	state := CallState{Calls: map[string]int{"read_file": 2}, Total: 3}
+	Handle(reg, grant, table, model.ToolCall{ID: "i1", Name: "read_file",
+		Arguments: args(t, map[string]any{"path": "a.go"})}, state)
+	if state.Calls["read_file"] != 2 || state.Total != 3 || len(state.Calls) != 1 {
+		t.Fatalf("Handle must never mutate CallState: %+v", state)
+	}
+}
+
+// Registry timeout is enforced (arch review: no asserted-but-dead
+// controls): a slow executor yields a typed timeout error + audit.
+func TestTimeoutEnforced(t *testing.T) {
+	reg := loadRegistryBody(t, `{"version":1,"tools":[{"name":"slow_probe","description":"d","target":"none","timeout_sec":1,"trust":"external-untrusted","params":[]}]}`)
+	grant := loadGrantBody(t, `{"version":1,"task_id":"T","total_max_calls":9,"entries":[{"tool":"slow_probe","max_calls":9}]}`)
+	table := map[string]Executor{"slow_probe": func(*GrantEntry, map[string]any, string) Outcome {
+		time.Sleep(1500 * time.Millisecond)
+		return Outcome{Evidence: []byte("late\n")}
+	}}
+	msg, ev, audit := Handle(reg, grant, table, model.ToolCall{ID: "t1", Name: "slow_probe",
+		Arguments: nil}, CallState{Calls: map[string]int{}})
+	if ev != nil || audit.Decision != "error" || audit.ErrClass != ErrTimeout {
+		t.Fatalf("overrun must be typed timeout: %+v", audit)
+	}
+	if !strings.Contains(msg.Content, "timeout") {
+		t.Fatalf("timeout content wrong: %q", msg.Content)
+	}
+}
+
+// bound() rune-split pin: a multibyte rune truncated at the byte
+// boundary marshals as U+FFFD — well-formed JSON, no field spoofing.
+func TestBoundRuneSplit(t *testing.T) {
+	s := strings.Repeat("é", 200) // 400 bytes
+	b := bound(s)
+	if len(b) != 256 {
+		t.Fatalf("bound must truncate to 256 bytes: %d", len(b))
+	}
+	body, err := json.Marshal(map[string]string{"target": b})
+	if err != nil || !json.Valid(body) {
+		t.Fatalf("split-rune echo must stay valid JSON: %v", err)
+	}
+}
+
+// The real provider round-trip (M4): a scripted Ollama mock emits a
+// structured tool call; the Model Interface parses it; Handle
+// authorizes and executes; the tool message returns to the provider;
+// the second turn completes. This is the deterministic half of Q-L4-9
+// proven through the actual seam, not a hand-built ToolCall.
+func TestProviderRoundTrip(t *testing.T) {
+	reg := shippedRegistry(t)
+	ws := t.TempDir()
+	writeFile(t, ws, "parser.go", "package parser // SENTINEL-9142\n")
+	grant := testGrant(t, ws)
+	table, err := NewExecutorTable(reg, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	turn := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Messages []struct {
+				Role       string `json:"role"`
+				Content    string `json:"content"`
+				ToolCallID string `json:"tool_call_id"`
+			} `json:"messages"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Error(err)
+		}
+		turn++
+		if turn == 1 {
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"model": "mock", "done": true, "done_reason": "stop",
+				"message": map[string]any{"role": "assistant", "content": "",
+					"tool_calls": []map[string]any{{"function": map[string]any{
+						"name": "read_file", "arguments": map[string]any{"path": "parser.go"}}}}},
+			})
+			return
+		}
+		// Second turn: the tool message must have arrived with content.
+		last := req.Messages[len(req.Messages)-1]
+		if last.Role != "tool" || !strings.Contains(last.Content, "SENTINEL-9142") {
+			t.Errorf("tool result missing on second turn: %+v", last)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"model": "mock", "done": true, "done_reason": "stop",
+			"message": map[string]any{"role": "assistant", "content": "The file mentions SENTINEL-9142."},
+		})
+	}))
+	defer srv.Close()
+
+	provider := model.NewOllamaChat(srv.URL)
+	msgs := []model.Message{{Role: model.RoleUser, Content: "Read parser.go"}}
+	resp, err := provider.Execute(stdctx.Background(), model.ExecutionRequest{
+		Model: "mock", Messages: msgs, Options: model.DefaultOptions()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Termination != model.TerminationToolCalls || len(resp.ToolCalls) != 1 {
+		t.Fatalf("provider must yield a structured tool call: %+v", resp.Termination)
+	}
+	toolMsg, ev, audit := Handle(reg, grant, table, resp.ToolCalls[0], CallState{Calls: map[string]int{}})
+	if ev == nil || audit.Decision != "authorized" {
+		t.Fatalf("round-trip authorize failed: %+v", audit)
+	}
+	msgs = append(msgs, model.Message{Role: model.RoleAssistant, Content: ""}, toolMsg)
+	resp2, err := provider.Execute(stdctx.Background(), model.ExecutionRequest{
+		Model: "mock", Messages: msgs, Options: model.DefaultOptions()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp2.Termination != model.TerminationStop || !strings.Contains(resp2.Content, "SENTINEL-9142") {
+		t.Fatalf("completion must reflect the tool result: %+v", resp2.Content)
 	}
 }

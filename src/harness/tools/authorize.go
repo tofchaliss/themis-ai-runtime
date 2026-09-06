@@ -53,7 +53,10 @@ var themisIDSyntax = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$`)
 // anti-oracle invariant (Q-L4-5 §3): availability (registry ∩ grant ∩
 // quota) is established BEFORE any argument inspection, so an
 // unavailable capability reveals nothing about schemas, existence, or
-// limits.
+// limits. Purity, amended per architecture review F5: Authorize is
+// input-bounded EXCEPT workspace target confinement, which necessarily
+// consults live filesystem state (symlink resolution) — lexical-only
+// confinement would be bypassable; TOCTOU is the L5 sandbox's problem.
 func Authorize(reg *Registry, grant *Grant, toolName string, rawArgs json.RawMessage, state CallState) Decision {
 	d := Decision{Tool: toolName, RegistryHash: reg.Hash, GrantHash: grant.Hash}
 	deny := func(class DenialClass, detail, predicate string) Decision {

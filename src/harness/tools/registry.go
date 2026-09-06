@@ -197,8 +197,13 @@ type GrantEntry struct {
 }
 
 // Grant is the execution-scoped allowlist: ExecutionGrant ⊆
-// WorkflowCeiling ⊆ Registry (Q-L4-1; the ceiling⊆ check is L7-era —
-// v1 validates grant ⊆ registry at use).
+// WorkflowCeiling ⊆ Registry (Q-L4-1; the ceiling⊆ check is L7-era).
+// Deliberate decision (arch review F7): grant ⊆ registry is enforced
+// at use, not at load — a grant naming an unregistered tool silently
+// narrows (registry checked first ⇒ not-available) rather than
+// refusing the artifact, because grants and registries version
+// independently and the intersection is what authorizes. Fail-closed
+// either way; the asymmetry is recorded here.
 type Grant struct {
 	Version       int          `json:"version"`
 	TaskID        string       `json:"task_id"`

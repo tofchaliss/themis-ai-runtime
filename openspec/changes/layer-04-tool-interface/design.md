@@ -49,7 +49,7 @@ Model ──ToolCall (advisory data)──► L7 considers (future: loop/sequenc
 
 ### D-L4-3 — The authorization function
 
-`Authorize(registry, grant, request) → Decision{allow|deny, reason, audit}` — pure, deterministic, no I/O, no clock beyond injected inputs. Inputs are exactly (registered tool def, grant entry, request args, target). Nothing else is readable by construction (the L3 type-boundary trick applied to authorization).
+`Authorize(registry, grant, request) → Decision{allow|deny, reason, audit}` — deterministic and input-bounded, **except workspace target confinement, which necessarily consults live filesystem state** (symlink resolution; lexical-only confinement is bypassable — amended per arch review F5). Inputs are exactly (registered tool def, grant entry, request args, target). Nothing else is readable by construction (the L3 type-boundary trick applied to authorization).
 
 ### D-L4-4 — Strict schema validation
 
@@ -146,7 +146,11 @@ Authorization failure ⇒ denial; authorized operation + world failure ⇒ **typ
 
 ### Q-L4-9 — Operational proof (CLOSED WITH ACTION, owner-authorized)
 
-Owner decision: **pull `qwen2.5-coder:7b`** as test equipment for the seam — explicitly not a model standardization (DEC-05; the model is replaceable behind the Model Interface). Rationale: mock fixtures prove the deterministic pipeline but not that a real provider produces the tool-call representation the Model Interface expects — an empirical, already-observed integration risk (WhiteRabbitNeo's tool rejection). Live proof must exercise: authorized call · `not-available` · `invalid-args(field)` · `target-refused(target)` · `error` · result re-entering L2 as classified evidence. Deterministic negative cases may be driven via controlled prompts/fixtures — the acceptance criterion is the protocol seam, not model cleverness. Gate: mock proof ✓ required; live cases pending the download + implementation.
+Owner decision: **pull `qwen2.5-coder:7b`** as test equipment for the seam — explicitly not a model standardization (DEC-05; the model is replaceable behind the Model Interface). Rationale: mock fixtures prove the deterministic pipeline but not that a real provider produces the tool-call representation the Model Interface expects — an empirical, already-observed integration risk (WhiteRabbitNeo's tool rejection). Live proof must exercise: authorized call · `not-available` · `invalid-args(field)` · `target-refused(target)` · `error` · result re-entering L2 as classified evidence.
+
+**Update 2026-09-06 (recorded outcome):** the authorized pull completed, but `qwen2.5-coder:7b` **failed the tool-protocol smoke** — it emits tool-call JSON as plain content, never the structured `tool_calls` field its own Ollama template requires (three runs, temperature 0). Content-as-action parsing was rejected on principle (content masquerading as action is a smuggling channel). **Live proof re-pending an owner decision:** pull `qwen2.5:7b` or `llama3.1:8b`, or defer live proof to the L5/vertical-slice era. The deterministic half is complete, including a scripted-provider round-trip through the real Model Interface seam (`TestProviderRoundTrip`: provider emits structured tool_calls → parse → Authorize → execute → tool message → completion).
+
+**PENDING OWNER (architecture reconciliation, arch review F6):** `ARCHITECTURE.md` states "Model output -> validation -> policy -> authorization -> execution"; the owner-locked Q-L4-5 §3 deliberately runs authorization (availability) before argument validation for anti-oracle reasons. Both gates precede execution. Proposed recorded interpretation: the ARCHITECTURE.md sentence enumerates mandatory gates, not their strict order; L4's denial-disclosure ordering is a locked security-strengthening refinement. Owner confirmation required (architecture-authority class).
 
 ### Grill board — ALL CLOSED 2026-09-06
 

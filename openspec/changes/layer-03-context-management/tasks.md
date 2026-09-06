@@ -4,8 +4,12 @@ Execution starts only after the grill closes Q-L3-1…9 and the owner accepts. E
 
 ## 0. Gate
 
-- [ ] Grill session held; each Q-L3-n answered and recorded in design.md
-- [ ] Design accepted by owner
+- [x] Grill session held 2026-09-06; Q-L3-1..9 closed (Q5/Q6 deliberately deferred to dedicated grills) and recorded in design.md §3
+- [ ] Owner reviews the folded change; acceptance clears this gate
+
+## Binding constraints (from the grill — govern all implementation)
+
+Deterministic policy execution, zero runtime judgment (rank/drop functions receive ItemRef only, never evidence bytes) · capacity is never authority (required never droppable; optional governed undroppable by default; droppability = explicit named contract relaxation; every governed slot declares one of four dispositions) · fifth availability state `omitted_for_capacity` (state-only model marker; counts/mechanics trace-only) · rank ≠ render (presentation stays contract slot order) · no truncation of evidence · dedup within class only, provenance multiplicity retained; cross-class never collapsed or promoted · budget lives in the ManagementPolicy; overrides are L7-era governance acts · model requests carry zero rank weight · no probabilistic component and no compressor without its own grill
 
 ## 1. L3-M1 — ManagementPolicy artifact (Class 3 — security-sensitive)
 
@@ -18,8 +22,8 @@ Execution starts only after the grill closes Q-L3-1…9 and the owner accepts. E
 
 - [ ] `Manage(policy, gathered) (managed *Gathered, trace SelectionTrace, err)` — deterministic, judgment-free execution
 - [ ] Required/undroppable slots excluded from drop candidates; unmeetable budget ⇒ fail closed
-- [ ] Typed drop states per Q-L3-3 decision; every outcome trace-recorded
-- [ ] Hash-identity dedup + collapsed refs per Q-L3-8 decision
+- [ ] `omitted_for_capacity` state (Q-L3-3): state-only model marker at slot granularity; counts/ranks/policy hash trace-only
+- [ ] Within-class hash-identity dedup with full collapsed source refs in trace; cross-class duplicates delivered separately (Q-L3-8)
 - [ ] Deterministic token estimator per Q-L3-5/D-L3-5
 - [ ] Security review
 
@@ -30,9 +34,9 @@ Execution starts only after the grill closes Q-L3-1…9 and the owner accepts. E
 
 ## 4. L3-M4 — Seams + proof (Class 2)
 
-- [ ] Compressor registration seam defined (no v1 implementation) per Q-L3-6 decision
+- [ ] Compressor registration seam only (Q-L3-6 deferral recorded: no activation without a dedicated grill)
 - [ ] Selection trace documented for L6; L7 policy-selection contract stated
-- [ ] End-to-end: L2 delivery proof through Manage (no-pressure passthrough byte-identical; pressure scenario per Q-L3-9)
+- [ ] Q-L3-9 proofs: no-pressure byte-identical passthrough + golden managed set (deterministic); live budget-pressure run with omitted_for_capacity marker + survivor citation
 - [ ] Traceability table, coverage-verified
 
 ## 5. Deferred dependencies (NOT L3 scope)

@@ -13,6 +13,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+
+	"github.com/tofchaliss/themis/confine"
 )
 
 // AuthorityClass is one of the four mutually exclusive
@@ -159,7 +161,10 @@ var (
 	ErrContractInvalid     = errors.New("invalid context contract")
 	ErrPlanOutsideContract = errors.New("plan exceeds the workflow contract")
 	ErrUnrecognizedSource  = errors.New("unrecognized context source")
-	ErrConfinement         = errors.New("path escapes the confinement root")
+	// ErrConfinement is the canonical confinement error value (leaf
+	// package confine) — the same value everywhere, so errors.Is
+	// holds across every layer's wrapper.
+	ErrConfinement = confine.ErrConfinement
 	ErrRequiredMissing     = errors.New("required context slot not deliverable")
 	ErrItemTooLarge        = errors.New("context item exceeds size cap")
 	ErrContextTooLarge     = errors.New("total context exceeds size cap")

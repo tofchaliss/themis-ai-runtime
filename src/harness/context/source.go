@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/tofchaliss/themis/confine"
 )
 
 // SourceKind is a registered connector kind. Recognition never
@@ -287,35 +289,11 @@ func (s Source) collect() (items []ContextItem, available bool, err error) {
 // absolute paths, "..", and symlinks resolving outside the root
 // (gate-0 decision). A confinement violation is a hard refusal, never
 // a quiet skip.
+// confinedPath delegates to the canonical leaf implementation
+// (confine.ResolvePath) — semantics unchanged from the shipped L2
+// contract; ErrConfinement is the same error value.
 func confinedPath(root, rel string) (string, error) {
-	if root == "" {
-		return "", fmt.Errorf("%w: filesystem source has no confinement root", ErrConfinement)
-	}
-	if filepath.IsAbs(rel) || rel == "" {
-		return "", fmt.Errorf("%w: %q", ErrConfinement, rel)
-	}
-	rootAbs, err := filepath.Abs(root)
-	if err != nil {
-		return "", fmt.Errorf("%w: %v", ErrConfinement, err)
-	}
-	joined := filepath.Join(rootAbs, rel)
-	if joined != rootAbs && !strings.HasPrefix(joined, rootAbs+string(filepath.Separator)) {
-		return "", fmt.Errorf("%w: %q", ErrConfinement, rel)
-	}
-	resolved, err := filepath.EvalSymlinks(joined)
-	if err != nil {
-		// Nonexistent path: confinement judged lexically above; the
-		// read will report unavailability.
-		return joined, nil
-	}
-	resolvedRoot, err := filepath.EvalSymlinks(rootAbs)
-	if err != nil {
-		return "", fmt.Errorf("%w: %v", ErrConfinement, err)
-	}
-	if resolved != resolvedRoot && !strings.HasPrefix(resolved, resolvedRoot+string(filepath.Separator)) {
-		return "", fmt.Errorf("%w: %q resolves outside the root", ErrConfinement, rel)
-	}
-	return resolved, nil
+	return confine.ResolvePath(root, rel)
 }
 
 // ConfinePath is the exported confinement check for other harness

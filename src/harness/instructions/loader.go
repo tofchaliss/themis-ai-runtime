@@ -115,6 +115,20 @@ func loadSource(src Source) ([]Instruction, error) {
 		}
 		return insts, nil
 	}
+	if len(src.Files) > 0 {
+		// Activation-resolved file list (repository sources): exactly
+		// the registered allowlist, already confined — never a
+		// directory walk.
+		var insts []Instruction
+		for _, path := range src.Files {
+			inst, err := parseFile(path, src.Kind)
+			if err != nil {
+				return nil, err
+			}
+			insts = append(insts, inst)
+		}
+		return insts, nil
+	}
 	var paths []string
 	err := filepath.WalkDir(src.Root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {

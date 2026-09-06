@@ -32,23 +32,30 @@ var (
 
 // Source is a registered root or payload explicitly recognized as
 // feeding instructions (design D-L1-3): content the agent merely
-// encounters is data, never a source. Exactly one of Root or Inline
-// is set.
+// encounters is data, never a source. Exactly one of Root, Inline,
+// or Files is set. Files-based repository sources are constructed
+// ONLY by ActivateRepositorySource — the unexported activated flag
+// makes a hand-built repository source structurally unrecognizable,
+// so the four-control activation chain (D-L5-8) cannot be skipped.
 type Source struct {
 	Kind   Scope
 	Root   string        // directory of *.md files, or
-	Inline []Instruction // task payload (ScopeTask)
+	Inline []Instruction // task payload (ScopeTask), or
+	Files  []string      // activation-resolved instruction files (ScopeRepository)
+
+	activated bool // set only by ActivateRepositorySource
 }
 
-// recognizedKinds are the source kinds v1 loads. ScopeRepository and
-// ScopeDirectory await Layer 5 pinned-ref provenance; ScopeSkill
-// awaits Layer 9 registered skill identity (design §6, Q-L1-1;
-// tasks.md §7). Passing an unrecognized kind is a hard error, never a
-// silent skip.
+// recognizedKinds are the source kinds v1 loads. ScopeRepository
+// activates through registered, pinned provenance (L5-M4 / D-L5-8);
+// ScopeDirectory still awaits its own activation contract; ScopeSkill
+// awaits Layer 9 registered skill identity. Passing an unrecognized
+// kind is a hard error, never a silent skip.
 var recognizedKinds = map[Scope]bool{
 	ScopeHarnessSafety: true,
 	ScopeHarnessSystem: true,
 	ScopeThemisDomain:  true,
+	ScopeRepository:    true,
 	ScopeTask:          true,
 }
 
@@ -65,6 +72,18 @@ var trustedKinds = map[Scope]bool{
 func checkSource(s Source) error {
 	if !recognizedKinds[s.Kind] {
 		return fmt.Errorf("%w: kind %s", ErrUnrecognizedSource, s.Kind)
+	}
+	if s.Kind == ScopeRepository {
+		// Repository sources exist only through the activation chain:
+		// registration + pinned provenance + confined resolution
+		// (D-L5-8). A hand-constructed one is not a source.
+		if !s.activated || len(s.Files) == 0 || s.Root != "" || s.Inline != nil {
+			return fmt.Errorf("%w: repository sources activate only through registration (ActivateRepositorySource)", ErrUnrecognizedSource)
+		}
+		return nil
+	}
+	if s.Files != nil {
+		return fmt.Errorf("%w: file-list sources are repository activation only, got %s", ErrUnrecognizedSource, s.Kind)
 	}
 	if (s.Root == "") == (s.Inline == nil) {
 		return fmt.Errorf("%w: source %s must set exactly one of Root or Inline", ErrUnrecognizedSource, s.Kind)

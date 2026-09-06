@@ -171,6 +171,8 @@ Owner-locked:
 6. **Instruction path must resolve to a regular file without symlink traversal**, reusing the L5 confinement implementation (ResolveMode + stricter no-symlink rule) — no instruction-specific filesystem predicate.
 7. **v1 scope:** activation ships in this change as the final milestone, minimal — registration artifact + eligibility check + root `AGENTS.md` only, four-control chain wired end-to-end (closes the Q-L1-1 IOU).
 
+**Implementation residuals (M4 security review, recorded):** (a) a committer of a *registered* repository can, at the pinned SHA, ship a malformed/oversized/secret-matching AGENTS.md that aborts the whole resolution (`ErrIntake`) — consistent with locked L1 abort-on-structural-invalidity semantics, but the insider here is repo-registered rather than governed-tree-trusted, and the intake attribution names the task rather than the repository source (a distinct status/error text is a candidate L1 refinement); (b) activation-time no-symlink verification is re-checked with Lstat at read, with the residual window inside the documented Q-L5-4.5 TOCTOU limitation; (c) the pinned-SHA syntax accepts 40-hex only — SHA-256 (64-hex) object names refuse, revisit when git SHA-256 repos matter.
+
 ### Q-L5-9 — Limit semantics (CLOSED WITH AMENDMENTS)
 
 Owner-locked:

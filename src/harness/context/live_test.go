@@ -123,13 +123,27 @@ func TestLivePressureProof(t *testing.T) {
 		instructions.Source{Kind: instructions.ScopeThemisDomain, Root: "../../../instructions/themis"},
 		instructions.Source{Kind: instructions.ScopeTask, Inline: []instructions.Instruction{{
 			ID: "task.instructions", Scope: instructions.ScopeTask, Category: instructions.CategoryTask,
-			Body: "In one sentence: what is the status of the delivered finding? Cite only delivered evidence.\n"}}},
+			Body: "First list every token of the form UPPERCASEWORD-NNNN that appears in the delivered source files, verbatim. Then state the finding status in one sentence.\n"}}},
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 	c := loadTestContract(t, dropContract)
-	g := pressureGathered(t, c, 4000, 400)
+	// Sentinels: the survivor carries SURVIVOR-7391 (must be echoed);
+	// the dropped file carries DROPPED-4620 (must NOT be echoed).
+	root := t.TempDir()
+	writeFile(t, root, "big.go", "// DROPPED-4620\n"+strings.Repeat("x", 4000))
+	writeFile(t, root, "small.go", "// parser uses SURVIVOR-7391 token\n")
+	asg := []Assignment{
+		{Slot: "finding", Source: themisSrc(map[string]string{"finding": "CVE-2026-12345 OPEN\n"})},
+		{Slot: "task-facts", Source: inlineSrc(ContextItem{Kind: "task-facts", Evidence: []byte("component libXYZ 1.4.2\n")})},
+		{Slot: "source-files", Source: Source{Name: "workspace", Kind: KindFilesystem, Authority: AuthorityExternalUntrusted,
+			Sensitivity: SensitivityPublic, Author: "repository", Root: root, Paths: []string{"big.go", "small.go"}}},
+	}
+	g, err := Gather(c, asg)
+	if err != nil {
+		t.Fatal(err)
+	}
 	mp := mgmtPolicy(t, `{"version":1,"name":"live-tight","budget":300,"drop_order":["source-files"],"rank_keys":["size_asc"],"dedup":"none"}`)
 	managed, trace, err := Manage(mp, g)
 	if err != nil {
@@ -138,12 +152,24 @@ func TestLivePressureProof(t *testing.T) {
 	if trace.BudgetUsed > trace.BudgetLimit {
 		t.Fatalf("managed set exceeds budget: %+v", trace)
 	}
+	drops := 0
+	for _, d := range trace.Decisions {
+		if d.Action == ActionDropped {
+			drops++
+		}
+	}
+	if drops == 0 {
+		t.Fatal("pressure fixture must actually drop")
+	}
 	p, err := Compose(set, pol, managed)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(p.Messages[1].Content, "omitted_for_capacity") {
 		t.Fatal("pressure payload must carry the omission marker")
+	}
+	if !strings.Contains(p.Messages[1].Content, "SURVIVOR-7391") || strings.Contains(p.Messages[1].Content, "DROPPED-4620") {
+		t.Fatal("payload must contain the survivor sentinel and not the dropped one")
 	}
 	provider := model.NewOllamaChat(endpoint)
 	ctx, cancel := stdctx.WithTimeout(stdctx.Background(), 120*time.Second)
@@ -157,15 +183,11 @@ func TestLivePressureProof(t *testing.T) {
 	if resp.Termination != model.TerminationStop || strings.TrimSpace(resp.Content) == "" {
 		t.Fatalf("live pressure run must terminate clean: %+v", resp.Termination)
 	}
-	echoed := false
-	for _, token := range []string{"CVE-2026-12345", "OPEN", "libXYZ"} {
-		if strings.Contains(resp.Content, token) {
-			echoed = true
-			break
-		}
+	if !strings.Contains(resp.Content, "SURVIVOR-7391") {
+		t.Fatalf("reply must cite the surviving sentinel: %q", firstLine(resp.Content))
 	}
-	if !echoed {
-		t.Fatalf("reply cites no surviving evidence: %q", firstLine(resp.Content))
+	if strings.Contains(resp.Content, "DROPPED-4620") {
+		t.Fatalf("reply cites dropped evidence it never received: %q", firstLine(resp.Content))
 	}
 	t.Logf("live pressure proof: payload=%s used=%d/%d reply=%q",
 		p.PayloadHash[:12], trace.BudgetUsed, trace.BudgetLimit, firstLine(resp.Content))

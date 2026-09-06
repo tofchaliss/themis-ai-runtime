@@ -14,7 +14,7 @@ Deterministic policy execution, zero runtime judgment (rank/drop functions recei
 ## 1. L3-M1 — ManagementPolicy artifact (Class 3) — **DONE 2026-09-06**
 
 - [x] Policy schema + fail-closed loader (L1/L2 artifact posture: hash, unknown fields, trailing bytes, floors)
-- [x] Rank keys, dedup mode, drop order, undroppable marks, token budget
+- [x] Rank keys (closed legal set: size_asc/size_desc/kind — "version" removed per arch F2: lexicographic ≠ recency), dedup mode, drop order, token budget; droppability lives in the CONTRACT per Q-L3-2, not the policy (arch F4 record fix)
 - [x] Policy hash into the delivery trace
 - [x] Security review done (see §4a)
 
@@ -49,7 +49,16 @@ Class-3 review with compiled PoCs. Verdict: the authority boundary holds — no 
 - L6 trace sink; L7 policy selection + budget override channel
 - Provider-exact tokenizers (registered computation, later)
 
+## 5b. Close-out review record (2026-09-06)
+
+**Test review three-state verdict:** architecture-conformant YES · test-evidenced PARTIAL→closed (HIGH-A re-entry erasing the omission marker — confirmed empirically, fixed by refusing re-management of a managed set + regression; HIGH-B all rank keys now table-tested; dedup+drop bijection under real pressure; multi-source collapse w/ Authority tiebreak; full-omission SlotState assertions; estimator pinned exactly (incl. used=111); golden managed-payload hash; search dir-symlink + oversized-scan-skip tests; policy loader edges) · operationally proven YES (live pressure proof hardened with sentinels: survivor token echoed by the model, dropped token provably absent from payload AND reply; ≥1 real drop asserted).
+
+**Architecture review three-state verdict:** conformant, no boundary violations, live-re-verified independently. F2 version rank key removed (wisdom trap); F4/F5 record/comment drift fixed; F6 mechanism-stamp noted for the L4 era; F3 accepted (policy attestation lives in SelectionTrace until L6/L7 wire Compose↔Manage binding).
+
+**PENDING OWNER (arch F1):** Q-L3-2's "every governed slot resolves explicitly to one of four dispositions" is implemented as a fail-closed *default* (JSON-absent droppable=false=undroppable), not a reject-if-undeclared validator. Direction is fail-closed and honestly recorded; whether "undeclared disposition" must be rejected outright is an owner interpretation call.
+
 ## 6. Close
 
-- [ ] Architecture + security + test review, three-state verdicts
-- [ ] Code map updated; green checkpoints pushed on owner approval; archive on close
+- [x] Architecture + security + test review complete, three-state verdicts recorded (§4a, §5b)
+- [x] Code map updated (L3 → done)
+- [ ] Owner: resolve F1 interpretation; green checkpoints pushed on owner approval; archive on close

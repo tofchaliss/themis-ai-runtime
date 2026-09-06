@@ -469,3 +469,294 @@ func TestSearchOverCapRefuses(t *testing.T) {
 		t.Fatalf("over-cap search must refuse, not truncate: %v", err)
 	}
 }
+
+// HIGH-A regression: a managed set cannot be re-managed — re-entry
+// would erase the omitted_for_capacity marker (silent degradation).
+func TestManageReentryRefused(t *testing.T) {
+	c := loadTestContract(t, dropContract)
+	g := pressureGathered(t, c, 4000, 400)
+	pol := mgmtPolicy(t, `{"version":1,"name":"tight","budget":300,"drop_order":["source-files"],"rank_keys":["size_asc"],"dedup":"none"}`)
+	managed, _, err := Manage(pol, g)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := Manage(pol, managed); !errors.Is(err, ErrPolicyInvalid) {
+		t.Fatalf("re-managing a managed set must refuse: %v", err)
+	}
+	// Compose still accepts the managed set.
+	set, ipol := eisFixture(t)
+	if _, err := Compose(set, ipol, managed); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// HIGH-B: every rank key, a two-key chain, and the hash tiebreak.
+func TestRankKeys(t *testing.T) {
+	refs := []ItemRef{
+		{Kind: "b", Version: "2", Hash: "cc", Size: 10},
+		{Kind: "a", Version: "1", Hash: "bb", Size: 30},
+		{Kind: "a", Version: "3", Hash: "aa", Size: 30},
+	}
+	order := func(keys []string) string {
+		ranked := rankForDrop(refs, keys)
+		var hs []string
+		for _, r := range ranked {
+			hs = append(hs, r.ref.Hash)
+		}
+		return strings.Join(hs, ",")
+	}
+	if got := order([]string{"size_asc"}); got != "cc,aa,bb" { // ties by hash
+		t.Fatalf("size_asc: %s", got)
+	}
+	if got := order([]string{"size_desc"}); got != "aa,bb,cc" {
+		t.Fatalf("size_desc: %s", got)
+	}
+	if got := order([]string{"kind"}); got != "aa,bb,cc" { // a<b; ties by hash
+		t.Fatalf("kind: %s", got)
+	}
+	if got := order([]string{"kind", "size_asc"}); got != "aa,bb,cc" { // kind then size
+		t.Fatalf("chain: %s", got)
+	}
+	// Identical refs: terminal index tiebreak keeps it total + stable.
+	same := []ItemRef{{Hash: "xx", Size: 1}, {Hash: "xx", Size: 1}}
+	ranked := rankForDrop(same, nil)
+	if ranked[0].idx != 0 || ranked[1].idx != 1 {
+		t.Fatalf("index tiebreak: %+v", ranked)
+	}
+}
+
+// MEDIUM-C: bijection under an ACTUAL dedup+drop pass, and the fifth
+// state on the fully-dropped deduped slot; MEDIUM-E trace-state
+// assertions.
+func TestManageDedupDropBijection(t *testing.T) {
+	const phantomContract2 = `{
+	  "version": 1,
+	  "workflow": "phantom2",
+	  "sensitivity_ceiling": "internal",
+	  "slots": [
+	    {"name": "big", "kind": "big", "requirement": "required", "classes": ["external-untrusted"]},
+	    {"name": "dups", "kind": "file:*", "requirement": "optional", "classes": ["external-untrusted"], "droppable": true}
+	  ]
+	}`
+	c := loadTestContract(t, phantomContract2)
+	root := t.TempDir()
+	writeFile(t, root, "a.go", strings.Repeat("x", 4000))
+	writeFile(t, root, "b.go", strings.Repeat("x", 4000))
+	asg := []Assignment{
+		{Slot: "big", Source: inlineSrc(ContextItem{Kind: "big", Evidence: []byte(strings.Repeat("y", 10400))})},
+		{Slot: "dups", Source: Source{Name: "workspace", Kind: KindFilesystem, Authority: AuthorityExternalUntrusted,
+			Sensitivity: SensitivityPublic, Author: "repository", Root: root, Paths: []string{"a.go", "b.go"}}},
+	}
+	g, err := Gather(c, asg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Real usage post-dedup = 2600 + 1000 = 3600; budget 3000 forces a
+	// real drop of the deduped item → 2600 fits.
+	pol := mgmtPolicy(t, `{"version":1,"name":"b3000","budget":3000,"drop_order":["dups"],"dedup":"within-class"}`)
+	managed, trace, err := Manage(pol, g)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var dups SlotState
+	for _, s := range managed.Slots {
+		if s.Slot == "dups" {
+			dups = s
+		}
+	}
+	if dups.Availability != AvailabilityOmittedCapacity || dups.Delivery != DeliveryOmittedCapacity {
+		t.Fatalf("fully dropped deduped slot must carry the fifth state: %+v", dups)
+	}
+	if dups.SourceStatus != SourceAvailable {
+		t.Fatal("source availability must survive capacity omission (source ≠ delivery)")
+	}
+	if len(dups.Items) != 0 || len(managed.items["dups"]) != 0 {
+		t.Fatal("omitted slot carries no refs or items")
+	}
+	if trace.BudgetUsed != 2600 {
+		t.Fatalf("real accounting must survive dedup+drop: used=%d", trace.BudgetUsed)
+	}
+	drops := 0
+	for _, d := range trace.Decisions {
+		if d.Action == ActionDropped {
+			drops++
+		}
+	}
+	if drops != 1 {
+		t.Fatalf("exactly one real drop expected: %d", drops)
+	}
+}
+
+// MEDIUM-D: multi-source collapse — provenance multiplicity across
+// DISTINCT sources, two collapse groups, deterministic ordering incl.
+// the Authority tiebreak.
+func TestManageDedupMultiSource(t *testing.T) {
+	const multiContract = `{
+	  "version": 1,
+	  "workflow": "multi",
+	  "sensitivity_ceiling": "internal",
+	  "slots": [
+	    {"name": "vex", "kind": "vex", "requirement": "optional", "classes": ["governed-external", "external-untrusted"]}
+	  ]
+	}`
+	c := loadTestContract(t, multiContract)
+	same := []byte("VEX: not_affected\n")
+	other := []byte("VEX: affected\n")
+	hashSame, hashOther := evidenceHash(same), evidenceHash(other)
+	mkItem := func(class AuthorityClass, src string, body []byte) ContextItem {
+		return ContextItem{Kind: "vex", Authority: class, Hash: evidenceHash(body), Evidence: body,
+			Provenance: Provenance{Origin: "external", Source: src, Author: "vendor"}}
+	}
+	cross := &Gathered{Contract: c, validated: true,
+		Slots: []SlotState{{Slot: "vex", Kind: "vex", Requirement: SlotOptional,
+			Availability: AvailabilityDelivered, Delivery: DeliveryDelivered, SourceStatus: SourceAvailable,
+			Items: []ItemRef{
+				{Slot: "vex", Kind: "vex", Authority: AuthorityExternalUntrusted, Hash: hashSame, Size: len(same)},
+				{Slot: "vex", Kind: "vex", Authority: AuthorityExternalUntrusted, Hash: hashSame, Size: len(same)},
+				{Slot: "vex", Kind: "vex", Authority: AuthorityGovernedExternal, Hash: hashSame, Size: len(same)},
+				{Slot: "vex", Kind: "vex", Authority: AuthorityGovernedExternal, Hash: hashSame, Size: len(same)},
+				{Slot: "vex", Kind: "vex", Authority: AuthorityExternalUntrusted, Hash: hashOther, Size: len(other)},
+				{Slot: "vex", Kind: "vex", Authority: AuthorityExternalUntrusted, Hash: hashOther, Size: len(other)},
+			}}},
+		items: map[string][]ContextItem{"vex": {
+			mkItem(AuthorityExternalUntrusted, "feed-a", same),
+			mkItem(AuthorityExternalUntrusted, "feed-b", same),
+			mkItem(AuthorityGovernedExternal, "ingest-a", same),
+			mkItem(AuthorityGovernedExternal, "ingest-b", same),
+			mkItem(AuthorityExternalUntrusted, "feed-a", other),
+			mkItem(AuthorityExternalUntrusted, "feed-b", other),
+		}}}
+	pol := mgmtPolicy(t, `{"version":1,"name":"m","budget":100000,"drop_order":[],"dedup":"within-class"}`)
+	managed, trace, err := Manage(pol, cross)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Same bytes: untrusted pair collapses, governed pair collapses,
+	// cross-class copies both survive; other bytes collapse separately.
+	if len(managed.items["vex"]) != 3 {
+		t.Fatalf("want 3 delivered (2 classes of same + 1 of other): %d", len(managed.items["vex"]))
+	}
+	if len(trace.Collapses) != 3 {
+		t.Fatalf("want 3 collapse groups: %+v", trace.Collapses)
+	}
+	// Deterministic order incl. Authority tiebreak on the same-hash tie.
+	for i := 0; i < len(trace.Collapses)-1; i++ {
+		a, b := trace.Collapses[i], trace.Collapses[i+1]
+		if a.KeptHash == b.KeptHash && a.Authority >= b.Authority {
+			t.Fatalf("Authority tiebreak violated: %+v", trace.Collapses)
+		}
+	}
+	// Distinct sources retained per group.
+	for _, ref := range trace.Collapses {
+		if len(ref.Collapsed) != 2 || ref.Collapsed[0].Source == ref.Collapsed[1].Source {
+			t.Fatalf("multiplicity must record distinct suppliers: %+v", ref)
+		}
+	}
+	for i := 0; i < 3; i++ {
+		m2, t2, err := Manage(pol, cross)
+		if err != nil || !reflect.DeepEqual(t2.Collapses, trace.Collapses) || !reflect.DeepEqual(m2.Slots, managed.Slots) {
+			t.Fatal("multi-source collapse must be deterministic")
+		}
+	}
+}
+
+// LOW: estimator pinned exactly; empty drop-order slot under pressure
+// is skipped; policy loader edges.
+func TestEstimatorAndEdges(t *testing.T) {
+	for n, want := range map[int]int{0: 0, 1: 1, 4: 1, 5: 2, 4000: 1000} {
+		if got := estimateTokens(n); got != want {
+			t.Fatalf("estimateTokens(%d)=%d want %d", n, got, want)
+		}
+	}
+	// Pressure fixture's exact accounting: 100 (400b file) + 5 + 6 = 111.
+	c := loadTestContract(t, dropContract)
+	g := pressureGathered(t, c, 4000, 400)
+	pol := mgmtPolicy(t, `{"version":1,"name":"tight","budget":300,"drop_order":["source-files"],"rank_keys":["size_asc"],"dedup":"none"}`)
+	_, trace, err := Manage(pol, g)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if trace.BudgetUsed != 111 {
+		t.Fatalf("estimator drift: used=%d want 111", trace.BudgetUsed)
+	}
+	// Unavailable optional slot named in drop order: skipped, no panic.
+	c2 := loadTestContract(t, dropContract)
+	root := t.TempDir()
+	asg := []Assignment{
+		{Slot: "finding", Source: themisSrc(map[string]string{"finding": "CVE-2026-12345 OPEN\n"})},
+		{Slot: "task-facts", Source: inlineSrc(ContextItem{Kind: "task-facts", Evidence: []byte(strings.Repeat("z", 2000))})},
+		{Slot: "source-files", Source: Source{Name: "workspace", Kind: KindFilesystem, Authority: AuthorityExternalUntrusted,
+			Sensitivity: SensitivityPublic, Author: "repository", Root: root, Paths: []string{"absent.go"}}},
+	}
+	g2, err := Gather(c2, asg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := Manage(mgmtPolicy(t, `{"version":1,"name":"p","budget":400,"drop_order":["source-files"],"dedup":"none"}`), g2); !errors.Is(err, ErrBudget) {
+		t.Fatalf("empty droppable slot cannot save an over-budget set: %v", err)
+	}
+	// Policy loader edges.
+	if _, err := LoadManagementPolicy(filepath.Join(t.TempDir(), "absent.json")); !errors.Is(err, ErrPolicyInvalid) {
+		t.Fatal("missing policy file must fail closed")
+	}
+	for _, body := range []string{
+		`{"version":0,"name":"p","budget":10,"drop_order":[],"dedup":"none"}`,
+		`{"version":1,"name":"p","budget":10,"drop_order":[""],"dedup":"none"}`,
+	} {
+		path := filepath.Join(t.TempDir(), "p.json")
+		if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := LoadManagementPolicy(path); !errors.Is(err, ErrPolicyInvalid) {
+			t.Fatalf("must fail closed: %s", body)
+		}
+	}
+}
+
+// LOW: search — directory symlink refused; oversized files skipped
+// deterministically during scan.
+func TestSearchScanEdges(t *testing.T) {
+	root := t.TempDir()
+	outside := t.TempDir()
+	writeFile(t, outside, "d/secret.go", "libXYZ secret\n")
+	writeFile(t, root, "ok.go", "libXYZ ok\n")
+	if err := os.Symlink(filepath.Join(outside, "d"), filepath.Join(root, "dir")); err != nil {
+		t.Fatal(err)
+	}
+	src := Source{Name: "s", Kind: KindSearch, Authority: AuthorityExternalUntrusted,
+		Sensitivity: SensitivityPublic, Root: root, Query: "libXYZ"}
+	if _, _, err := src.collect(); !errors.Is(err, ErrConfinement) {
+		t.Fatalf("directory symlink must refuse: %v", err)
+	}
+	// Oversized file skipped from scanning; small match still returned.
+	root2 := t.TempDir()
+	writeFile(t, root2, "big.go", strings.Repeat("libXYZ", (MaxItemBytes/6)+10))
+	writeFile(t, root2, "small.go", "libXYZ hit\n")
+	src2 := src
+	src2.Root = root2
+	items, available, err := src2.collect()
+	if err != nil || !available || len(items) != 1 || items[0].Kind != "file:small.go" {
+		t.Fatalf("oversized files skip, small match survives: %v %v %+v", err, available, items)
+	}
+}
+
+// Golden managed-payload hash: pins the post-pressure composed record.
+const goldenManagedPayloadHash = "e4b4abc9e5add50eac22b5ffab20417c9c5461430f69ea78fd134a99973f281c"
+
+func TestGoldenManagedPayloadHash(t *testing.T) {
+	set, ipol := eisFixture(t)
+	c := loadTestContract(t, dropContract)
+	g := pressureGathered(t, c, 4000, 400)
+	pol := mgmtPolicy(t, `{"version":1,"name":"tight","budget":300,"drop_order":["source-files"],"rank_keys":["size_asc"],"dedup":"none"}`)
+	managed, _, err := Manage(pol, g)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := Compose(set, ipol, managed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.PayloadHash != goldenManagedPayloadHash {
+		t.Fatalf("managed payload hash drifted:\n got %s\nwant %s", p.PayloadHash, goldenManagedPayloadHash)
+	}
+}

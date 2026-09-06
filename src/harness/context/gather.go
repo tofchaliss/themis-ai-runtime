@@ -48,7 +48,8 @@ type SlotState struct {
 }
 
 // Gathered is the validated, classified evidence set awaiting
-// composition. It is constructible only through Gather: the
+// composition. Constructible through Gather (and, as a managed
+// successor, through Manage): the
 // unexported validated flag means an externally assembled Gathered
 // carries no Plan ⊆ Contract guarantee and Compose refuses it.
 type Gathered struct {
@@ -56,6 +57,7 @@ type Gathered struct {
 	Slots     []SlotState
 	items     map[string][]ContextItem // slot -> delivered items
 	validated bool
+	managed   bool // set by Manage; a managed set cannot be re-managed
 }
 
 // Gather validates the plan against the contract and collects every

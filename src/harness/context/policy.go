@@ -34,8 +34,12 @@ func estimateTokens(n int) int { return (n + 3) / 4 }
 // only (Q-L3-1 type-system boundary). Every chain implicitly ends
 // with the hash tiebreak so ordering is total and deterministic —
 // no runtime "best judgment" tie-break exists.
+// "version" is deliberately absent: lexicographic comparison is not
+// recency ("10.2" < "9.1"), and a rank key whose name promises what
+// its mechanism doesn't deliver is a wisdom-review trap (arch review
+// F2). A future recency key requires a typed, comparable as-of field.
 var legalRankKeys = map[string]bool{
-	"size_asc": true, "size_desc": true, "kind": true, "version": true,
+	"size_asc": true, "size_desc": true, "kind": true,
 }
 
 // ManagementPolicy is the loaded, validated artifact.

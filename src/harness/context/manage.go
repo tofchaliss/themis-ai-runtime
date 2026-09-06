@@ -73,11 +73,18 @@ func Manage(policy *ManagementPolicy, g *Gathered) (*Gathered, *SelectionTrace, 
 	if g == nil || !g.validated {
 		return nil, nil, fmt.Errorf("%w: gathered context did not pass Gather validation", ErrPolicyInvalid)
 	}
+	if g.managed {
+		// Re-managing a managed set would recompute omission flags from
+		// this pass's drops only, erasing the omitted_for_capacity
+		// marker — silent degradation (owner standing constraint).
+		// Capacity management runs once per epoch; a new epoch is a new
+		// Gather.
+		return nil, nil, fmt.Errorf("%w: set is already managed — capacity management runs once per epoch", ErrPolicyInvalid)
+	}
 	// Drop-order slots must be contract-droppable: optional AND
 	// explicitly authorized. A policy naming a required or undroppable
 	// slot is invalid against this contract — capacity is never
 	// authority.
-	droppable := map[string]bool{}
 	for _, name := range policy.DropOrder {
 		slot := g.Contract.slot(name)
 		if slot == nil {
@@ -87,11 +94,10 @@ func Manage(policy *ManagementPolicy, g *Gathered) (*Gathered, *SelectionTrace, 
 			return nil, nil, fmt.Errorf("%w: drop-order slot %q is not contract-droppable (requirement=%s droppable=%t withhold=%t)",
 				ErrPolicyInvalid, name, slot.Requirement, slot.Droppable, slot.Withhold)
 		}
-		droppable[name] = true
 	}
 
 	trace := &SelectionTrace{PolicyHash: policy.Hash, Estimator: estimatorVersion, BudgetLimit: policy.Budget}
-	managed := &Gathered{Contract: g.Contract, items: map[string][]ContextItem{}, validated: true}
+	managed := &Gathered{Contract: g.Contract, items: map[string][]ContextItem{}, validated: true, managed: true}
 
 	// Working copy + within-class dedup (delivery redundancy removed,
 	// provenance multiplicity retained in the trace).
@@ -160,7 +166,11 @@ func Manage(policy *ManagementPolicy, g *Gathered) (*Gathered, *SelectionTrace, 
 				Slot: slotName, Kind: it.Kind, Source: it.Provenance.Source,
 				Producer: it.Producer, Author: it.Provenance.Author, Origin: it.Provenance.Origin,
 				Authority: it.Authority, Sensitivity: it.Sensitivity, Version: it.Version,
-				Hash: it.Hash, Size: len(it.Evidence), Mechanism: MechanismPlannedConnector,
+				Hash: it.Hash, Size: len(it.Evidence),
+				// v1 has exactly one mechanism; when capability-fetch
+				// (L4-era) arrives, carry the original ref's mechanism
+				// through dedup instead of stamping (arch review F6).
+				Mechanism: MechanismPlannedConnector,
 			})
 			used += estimateTokens(len(it.Evidence))
 		}
@@ -274,10 +284,6 @@ func rankForDrop(input []ItemRef, keys []string) []rankedRef {
 			case "kind":
 				if refs[i].ref.Kind != refs[j].ref.Kind {
 					return refs[i].ref.Kind < refs[j].ref.Kind
-				}
-			case "version":
-				if refs[i].ref.Version != refs[j].ref.Version {
-					return refs[i].ref.Version > refs[j].ref.Version // newer survives longer
 				}
 			}
 		}

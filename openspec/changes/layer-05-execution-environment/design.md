@@ -173,11 +173,18 @@ Owner-locked:
 
 **Locked principle:** *A limit dimension may be claimed only at the strength actually delivered: enforced means deterministic typed enforcement at breach; observed means measurement recorded in the trace and available to a subsequent deterministic acceptance decision; absent means the provider makes no claim. Every dimension has explicit semantics and units. A provisioning requirement for a strength the provider cannot deliver fails closed at provisioning.*
 
+### Q-L5-10 — Artifact boundary (CLOSED)
+
+Owner-locked ownership: execution-completed (L5/provider) → eligible-to-egress (L5, deterministic structural/provenance/bounds gate) → is-evidence (L2) → accepted-into-Themis (governance/human). *L5 determines whether bytes are structurally eligible to leave; it never determines what those bytes mean.*
+
+**Artifact Egress Contract v1:** the artifact is a **diff against the pinned base** — {base: {repository_identity, pinned_sha}, changes[]: {path, change_type, old_hash, new_hash, size, mode}, patch_content, tool_audit_refs[]}. Egress uses ResolveMode (no second confinement predicate); symlinks never followed (target string is data, typed entry); `.git*` excluded (mechanism state, noted in trace); **no file-type allowlist** (structural constraints only; binary/text is metadata, not an authorization category); per-file/total-size/file-count bounds from WorkspaceExecutionCeiling (narrow, never widen); cryptographic binding to {task, execution, repository identity, pinned SHA, provider declaration, limits record}; manifest hash length-framed canonical; **no partial artifacts** — timeout/breach/teardown anomaly ⇒ no artifact (observed resource breaches become deterministic egress refusal); artifact **copied and hashed before teardown**, never referenced or streamed (closes the inspected-vs-shipped gap). Exactly two workspace→L2 evidence paths: L4-authorized tool result during execution, and the L5 egress artifact via L2 — anything else is an architectural violation.
+
+**Locked principle:** *Execution completion is a provider outcome; egress eligibility is a deterministic structural contract owned by L5; evidence authority is L2's; acceptance is governance's. The egress gate is content-neutral — structure, provenance, and bounds, never meaning — and produces either a complete, hashed, provenance-bound artifact from a clean terminal state, or nothing.*
+
 ## 3x. Open questions for the grill (remaining, owner-ordered)
 
-1. **Q-L5-10 — Artifact boundary:** where "execution completed" ends and "eligible to leave the environment" begins; egress contract ownership.
-2. **Q-L5-11 — Teardown:** what must be verified after execution, and what remains outside L5's claim; failure behavior.
-3. **Q-L5-12 — Operational proof gate:** what must be exercised against the v1 local provider before L5 receives the same three-state verdict as L4.
+1. **Q-L5-11 — Artifact lifecycle and durability:** custody after egress; immutability guarantee; persistence-failure behavior; teardown ordering; the execution-local → Themis-owned transition point.
+2. **Q-L5-12 — Teardown / operational proof gate:** teardown verification claims and what must be exercised against the v1 local provider before L5 receives the three-state verdict.
 
 ## 4. Test plan (three-state discipline)
 

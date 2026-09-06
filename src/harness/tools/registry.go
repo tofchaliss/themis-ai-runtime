@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -90,8 +91,10 @@ var nameSyntax = regexp.MustCompile(`^[a-z][a-z0-9_]{1,63}$`)
 // grill demanded).
 var forbiddenParams = map[string]bool{
 	"requires_human_decision": true, "authority": true, "authority_class": true,
-	"approved": true, "verified": true, "trust": true, "trust_class": true,
-	"sensitivity": true, "grant": true, "permission": true,
+	"approved": true, "approve": true, "approval": true, "authorization": true,
+	"authorized": true, "verified": true, "trust": true, "trust_class": true,
+	"trusted": true, "sensitivity": true, "grant": true, "grants": true,
+	"permission": true, "permissions": true, "human_approved": true,
 }
 
 // LoadRegistry: fail-closed artifact posture.
@@ -187,6 +190,9 @@ type GrantEntry struct {
 	// Workspace: confinement root for workspace-path targets.
 	Workspace string `json:"workspace,omitempty"`
 	// ThemisScope: permitted id prefixes for themis-id targets.
+	// Prefix matching is coarse ("FIND-1" authorizes "FIND-123");
+	// grant authors use delimiter-terminated prefixes ("FIND-1:") for
+	// exact families (F8, documented convention).
 	ThemisScope []string `json:"themis_scope,omitempty"`
 }
 
@@ -228,6 +234,12 @@ func LoadGrant(path string) (*Grant, error) {
 		seen[e.Tool] = true
 		if e.MaxCalls <= 0 {
 			return nil, fmt.Errorf("%w: grant %q needs a positive call cap", ErrGrantInvalid, e.Tool)
+		}
+		// Absolute workspace bindings only: a relative binding makes
+		// confinement depend on process cwd — non-reproducible across
+		// invocations (security review F6).
+		if e.Workspace != "" && !filepath.IsAbs(e.Workspace) {
+			return nil, fmt.Errorf("%w: grant %q workspace must be absolute", ErrGrantInvalid, e.Tool)
 		}
 	}
 	sum := sha256.Sum256(raw)

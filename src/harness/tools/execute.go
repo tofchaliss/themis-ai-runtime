@@ -34,6 +34,9 @@ const (
 type Outcome struct {
 	Evidence []byte
 	ErrClass ErrorClass
+	// SkippedOversized counts scan candidates omitted by size guards —
+	// surfaced in the audit so caps are never silent (F4).
+	SkippedOversized int
 }
 
 // Executor runs one authorized capability. v1 executors are read-only
@@ -99,12 +102,20 @@ func execListDirectory(entry *GrantEntry, args map[string]any, target string) Ou
 		return Outcome{ErrClass: ErrFileUnreadable}
 	}
 	var names []string
+	total := 0
 	for _, e := range entries {
 		name := e.Name()
 		if e.IsDir() {
 			name += "/"
 		}
+		total += len(name) + 1
 		names = append(names, name)
+	}
+	if total > maxToolEvidence {
+		// Evidence-size cap applies to every executor (security review
+		// F1): directory contents are external-untrusted and entry
+		// count/name length are repo-controlled.
+		return Outcome{ErrClass: ErrOversized}
 	}
 	sort.Strings(names)
 	return Outcome{Evidence: []byte(strings.Join(names, "\n") + "\n")}
@@ -117,6 +128,7 @@ func execSearchCode(entry *GrantEntry, args map[string]any, target string) Outco
 		return Outcome{ErrClass: ErrFileUnreadable}
 	}
 	var hits []string
+	skipped := 0
 	walkErr := filepath.WalkDir(rootAbs, func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
@@ -125,10 +137,15 @@ func execSearchCode(entry *GrantEntry, args map[string]any, target string) Outco
 			return fmt.Errorf("non-regular file in workspace")
 		}
 		if info, err := d.Info(); err != nil || info.Size() > maxToolEvidence {
+			skipped++
 			return nil
 		}
 		b, err := os.ReadFile(path)
-		if err != nil || !strings.Contains(string(b), query) {
+		if err != nil {
+			skipped++
+			return nil
+		}
+		if !strings.Contains(string(b), query) {
 			return nil
 		}
 		rel, err := filepath.Rel(rootAbs, path)
@@ -145,9 +162,15 @@ func execSearchCode(entry *GrantEntry, args map[string]any, target string) Outco
 	if len(hits) > 64 {
 		// No silent caps (L3 precedent): over-cap refuses as a typed
 		// error the model can react to by narrowing.
-		return Outcome{ErrClass: ErrOversized}
+		return Outcome{ErrClass: ErrOversized, SkippedOversized: skipped}
 	}
-	return Outcome{Evidence: []byte(strings.Join(hits, "\n") + "\n")}
+	if len(hits) == 0 && skipped > 0 {
+		// Empty-but-hidden: matches may exist only in size-skipped
+		// files — an adversarial repo must not hide indicators behind
+		// padding while the tool reports a clean empty result (F4).
+		return Outcome{ErrClass: ErrOversized, SkippedOversized: skipped}
+	}
+	return Outcome{Evidence: []byte(strings.Join(hits, "\n") + "\n"), SkippedOversized: skipped}
 }
 
 func themisExec(seam ThemisSeam, kind string) Executor {
@@ -183,16 +206,20 @@ type ToolEvidence struct {
 // AuditEvent is emitted for EVERY call — allow, deny, and error alike
 // (D-L4-8; the L6 shape).
 type AuditEvent struct {
-	Tool           string
-	ArgsHash       string
-	Decision       string // authorized | denied | error
-	DenialClass    DenialClass
-	TracePredicate string
-	ErrClass       ErrorClass
-	Target         string
-	RegistryHash   string
-	GrantHash      string
-	ResultHash     string
+	Tool             string
+	ArgsHash         string
+	Decision         string // authorized | denied | error
+	DenialClass      DenialClass
+	ModelDetail      string // exact model-visible denial detail (F2: joint reconstructability)
+	TracePredicate   string
+	ErrClass         ErrorClass
+	Target           string // requested target, recorded on every path incl. denials (F2)
+	RegistryHash     string
+	GrantHash        string
+	ResultHash       string
+	SkippedOversized int
+	// Timing and executor identity join at the L6 trace-sink era —
+	// explicit deferral, not omission (F2).
 }
 
 // Handle is the per-call pipeline: authorize → execute → result/denial
@@ -206,8 +233,9 @@ func Handle(reg *Registry, grant *Grant, table map[string]Executor, call model.T
 
 	d := Authorize(reg, grant, call.Name, call.Arguments, state)
 	audit.TracePredicate = d.TracePredicate
+	audit.Target = d.RequestedTarget
 	if !d.Allow {
-		audit.Decision, audit.DenialClass = "denied", d.Denial
+		audit.Decision, audit.DenialClass, audit.ModelDetail = "denied", d.Denial, d.ModelDetail
 		body := map[string]string{"denial": string(d.Denial)}
 		if d.ModelDetail != "" {
 			key := "field"
@@ -221,8 +249,16 @@ func Handle(reg *Registry, grant *Grant, table map[string]Executor, call model.T
 	}
 
 	def := reg.tool(call.Name)
-	out := table[call.Name](grant.entry(call.Name), d.Args, d.Target)
-	audit.Target = d.Target
+	exec, ok := table[call.Name]
+	if !ok {
+		// Registry/table drift: fail closed with a typed error and a
+		// complete audit event, never a panic (F3).
+		audit.Decision, audit.ErrClass = "error", ErrSeamUnavailable
+		content, _ := json.Marshal(map[string]string{"error": string(ErrSeamUnavailable)})
+		return model.Message{Role: model.RoleTool, Content: string(content), ToolCallID: call.ID}, nil, audit
+	}
+	out := exec(grant.entry(call.Name), d.Args, d.Target)
+	audit.SkippedOversized = out.SkippedOversized
 	if out.ErrClass != "" {
 		audit.Decision, audit.ErrClass = "error", out.ErrClass
 		content, _ := json.Marshal(map[string]string{"error": string(out.ErrClass)})

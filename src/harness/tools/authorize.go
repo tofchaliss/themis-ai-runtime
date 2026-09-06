@@ -25,15 +25,16 @@ const (
 // the ToolDef). TracePredicate names the exact failed check and never
 // reaches the model.
 type Decision struct {
-	Allow          bool
-	Denial         DenialClass
-	ModelDetail    string
-	TracePredicate string
-	Tool           string
-	Args           map[string]any // strictly validated, only when Allow
-	Target         string         // validated target instance, only when Allow
-	RegistryHash   string
-	GrantHash      string
+	Allow           bool
+	Denial          DenialClass
+	ModelDetail     string
+	TracePredicate  string
+	Tool            string
+	Args            map[string]any // strictly validated, only when Allow
+	Target          string         // validated target instance, only when Allow
+	RequestedTarget string         // model-supplied target echo, every path (F2)
+	RegistryHash    string
+	GrantHash       string
 }
 
 // CallState is L7-supplied execution history: L4 owns no counters
@@ -127,10 +128,14 @@ func Authorize(reg *Registry, grant *Grant, toolName string, rawArgs json.RawMes
 			}
 		}
 	}
+	d.RequestedTarget = bound(target)
 	switch def.Target {
 	case TargetWorkspacePath:
 		if entry.Workspace == "" {
-			return deny(DenialTargetRefused, bound(target), "grant-missing-workspace-binding")
+			// Operator/config error, not a model target fault: the
+			// capability is effectively unusable in this execution —
+			// actionable state is not-available (F9).
+			return deny(DenialNotAvailable, "", "grant-missing-workspace-binding")
 		}
 		if _, err := confine(entry.Workspace, target); err != nil {
 			return deny(DenialTargetRefused, bound(target), "confinement: "+err.Error())

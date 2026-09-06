@@ -382,3 +382,70 @@ func TestRemainingExecutorsAndEdges(t *testing.T) {
 		t.Fatalf("oversized args must be invalid-args: %+v", d3)
 	}
 }
+
+// Security-review regressions F1/F3/F4/F6/F9.
+func TestSecurityReviewRegressions(t *testing.T) {
+	reg := shippedRegistry(t)
+	// F6: relative workspace binding fails closed at load.
+	rel := `{"version":1,"task_id":"T","total_max_calls":5,"entries":[{"tool":"read_file","max_calls":1,"workspace":"relative/path"}]}`
+	path := filepath.Join(t.TempDir(), "g.json")
+	if err := os.WriteFile(path, []byte(rel), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadGrant(path); !errors.Is(err, ErrGrantInvalid) {
+		t.Fatal("relative workspace must fail closed")
+	}
+	// F9: granted workspace tool without a binding -> not-available.
+	noWS := `{"version":1,"task_id":"T","total_max_calls":5,"entries":[{"tool":"read_file","max_calls":1}]}`
+	if err := os.WriteFile(path, []byte(noWS), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	g, err := LoadGrant(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := Authorize(reg, g, "read_file", args(t, map[string]any{"path": "a.go"}), CallState{Calls: map[string]int{}})
+	if d.Allow || d.Denial != DenialNotAvailable || d.ModelDetail != "" {
+		t.Fatalf("missing binding is config error -> not-available: %+v", d)
+	}
+	if d.RequestedTarget != "a.go" {
+		t.Fatalf("requested target must be recorded on denial paths (F2): %+v", d)
+	}
+	// F1: unbounded directory listing refuses oversized.
+	ws := t.TempDir()
+	long := strings.Repeat("f", 200)
+	for i := 0; i < 1500; i++ {
+		writeFile(t, ws, long+string(rune('a'+i%26))+string(rune('a'+(i/26)%26))+string(rune('a'+i/676))+".go", "x")
+	}
+	grant := testGrant(t, ws)
+	table, _ := NewExecutorTable(reg, nil)
+	// list_directory not in testGrant; use a direct executor call.
+	out := execListDirectory(&GrantEntry{Workspace: ws}, nil, ".")
+	if out.ErrClass != ErrOversized {
+		t.Fatalf("huge listing must refuse oversized: %+v", out.ErrClass)
+	}
+	// F4: query match hidden only in an oversized file -> typed error, never clean-empty.
+	ws2 := t.TempDir()
+	writeFile(t, ws2, "pad.go", strings.Repeat("A", maxToolEvidence+10)+" NEEDLE")
+	out2 := execSearchCode(&GrantEntry{Workspace: ws2}, map[string]any{"query": "NEEDLE"}, ".")
+	if out2.ErrClass != ErrOversized || out2.SkippedOversized == 0 {
+		t.Fatalf("hidden-match padding must surface: %+v", out2)
+	}
+	// F3: registry/table drift -> typed error + audit, no panic.
+	drifted := map[string]Executor{}
+	msg, ev, audit := Handle(reg, grant, drifted, model.ToolCall{ID: "d1", Name: "read_file",
+		Arguments: args(t, map[string]any{"path": "x"})}, CallState{Calls: map[string]int{}})
+	_ = msg
+	if ev != nil || audit.Decision != "error" || audit.ErrClass != ErrSeamUnavailable {
+		t.Fatalf("table drift must fail closed with audit: %+v", audit)
+	}
+	// F2: denial audit carries model detail + requested target.
+	msgD, _, auditD := Handle(reg, grant, table, model.ToolCall{ID: "d2", Name: "read_file",
+		Arguments: args(t, map[string]any{"path": "../etc/passwd"})}, CallState{Calls: map[string]int{}})
+	if auditD.DenialClass != DenialTargetRefused || auditD.ModelDetail != "../etc/passwd" || auditD.Target != "../etc/passwd" {
+		t.Fatalf("denial audit incomplete: %+v", auditD)
+	}
+	if !strings.Contains(msgD.Content, "../etc/passwd") {
+		t.Fatalf("target echo missing: %q", msgD.Content)
+	}
+}

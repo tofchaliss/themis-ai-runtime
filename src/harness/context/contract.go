@@ -31,6 +31,11 @@ type Slot struct {
 	Requirement SlotRequirement  `json:"requirement"`
 	Classes     []AuthorityClass `json:"classes"`            // permitted authority classes
 	Withhold    bool             `json:"withhold,omitempty"` // this contract deliberately excludes the slot
+	// Droppable is the explicit contract authorization for capacity
+	// omission (Q-L3-2): absent = undroppable (fail-closed default).
+	// Only optional slots may be droppable; droppable governed slots
+	// are a named Class-3 relaxation visible at contract review.
+	Droppable bool `json:"droppable,omitempty"`
 }
 
 // Contract is the loaded, validated workflow context contract.
@@ -110,6 +115,12 @@ func (c *Contract) validate() error {
 		}
 		if s.Withhold && s.Requirement == SlotRequired {
 			return fmt.Errorf("slot %q cannot be both required and withheld", s.Name)
+		}
+		if s.Droppable && s.Requirement == SlotRequired {
+			return fmt.Errorf("slot %q cannot be both required and droppable — required context is never droppable", s.Name)
+		}
+		if s.Droppable && s.Withhold {
+			return fmt.Errorf("slot %q cannot be both withheld and droppable", s.Name)
 		}
 	}
 	return nil

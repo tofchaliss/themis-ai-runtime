@@ -22,6 +22,10 @@ const (
 	// KindFilesystem: confined workspace reads. External-untrusted in
 	// v1 — file authorship is unprovable until L5 provenance exists.
 	KindFilesystem SourceKind = "filesystem"
+	// KindSearch: deterministic lexical retrieval over the confined
+	// workspace (M3): walk + substring match, sorted results, capped.
+	// External-untrusted like all repository content.
+	KindSearch SourceKind = "search"
 	// KindThemis: reads through the Themis-owned data-access boundary.
 	// The only v1 kind that may declare governed classes. v1 ships the
 	// typed contract as a stub (gate-0 decision); real wiring waits
@@ -34,6 +38,7 @@ const (
 var allowedClasses = map[SourceKind][]AuthorityClass{
 	KindInline:     {AuthorityExternalUntrusted},
 	KindFilesystem: {AuthorityExternalUntrusted},
+	KindSearch:     {AuthorityExternalUntrusted},
 	KindThemis:     {AuthorityGovernedRecord, AuthorityGovernedExternal},
 }
 
@@ -50,8 +55,11 @@ type Source struct {
 	// every classification field is overwritten from the registration.
 	Items []ContextItem
 	// KindFilesystem: confinement root + relative paths.
-	Root  string
-	Paths []string
+	// KindSearch: confinement root + Query (+ optional Suffix filter).
+	Root   string
+	Paths  []string
+	Query  string
+	Suffix string
 	// KindThemis: the typed read contract (stub in v1).
 	Reader ThemisReader
 }
@@ -180,6 +188,81 @@ func (s Source) collect() (items []ContextItem, available bool, err error) {
 		}
 		return items, true, nil
 
+	case KindSearch:
+		if s.Query == "" {
+			return nil, false, fmt.Errorf("%w: search source %s has no query", ErrUnrecognizedSource, s.Name)
+		}
+		rootAbs, err := confinedPath(s.Root, ".")
+		if err != nil {
+			// "." is always lexically inside; only a missing root errors.
+			return nil, false, err
+		}
+		const maxMatches = 64
+		var matches []string
+		var confineErr error
+		walkErr := filepath.WalkDir(rootAbs, func(path string, d os.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return err
+			}
+			// Only regular files: a file symlink would be followed by
+			// ReadFile and could point outside the root (security
+			// review HIGH-2) — refuse hard, matching the filesystem
+			// kind's confinement contract.
+			if !d.Type().IsRegular() {
+				rel, _ := filepath.Rel(rootAbs, path)
+				confineErr = fmt.Errorf("%w: %q is not a regular file", ErrConfinement, rel)
+				return confineErr
+			}
+			if s.Suffix != "" && !strings.HasSuffix(path, s.Suffix) {
+				return nil
+			}
+			if info, err := d.Info(); err != nil || info.Size() > MaxItemBytes {
+				// Oversized files cannot become items; skipping the scan
+				// read bounds memory. Deterministic: size is the guard.
+				return nil
+			}
+			b, err := os.ReadFile(path)
+			if err != nil || !strings.Contains(string(b), s.Query) {
+				return nil
+			}
+			rel, err := filepath.Rel(rootAbs, path)
+			if err != nil {
+				return err
+			}
+			matches = append(matches, filepath.ToSlash(rel))
+			return nil
+		})
+		if confineErr != nil {
+			return nil, false, confineErr
+		}
+		if walkErr != nil {
+			return nil, false, nil
+		}
+		sort.Strings(matches)
+		// No silent caps: over-cap match sets refuse deterministically
+		// rather than truncating into a complete-looking result
+		// (security review MEDIUM-1) — narrow the query or suffix.
+		if len(matches) > maxMatches {
+			return nil, false, fmt.Errorf("%w: search %s matched %d files (cap %d) — narrow the query",
+				ErrContextTooLarge, s.Name, len(matches), maxMatches)
+		}
+		for _, rel := range matches {
+			abs, err := confinedPath(s.Root, rel)
+			if err != nil {
+				return nil, false, err
+			}
+			b, err := os.ReadFile(abs)
+			if err != nil {
+				return nil, false, nil
+			}
+			it, err := stamp(ContextItem{Kind: "file:" + rel, Version: rel}, b, "")
+			if err != nil {
+				return nil, false, err
+			}
+			items = append(items, it)
+		}
+		return items, len(items) > 0, nil
+
 	case KindThemis:
 		if s.Reader == nil {
 			return nil, false, nil // stub not wired: unavailable, typed
@@ -216,7 +299,7 @@ func confinedPath(root, rel string) (string, error) {
 		return "", fmt.Errorf("%w: %v", ErrConfinement, err)
 	}
 	joined := filepath.Join(rootAbs, rel)
-	if !strings.HasPrefix(joined, rootAbs+string(filepath.Separator)) {
+	if joined != rootAbs && !strings.HasPrefix(joined, rootAbs+string(filepath.Separator)) {
 		return "", fmt.Errorf("%w: %q", ErrConfinement, rel)
 	}
 	resolved, err := filepath.EvalSymlinks(joined)

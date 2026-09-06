@@ -5,39 +5,43 @@ Execution starts only after the grill closes Q-L3-1…9 and the owner accepts. E
 ## 0. Gate
 
 - [x] Grill session held 2026-09-06; Q-L3-1..9 closed (Q5/Q6 deliberately deferred to dedicated grills) and recorded in design.md §3
-- [ ] Owner reviews the folded change; acceptance clears this gate
+- [x] Owner ACCEPTED 2026-09-06 (all gate criteria GREEN); autonomous execution granted with the standing constraint: omitted_for_capacity never becomes silent degradation — unfittable required/undroppable set fails closed
 
 ## Binding constraints (from the grill — govern all implementation)
 
 Deterministic policy execution, zero runtime judgment (rank/drop functions receive ItemRef only, never evidence bytes) · capacity is never authority (required never droppable; optional governed undroppable by default; droppability = explicit named contract relaxation; every governed slot declares one of four dispositions) · fifth availability state `omitted_for_capacity` (state-only model marker; counts/mechanics trace-only) · rank ≠ render (presentation stays contract slot order) · no truncation of evidence · dedup within class only, provenance multiplicity retained; cross-class never collapsed or promoted · budget lives in the ManagementPolicy; overrides are L7-era governance acts · model requests carry zero rank weight · no probabilistic component and no compressor without its own grill
 
-## 1. L3-M1 — ManagementPolicy artifact (Class 3 — security-sensitive)
+## 1. L3-M1 — ManagementPolicy artifact (Class 3) — **DONE 2026-09-06**
 
-- [ ] Policy schema + fail-closed loader (L1/L2 artifact posture: hash, unknown fields, trailing bytes, floors)
-- [ ] Per-slot limits, rank keys, dedup mode, drop order, undroppable marks, token budget
-- [ ] Policy hash into the delivery trace
-- [ ] Security review (drop-order semantics, undroppable protection)
+- [x] Policy schema + fail-closed loader (L1/L2 artifact posture: hash, unknown fields, trailing bytes, floors)
+- [x] Rank keys, dedup mode, drop order, undroppable marks, token budget
+- [x] Policy hash into the delivery trace
+- [x] Security review done (see §4a)
 
-## 2. L3-M2 — Manage: filter/rank/dedup/budget (Class 3 — security-sensitive)
+## 2. L3-M2 — Manage: filter/rank/dedup/budget (Class 3) — **DONE 2026-09-06**
 
-- [ ] `Manage(policy, gathered) (managed *Gathered, trace SelectionTrace, err)` — deterministic, judgment-free execution
-- [ ] Required/undroppable slots excluded from drop candidates; unmeetable budget ⇒ fail closed
-- [ ] `omitted_for_capacity` state (Q-L3-3): state-only model marker at slot granularity; counts/ranks/policy hash trace-only
-- [ ] Within-class hash-identity dedup with full collapsed source refs in trace; cross-class duplicates delivered separately (Q-L3-8)
-- [ ] Deterministic token estimator per Q-L3-5/D-L3-5
-- [ ] Security review
+- [x] `Manage(policy, gathered) (managed *Gathered, trace SelectionTrace, err)` — deterministic, judgment-free execution
+- [x] Required/undroppable slots excluded from drop candidates; unmeetable budget ⇒ fail closed
+- [x] `omitted_for_capacity` state (Q-L3-3): state-only model marker at slot granularity; counts/ranks/policy hash trace-only
+- [x] Within-class hash-identity dedup with full collapsed source refs in trace; cross-class duplicates delivered separately (Q-L3-8)
+- [x] Deterministic token estimator per Q-L3-5/D-L3-5
+- [x] Security review done (see §4a)
 
-## 3. L3-M3 — Retrieval sources (Class 2)
+## 3. L3-M3 — Retrieval sources (Class 2) — **DONE 2026-09-06**
 
-- [ ] ripgrep/lexical/metadata-filter sources as registered L2 sources (external-untrusted, confined)
-- [ ] Table tests: classification, confinement, determinism
+- [x] Lexical search source (KindSearch: confined walk, regular-files-only, sorted, capped-with-refusal) + filesystem/metadata filtering via existing sources as registered L2 sources (external-untrusted, confined)
+- [x] Table tests: classification, confinement (incl. symlink escape), determinism, over-cap refusal
 
-## 4. L3-M4 — Seams + proof (Class 2)
+## 4. L3-M4 — Seams + proof (Class 2) — **DONE 2026-09-06**
 
-- [ ] Compressor registration seam only (Q-L3-6 deferral recorded: no activation without a dedicated grill)
-- [ ] Selection trace documented for L6; L7 policy-selection contract stated
-- [ ] Q-L3-9 proofs: no-pressure byte-identical passthrough + golden managed set (deterministic); live budget-pressure run with omitted_for_capacity marker + survivor citation
-- [ ] Traceability table, coverage-verified
+- [x] Compressor registration seam only (Q-L3-6 deferral recorded: no activation without a dedicated grill)
+- [x] Selection trace documented for L6 (SelectionTrace in manage.go); L7 policy-selection contract stated
+- [x] Q-L3-9 proofs done: no-pressure byte-identical passthrough + golden managed set (deterministic); live budget-pressure run with omitted_for_capacity marker + survivor citation
+- [x] Traceability table (`traceability.md`)
+
+## 4a. Security review record (M1+M2, 2026-09-06)
+
+Class-3 review with compiled PoCs. Verdict: the authority boundary holds — no combination evicts required or undroppable content. Two HIGH integrity defects found and remediated: **HIGH-1** phantom-drop accounting (ranking pre-dedup refs while budgeting post-dedup let duplicate bytes falsify BudgetUsed and bypass ErrBudget; refs/items could diverge so PayloadHash attested undelivered items) → rewritten to index-bijective post-dedup accounting, refs rebuilt from kept items, regression test locks the exact PoC. **HIGH-2** KindSearch followed file symlinks outside the confinement root (host-file exfiltration into model context) → non-regular files hard-refuse ErrConfinement + reads routed through confinedPath; regression test. **MEDIUM-1** silent 64-match cap → over-cap now refuses deterministically (no-silent-caps rule). **LOW-1** collapse-order tie → Authority added to sort key. **LOW-2** collapsed items' Kind/Version now retained in CollapseRef. Informational accepted: estimator excludes framing (MaxComposedBytes is the backstop), policy↔contract binding is caller convention until L7, search scan skips oversized files.
 
 ## 5. Deferred dependencies (NOT L3 scope)
 

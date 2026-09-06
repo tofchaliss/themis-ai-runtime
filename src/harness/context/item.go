@@ -69,6 +69,11 @@ const (
 	AvailabilityUnavailable   Availability = "unavailable"
 	AvailabilityNotApplicable Availability = "not_applicable"
 	AvailabilityWithheld      Availability = "withheld_by_contract"
+	// AvailabilityOmittedCapacity is the fifth state (Q-L3-3, owner
+	// amendment to the locked Q-L2-4 vocabulary): the source
+	// delivered, the contract permitted dropping, and the
+	// deterministic capacity policy selected it for omission.
+	AvailabilityOmittedCapacity Availability = "omitted_for_capacity"
 )
 
 // SourceStatus and DeliveryStatus are distinguished so a delivery
@@ -87,6 +92,11 @@ const (
 	DeliveryRefused   DeliveryStatus = "refused"
 	DeliveryWithheld  DeliveryStatus = "withheld"
 	DeliveryNone      DeliveryStatus = "none"
+	// DeliveryOmittedCapacity: capacity omission — distinct from
+	// unavailable (source delivered fine) and from withheld
+	// (deliberate contract exclusion). The distinction survives into
+	// the trace.
+	DeliveryOmittedCapacity DeliveryStatus = "omitted_for_capacity"
 )
 
 // Mechanism is transport metadata. It carries zero authority weight.

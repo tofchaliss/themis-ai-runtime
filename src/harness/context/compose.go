@@ -76,7 +76,13 @@ func Compose(set *instructions.EffectiveSet, policy *instructions.Policy, g *Gat
 			fmt.Fprintf(&b, "\n[slot: %s | availability: %s]\n", s.Slot, s.Availability)
 			continue
 		}
-		fmt.Fprintf(&b, "\n[slot: %s | availability: delivered]\n", s.Slot)
+		if s.Omitted {
+			// State-only marker: some items were omitted for capacity;
+			// counts and mechanics are trace-only (Q-L3-3).
+			fmt.Fprintf(&b, "\n[slot: %s | availability: delivered | omitted_for_capacity]\n", s.Slot)
+		} else {
+			fmt.Fprintf(&b, "\n[slot: %s | availability: delivered]\n", s.Slot)
+		}
 		for _, it := range g.items[s.Slot] {
 			version := ""
 			if it.Version != "" {

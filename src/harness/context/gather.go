@@ -27,6 +27,7 @@ type ItemRef struct {
 	Sensitivity Sensitivity
 	Version     string
 	Hash        string
+	Size        int // evidence byte length — envelope metadata, a legal rank dimension
 	Mechanism   Mechanism
 }
 
@@ -39,7 +40,11 @@ type SlotState struct {
 	Availability Availability
 	SourceStatus SourceStatus
 	Delivery     DeliveryStatus
-	Items        []ItemRef
+	// Omitted marks a delivered slot that lost items to capacity —
+	// model-visible as a state flag only; counts stay in the trace
+	// (Q-L3-3 minimum disclosure).
+	Omitted bool
+	Items   []ItemRef
 }
 
 // Gathered is the validated, classified evidence set awaiting
@@ -130,7 +135,7 @@ func Gather(contract *Contract, assignments []Assignment) (*Gathered, error) {
 				Slot: slot.Name, Kind: it.Kind, Source: it.Provenance.Source,
 				Producer: it.Producer, Author: it.Provenance.Author, Origin: it.Provenance.Origin,
 				Authority: it.Authority, Sensitivity: it.Sensitivity, Version: it.Version,
-				Hash: it.Hash, Mechanism: MechanismPlannedConnector,
+				Hash: it.Hash, Size: len(it.Evidence), Mechanism: MechanismPlannedConnector,
 			})
 		}
 		g.items[slot.Name] = items

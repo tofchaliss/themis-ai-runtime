@@ -95,3 +95,78 @@ func firstLine(s string) string {
 	}
 	return s
 }
+
+// L3 operational proof (Q-L3-9): live budget-pressure run — the model
+// receives the deterministically reduced set plus the
+// omitted_for_capacity marker and cites surviving evidence.
+func TestLivePressureProof(t *testing.T) {
+	endpoint := os.Getenv("THEMIS_LIVE_OLLAMA")
+	if endpoint == "" {
+		endpoint = "http://localhost:11434"
+	}
+	client := http.Client{Timeout: 2 * time.Second}
+	if _, err := client.Get(endpoint + "/api/tags"); err != nil {
+		t.Skipf("no local model endpoint at %s: %v", endpoint, err)
+	}
+	modelName := os.Getenv("THEMIS_LIVE_MODEL")
+	if modelName == "" {
+		modelName = "WhiteRabbitNeo/WHiteRabbitNeo-2.5-Qwen-2.5-Coder-7B:latest"
+	}
+
+	pol, err := instructions.LoadPolicy("../../../policies/security/instruction-directive-patterns.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	set, err := instructions.Resolve(instructions.Config{Policy: pol},
+		instructions.Source{Kind: instructions.ScopeHarnessSafety, Root: "../../../instructions/global/safety"},
+		instructions.Source{Kind: instructions.ScopeHarnessSystem, Root: "../../../instructions/global/system"},
+		instructions.Source{Kind: instructions.ScopeThemisDomain, Root: "../../../instructions/themis"},
+		instructions.Source{Kind: instructions.ScopeTask, Inline: []instructions.Instruction{{
+			ID: "task.instructions", Scope: instructions.ScopeTask, Category: instructions.CategoryTask,
+			Body: "In one sentence: what is the status of the delivered finding? Cite only delivered evidence.\n"}}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := loadTestContract(t, dropContract)
+	g := pressureGathered(t, c, 4000, 400)
+	mp := mgmtPolicy(t, `{"version":1,"name":"live-tight","budget":300,"drop_order":["source-files"],"rank_keys":["size_asc"],"dedup":"none"}`)
+	managed, trace, err := Manage(mp, g)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if trace.BudgetUsed > trace.BudgetLimit {
+		t.Fatalf("managed set exceeds budget: %+v", trace)
+	}
+	p, err := Compose(set, pol, managed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(p.Messages[1].Content, "omitted_for_capacity") {
+		t.Fatal("pressure payload must carry the omission marker")
+	}
+	provider := model.NewOllamaChat(endpoint)
+	ctx, cancel := stdctx.WithTimeout(stdctx.Background(), 120*time.Second)
+	defer cancel()
+	resp, err := provider.Execute(ctx, model.ExecutionRequest{
+		Model: modelName, Messages: p.Messages, Options: model.DefaultOptions(),
+	})
+	if err != nil {
+		t.Fatalf("live pressure execution failed: %v", err)
+	}
+	if resp.Termination != model.TerminationStop || strings.TrimSpace(resp.Content) == "" {
+		t.Fatalf("live pressure run must terminate clean: %+v", resp.Termination)
+	}
+	echoed := false
+	for _, token := range []string{"CVE-2026-12345", "OPEN", "libXYZ"} {
+		if strings.Contains(resp.Content, token) {
+			echoed = true
+			break
+		}
+	}
+	if !echoed {
+		t.Fatalf("reply cites no surviving evidence: %q", firstLine(resp.Content))
+	}
+	t.Logf("live pressure proof: payload=%s used=%d/%d reply=%q",
+		p.PayloadHash[:12], trace.BudgetUsed, trace.BudgetLimit, firstLine(resp.Content))
+}

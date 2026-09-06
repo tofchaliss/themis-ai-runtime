@@ -55,10 +55,11 @@ Class-3 review with compiled PoCs. Verdict: the authority boundary holds — no 
 
 **Architecture review three-state verdict:** conformant, no boundary violations, live-re-verified independently. F2 version rank key removed (wisdom trap); F4/F5 record/comment drift fixed; F6 mechanism-stamp noted for the L4 era; F3 accepted (policy attestation lives in SelectionTrace until L6/L7 wire Compose↔Manage binding).
 
-**PENDING OWNER (arch F1):** Q-L3-2's "every governed slot resolves explicitly to one of four dispositions" is implemented as a fail-closed *default* (JSON-absent droppable=false=undroppable), not a reject-if-undeclared validator. Direction is fail-closed and honestly recorded; whether "undeclared disposition" must be rejected outright is an owner interpretation call.
+**Arch F1 RESOLVED by owner 2026-09-06 — CONFORM, no delta.** Shipped interpretation kept: every governed slot has a deterministic effective disposition; explicit `droppable` is required for capacity-driven omission; absence of that declaration resolves to undroppable. An accidental omission can only make the system LESS aggressive in dropping evidence, never more. Separately locked: a workflow contract may not rely on undeclared behavior to exclude governed evidence. Reject-if-undeclared was considered and rejected (brittle authoring without a security gain — capacity must never become the authority that decides governed evidence can disappear, and the default guarantees exactly that).
 
 ## 6. Close
 
 - [x] Architecture + security + test review complete, three-state verdicts recorded (§4a, §5b)
 - [x] Code map updated (L3 → done)
-- [ ] Owner: resolve F1 interpretation; green checkpoints pushed on owner approval; archive on close
+- [x] Owner resolved F1 (CONFORM, 2026-09-06)
+- [ ] Green checkpoints pushed on owner approval; archive on close

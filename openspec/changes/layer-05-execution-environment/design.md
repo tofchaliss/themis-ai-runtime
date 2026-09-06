@@ -32,28 +32,39 @@ Task ──► L7 (future) ──provision──► ┌────────�
 - **Fail closed:** provisioning failure ⇒ no execution; limit breach ⇒ typed termination, recorded; unknown provider ⇒ refuse.
 - **L5 failure is bounded:** it can deny the agent a computer or kill its processes — it cannot grant authority, and its absence must never silently widen confinement.
 
-## 2. Draft decisions (grill targets)
+## 2. Locked decisions (post-grill fold, 2026-09-06)
 
-### D-L5-1 — Environment seam, local provider first
-`Environment` interface: {Provision(spec) → Workspace, Exec(req) → result, Teardown}. v1 provider: local git worktree + OS process isolation (separate process, rlimits, cwd-jailed, cleared env). Docker provider second, same seam. Provider choice is configuration, never code branching (DEC-05 posture applied to execution).
+Each decision is the folded form of its grill closures (§3); on conflict the grill record governs.
 
-### D-L5-2 — Workspace spec is a governed artifact
-{repo, ref (commit SHA — not a branch name), allowed byte/time/proc limits, network: none} — versioned, hashed into the trace. Branch names resolve to SHAs at provision time and the SHA is what's recorded.
+### D-L5-1 — Environment seam with declared-property provider contract (Q-L5-1/2/6/7/9)
+`Environment` interface: {Provision(spec) → Workspace, Exec(req) → result, Seal, Egress, Teardown}. Providers declare properties at declared strength — never "supported": isolation properties (Q-L5-2 seven-property contract, bounded termination per the amendment), `process_identity` (v1: `inherited`), `network` and `host_services` (v1: `denied-by-construction`), limit dimensions (`enforced`/`observed`/absent per the Q-L5-9 matrix). A spec requiring undeclared strength fails at provision. Absence of an enforcement mechanism is never represented as enforcement.
 
-### D-L5-3 — Executor migration
-L4's filesystem executors re-root onto the provisioned workspace; the confinement root becomes the environment's boundary rather than a caller-supplied path. TOCTOU closes structurally where the provider supports it (process cwd jail / container mount), with `ConfinePath` retained as defense in depth.
+### D-L5-2 — Governed envelope artifacts: WorkspaceExecutionCeiling + ProvisionSpec (Q-L5-1/3)
+Three envelope categories: hard floors (outside configuration vocabulary), governed parameters (ceiling → narrow, never widen), capability-intrinsic. ProvisionSpec ⊆ WorkspaceExecutionCeiling (cross-layer principle). Pinned commit SHA mandatory — never a branch. Both artifacts versioned, DisallowUnknownFields, hashed into trace, fail-closed loaders. Configuration is never de-isolation.
 
-### D-L5-4 — Mutating tools (write_file, apply_patch)
-Registered in a v2 registry under the same schema/target/grant discipline; grants for mutating tools carry explicit `mutating: true` visibility for review; results record {path, old hash, new hash}. Worktree diff is the task's artifact.
+### D-L5-3 — Provisioning is execution (Q-L5-3)
+No trusted-by-position execution: git provisioning uses infrastructure vocabulary, neutralization floors (env, config, hooks), the same audit plane, and post-condition verification. Local mirrors only in v1. L5 can refuse an environment; it can never refuse a request. A lower-level component never trusts the caller to have performed an authority check.
 
-### D-L5-5 — Hand-off, not push
-Task completion emits the worktree diff + provenance as an artifact for governed review (Themis/human). The environment has no push credential and no remote write path. (Where the diff goes is L6/L7-era; the *impossibility of direct push* is L5's.)
+### D-L5-4 — Two-mode confinement + mutating tools (Q-L5-4)
+One canonical confinement implementation, two modes: ResolveMode (reads) / CreateMode (mutations). CreateMode refuses all symlinks in write paths; broad `.git*` deny-list on every mutation mechanism; `apply_patch` transactional; TOCTOU a documented threat-model limitation; no inode restrictions. write_file/apply_patch in registry-v2 under the identical L4 gate with `mutating: true` grant visibility and {path, old hash, new hash} records.
 
-### D-L5-6 — Credential broker seam only
-Interface defined ({scope, ttl} → credential), no implementation; v1 provisions credential-less environments. Any future credentialed executor is a Class-3 registration.
+### D-L5-5 — Artifact Egress Contract + ArtifactStore (Q-L5-10/11)
+Artifact = diff against the pinned base, structural/provenance/bounds gate only — content-neutral, never meaning. No partial artifacts; copied and hashed before teardown; materialized directly into ArtifactStore staging (write-once, content-addressed, acknowledge-then-immutable, outside the provider boundary). Custody ends at acknowledgment; persistence failure fails closed without workspace retention; retention/GC is an explicit L6 IOU. Exactly two workspace→L2 evidence paths (L4 tool result, L5 egress artifact). No push credential, no remote write path.
 
-### D-L5-7 — run_command stays out
-Even sandboxed, arbitrary shell is OPEN-2's own grill (command policy, allowlists, output classification). The sandbox is necessary but not sufficient.
+### D-L5-6 — Environment and secret boundary (Q-L5-5)
+Empty environment by default; declared non-secret allowlist only (HOME/TMPDIR→env-owned tmp, LC_ALL=C, git neutralizers); no PATH — pinned absolute paths. In-process executors mechanically barred from ambient env. Secrets never in static artifacts; future credentials only via broker ({scope,ttl}→short-lived, seam only in v1). Credential contamination handling: exact broker-issued bytes replaced at the capture boundary before evidence classification — L5 may remove its own secret contamination; it may never sanitize external evidence.
+
+### D-L5-7 — Non-elevation identity floor + binary attestation (Q-L5-6)
+Identity floor = non-elevation (property-level), not privilege restriction; v1 declares `inherited` honestly. Execution-owned process group/session per out-of-process execution. Pinned executable attested (digest + mode recorded; setuid/world-writable refused); attestation ≠ behavioral trust — the trusted-pinned-binary residual is the documented v1 threat model, bounded by the capability vocabulary (no run_command).
+
+### D-L5-8 — Repository-instruction activation (Q-L5-8)
+Provisioning establishes availability and identity; registration establishes authority. Four-control chain: identity-bound registration + verified pinned checkout + L1 scope cap + L1 pattern gate. Unregistered AGENTS.md is ordinary external-untrusted data, invisible to the instruction plane without error. Registration never pins content hash. Instruction paths resolve to regular files, no symlink traversal, via the shared confinement implementation. Ships as the final milestone (root AGENTS.md only) — closes the Q-L1-1 IOU.
+
+### D-L5-9 — Monotonic lifecycle state machine (Q-L5-12)
+PROVISIONING → ACTIVE → SEALED → (EGRESSING → ACKNOWLEDGED)? → TEARDOWN → {DESTROYED | TEARDOWN_ANOMALOUS}. Sealing is one-way and precedes any egress read (the audit's added invariant — egress only from a stable, sealed workspace). SEALED→EGRESSING reachable only for clean + artifact-expected. Teardown unconditional on every path; DESTROYED requires verification; TEARDOWN_ANOMALOUS is the typed host-state-unverified terminal. No backward transitions; retry = new environment identity. Every claim-changing transition is a durable typed trace event. The environment machine is not the tool-call machine (L4 governs calls inside ACTIVE). Invariants hold by reachability, not discipline.
+
+### D-L5-10 — run_command stays out (unchanged)
+OPEN-2's own grill; additionally gated by Q-L5-7.5: stronger network/host-service isolation is a precondition, and Q-L5-6's identity residual must be revisited before any arbitrary-execution capability.
 
 ## 3. Grill record (2026-09-06)
 
@@ -191,10 +202,27 @@ Owner-locked. Three lifecycle transitions, only the first belonging to L5: Artif
 
 **Locked custody invariant:** *L5's custody of an artifact ends at ArtifactStore acknowledgment. Before acknowledgment, no teardown and no evidence delivery are permitted. Persistence failure fails the execution closed and does not create a retained-workspace state. After acknowledgment, immutability is structural through content-addressed, write-once storage. L5 participates only in the write/acknowledgment seam; durable lifecycle belongs to L6.*
 
-## 3x. Open questions for the grill (remaining)
+### Q-L5-12 — Final boundary audit: the lifecycle state machine (CLOSED WITH AMENDMENT)
 
-1. **Q-L5-12 — Final boundary audit:** the complete monotonic L5 state machine; legal transitions; teardown verification claims; then the operational proof gate.
+The audit exposed one genuinely missing invariant: **SEALED**. "Clean terminal state" was insufficient because Tier-0's cooperative-termination residual permits a lingering execution to mutate the workspace between inspection and shipment. Sealing is a one-way transition after which the environment refuses all further executions (typed); **only a sealed environment may be read by the Artifact Egress Contract** — the copied object is stable before inspection begins.
+
+Canonical machine and consequences locked as D-L5-9. Owner-locked enforcement-by-reachability: artifact exposure requires ACKNOWLEDGED ← EGRESSING ← SEALED(clean) with no ACTIVE→egress edge; every path reaches TEARDOWN with no workspace-retaining terminal; DESTROYED = verified clean vs TEARDOWN_ANOMALOUS = host state unverified (uncertainty can never become a false success assertion). Environment machine ≠ tool-call machine: L4 governs individual capability invocation inside ACTIVE; L5 governs the environment containing it. Durable record minimum: provision identity, provider declaration, effective envelope, seal reason, egress outcome, artifact address if acknowledged, teardown verification, final terminal state.
+
+**Owner-locked fundamental L5 invariant:** *L5 provides a bounded, isolated, provenance-bound execution environment; execution is monotonic, sealing is irreversible, egress is possible only from a sealed clean environment, artifact custody ends at store acknowledgment, and teardown always occurs. L5 determines structural execution and egress properties, never security meaning or acceptance.*
+
+**Grill complete: Q-L5-1..12 all CLOSED (2026-09-06). No open architecture questions remain.**
 
 ## 4. Test plan (three-state discipline)
 
-Provision/teardown determinism + host-cleanliness assertions; escape suite (symlink, `..`, absolute, race where testable) against the environment boundary; limit-breach typed terminations; mutating-tool old/new hash records; no-push structural proof (no credential, no remote); pinned-ref recording; the L4 decision-table rerun inside the environment; live proof per Q-L5-9.
+Provision/teardown determinism + host-cleanliness assertions; escape suite (symlink, `..`, absolute, `.git*`, race where testable) against the environment boundary; limit-breach typed terminations per the Q-L5-9 matrix (enforced dimensions terminate typed; observed dimensions gate egress); mutating-tool old/new hash records; no-push structural proof (no credential, no remote); pinned-SHA recording + binary attestation; state-machine reachability tests (no ACTIVE→egress, no post-seal execution, no unverified DESTROYED); the L4 decision-table rerun inside the environment.
+
+### Operational proof gate (Q-L5-12 gate; supersedes the draft Q-L5-9 proof)
+
+L5 receives its three-state verdict only after a live run exercises, end to end, against the v1 local provider:
+
+1. **Provision:** local-mirror clone at pinned SHA; post-condition verification passes; provider declaration, binary attestation, and effective envelope recorded in trace.
+2. **Regression inside:** the L4 decision table reruns with executors re-rooted on the environment — identical verdicts.
+3. **Live mutation:** a real local model (qwen2.5:7b precedent) drives `write_file` through the full L4 gate into the workspace; escape attempts (symlink write path, `..`, absolute, `.git*` target) each die as typed refusals; host filesystem provably untouched.
+4. **Seal + egress:** post-seal execution attempt refused typed; egress produces the diff-against-pinned-base artifact; manifest hash verifies against copied bytes; ArtifactStore acknowledgment recorded; an observed-limit breach fixture demonstrates deterministic egress refusal.
+5. **Teardown:** verified DESTROYED — worktree gone, temp dirs gone, process group empty — asserted, not assumed; and a forced-anomaly fixture lands in TEARDOWN_ANOMALOUS, never a false DESTROYED.
+6. **Trace:** the durable record contains the complete typed transition sequence for both the clean and the failure-path runs.

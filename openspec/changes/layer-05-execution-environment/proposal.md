@@ -1,7 +1,7 @@
 # Proposal: Layer 5 — Execution Environment
 
-**Change ID:** layer-05-execution-environment · **Status:** DRAFT for grilling · 2026-09-06
-**Owner gate:** ships only after the grill closes Q-L5-1…9 (design.md) and the owner accepts.
+**Change ID:** layer-05-execution-environment · **Status:** GRILL CLOSED (Q-L5-1..12), awaiting Gate 0 · 2026-09-06
+**Owner gate:** ships only after owner Gate-0 acceptance of the folded design (design.md §2 D-L5-1..10, §3 grill record).
 
 ## Why
 

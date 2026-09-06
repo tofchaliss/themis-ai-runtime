@@ -27,10 +27,10 @@ Not tasks; constraints. Recorded in design.md §3: Themis workflow contract is t
 
 ## 2. L2-M2 — Workflow context contract (Class 3 — security-sensitive) — **DONE 2026-09-06**
 
-- [x] `ContextContract` artifact {version, hash, permitted classes, required/optional, authority classification, sensitivity ceiling, closure rules, expansion ceiling} — versioned file, hash in trace (pattern-policy posture)
+- [x] `ContextContract` artifact {version, hash, permitted classes, required/optional, authority classification, sensitivity ceiling} — versioned file, hash in trace. **Bounded claim (arch-review F4):** no production contract artifact ships in v1 (no real workflow exists yet); contracts are test fixtures until L7 registers real workflows — full pattern-policy parity lands then.
 - [x] `Plan ⊆ Contract` enforcement, fail closed; required-missing ⇒ composition failure, no model call; optional-missing ⇒ typed unavailable
 - [x] Withholding: `withheld_by_contract` only where the contract permits; marker carries existence + state only, never content or behavioral guidance
-- [x] Mechanical closure rules executed, never interpreted; expansion ceiling enforced
+- [ ] ~~Mechanical closure rules executed; expansion ceiling enforced~~ **DEFERRED (arch-review F1, owner-visible):** v1 has no multi-hop connector and no capability fetch, so closure rules and the expansion ceiling are omitted from the contract schema rather than shipped as dead configuration; they join with a version bump at the L4/L7 era. This narrows the owner-locked artifact shape {…, closure rules, expansion ceiling} — deferral, not delivery.
 - [x] Security review (contract enforcement, withholding, fail-closed paths)
 
 ## 3. L2-M3 — Composition, framing, delivery integrity (Class 3 — security-sensitive) — **DONE 2026-09-06**
@@ -44,7 +44,7 @@ Not tasks; constraints. Recorded in design.md §3: Themis workflow contract is t
 
 ## 4. L2-M4 — Trace + delivery proof (Class 2) — **DONE 2026-09-06**
 
-- [x] Delivery trace {ContractHash, EISHash, RenderHash, PayloadHash, per-item: provenance/class/hashes/statuses/mechanism} documented for L6; joint delivery+tool-trace reconstruction contract stated for L7/L4 era
+- [x] Delivery trace {ContractHash, EISHash, RenderHash, PayloadHash, per-item: provenance/class/hashes/statuses/mechanism} documented for L6; joint delivery+tool-trace reconstruction contract stated for L7/L4 era. **Recorded deferral (arch-review F2):** with the candidate-skip fence, per-item framing refusal no longer occurs — fence exhaustion aborts the whole composition, so `DeliveryRefused` and `AvailabilityNotApplicable` are reserved vocabulary with no v1 producer; per-item refusal-status recording joins at the L6 trace-sink era.
 - [x] Error classification consistent with L1's intake/resolution split
 - [x] Mock-provider proof: composed payload byte-identical through `model.ExecutionRequest`
 - [x] Operational proof per gate-0 decision
@@ -60,6 +60,10 @@ Class-3 review ran with adversarial PoCs. Three HIGHs found and remediated: **HI
 
 ## 6. Deferred dependencies (NOT L2 scope)
 
+- **Contract schema growth (L4/L7, version bump):** closure rules + expansion ceiling (arch F1)
+- **L6 trace sink:** per-item refusal-status recording; producers for `DeliveryRefused`/`AvailabilityNotApplicable` (arch F2)
+- **First production contract artifact** under governance review (arch F4)
+
 - **L3:** selection/rank/dedup/compression/token budgets
 - **L4:** capability registry + authorization for model-requested expansion (L2 defines the fulfillment seam only)
 - **L5:** worktrees/sandboxed retrieval; pinned-ref provenance
@@ -69,6 +73,6 @@ Class-3 review ran with adversarial PoCs. Three HIGHs found and remediated: **HI
 
 ## 7. Close
 
-- [ ] Architecture + security + test review on the full change, three-state verdicts each
-- [ ] Architecture-to-code map updated (L2 → done)
+- [x] Reviews complete 2026-09-06 with three-state verdicts. **Security (Class 3):** 3 HIGHs remediated (§5a). **Test:** architecture-conformant YES / test-evidenced MOSTLY→closed (real fence-scan coverage, total-byte cap, non-inline metadata directions, Gather-path classification, order independence, golden payload hash d8ead1c5…, contract crumbs — all added; 97.9% coverage) / operationally proven YES (live run + evidence-echo starvation guard added). **Architecture:** conformant, no boundary violations; F1/F2/F4 record-honesty items resolved above; F3 contract slot-name checkMeta added; F5 withheld SourceStatus convention documented.
+- [x] Architecture-to-code map updated (L2 → done)
 - [ ] Green checkpoints pushed on owner approval; archive change on close

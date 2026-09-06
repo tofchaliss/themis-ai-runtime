@@ -84,6 +84,15 @@ func (c *Contract) validate() error {
 		if s.Name == "" || s.Kind == "" {
 			return fmt.Errorf("slot missing name or kind")
 		}
+		// Slot names and kinds render into frame markers: the HIGH-1
+		// remediation posture applies to them too, trusted artifact or
+		// not.
+		if err := checkMeta("slot name", s.Name, maxNameLen); err != nil {
+			return err
+		}
+		if err := checkMeta("slot kind", s.Kind, maxKindLen); err != nil {
+			return err
+		}
 		if seen[s.Name] {
 			return fmt.Errorf("duplicate slot %q", s.Name)
 		}

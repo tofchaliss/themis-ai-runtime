@@ -137,8 +137,9 @@ const (
 	// review HIGH-3).
 	MaxContextItems = 512
 	// MaxComposedBytes caps the rendered user message including
-	// framing overhead. With MaxContextItems items the overhead fits
-	// inside the headroom above MaxContextBytes.
+	// framing overhead. A Gather-passing plan with maximal metadata on
+	// every item can still exceed this and refuse at Compose — that
+	// direction is fail-closed by design, not an accident.
 	MaxComposedBytes = MaxContextBytes + 256*1024
 )
 

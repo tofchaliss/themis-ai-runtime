@@ -155,6 +155,9 @@ func Gather(contract *Contract, assignments []Assignment) (*Gathered, error) {
 	// covered by the plan.
 	for _, slot := range contract.Slots {
 		if slot.Withhold {
+			// SourceStatus here is convention, not observation: L2
+			// never queries a withheld slot's source; existence is
+			// implied by withheld_by_contract itself.
 			g.Slots = append(g.Slots, SlotState{
 				Slot: slot.Name, Kind: slot.Kind, Requirement: slot.Requirement,
 				Availability: AvailabilityWithheld, SourceStatus: SourceAvailable, Delivery: DeliveryWithheld,

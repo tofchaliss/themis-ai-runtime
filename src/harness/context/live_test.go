@@ -69,6 +69,19 @@ func TestLiveOperationalProof(t *testing.T) {
 	if resp.Termination != model.TerminationStop || strings.TrimSpace(resp.Content) == "" {
 		t.Fatalf("live run must terminate clean with content: %+v", resp.Termination)
 	}
+	// Payload-starvation guard: the task demands citing delivered
+	// evidence, so the reply must echo at least one evidence token —
+	// an empty or garbled user message would otherwise still pass.
+	echoed := false
+	for _, token := range []string{"CVE-2026-12345", "libXYZ", "1.4.2"} {
+		if strings.Contains(resp.Content, token) {
+			echoed = true
+			break
+		}
+	}
+	if !echoed {
+		t.Fatalf("reply cites no delivered evidence token — payload starvation? %q", firstLine(resp.Content))
+	}
 	t.Logf("live proof: eis=%s payload=%s model=%s reply=%q",
 		p.EISHash[:12], p.PayloadHash[:12], resp.Identity.WireModel, firstLine(resp.Content))
 }

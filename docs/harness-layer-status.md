@@ -1,6 +1,6 @@
-# Harness Layer Status — L1 · L2 · L3
+# Harness Layer Status — L1 · L2 · L3 · L4 · L5
 
-Status date: 2026-09-06. All three layers SHIPPED: grilled (openspec, owner-closed), implemented, security/test/architecture reviewed with three-state verdicts, live-proven against a local model. Archived changes: `openspec/changes/archive/2026-09-0{5,6}-layer-0{1,2,3}-*`.
+Status date: 2026-09-06. L1–L4 SHIPPED and ARCHIVED: grilled (openspec, owner-closed), implemented, security/test/architecture reviewed with three-state verdicts, live-proven against a local model. Archived changes: `openspec/changes/archive/2026-09-0{5,6}-layer-0{1,2,3,4}-*`. **L5 implemented and live-proven 2026-09-06** (openspec/changes/layer-05-execution-environment; close pending owner review acceptance).
 
 ## Architecture flow
 
@@ -83,9 +83,28 @@ Decides which already-classified items survive the token budget — by executing
 - Byte-identical evidence within one authority class collapses to a single delivery with every supplier recorded; the same bytes under two authority classes are **both** delivered — the provenance duality is evidence, not waste.
 - A managed set refuses re-management (the marker can't be silently erased); rank never changes presentation order.
 
+### L4 — Tool Interface (`src/harness/tools`)
+
+The first enforcement layer: is this capability authorized for this execution?
+
+- The model asks to read `parser.go`: registry ∩ grant ∩ quota established **before** argument inspection (anti-oracle order); the target confines under the workspace; result classified `external-untrusted` with hash — an audit event on every path.
+- It asks for an ungranted tool: `not-available`, zero detail (unknown ∪ not-granted ∪ quota collapse — no capability oracle). It asks for `../../etc/passwd`: `target-refused`. Extra argument: whole-call `invalid-args`, never silent stripping.
+- Live-proven six ways against qwen2.5:7b.
+
+### L5 — Execution Environment (`src/harness/execution` + `src/harness/confine`)
+
+The safe computer: provisioned, isolated, provenance-pinned, torn down verified.
+
+- The task's repository provisions from a **local mirror at a pinned SHA** (post-condition verified, binary attested) into a single-use environment: empty-env allowlist (no PATH), inherited identity declared honestly, denied-by-construction network/host-services, wall-clock budget enforced at the envelope.
+- Mutating tools (`write_file`, transactional `apply_patch` — registry-v2, mutating-visible grants) pass CreateMode confinement: no symlink anywhere in a write path, broad `.git*` deny-list; the L4 gate is identical inside — containment, never a second permission system.
+- The lifecycle is one monotonic machine — PROVISIONING → ACTIVE → **SEALED** (irreversible) → EGRESSING → ACKNOWLEDGED → TEARDOWN → DESTROYED | TEARDOWN_ANOMALOUS — and its invariants hold by reachability: no egress from an unsealed workspace, no partial artifacts, no unverified "destroyed".
+- The hand-off is a diff-against-the-pin manifest in a content-addressed, write-once ArtifactStore (custody ends at acknowledgment; the store survives teardown; retention is L6's). No push credential, no remote write path — hand-off, never push.
+- Registered repositories may speak at repository scope through the four-control chain (registration + pinned provenance + scope cap + pattern gate); an unregistered `AGENTS.md` is data, not instructions.
+- Live-proven vs qwen2.5:7b: model-driven mutation landed in the worktree, escapes refused typed, artifact acknowledged, teardown verified clean.
+
 ### What the model then gets — and cannot do
 
-A system message stating its rules (minus the rejected injection), evidence labeled by who authored it, honest markers for everything absent, and no path anywhere in L1–L3 that converts its output into authority. Its reply is advisory input to L4 authorization, deterministic verification, and Themis governance — the layers that come next.
+A system message stating its rules (minus the rejected injection), evidence labeled by who authored it, honest markers for everything absent, tools that refuse everything ungranted, an execution environment whose blast radius is one disposable worktree — and no path anywhere in L1–L5 that converts its output into authority. Its reply is advisory input to deterministic verification and Themis governance — the layers that come next.
 
 ## Standing safety property (owner-accepted, applies to all three)
 

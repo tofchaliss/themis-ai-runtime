@@ -148,6 +148,18 @@ Owner-locked:
 
 **Locked principle:** *A provider's declared isolation strength describes what it can guarantee; absence of an enforcement mechanism must never be represented as enforcement.*
 
+### Q-L5-8 — Repository-instruction activation (CLOSED WITH AMENDMENT)
+
+Owner-locked:
+
+1. **Core principle:** *Provisioning establishes availability and identity; registration establishes authority. L5 contributes provenance — which bytes — and never eligibility — whose voice.*
+2. **Four-control chain, L5 supplying exactly one:** registration (governance decision, Themis-owned) + verified pinned checkout (L5's provenance contribution) + L1 scope cap (`ScopeRepository` weakest tier, never overrides governed) + L1 pattern gate (directive-pattern policy per load, fail closed).
+3. **Unregistered `AGENTS.md` is ordinary workspace data** — readable via tools, L2-classified external-untrusted, invisible to the instruction plane, no error (closed vocabulary: absent = nonexistent).
+4. **Registration binds repository identity, not filesystem path** — {repository identity, permitted instruction paths, maximum scope}. A mutable local path must never satisfy registration; identity must correspond to the provisioned workspace's repository identity. Eligibility: registered(repo_identity) ∧ provisioned(repo_identity, pinned_SHA) ∧ verified_checkout ∧ registered_path ∧ pattern gate — evaluated at L1 resolution time, never at provision.
+5. **Registration does NOT pin instruction-content hash** — content hash belongs in provenance/audit (every load records {repo, SHA, path, content hash} in trace). Content needing immutable central governance belongs in the governed instruction tree; `ScopeRepository` must not become disguised governed instructions (scope cap + pattern gate are what make repo-mutable content safe).
+6. **Instruction path must resolve to a regular file without symlink traversal**, reusing the L5 confinement implementation (ResolveMode + stricter no-symlink rule) — no instruction-specific filesystem predicate.
+7. **v1 scope:** activation ships in this change as the final milestone, minimal — registration artifact + eligibility check + root `AGENTS.md` only, four-control chain wired end-to-end (closes the Q-L1-1 IOU).
+
 ## 3x. Open questions for the grill (remaining, owner-ordered)
 
 1. **Q-L5-8 — Repository-instruction activation timing:** when does the provisioned/pinned repository become eligible to influence L1? (The archived Q-L1-1 `ScopeRepository` contract meets L5's verified workspace.)

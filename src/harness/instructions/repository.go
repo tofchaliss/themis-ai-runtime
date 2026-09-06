@@ -27,6 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -84,13 +85,21 @@ func LoadRepoRegistration(path string) (*RepoRegistration, error) {
 		if len(repo.Paths) == 0 {
 			return nil, fmt.Errorf("%w: %q registers no instruction paths", ErrRegistrationInvalid, repo.Identity)
 		}
+		seenPath := map[string]bool{}
 		for _, p := range repo.Paths {
-			// Relative, traversal-free, non-VCS: the same lexical
-			// discipline every governed path gets. Confinement proper
-			// runs at activation against the live worktree.
-			if p == "" || strings.HasPrefix(p, "/") || strings.Contains(p, "..") || strings.HasPrefix(p, ".git") {
+			// Relative, traversal-free, non-VCS — via the canonical
+			// deny-list predicate (per-segment, case-folded), never a
+			// weaker string-prefix twin (M4 security review LOW).
+			// Confinement proper runs again at activation against the
+			// live worktree.
+			if p == "" || strings.HasPrefix(p, "/") || strings.Contains(p, "..") || confine.DeniedVCSPath(p) {
 				return nil, fmt.Errorf("%w: %q: bad instruction path %q", ErrRegistrationInvalid, repo.Identity, p)
 			}
+			clean := filepath.Clean(p)
+			if seenPath[clean] {
+				return nil, fmt.Errorf("%w: %q: duplicate instruction path %q", ErrRegistrationInvalid, repo.Identity, p)
+			}
+			seenPath[clean] = true
 		}
 	}
 	sum := sha256.Sum256(raw)
@@ -111,12 +120,17 @@ var pinnedSHASyntax = regexp.MustCompile(`^[0-9a-f]{40}$`)
 
 // ActivationRecord is the provenance L5 contributed, recorded per
 // activation: which repository, which bytes (pin), which registered
-// files actually resolved.
+// files actually resolved, and the content hash of each at
+// activation time — the full Q-L5-8.5 tuple {repo, SHA, path,
+// content hash} in one artifact (M4 security review LOW). Load
+// re-hashes per instruction (BodyHash covers the body after
+// frontmatter); ContentHashes cover the whole file as activated.
 type ActivationRecord struct {
 	Repo             string
 	PinnedSHA        string
 	RegistrationHash string
 	Paths            []string
+	ContentHashes    []string // sha256 hex, parallel to Paths
 }
 
 // ActivateRepositorySource computes eligibility for one provisioned
@@ -167,11 +181,17 @@ func ActivateRepositorySource(reg *RepoRegistration, identity, pinnedSHA, worktr
 		if !info.Mode().IsRegular() {
 			return Source{}, ActivationRecord{}, false, fmt.Errorf("%w: %s: registered path %q must be a regular file", ErrRegistrationInvalid, identity, rel)
 		}
+		b, err := os.ReadFile(abs)
+		if err != nil {
+			return Source{}, ActivationRecord{}, false, fmt.Errorf("%w: %s: %v", ErrRegistrationInvalid, identity, err)
+		}
+		sum := sha256.Sum256(b)
 		files = append(files, abs)
 		rec.Paths = append(rec.Paths, rel)
+		rec.ContentHashes = append(rec.ContentHashes, hex.EncodeToString(sum[:]))
 	}
 	if len(files) == 0 {
 		return Source{}, ActivationRecord{}, false, nil
 	}
-	return Source{Kind: ScopeRepository, Files: files, activated: true}, rec, true, nil
+	return Source{Kind: ScopeRepository, files: files, activated: true}, rec, true, nil
 }

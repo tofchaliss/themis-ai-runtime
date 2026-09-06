@@ -83,6 +83,11 @@ func vcsDenied(rel string) bool {
 	return false
 }
 
+// DeniedVCSPath exposes the deny-list predicate for governed-artifact
+// validation (e.g. repository-instruction registration) — the SAME
+// predicate, never a per-layer twin (D-L5-4).
+func DeniedVCSPath(rel string) bool { return vcsDenied(rel) }
+
 // CreatePath validates a mutation target under root and returns the
 // absolute path to create/overwrite. CreateMode rules (all locked,
 // Q-L5-4):

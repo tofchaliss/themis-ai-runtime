@@ -40,9 +40,14 @@ var (
 type Source struct {
 	Kind   Scope
 	Root   string        // directory of *.md files, or
-	Inline []Instruction // task payload (ScopeTask), or
-	Files  []string      // activation-resolved instruction files (ScopeRepository)
+	Inline []Instruction // task payload (ScopeTask)
 
+	// files: activation-resolved instruction files (ScopeRepository).
+	// Unexported WITH the activated flag (M4 security review MED):
+	// exporting the list would let a caller mutate a legitimately
+	// activated source past the registration allowlist — the flag
+	// must mean "unchanged since activation", not "activated once".
+	files     []string
 	activated bool // set only by ActivateRepositorySource
 }
 
@@ -77,12 +82,12 @@ func checkSource(s Source) error {
 		// Repository sources exist only through the activation chain:
 		// registration + pinned provenance + confined resolution
 		// (D-L5-8). A hand-constructed one is not a source.
-		if !s.activated || len(s.Files) == 0 || s.Root != "" || s.Inline != nil {
+		if !s.activated || len(s.files) == 0 || s.Root != "" || s.Inline != nil {
 			return fmt.Errorf("%w: repository sources activate only through registration (ActivateRepositorySource)", ErrUnrecognizedSource)
 		}
 		return nil
 	}
-	if s.Files != nil {
+	if s.files != nil {
 		return fmt.Errorf("%w: file-list sources are repository activation only, got %s", ErrUnrecognizedSource, s.Kind)
 	}
 	if (s.Root == "") == (s.Inline == nil) {

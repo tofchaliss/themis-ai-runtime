@@ -31,6 +31,9 @@ func TestRepoRegistrationFailsClosed(t *testing.T) {
 		{"abs-path", `{"version":1,"repositories":[{"identity":"r","paths":["/etc/x"]}]}`, "bad instruction path"},
 		{"dotdot-path", `{"version":1,"repositories":[{"identity":"r","paths":["../x"]}]}`, "bad instruction path"},
 		{"git-path", `{"version":1,"repositories":[{"identity":"r","paths":[".gitagents.md"]}]}`, "bad instruction path"},
+		{"git-nested", `{"version":1,"repositories":[{"identity":"r","paths":["docs/.gitagents.md"]}]}`, "bad instruction path"},
+		{"git-upper", `{"version":1,"repositories":[{"identity":"r","paths":[".GIT/x.md"]}]}`, "bad instruction path"},
+		{"dup-path", `{"version":1,"repositories":[{"identity":"r","paths":["AGENTS.md","./AGENTS.md"]}]}`, "duplicate instruction path"},
 	}
 	for _, c := range cases {
 		_, err := writeReg(t, c.body)
@@ -95,8 +98,14 @@ func TestActivationEligibility(t *testing.T) {
 	if err != nil || !eligible {
 		t.Fatalf("registered+present must be eligible: %v", err)
 	}
-	if rec.Repo != "themis-demo" || rec.PinnedSHA != goodSHA || rec.RegistrationHash != reg.Hash || len(rec.Paths) != 1 {
-		t.Fatalf("activation record incomplete: %+v", rec)
+	if rec.Repo != "themis-demo" || rec.PinnedSHA != goodSHA || rec.RegistrationHash != reg.Hash ||
+		len(rec.Paths) != 1 || len(rec.ContentHashes) != 1 || len(rec.ContentHashes[0]) != 64 {
+		t.Fatalf("activation record must carry the full provenance tuple incl. content hash: %+v", rec)
+	}
+	// The activated file list is sealed: no exported field lets a
+	// caller extend it past the registration allowlist (M4 MED).
+	if len(src.files) != 1 {
+		t.Fatalf("activation must resolve exactly the registered allowlist: %v", src.files)
 	}
 	res, err := Load(testConfig(t), src)
 	if err != nil {
@@ -114,7 +123,7 @@ func TestActivationEligibility(t *testing.T) {
 // the activation chain cannot be skipped.
 func TestHandBuiltRepositorySourceRefused(t *testing.T) {
 	ws := repoWorktree(t, goodAgents)
-	_, err := Load(testConfig(t), Source{Kind: ScopeRepository, Files: []string{filepath.Join(ws, "AGENTS.md")}})
+	_, err := Load(testConfig(t), Source{Kind: ScopeRepository, files: []string{filepath.Join(ws, "AGENTS.md")}})
 	if err == nil || !strings.Contains(err.Error(), "activate only through registration") {
 		t.Fatalf("hand-built repository source must refuse: %v", err)
 	}
@@ -123,7 +132,7 @@ func TestHandBuiltRepositorySourceRefused(t *testing.T) {
 		t.Fatal("root-based repository source must refuse")
 	}
 	// File-list on a non-repository kind refuses too.
-	_, err = Load(testConfig(t), Source{Kind: ScopeTask, Files: []string{"x"}})
+	_, err = Load(testConfig(t), Source{Kind: ScopeTask, files: []string{"x"}})
 	if err == nil || !strings.Contains(err.Error(), "repository activation only") {
 		t.Fatalf("file-list task source must refuse: %v", err)
 	}

@@ -115,12 +115,19 @@ func loadSource(src Source) ([]Instruction, error) {
 		}
 		return insts, nil
 	}
-	if len(src.Files) > 0 {
+	if len(src.files) > 0 {
 		// Activation-resolved file list (repository sources): exactly
 		// the registered allowlist, already confined — never a
-		// directory walk.
+		// directory walk. Re-Lstat before the read: the no-symlink
+		// property must still hold at read time, not only at
+		// activation (M4 security review hardening; the residual
+		// TOCTOU window stays a documented Q-L5-4.5 limitation).
 		var insts []Instruction
-		for _, path := range src.Files {
+		for _, path := range src.files {
+			info, err := os.Lstat(path)
+			if err != nil || !info.Mode().IsRegular() {
+				return nil, fmt.Errorf("%w: activated instruction file %q is no longer a regular file", ErrSourceUnavailable, path)
+			}
 			inst, err := parseFile(path, src.Kind)
 			if err != nil {
 				return nil, err

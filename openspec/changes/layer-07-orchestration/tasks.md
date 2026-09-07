@@ -44,8 +44,9 @@ Grill closed 2026-09-07 (Q-L7-1..12, all CLOSED; design.md §3 is the record, §
 
 - [x] Register A structural suite · Register B adversarial suite (incl. no-defaulting proofs) · Register C fault sweep + real-kill (loop boundaries + meta-sync) · Register D deterministic-walk replayer with single-authority + what-the-model-saw reconstruction · Register E live proof with negative proofs
 - [x] CallState record-recount verifier rule
-- [ ] Traceability, coverage-verified; reviews with three-state verdicts
-- [ ] Code map + status doc + artifact updates; push/archive on owner approval
+- [x] Reviews with three-state verdicts (2026-09-07: test-evidenced YES — 80%+ coverage, all registers green; operationally-proven YES — live walk + real-kill vs qwen2.5:7b through the production loop; architecture-conformant YES — after arch HIGH 2a closed by owner decision "implement": full L2 composition wired into the loop)
+- [x] Code map + status doc updated (2026-09-07)
+- [ ] Traceability.md (written at archive) · artifact update · push/archive on owner approval
 
 ## 6. Deferred (NOT L7 scope — recorded IOUs, never silently promoted)
 

@@ -1,6 +1,6 @@
-# Harness Layer Status — L1 · L2 · L3 · L4 · L5 · L6
+# Harness Layer Status — L1 · L2 · L3 · L4 · L5 · L6 · L7
 
-Status date: 2026-09-06. L1–L4 SHIPPED and ARCHIVED: grilled (openspec, owner-closed), implemented, security/test/architecture reviewed with three-state verdicts, live-proven against a local model. Archived changes: `openspec/changes/archive/2026-09-0{5,6}-layer-0{1,2,3,4}-*`. **L5 SHIPPED and ARCHIVED 2026-09-07** (openspec/changes/archive/2026-09-07-layer-05-execution-environment). **L6 SHIPPED and ARCHIVED 2026-09-07** (openspec/changes/archive/2026-09-07-layer-06-durable-state). **L7 Orchestration grill open** (openspec/changes/layer-07-orchestration).
+Status date: 2026-09-06. L1–L4 SHIPPED and ARCHIVED: grilled (openspec, owner-closed), implemented, security/test/architecture reviewed with three-state verdicts, live-proven against a local model. Archived changes: `openspec/changes/archive/2026-09-0{5,6}-layer-0{1,2,3,4}-*`. **L5 SHIPPED and ARCHIVED 2026-09-07** (openspec/changes/archive/2026-09-07-layer-05-execution-environment). **L6 SHIPPED and ARCHIVED 2026-09-07** (openspec/changes/archive/2026-09-07-layer-06-durable-state). **L7 Orchestration IMPLEMENTED + REVIEWED 2026-09-07** (openspec/changes/layer-07-orchestration): grill closed (Q-L7-1..12), three Class-3 reviews remediated, arch HIGH 2a closed by owner decision (full L2 composition in the loop), live-proven vs qwen2.5:7b. Awaiting push/archive approval.
 
 ## Architecture flow
 
@@ -22,8 +22,8 @@ Status date: 2026-09-06. L1–L4 SHIPPED and ARCHIVED: grilled (openspec, owner-
         │                          │ verbatim + hash-bound    │
         ▼                          │                          ▼
 ┌───────────────────────┐          │            ┌───────────────────────┐
-│ L7 plan (future)      │          │            │ L2  GATHER            │
-│ assignments ⊆ contract│──────────┼───────────►│ registered sources    │
+│ L7  ORCHESTRATION     │          │            │ L2  GATHER            │
+│ governed lattice · δ  │──────────┼───────────►│ registered sources    │
 └───────────────────────┘          │            │ classify + provenance │
                                    │            └───────────┬───────────┘
                                    │                        │ typed items
@@ -74,7 +74,7 @@ Status date: 2026-09-06. L1–L4 SHIPPED and ARCHIVED: grilled (openspec, owner-
                               above this line can grant authority)
 ```
 
-One-line ownership: **L1 decides what the model is told · L2 decides how facts reach it · L3 decides what survives the budget · L4 decides what its output may do · L5 decides where it runs and what may leave · L6 remembers all of it without deciding anything · none of them decides what the evidence means.**
+One-line ownership: **L1 decides what the model is told · L2 decides how facts reach it · L3 decides what survives the budget · L4 decides what its output may do · L5 decides where it runs and what may leave · L6 remembers all of it without deciding anything · L7 decides only what comes next — sequence, never selection · none of them decides what the evidence means.**
 
 ## What each layer does — one use case, end to end
 
@@ -136,10 +136,21 @@ The record plane: what the harness did, kept honestly.
 - Retention is graph reachability (retain-all v1, no deletion path in code — a structural absence proof); the model has no L6 verb; L7 gets a status view that structurally cannot carry contents; Themis remains the system of record — `durable(local)` / `transferred` / `accepted` are permanently distinct words.
 - Proven three ways: an exhaustive 9-point fault-injection sweep, a real SIGKILL mid-task with cold recovery, and a live full-stack task (qwen2.5:7b) reconstructed **byte-exactly** from disk alone.
 
+### L7 — Orchestration (`src/harness/orchestration`)
+
+The deterministic executor of a governed workflow lattice — sequence, never selection.
+
+- The task arrives as one governed **envelope** (the only input; nothing defaulted, every reference named on refusal, payload capped and external-untrusted forever). Assembly is a ⊆-checkpoint that trusts the submitter for nothing: workflow ⊆ ceiling ⊆ registry, grant ⊆ workflow ceiling, spec ⊆ execution ceiling, contract bound to the workflow, task_id bound across every artifact, all hashes + both constitutions into the L6 attribution.
+- The **workflow definition** is statically verified at load: total edge maps (every declared event, exactly once, per phase), counter-free cycles unloadable, every counter with a strictly-forward exhaustion edge, finite worst-case walk ≤ ceiling. Runtime-producible events are load-mandatory, so legal model behavior can never reach the invariant path.
+- **δ is a function, not a planner**: it consumes (definition-at-hash, cursor, declared typed event, counters) — structural turn facts and typed L4 gate outcomes only. Model content never reaches control; the sole completion mechanism is a registered zero-argument control verb (`declare_done`) whose authorized execution emits a constitution-owned signal onto a governed edge. Prose, JSON-in-prose, invented arguments: all inert.
+- Each phase entry composes fresh **through the full L2 pipeline** (owner decision on the one review HIGH: implement, not narrow) — fenced, provenance-labeled, recorded byte-exact before delivery; every turn, tool result, and transition commits before the next turn (record-before-next-turn); phase capabilities narrow the grant at the gate.
+- Floors are constitution-owned and undeclarable: wall-clock exhaustion seals the environment and fails the task — never a workflow edge a definition could reroute. Startup closes every non-terminal record before accepting work; resume has no object, by reachability. Retry is a new identity carrying `retry_of`.
+- Proven five ways: structural API closure, adversarial (every laundering path pinned), fault sweep + real SIGKILL child with no continuation, a deterministic replayer that re-derives every transition from the record and checks the recorded cause against its own derivation (single-authority), and a live walk vs qwen2.5:7b through the production loop — including negative live proofs.
+
 ### What the model then gets — and cannot do
 
 A system message stating its rules (minus the rejected injection), evidence labeled by who authored it, honest markers for everything absent, tools that refuse everything ungranted, an execution environment whose blast radius is one disposable worktree, and a durable record plane that remembers every decision without ever making one — and no path anywhere in L1–L6 that converts its output into authority. Its reply is advisory input to deterministic verification and Themis governance — the layers that come next.
 
 ## Standing safety property (owner-accepted, applies to all three)
 
-Failure of L1/L2/L3 can garble or starve model input; it can never bypass authorization, verification, or governance. Deferred behind dedicated grills: probabilistic selection, compression, repository/skill instruction sources (L5/L9 provenance), capability-fetch expansion (L4), trace persistence (L6), plan/epoch orchestration (L7).
+Failure of L1/L2/L3 can garble or starve model input; it can never bypass authorization, verification, or governance. Deferred behind dedicated grills: probabilistic selection, compression, repository/skill instruction sources (L5/L9 provenance), capability-fetch expansion (L4), trace persistence (L6), the approval channel + subagents + run_command (L7 residuals / L8 / OPEN-2).

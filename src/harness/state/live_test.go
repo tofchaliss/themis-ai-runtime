@@ -129,6 +129,11 @@ func TestLiveTaskReconstruction(t *testing.T) {
 	// --- L6: state root, disjointness checked at assembly (Q-L6-4).
 	stateRoot := filepath.Join(t.TempDir(), "state")
 	artifactStoreDir := filepath.Join(t.TempDir(), "artifacts")
+	for _, d := range []string{stateRoot, artifactStoreDir} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
 	if err := CheckDisjointRoots(stateRoot, artifactStoreDir, mirrorRoot, ws.Root); err != nil {
 		t.Fatal(err)
 	}
@@ -146,15 +151,28 @@ func TestLiveTaskReconstruction(t *testing.T) {
 	if err := task.Transition(StatusRunning, "provisioned"); err != nil {
 		t.Fatal(err)
 	}
+	var emitted []Event
 	must := func(ev Event, err error) Event {
 		t.Helper()
 		if err != nil {
 			t.Fatal(err)
 		}
+		emitted = append(emitted, ev)
 		return ev
 	}
 	l1body, _ := json.Marshal(map[string]any{"instructions": len(l1res.Instructions), "conflicts": len(l1res.Conflicts), "policy": l1res.PolicyHash})
 	must(task.AppendEvent(EvL1Conflict, "l1", l1body))
+
+	// Record-before-effect for the payload leg (D-L6-10; security
+	// review): the delivery record commits BEFORE the prompt reaches
+	// the model.
+	prompt := "Use the write_file tool to create a file named notes.md whose content is exactly: L6 proof"
+	promptObj, err := task.StoreObject(ObjEvidencePayload, []byte(prompt))
+	if err != nil {
+		t.Fatal(err)
+	}
+	delivery, _ := json.Marshal(map[string]string{"payload": promptObj})
+	must(task.AppendEvent(EvL2Delivery, "l2", delivery, Ref{ID: promptObj, Class: ObjEvidencePayload}))
 
 	// --- Live model call driving the mutation.
 	mp := model.NewOllamaChat(endpoint)
@@ -162,8 +180,7 @@ func TestLiveTaskReconstruction(t *testing.T) {
 	defer cancel()
 	resp, err := mp.Execute(ctx, model.ExecutionRequest{
 		Model: modelName,
-		Messages: []model.Message{{Role: model.RoleUser,
-			Content: "Use the write_file tool to create a file named notes.md whose content is exactly: L6 proof"}},
+		Messages: []model.Message{{Role: model.RoleUser, Content: prompt}},
 		Tools: []model.ToolDef{{Name: "write_file", Description: "Create one file in the workspace.",
 			Parameters: json.RawMessage(`{"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]}`)}},
 		Options: model.DefaultOptions()})
@@ -183,7 +200,7 @@ func TestLiveTaskReconstruction(t *testing.T) {
 		t.Fatal(err)
 	}
 	auditBody, _ := json.Marshal(audit)
-	must(task.AppendEvent(EvL4Audit, "l4", auditBody, evObj))
+	must(task.AppendEvent(EvL4Audit, "l4", auditBody, Ref{ID: evObj, Class: ObjEvidencePayload}))
 	_ = msg // the result may now proceed to the model loop
 
 	// --- Seal, egress, artifact into BOTH stores; bind the address.
@@ -224,6 +241,24 @@ func TestLiveTaskReconstruction(t *testing.T) {
 		t.Fatal(err)
 	}
 	task.Close()
+	// The in-memory events captured at emit must appear cold
+	// byte-identically (test review: live-to-durable fidelity, not
+	// just parse determinism).
+	byseq := map[int64]Event{}
+	for _, ev := range liveEvents {
+		byseq[ev.Seq] = ev
+	}
+	for _, em := range emitted {
+		cold, ok := byseq[em.Seq]
+		if !ok {
+			t.Fatalf("emitted event %d missing cold", em.Seq)
+		}
+		lb, _ := json.Marshal(em)
+		cb, _ := json.Marshal(cold)
+		if string(lb) != string(cb) {
+			t.Fatalf("event %d differs: live-emitted vs cold", em.Seq)
+		}
+	}
 
 	// --- BYTE-EXACT cold reconstruction from durable state alone.
 	cold, err := OpenRoot(stateRoot)

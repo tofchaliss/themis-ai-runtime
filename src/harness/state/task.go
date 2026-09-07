@@ -19,6 +19,12 @@ import (
 type Root struct {
 	dir   string
 	store *ObjectStore
+
+	// live tracks in-process writers so recovery can refuse to race
+	// one (security review MED). Cross-process exclusion is a
+	// recorded residual of the single-process v1 model.
+	liveMu sync.Mutex
+	live   map[string]bool
 }
 
 // OpenRoot prepares a state root. The root must be absolute; its
@@ -36,13 +42,29 @@ func OpenRoot(dir string) (*Root, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Root{dir: dir, store: store}, nil
+	return &Root{dir: dir, store: store, live: map[string]bool{}}, nil
 }
 
 // Store exposes the object store (its only mutation is StoreObject).
 func (r *Root) Store() *ObjectStore { return r.store }
 
 func (r *Root) taskDir(id string) string { return filepath.Join(r.dir, "tasks", id) }
+
+func (r *Root) isLive(id string) bool {
+	r.liveMu.Lock()
+	defer r.liveMu.Unlock()
+	return r.live[id]
+}
+
+func (r *Root) setLive(id string, v bool) {
+	r.liveMu.Lock()
+	defer r.liveMu.Unlock()
+	if v {
+		r.live[id] = true
+	} else {
+		delete(r.live, id)
+	}
+}
 
 // TaskOptions carries the only caller-suppliable manifest facts.
 type TaskOptions struct {
@@ -85,12 +107,13 @@ func (r *Root) CreateTask(id string, opts TaskOptions) (*TaskRecord, error) {
 	// Manifest-first: a crashed task keeps attribution (D-L6-2). The
 	// CREATED projection is preceded by its lifecycle event like every
 	// other transition.
-	if _, err := t.appendLocked(EvLifecycle, "l6", lifecycleBody(StatusCreated, "created"), nil); err != nil {
+	if _, err := t.appendLocked(EvLifecycle, "l6", createdBody(opts), nil); err != nil {
 		return nil, err
 	}
 	if err := writeManifest(dir, t.man); err != nil {
 		return nil, err
 	}
+	r.setLive(id, true)
 	return t, nil
 }
 
@@ -99,13 +122,25 @@ func lifecycleBody(to TaskStatus, reason string) json.RawMessage {
 	return b
 }
 
+// createdBody carries the caller-supplied manifest facts INTO the
+// record, so recovery projects them instead of inventing (architecture
+// review 6b: zero origination extends to attribution).
+func createdBody(opts TaskOptions) json.RawMessage {
+	b, _ := json.Marshal(map[string]any{
+		"to": string(StatusCreated), "reason": "created",
+		"retry_of": opts.RetryOf, "governed_hashes": opts.GovernedHashes,
+		"constitution_hash": ConstitutionHash(),
+	})
+	return b
+}
+
 // AppendEvent is the caller-facing sink primitive: envelope validated
 // (class in the closed vocabulary, refs durable), content owned by
 // the emitting layer, sequence assigned by the sink, synchronously
 // committed (D-L6-10). Recovery-only classes refuse.
-func (t *TaskRecord) AppendEvent(class, writer string, body json.RawMessage, refs ...string) (Event, error) {
-	if recoveryOnlyEvents[class] {
-		return Event{}, fmt.Errorf("%w: event class %q is recovery-owned", ErrConstitution, class)
+func (t *TaskRecord) AppendEvent(class, writer string, body json.RawMessage, refs ...Ref) (Event, error) {
+	if primitiveOnlyEvents[class] {
+		return Event{}, fmt.Errorf("%w: event class %q is recovery-owned or primitive-owned", ErrConstitution, class)
 	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -115,7 +150,7 @@ func (t *TaskRecord) AppendEvent(class, writer string, body json.RawMessage, ref
 	return t.appendLocked(class, writer, body, refs)
 }
 
-func (t *TaskRecord) appendLocked(class, writer string, body json.RawMessage, refs []string) (Event, error) {
+func (t *TaskRecord) appendLocked(class, writer string, body json.RawMessage, refs []Ref) (Event, error) {
 	ev, err := t.stream.append(class, writer, body, refs, t.root.store)
 	if err != nil {
 		return Event{}, err
@@ -167,22 +202,35 @@ func (t *TaskRecord) transitionLocked(to TaskStatus, reason string) error {
 	return writeManifest(t.dir, t.man)
 }
 
-// BindArtifact records an acknowledged artifact address on the
-// manifest (an opaque reference — L7's StatusView may see it; only
-// audit may resolve it).
+// BindArtifact records an acknowledged artifact on the manifest.
+// The reference rule applies at THIS door too (security review): the
+// address must be a present state-store object, and the binding is
+// recorded as an event BEFORE the manifest projection — the manifest
+// stays a pure projection of the stream (architecture review 3A).
 func (t *TaskRecord) BindArtifact(addr string) error {
+	if !t.root.store.HasObject(addr) {
+		return fmt.Errorf("%w: artifact %q is not a durable state-store object — a durable record may reference only already-durable material", ErrStream, addr)
+	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if terminal(t.man.Status) {
 		return fmt.Errorf("%w: task %s is terminal", ErrLifecycle, t.man.TaskID)
+	}
+	body, _ := json.Marshal(map[string]string{"artifact": addr})
+	if _, err := t.appendLocked(EvArtifact, "l6", body, []Ref{{ID: addr, Class: ObjEgressArtifact}}); err != nil {
+		return err
 	}
 	t.man.ArtifactAddrs = append(t.man.ArtifactAddrs, addr)
 	return writeManifest(t.dir, t.man)
 }
 
 // Close releases the stream handle (no durability implication: every
-// append already committed synchronously).
-func (t *TaskRecord) Close() { t.stream.close() }
+// append already committed synchronously) and deregisters the live
+// writer.
+func (t *TaskRecord) Close() {
+	t.stream.close()
+	t.root.setLive(t.man.TaskID, false)
+}
 
 // suspectSecret is the flag-only pattern family (DAY-0 §3 shape —
 // deliberately mirrored from the L1 loader's family; drift between
@@ -202,10 +250,27 @@ func suspectSecret(b []byte) bool {
 // provider base, every grant workspace); pairwise non-nesting, both
 // directions (Q-L6-4).
 func CheckDisjointRoots(roots ...string) error {
+	if len(roots) < 2 {
+		return fmt.Errorf("%w: disjointness needs at least two roots", ErrIdentity)
+	}
 	sep := string(filepath.Separator)
-	for i := 0; i < len(roots); i++ {
-		for j := i + 1; j < len(roots); j++ {
-			a, b := filepath.Clean(roots[i]), filepath.Clean(roots[j])
+	resolved := make([]string, len(roots))
+	for i, root := range roots {
+		if !filepath.IsAbs(root) {
+			return fmt.Errorf("%w: root %q must be absolute", ErrIdentity, root)
+		}
+		// Physical, case-folded comparison (security review): lexical
+		// checks miss symlinked and case-aliased nesting; resolution
+		// failure fails closed.
+		rp, err := filepath.EvalSymlinks(root)
+		if err != nil {
+			return fmt.Errorf("%w: root %q: %v", ErrIdentity, root, err)
+		}
+		resolved[i] = strings.ToLower(filepath.Clean(rp))
+	}
+	for i := 0; i < len(resolved); i++ {
+		for j := i + 1; j < len(resolved); j++ {
+			a, b := resolved[i], resolved[j]
 			if a == b || strings.HasPrefix(a+sep, b+sep) || strings.HasPrefix(b+sep, a+sep) {
 				return fmt.Errorf("%w: roots %q and %q are nested", ErrIdentity, roots[i], roots[j])
 			}

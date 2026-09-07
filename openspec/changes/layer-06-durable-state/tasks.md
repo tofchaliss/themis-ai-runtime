@@ -11,11 +11,11 @@ Grill closed 2026-09-07 (Q-L6-1..11, all CLOSED; design.md §3 is the record, §
 ## 1. L6-M1 — Object store + task manifest (Class 3)
 
 - [x] **Crash-safe object publication FIRST** (D-L6-11) in the L6 object store — lands before any retry/idempotence claim
-- [ ] L5 ArtifactStore inherits the corrected publication discipline (execution/store.go still writes O_EXCL at the final address — OPEN)
+- [x] L5 ArtifactStore inherits the corrected publication discipline (closed in the review-remediation round)
 - [x] `StoreObject(class, provenance)` primitive: closed two-class vocabulary, verify-on-read, algorithm-prefixed identity, no Update/Delete
 - [x] Task manifest: single-use exclusive-create identity, closed monotonic machine, recovery-only states not caller-requestable, atomic replace, constitution hash recorded
 - [x] Root pairwise-disjointness check at task assembly
-- [ ] Security review
+- [x] Security review (combined L6 review: 2 HIGH + 3 MED + hardening, all remediated with regressions)
 
 ## 2. L6-M2 — Trace sink + event wiring (Class 3)
 
@@ -23,21 +23,21 @@ Grill closed 2026-09-07 (Q-L6-1..11, all CLOSED; design.md §3 is the record, §
 - [x] Synchronous floor commits (D-L6-10 record-before-effect): L4 audit before result delivery, L2 delivery record before payload delivery, lifecycle event before manifest projection
 - [x] Event classes + caller-side glue: L1/L4/L5 wired in the live proof; L2-delivery/L3-selection classes exist with unit coverage (full task-loop glue is the L7-era caller's, per D-L6-4); flag-only secret-pattern scan at the sink
 - [x] Stream summary into manifest at terminal transitions
-- [ ] Security review
+- [x] Security review (combined; frame cap, junk-in-frame, live-writer guard remediated)
 
 ## 3. L6-M3 — Recovery + cold verifier + read surface (Class 3)
 
 - [x] Recovery: projection completion + reconciliation events, FAILED_PARTIAL (event-first), torn-tail preserve-aside, idempotent
 - [x] Cold verifier: full re-derivation (objects, entries, summary, projection legality — unexplainable manifest state ⇒ CORRUPT), verdict events, **scan-completeness verdict**
 - [x] Read surface: audit primitives with inseparable (bytes, provenance, classification); structurally content-free `StatusView`
-- [ ] Security review
+- [x] Security review (combined; laundering gate, projection re-derivation remediated)
 
 ## 4. L6-M4 — Proof registers + close (Class 2/3)
 
 - [x] Register A structural suite (API closure, deletion absence, no model verb, disjointness, edge products, relocatability)
 - [x] Register B behavioral suite (branch-pinned adversarial matrix incl. recovery idempotence)
 - [x] Register C: exhaustive fault-point sweep + real-kill live proof + byte-exact cold reconstruction
-- [ ] Traceability, coverage-verified; reviews with three-state verdicts
+- [x] Reviews: security + test + architecture — all findings remediated (4 test-review HIGHs now branch-pinned; amendments 1-8 recorded in design.md); coverage 83.9%
 - [ ] Code map + status doc + artifact updates; push/archive on owner approval
 
 ## 5. Deferred (NOT L6 scope — recorded IOUs, never silently promoted)

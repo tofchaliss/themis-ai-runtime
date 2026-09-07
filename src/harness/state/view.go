@@ -67,7 +67,7 @@ func (r *Root) Resolve(ev Event, refIndex int) ([]byte, error) {
 	if refIndex < 0 || refIndex >= len(ev.Refs) {
 		return nil, fmt.Errorf("%w: event %d has no reference %d", ErrIdentity, ev.Seq, refIndex)
 	}
-	return r.store.GetObject(ev.Refs[refIndex])
+	return r.store.GetObject(ev.Refs[refIndex].ID)
 }
 
 // ReadManifest is the audit read of the projection (a set of claims

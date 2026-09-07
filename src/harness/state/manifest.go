@@ -77,6 +77,9 @@ func writeManifest(dir string, m *Manifest) error {
 	if err := os.Rename(tmpName, filepath.Join(dir, "manifest.json")); err != nil {
 		return fmt.Errorf("%w: %v", ErrPersist, err)
 	}
+	if err := faultAt("manifest.pre-dirsync"); err != nil {
+		return fmt.Errorf("%w: %v", ErrPersist, err)
+	}
 	if err := fsyncDir(dir); err != nil {
 		return fmt.Errorf("%w: %v", ErrPersist, err)
 	}

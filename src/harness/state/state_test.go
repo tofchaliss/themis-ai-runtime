@@ -39,16 +39,20 @@ func TestNoDeletionPathStructural(t *testing.T) {
 			t.Fatal(err)
 		}
 		src := string(b)
-		for _, forbidden := range []string{"os.RemoveAll("} {
-			if strings.Contains(src, forbidden) {
-				t.Errorf("%s contains %s — no deletion path may exist in v1", e.Name(), forbidden)
-			}
+		if strings.Contains(src, "os.RemoveAll(") {
+			t.Errorf("%s contains os.RemoveAll — no deletion path may exist in v1", e.Name())
 		}
-		// os.Remove is legal ONLY for staging temp files (publication
-		// cleanup) — never for committed state. Pin the exact uses.
+		// os.Remove is legal ONLY as staging-temp cleanup, pinned to
+		// the exact line form; os.Truncate is legal ONLY at recovery's
+		// frontier cut (test review: the scan must pin the one
+		// primitive that can cut committed-stream bytes).
 		for _, line := range strings.Split(src, "\n") {
-			if strings.Contains(line, "os.Remove(") && !strings.Contains(line, "tmpName") && !strings.Contains(line, "u.path") {
-				t.Errorf("%s: os.Remove outside staging/rollback cleanup: %q", e.Name(), strings.TrimSpace(line))
+			trimmed := strings.TrimSpace(line)
+			if strings.Contains(trimmed, "os.Remove(") && trimmed != "defer os.Remove(tmpName) // no-op after successful publication cleanup" && trimmed != "defer os.Remove(tmpName)" {
+				t.Errorf("%s: os.Remove outside pinned staging cleanup: %q", e.Name(), trimmed)
+			}
+			if strings.Contains(trimmed, "os.Truncate(") && e.Name() != "recovery.go" {
+				t.Errorf("%s: os.Truncate outside recovery's frontier cut: %q", e.Name(), trimmed)
 			}
 		}
 	}
@@ -79,7 +83,7 @@ func TestClosedVocabularies(t *testing.T) {
 		for _, to := range all {
 			legal := legalNext[from][to]
 			want := map[TaskStatus]map[TaskStatus]bool{
-				StatusCreated: {StatusRunning: true, StatusFailed: true},
+				StatusCreated: {StatusRunning: true, StatusFailed: true, StatusFailedPartial: true},
 				StatusRunning: {StatusCompleted: true, StatusFailed: true, StatusFailedPartial: true},
 			}[from][to]
 			if legal != want {
@@ -116,7 +120,7 @@ func TestIdentityStructure(t *testing.T) {
 	// Relocatability: move the state root; every identity and
 	// verification must hold (Q-L6-3: location is never identity).
 	tr, _ := r.CreateTask("t-move", TaskOptions{})
-	if _, err := tr.AppendEvent(EvL4Audit, "l4", body("a"), id); err != nil {
+	if _, err := tr.AppendEvent(EvL4Audit, "l4", body("a"), Ref{ID: id, Class: ObjEvidencePayload}); err != nil {
 		t.Fatal(err)
 	}
 	if err := tr.Transition(StatusRunning, "r"); err != nil {
@@ -157,15 +161,44 @@ func TestConstitutionHash(t *testing.T) {
 	}
 }
 
-// Root disjointness: pairwise, both directions.
+// Root disjointness: pairwise, both directions, physical (symlinks
+// resolved), case-folded, absolute-only, fail-closed on nonexistence
+// (security review hardening).
 func TestCheckDisjointRoots(t *testing.T) {
-	if err := CheckDisjointRoots("/a/state", "/a/work", "/b/mirror"); err != nil {
+	base := t.TempDir()
+	a := filepath.Join(base, "a")
+	b := filepath.Join(base, "b")
+	nested := filepath.Join(a, "state")
+	for _, d := range []string{a, b, nested} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := CheckDisjointRoots(a, b); err != nil {
 		t.Fatalf("disjoint roots must pass: %v", err)
 	}
-	for _, pair := range [][]string{{"/a", "/a/state"}, {"/a/state", "/a"}, {"/a", "/a"}} {
+	for _, pair := range [][]string{{a, nested}, {nested, a}, {a, a}} {
 		if err := CheckDisjointRoots(pair...); !errors.Is(err, ErrIdentity) {
 			t.Errorf("nested roots %v must refuse", pair)
 		}
+	}
+	// Symlinked nesting is physical nesting.
+	link := filepath.Join(base, "alias")
+	if err := os.Symlink(a, link); err != nil {
+		t.Fatal(err)
+	}
+	if err := CheckDisjointRoots(link, nested); !errors.Is(err, ErrIdentity) {
+		t.Errorf("symlink-aliased nesting must refuse: %v", err)
+	}
+	// Relative, single, and nonexistent roots fail closed.
+	if err := CheckDisjointRoots("relative", a); !errors.Is(err, ErrIdentity) {
+		t.Error("relative root must refuse")
+	}
+	if err := CheckDisjointRoots(a); !errors.Is(err, ErrIdentity) {
+		t.Error("single root must refuse")
+	}
+	if err := CheckDisjointRoots(filepath.Join(base, "ghost"), a); !errors.Is(err, ErrIdentity) {
+		t.Error("nonexistent root must fail closed")
 	}
 }
 
@@ -175,7 +208,7 @@ func TestStatusViewContentFree(t *testing.T) {
 	r := testRoot(t)
 	tr, _ := r.CreateTask("t-view", TaskOptions{RetryOf: "t-old"})
 	id, _ := tr.StoreObject(ObjEvidencePayload, []byte("evidence bytes"))
-	if _, err := tr.AppendEvent(EvL2Delivery, "l2", body("payload"), id); err != nil {
+	if _, err := tr.AppendEvent(EvL2Delivery, "l2", body("payload"), Ref{ID: id, Class: ObjEvidencePayload}); err != nil {
 		t.Fatal(err)
 	}
 	_ = tr.Transition(StatusRunning, "r")
@@ -232,7 +265,7 @@ func TestEventPlaneBehavior(t *testing.T) {
 	}
 	// Dangling reference dies at the door.
 	ghost := objectID([]byte("never stored"))
-	if _, err := tr.AppendEvent(EvL4Audit, "l4", body("a"), ghost); !errors.Is(err, ErrStream) || !strings.Contains(err.Error(), "already-durable") {
+	if _, err := tr.AppendEvent(EvL4Audit, "l4", body("a"), Ref{ID: ghost, Class: ObjEvidencePayload}); !errors.Is(err, ErrStream) || !strings.Contains(err.Error(), "already-durable") {
 		t.Fatalf("dangling reference must refuse at append: %v", err)
 	}
 	// Sequence is sink-assigned and contiguous.
@@ -447,7 +480,7 @@ func TestScanReachable(t *testing.T) {
 	orphan, _ := r.Store().StoreObject(ObjEvidencePayload, []byte("orphan"))
 	for _, id := range []string{"t-a", "t-b"} {
 		tr, _ := r.CreateTask(id, TaskOptions{})
-		if _, err := tr.AppendEvent(EvL2Delivery, "l2", body("d"), shared); err != nil {
+		if _, err := tr.AppendEvent(EvL2Delivery, "l2", body("d"), Ref{ID: shared, Class: ObjEvidencePayload}); err != nil {
 			t.Fatal(err)
 		}
 		_ = tr.Transition(StatusRunning, "r")

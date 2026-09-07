@@ -30,10 +30,25 @@ type Event struct {
 	Class    string          `json:"class"`
 	Writer   string          `json:"writer"`
 	TS       string          `json:"ts"`
-	Refs     []string        `json:"refs,omitempty"`
+	Refs     []Ref           `json:"refs,omitempty"`
 	Body     json.RawMessage `json:"body"`
 	BodyHash string          `json:"body_hash"`
 }
+
+// Ref durably binds an object reference to its declared class — the
+// {class, provenance} declaration rides the referencing event
+// (architecture review 2a): the class is recorded where the reference
+// is, and the provenance is the event's writer and body.
+type Ref struct {
+	ID    string `json:"id"`
+	Class string `json:"class"`
+}
+
+// maxEventBytes caps a framed entry well under the parser's 9-digit
+// frame limit (security review HIGH): an entry that committed but
+// could not be re-parsed would be an acknowledged record expelled as
+// torn. Evidence payloads belong in the object plane, not in bodies.
+const maxEventBytes = 8 << 20
 
 // stream is the single writer for one task's event log.
 type stream struct {
@@ -45,7 +60,7 @@ type stream struct {
 }
 
 func openStream(path string) (*stream, error) {
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrStream, err)
 	}
@@ -68,7 +83,7 @@ func sum256Chain(prev [32]byte, bodyHash string) [32]byte {
 
 // append frames and durably commits one event, assigning its
 // sequence. On any failure the stream is terminal, typed.
-func (s *stream) append(class, writer string, body json.RawMessage, refs []string, store *ObjectStore) (Event, error) {
+func (s *stream) append(class, writer string, body json.RawMessage, refs []Ref, store *ObjectStore) (Event, error) {
 	if s.terminal {
 		return Event{}, fmt.Errorf("%w: stream is terminal after a failed append", ErrStream)
 	}
@@ -81,8 +96,11 @@ func (s *stream) append(class, writer string, body json.RawMessage, refs []strin
 	// The reference rule enforced at the door: dangles die here, not
 	// at the verifier (Q-L6-2).
 	for _, r := range refs {
-		if !store.HasObject(r) {
-			return Event{}, fmt.Errorf("%w: reference %q is not durable — a durable record may reference only already-durable material", ErrStream, r)
+		if !objectClasses[r.Class] {
+			return Event{}, fmt.Errorf("%w: reference %q declares unknown class %q", ErrConstitution, r.ID, r.Class)
+		}
+		if !store.HasObject(r.ID) {
+			return Event{}, fmt.Errorf("%w: reference %q is not durable — a durable record may reference only already-durable material", ErrStream, r.ID)
 		}
 	}
 	ev := Event{
@@ -101,6 +119,11 @@ func (s *stream) append(class, writer string, body json.RawMessage, refs []strin
 	full, err := json.Marshal(ev)
 	if err != nil {
 		return Event{}, fmt.Errorf("%w: %v", ErrStream, err)
+	}
+	if len(full) > maxEventBytes {
+		// Pre-write refusal: nothing landed, the stream state is
+		// unambiguous, so this is typed and NON-terminal.
+		return Event{}, fmt.Errorf("%w: event of %d bytes exceeds the %d-byte frame cap — large payloads belong in the object plane", ErrStream, len(full), maxEventBytes)
 	}
 	frame := []byte(strconv.Itoa(len(full)) + "\n")
 	frame = append(frame, full...)
@@ -189,6 +212,13 @@ func parseStream(path string) (parseResult, error) {
 		if err := dec.Decode(&ev); err != nil {
 			res.TornTail = raw[offset:]
 			break
+		}
+		if dec.More() {
+			// Junk between the JSON value and the frame terminator:
+			// unproducible by the writer, invisible to every view —
+			// corruption, not a crash artifact (security review INFO).
+			res.Corrupt = fmt.Sprintf("entry %d carries trailing bytes inside its frame", ev.Seq)
+			return res, nil
 		}
 		// Verify the per-entry hash over the canonical pre-hash form.
 		check := ev

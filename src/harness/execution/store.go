@@ -36,39 +36,76 @@ func NewArtifactStore(dir string) (*ArtifactStore, error) {
 
 // Put persists one artifact and returns its content address. The
 // manifest hash IS the address: a modified artifact is a different
-// address, so tampering is unhideable by construction. Write path:
-// O_CREAT|O_EXCL (no overwrite path exists in the code), write,
-// fsync, then the caller may treat the address as acknowledged.
-// An existing file at the address is verified byte-identical
-// (content-addressing makes Put idempotent) — anything else is
-// corruption, typed.
+// address, so tampering is unhideable by construction. The write
+// path inherits the L6 crash-safe publication discipline (D-L6-11 —
+// the direct-at-final-address write had a crash window that left a
+// durable partial permanently poisoning its address):
+//
+//	write temp → fsync temp → atomic no-replace link → fsync
+//	directory → remove temp
+//
+// so an address is only ever ABSENT (retryable) or COMPLETE
+// (verifiable). An existing file at the address is verified
+// byte-identical (content-addressing makes Put idempotent) —
+// anything else is corruption, typed.
 func (s *ArtifactStore) Put(manifest []byte) (string, error) {
 	sum := sha256.Sum256(manifest)
 	addr := hex.EncodeToString(sum[:])
 	final := filepath.Join(s.Dir, addr+".json")
-	f, err := os.OpenFile(final, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o444)
-	if err != nil {
-		if os.IsExist(err) {
-			existing, rerr := os.ReadFile(final)
-			if rerr == nil && sha256.Sum256(existing) == sum {
-				return addr, nil // same bytes at the same address: already acknowledged
+	ackExisting := func() (string, error) {
+		existing, rerr := os.ReadFile(final)
+		if rerr == nil && sha256.Sum256(existing) == sum {
+			// The dirsync makes THIS caller's ack independently
+			// durable even when another writer published.
+			if derr := fsyncDir(s.Dir); derr != nil {
+				return "", fmt.Errorf("%w: %v", ErrPersist, derr)
 			}
-			return "", fmt.Errorf("%w: address %s occupied by different bytes", ErrPersist, addr)
+			return addr, nil
+		}
+		return "", fmt.Errorf("%w: address %s occupied by different bytes", ErrPersist, addr)
+	}
+	if _, err := os.Stat(final); err == nil {
+		return ackExisting()
+	}
+	tmp, err := os.CreateTemp(s.Dir, "staging-")
+	if err != nil {
+		return "", fmt.Errorf("%w: %v", ErrPersist, err)
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+	if _, err := tmp.Write(manifest); err != nil {
+		tmp.Close()
+		return "", fmt.Errorf("%w: %v", ErrPersist, err)
+	}
+	if err := tmp.Sync(); err != nil {
+		tmp.Close()
+		return "", fmt.Errorf("%w: %v", ErrPersist, err)
+	}
+	if err := tmp.Close(); err != nil {
+		return "", fmt.Errorf("%w: %v", ErrPersist, err)
+	}
+	if err := os.Chmod(tmpName, 0o444); err != nil {
+		return "", fmt.Errorf("%w: %v", ErrPersist, err)
+	}
+	if err := os.Link(tmpName, final); err != nil {
+		if os.IsExist(err) {
+			return ackExisting()
 		}
 		return "", fmt.Errorf("%w: %v", ErrPersist, err)
 	}
-	if _, err := f.Write(manifest); err != nil {
-		f.Close()
-		return "", fmt.Errorf("%w: %v", ErrPersist, err)
-	}
-	if err := f.Sync(); err != nil {
-		f.Close()
-		return "", fmt.Errorf("%w: %v", ErrPersist, err)
-	}
-	if err := f.Close(); err != nil {
+	if err := fsyncDir(s.Dir); err != nil {
 		return "", fmt.Errorf("%w: %v", ErrPersist, err)
 	}
 	return addr, nil
+}
+
+func fsyncDir(dir string) error {
+	d, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	return d.Sync()
 }
 
 // Get retrieves an artifact by address, verifying the content

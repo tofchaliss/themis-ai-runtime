@@ -23,7 +23,7 @@ import (
 var faultPoints = []string{
 	"object.write", "object.pre-fsync", "object.pre-link", "object.pre-dirsync",
 	"sink.pre-write", "sink.pre-fsync",
-	"manifest.pre-write", "manifest.pre-rename",
+	"manifest.pre-write", "manifest.pre-rename", "manifest.pre-dirsync",
 }
 
 func TestFaultPointSweepExhaustive(t *testing.T) {
@@ -44,6 +44,7 @@ func TestFaultPointSweepExhaustive(t *testing.T) {
 			}
 			// Arm the fault, then drive the full commit chain; the
 			// armed point errors, simulating death at that boundary.
+			t.Cleanup(func() { fault = nil })
 			fault = func(p string) error {
 				if p == point {
 					return errors.New("injected@" + p)
@@ -55,7 +56,7 @@ func TestFaultPointSweepExhaustive(t *testing.T) {
 			if err != nil {
 				faulted = true
 			} else {
-				if _, err := tr.AppendEvent(EvL2Delivery, "l2", body("d"), id); err != nil {
+				if _, err := tr.AppendEvent(EvL2Delivery, "l2", body("d"), Ref{ID: id, Class: ObjEvidencePayload}); err != nil {
 					faulted = true
 				} else if err := tr.Transition(StatusCompleted, "done"); err != nil {
 					faulted = true
@@ -152,7 +153,7 @@ func TestRealKillRecovery(t *testing.T) {
 			if err != nil {
 				os.Exit(1)
 			}
-			if _, err := tr.AppendEvent(EvL4Audit, "l4", body(fmt.Sprintf("call-%d", i)), id); err != nil {
+			if _, err := tr.AppendEvent(EvL4Audit, "l4", body(fmt.Sprintf("call-%d", i)), Ref{ID: id, Class: ObjEvidencePayload}); err != nil {
 				os.Exit(1)
 			}
 		}
@@ -164,7 +165,21 @@ func TestRealKillRecovery(t *testing.T) {
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(400 * time.Millisecond) // let it commit real work
+	// Poll for committed work before killing (test review: a fixed
+	// sleep flakes on loaded machines — kill only once the child has
+	// provably committed events).
+	streamPath := filepath.Join(rootDir, "tasks", "t-kill", "events.log")
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		if info, err := os.Stat(streamPath); err == nil && info.Size() > 1024 {
+			break
+		}
+		if time.Now().After(deadline) {
+			_ = cmd.Process.Kill()
+			t.Fatal("child never committed work")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
 	if err := cmd.Process.Signal(syscall.SIGKILL); err != nil {
 		t.Fatal(err)
 	}
@@ -193,7 +208,7 @@ func TestRealKillRecovery(t *testing.T) {
 	// point) — Verify checked it; double-check explicitly.
 	for _, ev := range evs {
 		for _, ref := range ev.Refs {
-			if _, err := r.Store().GetObject(ref); err != nil {
+			if _, err := r.Store().GetObject(ref.ID); err != nil {
 				t.Fatalf("dangling reference after kill: %v", err)
 			}
 		}

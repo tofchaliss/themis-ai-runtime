@@ -38,6 +38,10 @@ func fsyncDir(dir string) error {
 
 // ObjectStore is rooted at <root>/objects with a staging area at
 // <root>/objects/tmp.
+// Recorded residual (security review LOW): crashed staging temps
+// accumulate in objects/tmp — pure bounded-by-crashes waste, never
+// re-read, never re-linked, never poisoning an address. The natural
+// cleanup is a future quiescent startup sweep alongside GC.
 type ObjectStore struct {
 	dir string
 	tmp string
@@ -82,8 +86,14 @@ func (s *ObjectStore) StoreObject(class string, bytes []byte) (string, error) {
 		return "", err
 	}
 	if existing, err := os.ReadFile(final); err == nil {
-		// Occupied: complete by construction (D-L6-11) — verify.
+		// Occupied: complete by construction (D-L6-11) — verify. The
+		// dirsync makes THIS caller's ack independently durable: an
+		// ack must never precede durability, even when another writer
+		// did the publication (security review MED).
 		if objectID(existing) == id {
+			if err := fsyncDir(filepath.Dir(final)); err != nil {
+				return "", fmt.Errorf("%w: %v", ErrPersist, err)
+			}
 			return id, nil // idempotent re-write of identical bytes
 		}
 		return "", fmt.Errorf("%w: address %s occupied by different bytes", ErrCorrupt, id)
@@ -124,6 +134,9 @@ func (s *ObjectStore) StoreObject(class string, bytes []byte) (string, error) {
 	if err := os.Link(tmpName, final); err != nil {
 		if os.IsExist(err) {
 			if existing, rerr := os.ReadFile(final); rerr == nil && objectID(existing) == id {
+				if serr := fsyncDir(filepath.Dir(final)); serr != nil {
+					return "", fmt.Errorf("%w: %v", ErrPersist, serr)
+				}
 				return id, nil
 			}
 			return "", fmt.Errorf("%w: address %s occupied by different bytes", ErrCorrupt, id)

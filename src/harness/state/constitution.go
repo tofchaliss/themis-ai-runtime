@@ -64,17 +64,24 @@ const (
 	EvL4Audit       = "l4-audit"
 	EvL5Transition  = "l5-transition"
 	EvL5Op          = "l5-op"
+	// EvArtifact records an artifact binding — written only by the
+	// BindArtifact primitive so the manifest's artifact list stays a
+	// pure projection of the stream.
+	EvArtifact = "artifact-bound"
 )
 
 var eventClasses = map[string]bool{
 	EvLifecycle: true, EvRecovery: true, EvVerdict: true, EvContamination: true,
 	EvL1Conflict: true, EvL2Delivery: true, EvL3Selection: true,
-	EvL4Audit: true, EvL5Transition: true, EvL5Op: true,
+	EvL4Audit: true, EvL5Transition: true, EvL5Op: true, EvArtifact: true,
 }
 
-// recoveryOnlyEvents may be appended only by L6's own recovery and
-// verification passes, never by callers (Q-L6-4/6).
-var recoveryOnlyEvents = map[string]bool{EvRecovery: true, EvVerdict: true}
+// primitiveOnlyEvents may be appended only by L6's own primitives
+// (recovery, verification, artifact binding, lifecycle) — never
+// through the caller-facing AppendEvent (Q-L6-4/6).
+var primitiveOnlyEvents = map[string]bool{
+	EvRecovery: true, EvVerdict: true, EvArtifact: true, EvLifecycle: true,
+}
 
 // Task lifecycle — the closed monotonic machine (Q-L6-6). Terminals
 // are immutable. FAILED_PARTIAL is recovery-owned: it is not in the
@@ -92,7 +99,10 @@ const (
 )
 
 var legalNext = map[TaskStatus]map[TaskStatus]bool{
-	StatusCreated: {StatusRunning: true, StatusFailed: true},
+	// CREATED -> FAILED_PARTIAL is recovery's edge for a task that
+	// died before RUNNING (architecture review 3B: the machine and
+	// recovery's real edges must agree).
+	StatusCreated: {StatusRunning: true, StatusFailed: true, StatusFailedPartial: true},
 	StatusRunning: {StatusCompleted: true, StatusFailed: true, StatusFailedPartial: true},
 	// COMPLETED, FAILED, FAILED_PARTIAL are terminal.
 }

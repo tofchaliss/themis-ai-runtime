@@ -41,13 +41,20 @@ func (r *Root) Recover(taskID string) (RecoveryOutcome, error) {
 		// trust; Verify reports it.
 		return out, fmt.Errorf("%w: %s: %s", ErrCorrupt, taskID, parsed.Corrupt)
 	}
+	// Refuse a record that races a live writer (security review MED):
+	// two appenders would manufacture durable sequence corruption. v1
+	// is single-process; the in-process registry is the guard, and
+	// the cross-process case is a recorded residual.
+	if r.isLive(taskID) {
+		return out, fmt.Errorf("%w: task %s has a live writer — recovery is a cold operation", ErrStream, taskID)
+	}
 
 	// Preserve a torn tail aside — identity-less crash bytes, kept
 	// for audit, removed from the framing path (Q-L6-2).
 	if len(parsed.TornTail) > 0 {
 		saved := filepath.Join(dir, fmt.Sprintf("events.torn.%d", len(parsed.Events)))
 		if _, err := os.Stat(saved); os.IsNotExist(err) {
-			if err := os.WriteFile(saved, parsed.TornTail, 0o444); err != nil {
+			if err := os.WriteFile(saved, parsed.TornTail, 0o400); err != nil {
 				return out, fmt.Errorf("%w: preserving torn tail: %v", ErrPersist, err)
 			}
 			if err := fsyncDir(dir); err != nil {
@@ -63,7 +70,13 @@ func (r *Root) Recover(taskID string) (RecoveryOutcome, error) {
 		// invariant conflict: live-process appends after an ambiguous
 		// tail stay terminal (Q-L6-3); cold recovery knows the exact
 		// frontier and may resume behind it.
+		if err := faultAt("recovery.pre-truncate"); err != nil {
+			return out, fmt.Errorf("%w: %v", ErrPersist, err)
+		}
 		if err := os.Truncate(streamPath, parsed.CommittedLen); err != nil {
+			return out, fmt.Errorf("%w: %v", ErrPersist, err)
+		}
+		if err := faultAt("recovery.post-truncate"); err != nil {
 			return out, fmt.Errorf("%w: %v", ErrPersist, err)
 		}
 		out.TornSaved = saved
@@ -71,15 +84,40 @@ func (r *Root) Recover(taskID string) (RecoveryOutcome, error) {
 
 	// The manifest is a projection; derive the record's own view.
 	lastLifecycle, lifecycleFound := lastLifecycleEvent(parsed.Events)
-	man, manErr := readManifest(dir)
-	switch {
-	case manErr == nil:
-	case os.IsNotExist(underlying(manErr)):
+	var man *Manifest
+	if _, statErr := os.Stat(filepath.Join(dir, "manifest.json")); os.IsNotExist(statErr) {
 		// Creation crashed between the CREATED event and its
-		// projection: project what the record contains.
-		man = &Manifest{TaskID: taskID, Status: StatusCreated, ConstitutionHash: ConstitutionHash()}
-	default:
-		return out, manErr
+		// projection: project what the record contains — but only if
+		// the record actually contains the creation (recovery never
+		// creates a stream CreateTask didn't).
+		if len(parsed.Events) == 0 {
+			return out, fmt.Errorf("%w: %s: no manifest and no committed events — nothing to recover", ErrCorrupt, taskID)
+		}
+		// Project attribution from the CREATED event — recovery never
+		// invents what the record already carries (architecture review
+		// 6b: zero origination extends to attribution).
+		created := createdEventBody(parsed.Events)
+		if created == nil {
+			return out, fmt.Errorf("%w: %s: record does not begin at CREATED", ErrCorrupt, taskID)
+		}
+		man = &Manifest{TaskID: taskID, Status: StatusCreated,
+			ConstitutionHash: created.ConstitutionHash, RetryOf: created.RetryOf,
+			GovernedHashes: created.GovernedHashes}
+	} else {
+		var manErr error
+		man, manErr = readManifest(dir)
+		if manErr != nil {
+			return out, manErr
+		}
+		// Projection-legality gate (security review HIGH): recovery
+		// must never launder a record Verify would call corrupt. An
+		// existing manifest state must be explained by a prior durable
+		// lifecycle event — a manifest ahead of its stream (stream
+		// loss, replacement with a shorter prefix) is corruption, and
+		// recovery refuses to touch it.
+		if !statusExplained(man.Status, parsed.Events) {
+			return out, fmt.Errorf("%w: %s: manifest state %s has no supporting lifecycle event — recovery refuses", ErrCorrupt, taskID, man.Status)
+		}
 	}
 
 	st, err := resumeStream(streamPath, parsed)
@@ -138,6 +176,25 @@ func (r *Root) Recover(taskID string) (RecoveryOutcome, error) {
 	return out, nil
 }
 
+// statusExplained reports whether a manifest state is supported by a
+// prior durable lifecycle event — the same rule the verifier applies
+// (Q-L6-6: a manifest state unexplainable by the stream is itself
+// evidence of corruption).
+func statusExplained(status TaskStatus, events []Event) bool {
+	for _, ev := range events {
+		if ev.Class != EvLifecycle {
+			continue
+		}
+		var b struct {
+			To string `json:"to"`
+		}
+		if json.Unmarshal(ev.Body, &b) == nil && TaskStatus(b.To) == status {
+			return true
+		}
+	}
+	return false
+}
+
 func lastLifecycleEvent(events []Event) (TaskStatus, bool) {
 	for i := len(events) - 1; i >= 0; i-- {
 		if events[i].Class != EvLifecycle {
@@ -153,14 +210,3 @@ func lastLifecycleEvent(events []Event) (TaskStatus, bool) {
 	return "", false
 }
 
-func underlying(err error) error {
-	type unwrapper interface{ Unwrap() error }
-	for err != nil {
-		u, ok := err.(unwrapper)
-		if !ok {
-			return err
-		}
-		err = u.Unwrap()
-	}
-	return err
-}

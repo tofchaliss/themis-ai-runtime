@@ -118,4 +118,14 @@ Re-running = new task_id + `retry_of`, new environment identity, fresh assembly.
 
 **Single-authority property (capstone, proven in D+B):** for every transition in a completed record there is exactly one governing definition edge and exactly one typed causing event; no transition is caused by model content, a transport request, a direct L6 mutation, or an implicit rule.
 
+## 5. Review record (2026-09-07) — three Class-3 reviews, remediated
+
+**Security review** — no CRITICAL/HIGH; six MED, all remediated with regressions: MED-1 cross-artifact task_id binding (spec/grant must bind to the envelope's task); MED-2 control-verb results appended to the conversation (protocol conformance); MED-3 runtime-producible events (`turns-exhausted`, `turn-no-action`, `turn-provider-error`) load-mandatory + control-verb signal declaration required; MED-4 `turns-exhausted` cannot target `@stay`; MED-5 startup sweep fails closed on ReadDir and discriminates CORRUPT from transient IO; MED-6 honest event source (`l7`, `eis+raw-payload-v1`). LOW: 64KiB payload cap.
+
+**Test review** — one CRITICAL (real-kill test could silently skip its assertion path) remediated: child-error file, skip→fatal, retry_of asserted, ceiling raised so the child provably runs. HIGHs remediated, including the predicted phase-capability-narrowing hole: `phaseGrant()` now narrows the grant to phase capabilities at the gate, pinned by `TestPhaseCapabilityNarrowing`. ~13 regressions in `review_test.go`; suite 80.8% coverage, all green including live registers.
+
+**Architecture review** — MEDs remediated: 1.2 governed `turn_timeout_sec` (no L7-authored constant); 1.3 `SubmitTask(path)` loads the envelope internally (no stale-hash execution); 2d field-scoped placeholder-only grant instantiation (literal workspace refused); 2e no-action prose appended to the conversation; 4.3 wall-clock budget floor (seal env-deadline → FAILED, never a workflow edge).
+
+**Architecture HIGH 2a — OPEN, owner decision required:** the production loop delivers the envelope payload into the conversation without the full L2 composition pipeline (fencing/provenance labeling of the untrusted half). Options: (a) route phase composition through the L2 composer, or (b) owner-record a v1 narrowing accepting unfenced payload delivery, with the L2 integration as a recorded residual. The layer cannot claim **architecture-conformant** until this is decided and recorded.
+
 **Acceptance gate:** architecture-conformant + test-evidenced + operationally proven — independently challenged, all three.

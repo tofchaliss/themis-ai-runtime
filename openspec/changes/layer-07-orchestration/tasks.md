@@ -14,14 +14,14 @@ Grill closed 2026-09-07 (Q-L7-1..12, all CLOSED; design.md §3 is the record, §
 - [x] L6 constitution amendments (deliberate, hash-changing): `workflow-transition` (cause-carrying: from/to/edge-id/causing-seq) + `model-turn` event classes
 - [x] Workflow-definition artifact + fail-closed loader: static totality (coverage, no overlap), exhaustion edges per counter, counter-free cycles refused, finite worst-case walk computed, definition ⊆ ceilings, invariant/approval vocabulary undeclarable (approval-gated definitions refuse in v1)
 - [x] Registry `control` classification with two-way constitution ⊆
-- [ ] Security review
+- [x] Security review (2026-09-07: no CRIT/HIGH; 6 MED remediated with regressions in review_test.go)
 
 ## 2. L7-M2 — Envelope + assembly + seam (Class 3)
 
 - [x] Task-envelope artifact, fail-closed loader, governed/payload split, no defaulting anywhere
 - [x] Assembly ⊆-checkpoint: grant ⊆ WorkflowCeiling, plan ⊆ contract, spec ⊆ execution ceiling, root disjointness at its designed call site, hashes + submitter identity into the L6 record
 - [x] Public seam exactly Open/SubmitTask/ReadStatus; adapter import lint
-- [ ] Security review
+- [x] Security review (2026-09-07: no CRIT/HIGH; 6 MED remediated with regressions in review_test.go)
 
 ## 3. L7-M3 — The loop (Class 3)
 
@@ -30,7 +30,7 @@ Grill closed 2026-09-07 (Q-L7-1..12, all CLOSED; design.md §3 is the record, §
 - [x] Structural turn facts; `declare_done` executor; CallState monotonic increment; independent-gate budget behavior
 - [x] Typed termination → seal reasons → L6 lifecycle; L5 provision/seal/egress/teardown driven by the loop
 - [x] Invariant-failure fixed path (freeze → typed event → fatal-breach seal → teardown → FAILED)
-- [ ] Security review
+- [x] Security review (2026-09-07: no CRIT/HIGH; 6 MED remediated with regressions in review_test.go)
 
 ## 4. L7-M4 — Startup, failure classes, routing (Class 2/3)
 
@@ -38,7 +38,7 @@ Grill closed 2026-09-07 (Q-L7-1..12, all CLOSED; design.md §3 is the record, §
 - [x] Failure taxonomy wiring (declared execution failures to δ; undeclared to record+conversation only)
 - [x] Retry_of submission path; duplicate-submission structural refusal
 - [x] Router evolution: model selection is a fixed governed envelope input; no per-turn routing exists (the legacy Router remains a governance-side advisor, untouched)
-- [ ] Security review
+- [x] Security review (2026-09-07: no CRIT/HIGH; 6 MED remediated with regressions in review_test.go)
 
 ## 5. L7-M5 — Proof registers + close (Class 2/3)
 

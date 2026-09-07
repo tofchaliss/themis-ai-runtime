@@ -308,4 +308,3 @@ func vcsComponent(rel string) bool {
 	}
 	return false
 }
-

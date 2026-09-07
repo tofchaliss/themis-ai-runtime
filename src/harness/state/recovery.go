@@ -209,4 +209,3 @@ func lastLifecycleEvent(events []Event) (TaskStatus, bool) {
 	}
 	return "", false
 }
-

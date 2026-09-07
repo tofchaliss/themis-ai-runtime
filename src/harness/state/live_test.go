@@ -179,7 +179,7 @@ func TestLiveTaskReconstruction(t *testing.T) {
 	ctx, cancel := stdctx.WithTimeout(stdctx.Background(), 120*time.Second)
 	defer cancel()
 	resp, err := mp.Execute(ctx, model.ExecutionRequest{
-		Model: modelName,
+		Model:    modelName,
 		Messages: []model.Message{{Role: model.RoleUser, Content: prompt}},
 		Tools: []model.ToolDef{{Name: "write_file", Description: "Create one file in the workspace.",
 			Parameters: json.RawMessage(`{"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]}`)}},

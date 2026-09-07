@@ -347,7 +347,7 @@ func TestExportedAPIClosure(t *testing.T) {
 		"Root.ReadEvents": true, "Root.Resolve": true, "Root.ReadManifest": true,
 		"TaskRecord.AppendEvent": true, "TaskRecord.StoreObject": true,
 		"TaskRecord.Transition": true, "TaskRecord.BindArtifact": true,
-		"TaskRecord.Close": true,
+		"TaskRecord.Close":        true,
 		"ObjectStore.StoreObject": true, "ObjectStore.GetObject": true, "ObjectStore.HasObject": true,
 	}
 	fset := token.NewFileSet()

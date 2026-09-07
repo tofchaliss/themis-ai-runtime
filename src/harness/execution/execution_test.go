@@ -396,11 +396,11 @@ func TestAttestation(t *testing.T) {
 func TestEndpointRefusal(t *testing.T) {
 	bad := []string{
 		"https://github.com/x", "git://h/x", "ssh://h/x", "file://local", // schemes
-		"git@github.com:x/y.git",  // scp with user
-		"example.com:repo",        // scp without user — git's own heuristic (MED-1)
-		"host:path",               // ditto
-		"ext::sh -c evil",         // protocol.ext transport helper (MED-1)
-		"fd::17",                  // transport-helper syntax
+		"git@github.com:x/y.git", // scp with user
+		"example.com:repo",       // scp without user — git's own heuristic (MED-1)
+		"host:path",              // ditto
+		"ext::sh -c evil",        // protocol.ext transport helper (MED-1)
+		"fd::17",                 // transport-helper syntax
 	}
 	for _, a := range bad {
 		if err := refuseEndpoints([]string{"clone", a}); !errors.Is(err, ErrEndpoint) {

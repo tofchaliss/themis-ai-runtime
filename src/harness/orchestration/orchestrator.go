@@ -49,10 +49,10 @@ type StartupReport struct {
 // Orchestrator is the L7 instance: one per state root (recorded v1
 // deployment invariant).
 type Orchestrator struct {
-	cfg   Config
-	root  *state.Root
-	store *execution.ArtifactStore
-	prov  *execution.LocalProvider
+	cfg    Config
+	root   *state.Root
+	store  *execution.ArtifactStore
+	prov   *execution.LocalProvider
 	eis    *instructions.EffectiveSet
 	policy *instructions.Policy
 }

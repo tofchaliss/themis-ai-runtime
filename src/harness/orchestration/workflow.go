@@ -51,11 +51,11 @@ type WorkflowDef struct {
 // WorkflowCeiling bounds what any definition may declare
 // (definition ⊆ ceiling ⊆ registry — the cross-layer principle).
 type WorkflowCeiling struct {
-	Version           int      `json:"version"`
-	AllowedTools      []string `json:"allowed_tools"`
-	MaxTotalCalls     int      `json:"max_total_calls"`
-	MaxWalkLength     int64    `json:"max_walk_length"`
-	MaxTurnsPerPhase  int64    `json:"max_turns_per_phase"`
+	Version          int      `json:"version"`
+	AllowedTools     []string `json:"allowed_tools"`
+	MaxTotalCalls    int      `json:"max_total_calls"`
+	MaxWalkLength    int64    `json:"max_walk_length"`
+	MaxTurnsPerPhase int64    `json:"max_turns_per_phase"`
 
 	Hash string `json:"-"`
 }
@@ -250,4 +250,3 @@ func (w *WorkflowDef) phase(name string) *Phase {
 	}
 	return nil
 }
-

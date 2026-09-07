@@ -514,7 +514,7 @@ func TestEnvelopeNoDefaulting(t *testing.T) {
 	dir := t.TempDir()
 	full := map[string]any{"version": 1, "task_id": "t", "model": "m", "payload": "p",
 		"turn_timeout_sec": 60,
-		"workflow_path": "/w", "workflow_ceiling_path": "/c", "registry_path": "/r",
+		"workflow_path":    "/w", "workflow_ceiling_path": "/c", "registry_path": "/r",
 		"grant_path": "/g", "exec_ceiling_path": "/e", "spec_path": "/s",
 		"context_contract_path": "/ctx"}
 	for missing := range full {

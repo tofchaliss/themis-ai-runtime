@@ -164,14 +164,14 @@ var (
 	// ErrConfinement is the canonical confinement error value (leaf
 	// package confine) — the same value everywhere, so errors.Is
 	// holds across every layer's wrapper.
-	ErrConfinement = confine.ErrConfinement
-	ErrRequiredMissing     = errors.New("required context slot not deliverable")
-	ErrItemTooLarge        = errors.New("context item exceeds size cap")
-	ErrContextTooLarge     = errors.New("total context exceeds size cap")
-	ErrSensitivityCeiling  = errors.New("item sensitivity exceeds the contract ceiling")
-	ErrFramingCollision    = errors.New("no collision-free frame delimiter available")
-	ErrMetadataInvalid     = errors.New("metadata field unsafe for frame rendering")
-	ErrCompose             = errors.New("composition refused")
+	ErrConfinement        = confine.ErrConfinement
+	ErrRequiredMissing    = errors.New("required context slot not deliverable")
+	ErrItemTooLarge       = errors.New("context item exceeds size cap")
+	ErrContextTooLarge    = errors.New("total context exceeds size cap")
+	ErrSensitivityCeiling = errors.New("item sensitivity exceeds the contract ceiling")
+	ErrFramingCollision   = errors.New("no collision-free frame delimiter available")
+	ErrMetadataInvalid    = errors.New("metadata field unsafe for frame rendering")
+	ErrCompose            = errors.New("composition refused")
 )
 
 // EvidenceHash is the exported content-hash helper shared with Layer

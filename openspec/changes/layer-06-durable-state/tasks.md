@@ -10,32 +10,32 @@ Grill closed 2026-09-07 (Q-L6-1..11, all CLOSED; design.md §3 is the record, §
 
 ## 1. L6-M1 — Object store + task manifest (Class 3)
 
-- [ ] **Crash-safe object publication FIRST** (D-L6-11: temp → fsync → no-replace link → dir fsync → cleanup; address only ever ABSENT or COMPLETE) — lands before any retry/idempotence claim; L5 ArtifactStore inherits the discipline
-- [ ] `StoreObject(class, provenance)` primitive: closed two-class vocabulary, verify-on-read, algorithm-prefixed identity, no Update/Delete
-- [ ] Task manifest: single-use exclusive-create identity, closed monotonic machine, recovery-only states not caller-requestable, atomic replace, constitution hash recorded
-- [ ] Root pairwise-disjointness check at task assembly
+- [x] **Crash-safe object publication FIRST** (D-L6-11: temp → fsync → no-replace link → dir fsync → cleanup; address only ever ABSENT or COMPLETE) — lands before any retry/idempotence claim; L5 ArtifactStore inherits the discipline
+- [x] `StoreObject(class, provenance)` primitive: closed two-class vocabulary, verify-on-read, algorithm-prefixed identity, no Update/Delete
+- [x] Task manifest: single-use exclusive-create identity, closed monotonic machine, recovery-only states not caller-requestable, atomic replace, constitution hash recorded
+- [x] Root pairwise-disjointness check at task assembly
 - [ ] Security review
 
 ## 2. L6-M2 — Trace sink + event wiring (Class 3)
 
-- [ ] `AppendEvent`: sink-assigned sequence, length-framed + per-entry hash, reference validity at the door, terminal-on-failed-append, UTC annotation at append
-- [ ] Synchronous floor commits (D-L6-10 record-before-effect): L4 audit before result delivery, L2 delivery record before payload delivery, lifecycle event before manifest projection
-- [ ] L1 conflicts, L2 delivery, L3 selection, L4 audit, L5 transition/op event wiring; flag-only secret-pattern scan at the sink
-- [ ] Stream summary into manifest at terminal transitions
+- [x] `AppendEvent`: sink-assigned sequence, length-framed + per-entry hash, reference validity at the door, terminal-on-failed-append, UTC annotation at append
+- [x] Synchronous floor commits (D-L6-10 record-before-effect): L4 audit before result delivery, L2 delivery record before payload delivery, lifecycle event before manifest projection
+- [x] L1 conflicts, L2 delivery, L3 selection, L4 audit, L5 transition/op event wiring; flag-only secret-pattern scan at the sink
+- [x] Stream summary into manifest at terminal transitions
 - [ ] Security review
 
 ## 3. L6-M3 — Recovery + cold verifier + read surface (Class 3)
 
-- [ ] Recovery: projection completion + reconciliation events, FAILED_PARTIAL (event-first), torn-tail preserve-aside, idempotent
-- [ ] Cold verifier: full re-derivation (objects, entries, summary, projection legality — unexplainable manifest state ⇒ CORRUPT), verdict events, **scan-completeness verdict**
-- [ ] Read surface: audit primitives with inseparable (bytes, provenance, classification); structurally content-free `StatusView`
+- [x] Recovery: projection completion + reconciliation events, FAILED_PARTIAL (event-first), torn-tail preserve-aside, idempotent
+- [x] Cold verifier: full re-derivation (objects, entries, summary, projection legality — unexplainable manifest state ⇒ CORRUPT), verdict events, **scan-completeness verdict**
+- [x] Read surface: audit primitives with inseparable (bytes, provenance, classification); structurally content-free `StatusView`
 - [ ] Security review
 
 ## 4. L6-M4 — Proof registers + close (Class 2/3)
 
-- [ ] Register A structural suite (API closure, deletion absence, no model verb, disjointness, edge products, relocatability)
-- [ ] Register B behavioral suite (branch-pinned adversarial matrix incl. recovery idempotence)
-- [ ] Register C: exhaustive fault-point sweep + real-kill live proof + byte-exact cold reconstruction
+- [x] Register A structural suite (API closure, deletion absence, no model verb, disjointness, edge products, relocatability)
+- [x] Register B behavioral suite (branch-pinned adversarial matrix incl. recovery idempotence)
+- [x] Register C: exhaustive fault-point sweep + real-kill live proof + byte-exact cold reconstruction
 - [ ] Traceability, coverage-verified; reviews with three-state verdicts
 - [ ] Code map + status doc + artifact updates; push/archive on owner approval
 

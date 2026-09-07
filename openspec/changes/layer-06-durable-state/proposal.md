@@ -1,7 +1,7 @@
 # Proposal: Layer 6 — Durable State
 
-**Change ID:** layer-06-durable-state · **Status:** DRAFT for grilling · 2026-09-07
-**Owner gate:** ships only after the grill closes Q-L6-1..n (design.md) and the owner accepts.
+**Change ID:** layer-06-durable-state · **Status:** GRILL CLOSED (Q-L6-1..11), awaiting Gate 0 · 2026-09-07
+**Owner gate:** ships only after owner Gate-0 acceptance of the folded design (design.md §2 D-L6-1..11 + residuals, §3 grill record).
 
 ## Why
 
@@ -22,7 +22,7 @@ A durable-state layer at `src/harness/state`:
 - **Task record:** one durable envelope per task — identity, governed-artifact hashes (EIS, contract, policy, registry, grant, ceiling, spec), status, terminal outcome — reusing the shipped RunRecord provenance pattern (manifest-first writes, options retained end-to-end).
 - **Trace sink:** the append-only destination for the typed events every layer already emits (L1 conflicts, L2 delivery/refusal records, L3 selection traces, L4 audit events, L5 transitions/ops) — persisted at defined boundaries, hash-bound to the task record.
 - **Timing enters here:** the deliberate L4 deferral lands — wall timestamps join durable events at the sink, never inside the deterministic decision paths.
-- **ArtifactStore lifecycle:** retention posture beyond v1 retain-all; the store's addresses referenced from task records.
+- **ArtifactStore lifecycle:** the store becomes the L6 object store (inheriting the crash-safe publication discipline, D-L6-11); addresses referenced from task records. Retention stays retain-all in v1 with the GC invariant locked and no deletion path shipped (Q-L6-7).
 - **Not a security database:** Themis remains the system of record; the harness trace is the *operational* record of what the harness did — it feeds Themis governance, never competes with it.
 
 ## What this change does NOT do

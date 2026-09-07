@@ -1,69 +1,101 @@
 # Design: Layer 6 — Durable State
 
-**Inputs:** `docs/architecture/harness/00-p0-architecture-v2.md` §9 (layer doc), archived L1–L5 designs (their trace-sink/timing/retention IOUs land here), `ARCHITECTURE.md`, the shipped RunRecord envelope pattern (`internal/service` / benchmarks — manifest-first, options retained).
-**Decision IDs** `D-L6-n`; **open questions** `Q-L6-n`.
+**Inputs:** `docs/architecture/harness/00-p0-architecture-v2.md` §9 (layer doc), archived L1–L5 designs (their trace-sink/timing/retention IOUs land here), `ARCHITECTURE.md`, the shipped RunRecord envelope pattern.
+**Decision IDs** `D-L6-n`; **grill record** `Q-L6-1..11`, all CLOSED 2026-09-07. The grill record (§3) governs on conflict.
 
 ## 0. Position in the flow
 
 ```
-L1..L5 typed events (in-memory today)          governed artifacts (hashed)
-        │                                              │
-        ▼                                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│ L6 Durable State                                            │
-│  task record (envelope)  ·  trace sink (append-only)        │
-│  artifact addresses      ·  timing joins here               │
-└───────────────────────────────┬─────────────────────────────┘
-                                │ operational record
-                                ▼
-                 Themis governance (system of record)
-                 — reads the harness record; is never replaced by it
+L1..L5 typed events                     governed artifacts (hashed)
+        │                                        │
+        ▼                                        ▼
+┌──────────────────────────────────────────────────────────────┐
+│ L6 Durable State — the record plane                          │
+│  object store (content-addressed, immutable)                 │
+│  trace sink (append-only event stream per task)              │
+│  task manifest (derived projection, closed machine)          │
+└──────┬────────────────────┬───────────────────┬──────────────┘
+       │ full record        │ StatusView        │ future L2
+       ▼                    ▼                   ▼ source kind
+ Audit/Governance          L7                 Model (never direct)
+       │
+       ▼
+ Themis governance (system of record) — reads the harness record;
+ is never replaced by it; confers standing only at governed ingestion
 ```
 
 ## 1. Hard invariants (inherited, not grillable)
 
-- **Themis is the security system of record.** The harness trace is the operational record of harness behavior; it feeds governance and never establishes competing security truth.
-- **No secret in durable state, ever** (3.5; Q-L5-5 contamination handling precedes persistence; L1 secret scan precedes instruction loading).
-- **Records are data about decisions, never inputs to them:** nothing in L1–L5's deterministic paths reads the trace sink back to decide anything.
-- **Fail closed on the record:** if the durable record cannot be written at a boundary that requires it, that is a typed failure — never a silent best-effort.
-- **Deterministic layers stay deterministic:** timestamps live in the sink's envelope, not in event content that any replay/verification hashes.
-- **Model output is advisory** — an L6 record of a model's claim is a record of a claim.
+- **Themis is the security system of record.** The harness record is the operational record of harness behavior; it feeds governance and never establishes competing security truth.
+- **No secret in durable state, ever** (3.5; Q-L5-5 contamination handling precedes persistence; the L1 secret scan precedes instruction loading).
+- **Records are data about decisions:** no deterministic security decision (authorization, admission, confinement, sealing, egress) ever consumes L6 state. History reaches authorization only as a governed artifact through the front door.
+- **Fail closed on the record:** an unwritable mandatory record is a typed task failure, never silent best-effort.
+- **Deterministic layers stay deterministic:** timestamps are sink-envelope annotation, never decision content, never ordering authority, never model-visible.
+- **Model output is advisory** — an L6 record of a model claim is a record of a claim.
 
-## 2. Draft decisions (grill targets)
+## 2. Locked decisions (post-grill fold, 2026-09-07)
 
-### D-L6-1 — Task record as the durable envelope
-One record per task: task identity, every governed-artifact hash that judged it (EIS, contract, management policy, registry, grant, ceiling, spec, registration), status (the L1 four-status vocabulary generalized), terminal outcome, artifact addresses. RunRecord discipline: manifest-first write so a crashed task keeps attribution.
+### D-L6-1 — Two-sided durability eligibility (Q-L6-1)
+Durability is declared by the owner and bounded by governed floors in both directions: the record that must exist cannot be opted out (trace/lifecycle floor); the secret that must not exist cannot be opted in (not a class at all); everything between is a closed-vocabulary declaration L6 enforces without judging. v1 treatment: execution artifacts durable only through the L5 egress path · evidence and model/context payloads merged as content-addressed objects referenced from trace · trace mandatory floor · task lifecycle state durable · checkpoint/retry/subagent state out of scope (no speculative class) · secrets never persistable. The sink-side secret-pattern scan is flag-only defense in depth (`contamination-suspected` event); the authoritative removal boundary stays upstream at L5 capture; **L6 never sanitizes evidence**. "L6 cannot accept a secret as legal" is the invariant; "L6 can detect every secret" is an unsafe promise nobody makes.
 
-### D-L6-2 — Append-only trace sink, typed events
-The existing event types (Conflict, delivery record, selection trace, AuditEvent, Transition/OpRecord) persist as appended, length-framed, hash-chained entries bound to the task record. No new event vocabulary invented at L6: the layers own their event types; L6 owns durability.
+### D-L6-2 — DurableCommit, the reference rule, one commit discipline (Q-L6-2, Q-L6-11 refinement)
+`DurableCommit` = write + file fsync + containing-directory fsync for new files — **local-substrate strength, honestly bounded** (a lying disk is a documented residual). Acknowledgment only after commit. **A durable record may reference only already-durable material: orphaned objects are acceptable waste; dangling references are unacceptable lies** (unproducible by ordering; corruption if observed). Crash yields a typed partial that recovery verifies, records, and never silently repairs — recovery only appends. Three durable shapes — objects, event streams, manifests — under one commit discipline, never independent persistence systems. Object writes retry (idempotent); **a failed event-stream append is terminal for that stream** (tail state ambiguous; further appends refused typed; task fails closed). Torn tails are detectable (length-framed), preserved aside, never truncated.
 
-### D-L6-3 — Persistence boundaries
-Events persist at defined boundaries (per-call for L4 audit, per-transition for L5, at compose for L2) — the grill decides sync-per-event vs staged, and what "the boundary requires the write" means for each class.
+### D-L6-3 — Identity and integrity (Q-L6-3)
+Objects: `ObjectID = sha256:<hex>` — algorithm-prefixed, closed v1 namespace `{sha256}`; same bytes same identity; storage path derived from identity, never the reverse; **relocating the state root preserves every identity**. Events: `(task_id, writer-assigned monotonic seq)` — positional, sink-assigned at successful commit; no caller-proposed positions; duplicates and gaps unproducible. Tasks: single-use `task_id`, never reused/resurrected/overwritten (exclusive create); re-run = new identity, optional `retry_of` link. Integrity: objects verify-on-read; every event entry carries its content hash; the manifest binds the set once (event count + stream summary at terminal transitions) and **certifies nothing itself** — the cold verifier re-derives every claim. No hash chain, no Merkle structure: local-operator tamper resistance is explicitly not claimed; the one legitimate strengthening is the future Themis external anchor (D-L6-8).
 
-### D-L6-4 — Timing at the sink
-Wall-clock timestamps and executor identity attach in the sink envelope at append time (the recorded L4 deferral). Determinism of decision content is untouched.
+### D-L6-4 — Mutation authority: three primitives, no second authorization system (Q-L6-4)
+No generic durable-write capability. Every mutation enters through: `StoreObject(class, bytes, provenance)` (closed two-class vocabulary; no Update/Delete primitive exists) · `AppendEvent` (sink owns task binding, sequence, framing, mandatory durability, reference validity; the emitting layer owns event meaning) · manifest transition (closed monotonic machine; recovery-only states not caller-requestable). Writer identity is **recorded, not authenticated** — L6's callers are in-process layers whose boundary is structural (the executor-env / sealed-list pattern), and an L4-style gate for compiled-in callers would be a second permission system. Bypass unreachable: no model-facing L6 verb in any registry; the state root is **pairwise non-nested** with every workspace, artifact store, mirror, and provider root, checked at task assembly, fail closed.
 
-### D-L6-5 — Crash semantics: typed partial, no resume (v1)
-A crash leaves the manifest + whatever the sink holds: a typed, attributable partial record. No checkpoint/resume in v1 — re-execution is an orchestration decision against a fresh environment (locked at Q-L5-11).
+### D-L6-5 — The durability constitution lives in code, with a recorded hash (Q-L6-5)
+An owner declares exactly `{class, provenance}`; mandatoriness, lifecycle, reference mechanics, and retention are fixed by the durability constitution — which in v1 lives in code because it contains no variable content (a governed artifact whose every field is constant is configuration theater). Killed fields, deliberately: `allowed_producer` (duplicates the structural seam), `sensitivity_floor` (L6 must not reason about sensitivity), per-class `reference_rules` (mechanics are universal), `deletion_semantics` (no dead entries). The constitution's canonical form is SHA-256-hashed into every task manifest — constant today, meaningful the day the first genuine governance knob (retention) arrives, attribution mechanism unchanged. Retention is never an object property; declarations will be floor/ceiling-bounded (extend legal, shorten refused) when the vocabulary exists.
 
-### D-L6-6 — Retention: explicit, governed, not yet clever
-Retain-all stays the v1 posture, now stated in a governed artifact rather than by omission; deletion/GC vocabulary defined but unimplemented (seam-now pattern, like the credential broker).
+### D-L6-6 — The stream is the record; the manifest is a projection; recovery has bounded authority (Q-L6-6)
+**Every manifest transition must be preceded by its lifecycle event durably committed to the stream** (decision → event → commit → projection → commit). Recovery holds: *projection authority* (it may finish projecting decisions the record already contains, appending a reconciliation event — repairing an incomplete projection is not repairing the record), *structural-fact authority* (`FAILED_PARTIAL`, committed as recovery's own event before projection), and **zero origination authority** (it never derives a semantic outcome from activity). Record verdicts `{VERIFIED, TORN, CORRUPT}` are orthogonal to lifecycle state `{CREATED, RUNNING, COMPLETED, FAILED, FAILED_PARTIAL}` and never rewrite history — `COMPLETED + CORRUPT` is uncomfortable but honest; bit-rot cannot change what a task did, only what the record proves. **A manifest state unexplainable by a prior durable lifecycle event is itself evidence of record corruption** — the deterministic cold-verification rule that never trusts the manifest.
 
-### D-L6-7 — Storage substrate: local files first
-Same posture as every layer: local-first (JSON/JSONL under a state root), content-addressing reused where immutability is the property; no database dependency in v1.
+### D-L6-7 — Retention is reachability; GC is a consequence, not an authority (Q-L6-7)
+GC never decides semantic importance; it evaluates mechanical reachability against the governed retention regime, derived from the durable record graph at scan time — never a refcount, never a persisted orphan mark. Deletable ⇔ proven unreachable from every retained root (all non-expired manifests; plus the maintenance stream, itself a permanent root whose deletion records outlive the deletions they legitimize). **Uncertainty retains: an incomplete scan, torn state, or corruption pins everything it references** — a filesystem operator can force retention, never destruction (accepted residual: uncertainty may cause retention, must never cause deletion). **Deletion loses every race with reference creation**; v1 removes the race structurally (GC quiescent-only, and v1 retain-all ships **no deletion path at all** — a structural-absence proof). Retention applies to roots, not objects: object age is semantically meaningless; objects live while anything retained can name them; revival of an orphan by a new write is normal. Expiry and deletion, when they exist, are durably recorded in a system maintenance stream (defined seam; not built empty in v1). Scan completeness is a typed verdict: `COMPLETE` permits candidate evaluation; anything else deletes nothing. No probabilistic GC.
 
-## 3. Open questions for the grill (Q-L6-n)
+### D-L6-8 — One durability domain; three permanent states; two authorities (Q-L6-8)
+v1 durability is **local-substrate only**: "durable" in every L6 claim means survives process death, not host loss — evidence in v1 is durable-until-host-loss, stated plainly. Permanent vocabulary: `durable(local)` → `transferred` (custody in flight, not a durability upgrade) → `accepted` (Themis governed ingestion acknowledgment — the only system-of-record standing). After acceptance: **Themis owns security meaning and the organizational record; L6 remains the authoritative operational record of execution** — two authorities for two questions; acceptance never expires the local copy. Future seams recorded, not built: transfer unit = the self-verifying task record bundle (manifest + stream + objects + artifact); anchor = `{task_id, stream summary, constitution hash}` at terminal transitions. **Themis acknowledgment is never on the execution critical path by default**; any pre-action acceptance requirement enters as a per-capability governed requirement through its own grill.
 
-1. **Q-L6-1 — Record-plane ownership boundary:** what exactly may the harness's durable record be *used for*? (Reconstruction/audit/governance-feed yes; but can L7 read task records for orchestration decisions? Can L11 evaluate from them? Where is the line that keeps L6 from becoming a second source of truth?)
-2. **Q-L6-2 — The unit of record:** task, execution, or turn — and identity/versioning when a task is re-run (new environment identity per Q-L5-12; does the task record link attempts?).
-3. **Q-L6-3 — Integrity model:** hash-chained sink entries vs content-addressed batches vs plain append — what tamper-evidence is claimed, against whom, and what is honestly NOT claimed (local-operator model, per the store precedent)?
-4. **Q-L6-4 — Persistence-boundary strength per event class:** which events are write-before-proceed (L4 audit before result delivery?) vs write-behind; what fails closed when the sink is unavailable mid-task?
-5. **Q-L6-5 — Reconstruction contract:** what exactly does "every model-visible byte reconstructable" require the sink to store vs reference (payload hashes exist — do payloads themselves persist, and where does evidence-verbatim meet retention)?
-6. **Q-L6-6 — Timing without lying:** monotonic vs wall clocks, clock-skew honesty, and what timing is model-visible (nothing?) vs trace-only.
-7. **Q-L6-7 — Retention/GC vocabulary:** what the governed retention artifact declares; interaction with the ArtifactStore's write-once claim; what deletion even means for hash-chained records.
-8. **Q-L6-8 — Themis hand-off:** how governance consumes the record (export? query seam? files?) without L6 growing a query API that becomes load-bearing security surface.
-9. **Q-L6-9 — Operational proof gate:** proposed — a live L1→L5 task run persisted end-to-end; process killed mid-task in a second run; both records read back cold and verified (complete vs typed-partial).
+### D-L6-9 — Read and control boundary (Q-L6-10; discharges the Q-L6-1 read IOU)
+L6 owns persistence, identity, integrity, and **preservation of classification** — never meaning or control consequences. Typed structural reads only: audit/governance may read the complete verified record with **bytes inseparable from provenance and classification**; L7 receives a `StatusView` that structurally cannot carry contents (lifecycle status, record verdict, identity, `retry_of`, opaque artifact addresses, counts — the ItemRef move); the model has no L6 read path ever — historical evidence re-enters model context only through L2 as a future registered, classified source kind (L2's grill, not L6's). **A read may become a control input only for a decision its owner explicitly declares in a governed workflow definition, and only from the structural vocabulary; deterministic security decisions never consume L6 state.** L6 enforces no semantic read authorization: persistence+identity+integrity are L6's; authorization/eligibility are the consumer boundary's; classification/delivery to the model is L2's. Durability does not imply authority; readability does not imply permission to use. Read-auditing deliberately absent in v1 (theater under the local-operator model).
 
-## 4. Test plan (three-state discipline)
+### D-L6-10 — Record-before-effect; synchronous floors; timing as annotation (Q-L6-11 + timing decision)
+**v1 has no write-behind path: every mandatory floor event is synchronously DurableCommit-ed before the emitting layer proceeds.** The governing invariant: *record-before-effect — no effect that outlives the task or reaches the model may occur before its record is durable* — with the L5 qualification that makes it achievable without universal two-phase commit: workspace-internal effects are recoverable-by-destruction (a pre-audit crash discards the unaudited mutation with the environment; only egress artifacts and model-visible bytes survive a task, and both sit behind durable commits). Concretely: L4 audit commits before the tool result/denial reaches the model loop; the L2 delivery record commits before the payload reaches the model; lifecycle events precede manifest projection (D-L6-6). Any future write-behind is a per-class grill. Timing: UTC wall-clock attached by the sink at append; sequence remains the sole ordering authority; timestamps are annotation (host's claim, skew unproven), trace-only, never model-visible; no monotonic/duration machinery until a real requirement exists.
 
-Fail-closed loaders for the state-root/retention artifacts; manifest-first crash-window tests; sink append/read-back byte-equality; hash-chain verification incl. tamper detection; boundary-strength tests per event class; cold reconstruction of a full task; typed-partial after kill; live proof per Q-L6-9.
+### D-L6-11 — Crash-safe object publication (implementation obligation from Q-L6-9; not optional)
+The final content-addressed address must never hold a durable partial object: `write temp → fsync temp → atomic no-replace publication (link) → directory fsync → remove temp`. An address is only ever ABSENT (retryable) or COMPLETE (verifiable) — the shipped L5 ArtifactStore's direct `O_CREAT|O_EXCL` write has a crash window that permanently poisons an address and falsifies the Q-L6-3 retry/idempotence property; it **inherits the corrected discipline** when it becomes the L6 object store. Fault injection at every boundary of the sequence is a Register-C obligation.
+
+### Deliberate residuals (recorded, never silently promoted into scope)
+
+1. **L8 differently-trusted principals:** L6's structural in-process trust holds until L8 exists; isolation/authentication then belongs at the L8 boundary — L6 does not become an authorization service.
+2. **Themis transfer + external anchor:** future seams with recorded shapes (D-L6-8); require a Themis-side ingestion contract and their own grills.
+3. **Local-substrate honesty:** fsync-strength durability, detect-on-read integrity, no local-operator tamper resistance — all stated, none overclaimed.
+
+## 3. Grill record (2026-09-07) — Q-L6-1..11, all CLOSED
+
+1. **Q-L6-1 — Durability eligibility (CLOSED):** two-sided floors + closed declarable vocabulary; six proposed classes refined (trace/manifest are floors-as-primitives; secrets are not a class; checkpoint state has no owner yet). → D-L6-1.
+2. **Q-L6-2 — DurableCommit + crash semantics (CLOSED):** fsync-commit-then-ack; orphans legal, dangles lies; recovery verifies and appends, never rewrites; one commit discipline across three shapes; refinement — object writes retry, stream-append failure is terminal. → D-L6-2.
+3. **Q-L6-3 — Identity + integrity (CLOSED):** algorithm-prefixed content identity; positional sink-assigned event identity; single-use task identity; location derived from identity; per-entry hashes + one stream summary; manifests certify nothing; no Merkle/blockchain — external anchor recorded as the only legitimate strengthening. → D-L6-3.
+4. **Q-L6-4 — Mutation authority (CLOSED):** three closed typed primitives; no generic write, no second authorization system; recovery-only manifest states; state-plane unreachable from model capabilities; root disjointness checked at task assembly; L8 residual recorded. → D-L6-4.
+5. **Q-L6-5 — Durability constitution (CLOSED):** declaration = {class, provenance} only; constitution in code (no dead config), canonical hash in every manifest; retention never an object property; suspicious fields (allowed_producer, sensitivity_floor, per-class reference rules, deletion semantics) killed with reasons. → D-L6-5.
+6. **Q-L6-6 — Authority of the record (CLOSED):** stream authoritative, manifest projection, event-before-projection ordering; recovery = projection + structural-fact authority, zero origination; verdicts orthogonal to lifecycle; unexplainable manifest state = corruption evidence; no CORRUPT lifecycle state, no COMPLETED_UNPROJECTED. → D-L6-6.
+7. **Q-L6-7 — Retention/GC (CLOSED):** reachability not age; no refcount authority; uncertainty retains; deletion loses races; quiescent v1; maintenance stream seam; retention-forcing corruption accepted as the correct side of the asymmetry. → D-L6-7.
+8. **Q-L6-8 — Themis boundary (CLOSED):** durable(local)/transferred/accepted; two authorities for two questions; anchor + transport deferred with recorded shapes; Themis never on the critical path by default. → D-L6-8.
+9. **Q-L6-9 — Proof obligations (CLOSED):** three registers (§4); surfaced the object-publication defect → D-L6-11; GC-deletes-reachable proven by structural absence in v1.
+10. **Q-L6-10 — Read/control boundary (CLOSED; discharges the cached Q-L6-1 read IOU):** full-record audit reads with inseparable classification; L7 StatusView; model never; declared-owner structural control inputs only; security decisions never consume L6. → D-L6-9.
+11. **Q-L6-11 — Persistence-boundary strength (CLOSED; the orphaned draft question, recovered):** synchronous floors, record-before-effect with the L5-containment qualification, write-behind requires its own grill; + timing mini-decision (annotation, not ordering). → D-L6-10.
+
+**Locked layer principle:** *L6 owns durable state — persistence, identity, integrity, classification preservation — and never the meaning or control consequences of that state. The stream is the record; everything else is projection or waste; nothing durable lies.*
+
+## 4. Test plan — three proof registers (Q-L6-9)
+
+**Register A — structural (mechanical, no failure scenario):** API-surface closure (three primitives only; no exported generic Put/Update/Delete; internals unexported) · **no-deletion-path structural absence proof** (source scan) · no model-facing L6 verb (decoded registry scan) · root pairwise-disjointness check, per pair, both directions · closed vocabularies proven by exhaustive edge product (lifecycle machine N×N; object/event classes; unknown refuses) · identity structure (single-use task exclusive-create; sink-owned seq by API signature; algorithm-prefix refusal; **relocatability**: move the state root, everything verifies) · constitution hash present in every manifest · `StatusView` structurally content-free.
+
+**Register B — behavioral (adversarial, branch-pinned):** objects — wrong-content-at-address, idempotent duplicate, occupied-by-different-bytes, partial-write recovery per D-L6-11 · events — dangling ref refused at append, torn append detected+preserved, failed append → stream terminal (and stays terminal across restart), no caller seq · manifest — illegal transition, terminal mutation, projection-without-event ⇒ CORRUPT verdict, caller-requested FAILED_PARTIAL refused · recovery — torn tail typed partial; missing terminal ⇒ recovery event then FAILED_PARTIAL; terminal+stale manifest ⇒ projection + reconciliation event; corrupt object/entry ⇒ named verdict, lifecycle untouched; **recovery idempotence** · reachability (verifier, no GC) — reachable-set correctness with shared objects across tasks, corrupt/torn root pins, **scan completeness verdict** (COMPLETE/INCOMPLETE, evaluation refuses on anything but COMPLETE).
+
+**Register C — crash/operational:** **exhaustive deterministic fault-point sweep** — injected failure at every commit-path boundary (pre-object-fsync, post-object/pre-event, mid-append, post-event/pre-manifest, mid-manifest-replace, post-manifest, and every D-L6-11 publication step), then recovery + cold verification; universal assertions: *no crash point yields an acknowledged durable record containing a dangling reference*, and *no crash point lets recovery originate a semantic outcome* · **real-kill live proof** — run 1: full live L1→L5 task with L6 wired, then **byte-exact cold reconstruction** from durable state alone (streams re-verified, hashes recomputed, matches the live record); run 2: SIGKILL mid-task (harness as child process), cold recovery yields typed FAILED_PARTIAL with recovery event, nothing dangling, nothing silently repaired.
+
+**Acceptance gate (Gate for close):** architecture-conformant (independent review vs Q-L6-1..11 + amendments; deviations remediated with mechanisms or owner-recorded) + test-evidenced (Registers A/B branch-pinned, coverage-verified; Class-3 security reviews remediated) + operationally proven (Register C green) — all three, independently challenged.

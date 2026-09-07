@@ -199,7 +199,8 @@ func TestRealKillNoContinuation(t *testing.T) {
 	 "registry_path":`+jstr(mustAbs(t, filepath.Join(repoRoot, "policies/tools/registry-v3.json")))+`,
 	 "grant_path":`+jstr(filepath.Join(envAbs, "grant.json"))+`,
 	 "exec_ceiling_path":`+jstr(filepath.Join(envAbs, "eceiling.json"))+`,
-	 "spec_path":`+jstr(filepath.Join(envAbs, "spec.json"))+`}`)
+	 "spec_path":`+jstr(filepath.Join(envAbs, "spec.json"))+`,
+	 "context_contract_path":`+jstr(mustAbs(t, filepath.Join(repoRoot, "policies/context/task-contract-v1.json")))+`}`)
 
 	cmd := exec.Command(os.Args[0], "-test.run", "TestRealKillNoContinuation")
 	cmd.Env = append(os.Environ(), "L7_CHILD_BASE="+base)

@@ -33,6 +33,10 @@ type Envelope struct {
 	GrantPath           string `json:"grant_path"`
 	ExecCeilingPath     string `json:"exec_ceiling_path"`
 	SpecPath            string `json:"spec_path"`
+	// ContextContractPath: the L2 workflow context contract the loop
+	// composes against (architecture review 2a, owner decision
+	// 2026-09-07: the payload travels through the full L2 pipeline).
+	ContextContractPath string `json:"context_contract_path"`
 
 	Hash string `json:"-"`
 }
@@ -68,6 +72,7 @@ func LoadEnvelope(path string) (*Envelope, error) {
 		"grant_path":            e.GrantPath,
 		"exec_ceiling_path":     e.ExecCeilingPath,
 		"spec_path":             e.SpecPath,
+		"context_contract_path": e.ContextContractPath,
 	}
 	for name, v := range refs {
 		if v == "" {

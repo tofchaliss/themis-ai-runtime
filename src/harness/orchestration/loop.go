@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"time"
 
+	l2 "github.com/tofchaliss/themis/context"
 	"github.com/tofchaliss/themis/execution"
 	"github.com/tofchaliss/themis/runtime/model"
 	"github.com/tofchaliss/themis/state"
@@ -44,6 +45,7 @@ type walk struct {
 	l5          *execution.Env
 	execCeiling *execution.WorkspaceExecutionCeiling
 	spec        *execution.ProvisionSpec
+	contract    *l2.Contract
 
 	phase     string
 	edgeFires map[string]int64 // "phase/event" -> fires
@@ -310,21 +312,46 @@ func (w *walk) isControl(name string) bool {
 	return false
 }
 
-// composePhase builds the phase's fresh conversation and records the
-// composed payload durably before delivery.
+// taskPayloadSlot / taskPayloadKind: the loop's fixed L2 plan — one
+// inline assignment carrying the envelope's untrusted half. The
+// contract must declare this slot; a contract that doesn't refuses at
+// Gather (Plan ⊆ Contract, fail closed).
+const (
+	taskPayloadSlot = "task-payload"
+	taskPayloadKind = "task-brief"
+)
+
+// composePhase builds the phase's fresh conversation through the full
+// L2 pipeline and records the composed payload durably before
+// delivery (architecture review 2a, owner decision 2026-09-07:
+// implement, not narrow). The payload never reaches the conversation
+// raw: it travels Gather→Compose — Plan ⊆ Contract, content-derived
+// fencing, provenance labels, typed absence.
 func (w *walk) composePhase(p *Phase) ([]model.Message, error) {
-	payloadObj, err := w.task.StoreObject(state.ObjEvidencePayload, []byte(w.env.Payload))
+	src := l2.Source{
+		Name: taskPayloadSlot, Kind: l2.KindInline,
+		Authority: l2.AuthorityExternalUntrusted, Sensitivity: l2.SensitivityPublic,
+		Author: "task-submitter",
+		Items:  []l2.ContextItem{{Kind: taskPayloadKind, Evidence: []byte(w.env.Payload)}},
+	}
+	g, err := l2.Gather(w.contract, []l2.Assignment{{Slot: taskPayloadSlot, Source: src}})
 	if err != nil {
 		return nil, err
 	}
-	// Recorded truthfully (security review MED-6): v1 composes
-	// {rendered EIS + raw payload} in-loop — the L2 slot/fence
-	// machinery is NOT invoked; the writer says so, and wiring the
-	// full L2 composer into the loop is a recorded follow-through,
-	// not a quiet equivalence claim.
+	composed, err := l2.Compose(w.o.eis, w.o.policy, g)
+	if err != nil {
+		return nil, err
+	}
+	// The composed user message IS what the model sees — those exact
+	// bytes are the stored object (D-L7-11: byte-exact reconstruction).
+	payloadObj, err := w.task.StoreObject(state.ObjEvidencePayload, []byte(composed.Messages[1].Content))
+	if err != nil {
+		return nil, err
+	}
 	body, _ := json.Marshal(map[string]any{
-		"phase": p.Name, "eis_hash": w.o.eis.Hash, "payload": payloadObj,
-		"framing": "eis+raw-payload-v1",
+		"phase": p.Name, "eis_hash": composed.EISHash, "contract_hash": composed.ContractHash,
+		"render_hash": composed.RenderHash, "l2_payload_hash": composed.PayloadHash,
+		"payload": payloadObj, "framing": "l2-composed-v1",
 	})
 	if err := faultAt("loop.pre-compose-commit"); err != nil {
 		return nil, err
@@ -334,10 +361,7 @@ func (w *walk) composePhase(p *Phase) ([]model.Message, error) {
 		return nil, err
 	}
 	w.lastSeq = ev.Seq
-	return []model.Message{
-		{Role: model.RoleSystem, Content: w.o.eisTx},
-		{Role: model.RoleUser, Content: w.env.Payload},
-	}, nil
+	return composed.Messages, nil
 }
 
 // toolDefs exposes exactly the phase's granted capability subset to

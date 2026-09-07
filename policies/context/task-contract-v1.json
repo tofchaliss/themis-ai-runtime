@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "workflow": "analyze-verify",
+  "slots": [
+    {
+      "name": "task-payload",
+      "kind": "task-brief",
+      "requirement": "required",
+      "classes": ["external-untrusted"]
+    }
+  ],
+  "sensitivity_ceiling": "public"
+}

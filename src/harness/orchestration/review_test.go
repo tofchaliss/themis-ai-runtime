@@ -4,6 +4,7 @@ package orchestration
 // each pins a remediated finding to its branch.
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -339,6 +340,87 @@ func TestStepInvariantBranches(t *testing.T) {
 	w.wf.Phases[0].Edges = w.wf.Phases[0].Edges[:1]
 	if _, err := w.step(EvTurnNoAction); !errors.Is(err, ErrInvariant) || !strings.Contains(err.Error(), "static totality violated") {
 		t.Fatalf("declared event without edge must be invariant: %v", err)
+	}
+}
+
+// Architecture HIGH 2a (owner decision 2026-09-07: implement): phase
+// composition runs the full L2 pipeline. The delivered user message
+// is the composed, fenced rendering — the untrusted payload appears
+// inside a content-derived fence with provenance labels, never raw;
+// the delivery event carries the L2 hashes; the contract hash is in
+// the manifest attribution.
+func TestComposedDeliveryThroughL2(t *testing.T) {
+	f := setup(t, happyScript(), "")
+	res, err := f.o.SubmitTask(f.envelope(t, "t-l2"))
+	if err != nil || res.Status != state.StatusCompleted {
+		t.Fatalf("happy walk: %v %+v", err, res)
+	}
+	man, err := f.o.root.ReadManifest("t-l2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if man.GovernedHashes["context_contract"] == "" {
+		t.Fatal("context contract hash must be in the governed attribution")
+	}
+	evs, _ := f.o.root.ReadEvents("t-l2")
+	seen := false
+	for _, ev := range evs {
+		if ev.Class != state.EvL2Delivery {
+			continue
+		}
+		seen = true
+		var b struct {
+			Framing       string `json:"framing"`
+			ContractHash  string `json:"contract_hash"`
+			L2PayloadHash string `json:"l2_payload_hash"`
+		}
+		if err := json.Unmarshal(ev.Body, &b); err != nil {
+			t.Fatal(err)
+		}
+		if b.Framing != "l2-composed-v1" || b.ContractHash == "" || b.L2PayloadHash == "" {
+			t.Fatalf("delivery must record the L2 composition identity: %+v", b)
+		}
+		composed, err := f.o.root.Resolve(ev, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		text := string(composed)
+		// The stored bytes are the composed view: slot marker, fence
+		// frames, provenance labels — and the payload inside them.
+		for _, want := range []string{
+			"[slot: task-payload | availability: delivered]",
+			"--ctx-", "authority: external-untrusted", "source: task-payload",
+			"Read parser.go, then call declare_done.",
+		} {
+			if !strings.Contains(text, want) {
+				t.Fatalf("composed delivery missing %q:\n%s", want, text)
+			}
+		}
+		// Never raw: the payload must not open the message unfenced —
+		// the fence frame precedes it.
+		if strings.Index(text, "--ctx-") > strings.Index(text, "Read parser.go") {
+			t.Fatal("payload appears before the first fence — delivered raw")
+		}
+	}
+	if !seen {
+		t.Fatal("no l2-delivery event recorded")
+	}
+}
+
+// A contract minted for another workflow refuses at assembly.
+func TestContractWorkflowBindingRefused(t *testing.T) {
+	f := setup(t, happyScript(), "")
+	other := strings.Replace(
+		readFile(t, mustAbs(t, filepath.Join(repoRoot, "policies/context/task-contract-v1.json"))),
+		`"workflow": "analyze-verify"`, `"workflow": "other-lattice"`, 1)
+	otherPath := writeJSON(t, f.envDir, "other-contract.json", other)
+	env := readFile(t, f.envelope(t, "t-cbind"))
+	env = strings.Replace(env,
+		jstr(mustAbs(t, filepath.Join(repoRoot, "policies/context/task-contract-v1.json"))),
+		jstr(otherPath), 1)
+	p := writeJSON(t, f.envDir, "envelope-t-cbind-2.json", env)
+	if _, err := f.o.SubmitTask(p); !errors.Is(err, ErrAssembly) || !strings.Contains(err.Error(), "other-lattice") {
+		t.Fatalf("cross-workflow contract must refuse at assembly: %v", err)
 	}
 }
 

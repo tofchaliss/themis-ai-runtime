@@ -185,7 +185,8 @@ func (f *fixture) envelopeWith(t *testing.T, taskID, modelName, payload string) 
 	 "workflow_path":`+jstr(abs("workflow.json"))+`,"workflow_ceiling_path":`+jstr(abs("wceiling.json"))+`,
 	 "registry_path":`+jstr(mustAbs(t, filepath.Join(repoRoot, "policies/tools/registry-v3.json")))+`,
 	 "grant_path":`+jstr(abs(taskID+"-grant.json"))+`,"exec_ceiling_path":`+jstr(abs("eceiling.json"))+`,
-	 "spec_path":`+jstr(abs(taskID+"-spec.json"))+`}`)
+	 "spec_path":`+jstr(abs(taskID+"-spec.json"))+`,
+	 "context_contract_path":`+jstr(mustAbs(t, filepath.Join(repoRoot, "policies/context/task-contract-v1.json")))+`}`)
 }
 
 func mustAbs(t *testing.T, p string) string {
@@ -514,7 +515,8 @@ func TestEnvelopeNoDefaulting(t *testing.T) {
 	full := map[string]any{"version": 1, "task_id": "t", "model": "m", "payload": "p",
 		"turn_timeout_sec": 60,
 		"workflow_path": "/w", "workflow_ceiling_path": "/c", "registry_path": "/r",
-		"grant_path": "/g", "exec_ceiling_path": "/e", "spec_path": "/s"}
+		"grant_path": "/g", "exec_ceiling_path": "/e", "spec_path": "/s",
+		"context_contract_path": "/ctx"}
 	for missing := range full {
 		if missing == "version" || missing == "task_id" {
 			continue

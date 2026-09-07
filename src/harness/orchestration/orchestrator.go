@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 
+	l2 "github.com/tofchaliss/themis/context"
 	"github.com/tofchaliss/themis/execution"
 	"github.com/tofchaliss/themis/instructions"
 	"github.com/tofchaliss/themis/runtime/model"
@@ -52,8 +53,8 @@ type Orchestrator struct {
 	root  *state.Root
 	store *execution.ArtifactStore
 	prov  *execution.LocalProvider
-	eis   *instructions.EffectiveSet
-	eisTx string // rendered system message
+	eis    *instructions.EffectiveSet
+	policy *instructions.Policy
 }
 
 // Open prepares the orchestrator and drives every discovered
@@ -88,11 +89,13 @@ func Open(cfg Config) (*Orchestrator, *StartupReport, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	rendered, _, err := eis.Render(policy)
-	if err != nil {
+	// Render once at Open: an unrenderable L1 configuration fails the
+	// orchestrator here, not mid-walk (delivery itself re-renders
+	// through the L2 composer's SystemMessage seam per composition).
+	if _, _, err := eis.Render(policy); err != nil {
 		return nil, nil, err
 	}
-	o := &Orchestrator{cfg: cfg, root: root, store: store, prov: prov, eis: eis, eisTx: rendered}
+	o := &Orchestrator{cfg: cfg, root: root, store: store, prov: prov, eis: eis, policy: policy}
 
 	// Startup sweep: close the past before opening the future.
 	rep := &StartupReport{}
@@ -191,6 +194,15 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	if err != nil {
 		return res, err
 	}
+	contract, err := l2.LoadContract(env.ContextContractPath)
+	if err != nil {
+		return res, err
+	}
+	// Cross-artifact binding: the context contract is minted for one
+	// workflow; a contract for another lattice is refused, not adapted.
+	if contract.Workflow != wf.Name {
+		return res, fmt.Errorf("%w: context contract is for workflow %q, envelope workflow is %q", ErrAssembly, contract.Workflow, wf.Name)
+	}
 
 	// ⊆-checkpoint part 1 (pre-provision): control verbs exist in the
 	// constitution both ways; workflow capabilities ⊆ registry; grant
@@ -264,7 +276,7 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 		GovernedHashes: map[string]string{
 			"envelope": env.Hash, "workflow": wf.Hash, "workflow_ceiling": wfCeiling.Hash,
 			"registry": reg.Hash, "grant_envelope": hashBytes(rawGrant), "grant_effective": grant.Hash,
-			"exec_ceiling": execCeiling.Hash, "spec": spec.Hash,
+			"exec_ceiling": execCeiling.Hash, "spec": spec.Hash, "context_contract": contract.Hash,
 			"l1_eis": o.eis.Hash, "l1_policy": o.eis.PolicyHash,
 			"l6_constitution": state.ConstitutionHash(), "l7_constitution": ConstitutionHash(),
 		},
@@ -278,6 +290,7 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	w := &walk{
 		o: o, env: env, wf: wf, reg: reg, grant: grant, table: table,
 		task: task, l5: envn, execCeiling: execCeiling, spec: spec,
+		contract: contract,
 	}
 	return w.run()
 }

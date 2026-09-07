@@ -74,6 +74,13 @@ type ToolDef struct {
 	// mutating:true visibility or the tool is not-available — a
 	// mutating capability can never be granted invisibly.
 	Mutating bool `json:"mutating,omitempty"`
+	// Control marks workflow-control capabilities (registry-v3 /
+	// D-L7-6): a REVIEW classification, never an authorization
+	// branch — control tools pass the identical gate. Structural
+	// constraints: no parameters, no target, not mutating (distinct
+	// signals are distinct verbs; arguments would carry a hidden
+	// signal sub-vocabulary).
+	Control bool `json:"control,omitempty"`
 	// Trust is the result trust class fixed at registration
 	// (Q-L4-3). "derived" is structurally rejected in v1: no tool may
 	// self-declare computational provenance it does not carry.
@@ -172,6 +179,11 @@ func LoadRegistry(path string) (*Registry, error) {
 		}
 		if t.Target == TargetNone && targets != 0 {
 			return nil, fmt.Errorf("%w: tool %q declares a target param but no target class", ErrRegistryInvalid, t.Name)
+		}
+		if t.Control {
+			if len(t.Params) != 0 || t.Target != TargetNone || t.Mutating {
+				return nil, fmt.Errorf("%w: control tool %q must have zero params, no target, and no mutation — distinct signals are distinct verbs", ErrRegistryInvalid, t.Name)
+			}
 		}
 	}
 	sum := sha256.Sum256(raw)

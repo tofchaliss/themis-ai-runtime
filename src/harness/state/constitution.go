@@ -68,12 +68,22 @@ const (
 	// BindArtifact primitive so the manifest's artifact list stays a
 	// pure projection of the stream.
 	EvArtifact = "artifact-bound"
+	// L7 constitution amendments (deliberate, hash-changing — the
+	// layer-07 fold): the cause-carrying workflow transition record
+	// {from, to, edge, causing event seq}, the model-turn record
+	// (structural facts + Ref to the exact output object — durable
+	// history, never authority), and the orchestration-invariant
+	// record for the constitution-owned fail-closed path.
+	EvWorkflowTransition = "workflow-transition"
+	EvModelTurn          = "model-turn"
+	EvL7Invariant        = "l7-invariant"
 )
 
 var eventClasses = map[string]bool{
 	EvLifecycle: true, EvRecovery: true, EvVerdict: true, EvContamination: true,
 	EvL1Conflict: true, EvL2Delivery: true, EvL3Selection: true,
 	EvL4Audit: true, EvL5Transition: true, EvL5Op: true, EvArtifact: true,
+	EvWorkflowTransition: true, EvModelTurn: true, EvL7Invariant: true,
 }
 
 // primitiveOnlyEvents may be appended only by L6's own primitives

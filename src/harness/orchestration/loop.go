@@ -1,0 +1,407 @@
+package orchestration
+
+// The walk: deterministic mechanics around an advisory core
+// (D-L7-2/3/5). δ consumes only declared typed events; model content
+// never reaches control; every effect passes L4; every step obeys
+// record-before-next-turn (D-L7-11): compose → commit → deliver;
+// model output → commit → next turn; audit → commit → result
+// delivery.
+
+import (
+	stdctx "context"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/tofchaliss/themis/execution"
+	"github.com/tofchaliss/themis/runtime/model"
+	"github.com/tofchaliss/themis/state"
+	"github.com/tofchaliss/themis/tools"
+)
+
+// fault is the deterministic fault-injection seam for Register C.
+var fault func(point string) error
+
+func faultAt(point string) error {
+	if fault != nil {
+		return fault(point)
+	}
+	return nil
+}
+
+type walk struct {
+	o           *Orchestrator
+	env         *Envelope
+	wf          *WorkflowDef
+	reg         *tools.Registry
+	grant       *tools.Grant
+	table       map[string]tools.Executor
+	task        *state.TaskRecord
+	l5          *execution.Env
+	execCeiling *execution.WorkspaceExecutionCeiling
+	spec        *execution.ProvisionSpec
+
+	phase     string
+	edgeFires map[string]int64 // "phase/event" -> fires
+	callState tools.CallState
+	turnSeq   int64
+}
+
+// run drives the walk to a typed terminal. Every exit path seals and
+// tears down the environment and projects a terminal lifecycle state.
+func (w *walk) run() (TaskResult, error) {
+	res := TaskResult{TaskID: w.env.TaskID}
+	w.phase = w.wf.Initial
+	w.edgeFires = map[string]int64{}
+	w.callState = tools.CallState{Calls: map[string]int{}}
+
+	if err := w.task.Transition(state.StatusRunning, "assembled"); err != nil {
+		return w.invariant(res, err)
+	}
+
+	for {
+		outcome, err := w.runPhase()
+		if err != nil {
+			return w.invariant(res, err)
+		}
+		switch outcome {
+		case TargetComplete:
+			return w.complete(res)
+		case TargetFail:
+			return w.fail(res, "workflow-declared failure")
+		default:
+			// transition to another phase: continue the walk.
+			w.phase = outcome
+		}
+	}
+}
+
+// runPhase executes one phase visit: fresh composition, then paced
+// model turns until an edge moves the walk. Returns the next phase
+// name or a terminal target.
+func (w *walk) runPhase() (string, error) {
+	p := w.wf.phase(w.phase)
+	if p == nil {
+		return "", fmt.Errorf("%w: cursor at unknown phase %q", ErrInvariant, w.phase)
+	}
+	// One L2 composition per phase entry (D-L7-11): the composed
+	// payload is durably recorded BEFORE model delivery.
+	conversation, err := w.composePhase(p)
+	if err != nil {
+		return "", err
+	}
+
+	var turns int64
+	for {
+		if turns >= p.MaxModelTurns {
+			return w.step(EvTurnsExhausted)
+		}
+		if err := faultAt("loop.pre-model-turn"); err != nil {
+			return "", err
+		}
+		ctx, cancel := stdctx.WithTimeout(stdctx.Background(), 180*time.Second)
+		resp, mErr := w.o.cfg.Model.Execute(ctx, model.ExecutionRequest{
+			Model: w.env.Model, Messages: conversation,
+			Tools: w.toolDefs(p), Options: model.DefaultOptions()})
+		cancel()
+		turns++
+
+		if mErr != nil {
+			// Structural turn fact: provider error (harness-observed).
+			if err := w.recordTurn("provider-error", nil, ""); err != nil {
+				return "", err
+			}
+			return w.step(EvTurnProviderError)
+		}
+		// Model output → durable object + model-turn event BEFORE the
+		// next turn (D-L7-11): the model's own prior output is
+		// model-visible later and must be reconstructable.
+		outObj, err := w.task.StoreObject(state.ObjEvidencePayload, turnBytes(resp))
+		if err != nil {
+			return "", err
+		}
+		fact := "tool-calls"
+		if resp.Termination != model.TerminationToolCalls || len(resp.ToolCalls) == 0 {
+			fact = "no-action"
+		}
+		if err := w.recordTurn(fact, &outObj, resp.Content); err != nil {
+			return "", err
+		}
+
+		if fact == "no-action" {
+			next, err := w.step(EvTurnNoAction)
+			if err != nil || next != TargetStay {
+				return next, err
+			}
+			continue // explicit governed stay: pace another turn
+		}
+
+		conversation = append(conversation, model.Message{Role: model.RoleAssistant, ToolCalls: resp.ToolCalls, Content: resp.Content})
+		for _, call := range resp.ToolCalls {
+			msg, ev, audit := tools.Handle(w.reg, w.grant, w.table, call, w.callState)
+			// Record-before-effect: evidence object + audit event
+			// committed before the result re-enters the loop.
+			var refs []state.Ref
+			if ev != nil {
+				id, oerr := w.task.StoreObject(state.ObjEvidencePayload, ev.Evidence)
+				if oerr != nil {
+					return "", oerr
+				}
+				refs = append(refs, state.Ref{ID: id, Class: state.ObjEvidencePayload})
+			}
+			ab, _ := json.Marshal(audit)
+			if _, aerr := w.task.AppendEvent(state.EvL4Audit, "l4", ab, refs...); aerr != nil {
+				return "", aerr
+			}
+			// CallState increment between calls: the recorded L4
+			// obligation, monotonic by construction.
+			w.callState.Calls[call.Name]++
+			w.callState.Total++
+
+			// Control signal? (a typed GATE OUTCOME, not model
+			// content): only an authorized control verb produces one.
+			if audit.Decision == "authorized" && w.isControl(call.Name) {
+				next, err := w.step(controlVerbs[call.Name])
+				if err != nil || (next != TargetStay && next != "") {
+					return next, err
+				}
+				continue
+			}
+			if audit.Decision == "error" {
+				// Declared execution failure? δ sees it only if the
+				// definition declared it; otherwise it is the model's
+				// problem (typed result in conversation) within budgets.
+				if w.declared(EvToolError) {
+					next, err := w.step(EvToolError)
+					if err != nil || next != TargetStay {
+						return next, err
+					}
+				}
+			}
+			conversation = append(conversation, msg)
+		}
+	}
+}
+
+// step presents one declared typed event to δ and applies exactly
+// one governed edge (totality is static; anything else is an
+// invariant violation). It records the cause-carrying
+// workflow-transition event BEFORE the walk moves.
+func (w *walk) step(event string) (string, error) {
+	if !w.declared(event) {
+		return "", fmt.Errorf("%w: event %q reached δ without declaration", ErrInvariant, event)
+	}
+	p := w.wf.phase(w.phase)
+	var edge *Edge
+	for i := range p.Edges {
+		if p.Edges[i].On == event {
+			edge = &p.Edges[i]
+			break
+		}
+	}
+	if edge == nil {
+		return "", fmt.Errorf("%w: declared event %q has no edge in phase %q — static totality violated", ErrInvariant, event, w.phase)
+	}
+	target := edge.To
+	key := w.phase + "/" + event
+	if edge.Counter > 0 {
+		if w.edgeFires[key] >= edge.Counter {
+			target = edge.ExhaustedTo
+		} else {
+			w.edgeFires[key]++
+		}
+	}
+	if target == TargetStay {
+		return TargetStay, nil
+	}
+	// Record-before-effect: the transition event commits before the
+	// cursor moves (D-L6-10; cause-carrying per Q-L7-11).
+	if err := faultAt("loop.pre-transition-commit"); err != nil {
+		return "", err
+	}
+	body, _ := json.Marshal(map[string]any{
+		"from": w.phase, "to": target, "edge": event, "cause_seq": w.lastEventSeq(),
+	})
+	if _, err := w.task.AppendEvent(state.EvWorkflowTransition, "l7", body); err != nil {
+		return "", err
+	}
+	if err := faultAt("loop.post-transition-commit"); err != nil {
+		return "", err
+	}
+	return target, nil
+}
+
+func (w *walk) declared(event string) bool {
+	for _, e := range w.wf.DeclaredEvents {
+		if e == event {
+			return true
+		}
+	}
+	return false
+}
+
+func (w *walk) isControl(name string) bool {
+	for _, t := range w.reg.Tools {
+		if t.Name == name {
+			return t.Control
+		}
+	}
+	return false
+}
+
+// composePhase builds the phase's fresh conversation and records the
+// composed payload durably before delivery.
+func (w *walk) composePhase(p *Phase) ([]model.Message, error) {
+	payloadObj, err := w.task.StoreObject(state.ObjEvidencePayload, []byte(w.env.Payload))
+	if err != nil {
+		return nil, err
+	}
+	body, _ := json.Marshal(map[string]any{
+		"phase": p.Name, "eis_hash": w.o.eis.Hash, "payload": payloadObj,
+	})
+	if err := faultAt("loop.pre-compose-commit"); err != nil {
+		return nil, err
+	}
+	if _, err := w.task.AppendEvent(state.EvL2Delivery, "l2", body, state.Ref{ID: payloadObj, Class: state.ObjEvidencePayload}); err != nil {
+		return nil, err
+	}
+	return []model.Message{
+		{Role: model.RoleSystem, Content: w.o.eisTx},
+		{Role: model.RoleUser, Content: w.env.Payload},
+	}, nil
+}
+
+// toolDefs exposes exactly the phase's granted capability subset to
+// the model (declaration only — L4 re-checks everything anyway).
+func (w *walk) toolDefs(p *Phase) []model.ToolDef {
+	var defs []model.ToolDef
+	for _, cap := range p.Capabilities {
+		for _, t := range w.reg.Tools {
+			if t.Name != cap {
+				continue
+			}
+			props := map[string]any{}
+			var required []string
+			for _, prm := range t.Params {
+				props[prm.Name] = map[string]string{"type": string(prm.Type), "description": prm.Description}
+				if prm.Required {
+					required = append(required, prm.Name)
+				}
+			}
+			schema, _ := json.Marshal(map[string]any{"type": "object", "properties": props, "required": required})
+			defs = append(defs, model.ToolDef{Name: t.Name, Description: t.Description, Parameters: schema})
+		}
+	}
+	return defs
+}
+
+func (w *walk) recordTurn(fact string, outObj *string, content string) error {
+	w.turnSeq++
+	body, _ := json.Marshal(map[string]any{"fact": fact, "turn": w.turnSeq})
+	var refs []state.Ref
+	if outObj != nil {
+		refs = append(refs, state.Ref{ID: *outObj, Class: state.ObjEvidencePayload})
+	}
+	_, err := w.task.AppendEvent(state.EvModelTurn, "l7", body, refs...)
+	return err
+}
+
+func (w *walk) lastEventSeq() int64 {
+	view, err := w.o.root.ReadStatus(w.env.TaskID)
+	if err != nil {
+		return -1
+	}
+	_ = view
+	// The causing event is the most recently committed one; the
+	// replayer re-derives and checks this independently.
+	evs, err := w.o.root.ReadEvents(w.env.TaskID)
+	if err != nil || len(evs) == 0 {
+		return -1
+	}
+	return evs[len(evs)-1].Seq
+}
+
+func turnBytes(resp *model.ExecutionResponse) []byte {
+	b, _ := json.Marshal(map[string]any{
+		"content": resp.Content, "termination": resp.Termination, "tool_calls": resp.ToolCalls,
+	})
+	return b
+}
+
+// complete: @complete → seal(task-complete) → egress → bind → teardown
+// → COMPLETED (the closed termination mapping).
+func (w *walk) complete(res TaskResult) (TaskResult, error) {
+	if err := w.l5.Seal(execution.SealTaskComplete); err != nil {
+		return w.invariant(res, err)
+	}
+	addr, err := w.l5.Egress(w.execCeiling, w.spec, w.o.store)
+	if err != nil {
+		w.l5.Teardown()
+		return w.failClosed(res, "egress: "+err.Error())
+	}
+	artifactBytes, err := w.o.store.Get(addr)
+	if err != nil {
+		w.l5.Teardown()
+		return w.failClosed(res, "artifact readback: "+err.Error())
+	}
+	artObj, err := w.task.StoreObject(state.ObjEgressArtifact, artifactBytes)
+	if err != nil {
+		w.l5.Teardown()
+		return w.failClosed(res, err.Error())
+	}
+	if err := w.task.BindArtifact(artObj); err != nil {
+		w.l5.Teardown()
+		return w.failClosed(res, err.Error())
+	}
+	if st := w.l5.Teardown(); st != execution.StateDestroyed {
+		// Teardown anomaly is host-state news, not record news: the
+		// task still completes; the anomaly is in the L5 trace.
+		_ = st
+	}
+	if err := w.task.Transition(state.StatusCompleted, "workflow @complete"); err != nil {
+		return w.invariant(res, err)
+	}
+	res.Status, res.Artifact = state.StatusCompleted, artObj
+	if v, err := w.o.root.ReadStatus(w.env.TaskID); err == nil {
+		res.Verdict = v.Verdict
+	}
+	return res, nil
+}
+
+// fail: @fail (workflow-chosen) → seal(caller-abort) → teardown → FAILED.
+func (w *walk) fail(res TaskResult, reason string) (TaskResult, error) {
+	_ = w.l5.Seal(execution.SealCallerAbort)
+	w.l5.Teardown()
+	if err := w.task.Transition(state.StatusFailed, reason); err != nil {
+		return w.invariant(res, err)
+	}
+	res.Status = state.StatusFailed
+	if v, err := w.o.root.ReadStatus(w.env.TaskID); err == nil {
+		res.Verdict = v.Verdict
+	}
+	return res, nil
+}
+
+// failClosed: a floor fired (budget, record, egress failure) —
+// constitution path, typed, never workflow-mappable.
+func (w *walk) failClosed(res TaskResult, reason string) (TaskResult, error) {
+	if err := w.task.Transition(state.StatusFailed, "floor: "+reason); err != nil {
+		res.Status = state.StatusFailedPartial
+		return res, nil
+	}
+	res.Status = state.StatusFailed
+	return res, nil
+}
+
+// invariant: the fixed constitution-owned path (Q-L7-7): typed
+// invariant event → fatal-breach seal → unconditional teardown →
+// FAILED. Never reroutable by any workflow.
+func (w *walk) invariant(res TaskResult, cause error) (TaskResult, error) {
+	body, _ := json.Marshal(map[string]string{"cause": cause.Error()})
+	_, _ = w.task.AppendEvent(state.EvL7Invariant, "l7", body)
+	_ = w.l5.Seal(execution.SealFatalBreach)
+	w.l5.Teardown()
+	_ = w.task.Transition(state.StatusFailed, "invariant: "+cause.Error())
+	res.Status = state.StatusFailed
+	return res, fmt.Errorf("%w: %v", ErrInvariant, cause)
+}

@@ -1,0 +1,139 @@
+{
+  "version": 3,
+  "tools": [
+    {
+      "name": "read_file",
+      "description": "Read one file from the task workspace.",
+      "target": "workspace-path",
+      "timeout_sec": 10,
+      "trust": "external-untrusted",
+      "params": [
+        {
+          "name": "path",
+          "type": "string",
+          "required": true,
+          "description": "workspace-relative path",
+          "target": true
+        }
+      ]
+    },
+    {
+      "name": "list_directory",
+      "description": "List entries of one workspace directory.",
+      "target": "workspace-path",
+      "timeout_sec": 10,
+      "trust": "external-untrusted",
+      "params": [
+        {
+          "name": "path",
+          "type": "string",
+          "required": true,
+          "description": "workspace-relative directory",
+          "target": true
+        }
+      ]
+    },
+    {
+      "name": "search_code",
+      "description": "Search workspace files for a literal string.",
+      "target": "workspace-path",
+      "timeout_sec": 30,
+      "trust": "external-untrusted",
+      "params": [
+        {
+          "name": "path",
+          "type": "string",
+          "required": true,
+          "description": "workspace-relative root to search",
+          "target": true
+        },
+        {
+          "name": "query",
+          "type": "string",
+          "required": true,
+          "description": "literal text to find"
+        }
+      ]
+    },
+    {
+      "name": "get_finding",
+      "description": "Fetch a Themis finding by id.",
+      "target": "themis-id",
+      "timeout_sec": 15,
+      "trust": "governed-record",
+      "params": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "description": "finding id",
+          "target": true
+        }
+      ]
+    },
+    {
+      "name": "get_product",
+      "description": "Fetch a Themis product record by id.",
+      "target": "themis-id",
+      "timeout_sec": 15,
+      "trust": "governed-record",
+      "params": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "description": "product id",
+          "target": true
+        }
+      ]
+    },
+    {
+      "name": "write_file",
+      "description": "Create or overwrite one regular file in the task workspace.",
+      "target": "workspace-path",
+      "timeout_sec": 10,
+      "trust": "external-untrusted",
+      "mutating": true,
+      "params": [
+        {
+          "name": "path",
+          "type": "string",
+          "required": true,
+          "description": "workspace-relative path to write",
+          "target": true
+        },
+        {
+          "name": "content",
+          "type": "string",
+          "required": true,
+          "description": "full new file content"
+        }
+      ]
+    },
+    {
+      "name": "apply_patch",
+      "description": "Apply a structured patch (write/delete/rename operations) to the task workspace as one transaction.",
+      "target": "none",
+      "timeout_sec": 30,
+      "trust": "external-untrusted",
+      "mutating": true,
+      "params": [
+        {
+          "name": "patch",
+          "type": "string",
+          "required": true,
+          "description": "JSON patch document: {\"ops\":[{\"op\":\"write|delete|rename\",...}]}"
+        }
+      ]
+    },
+    {
+      "name": "declare_done",
+      "description": "Request phase completion. Emits the typed completion-request signal; the governed workflow definition decides what it means.",
+      "target": "none",
+      "timeout_sec": 5,
+      "trust": "external-untrusted",
+      "control": true,
+      "params": []
+    }
+  ]
+}

@@ -73,6 +73,10 @@ func NewExecutorTable(reg *Registry, seam ThemisSeam) (map[string]Executor, erro
 		// carries the mutating visibility flag.
 		"write_file":  execWriteFile,
 		"apply_patch": execApplyPatch,
+		// Control executor (registry-v3 era, D-L7-6): its "execution"
+		// is pure typed workflow signaling — the verb means nothing;
+		// the governed workflow definition's edge means everything.
+		"declare_done": execDeclareDone,
 	}
 	for _, t := range reg.Tools {
 		if _, ok := table[t.Name]; !ok {
@@ -184,6 +188,13 @@ func execSearchCode(entry *GrantEntry, args map[string]any, target string) Outco
 		return Outcome{ErrClass: ErrOversized, SkippedOversized: skipped}
 	}
 	return Outcome{Evidence: []byte(strings.Join(hits, "\n") + "\n"), SkippedOversized: skipped}
+}
+
+// execDeclareDone emits the fixed typed completion-request signal
+// (constitution 1:1, no arguments — Q-L7-6). What the signal MEANS is
+// decided solely by the workflow definition's edge for it.
+func execDeclareDone(entry *GrantEntry, args map[string]any, target string) Outcome {
+	return Outcome{Evidence: []byte(`{"signal":"phase-completion-requested"}`)}
 }
 
 func themisExec(seam ThemisSeam, kind string) Executor {

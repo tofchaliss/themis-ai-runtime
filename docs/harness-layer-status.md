@@ -1,6 +1,6 @@
 # Harness Layer Status — L1 · L2 · L3 · L4 · L5
 
-Status date: 2026-09-06. L1–L4 SHIPPED and ARCHIVED: grilled (openspec, owner-closed), implemented, security/test/architecture reviewed with three-state verdicts, live-proven against a local model. Archived changes: `openspec/changes/archive/2026-09-0{5,6}-layer-0{1,2,3,4}-*`. **L5 implemented and live-proven 2026-09-06** (openspec/changes/layer-05-execution-environment; close pending owner review acceptance).
+Status date: 2026-09-06. L1–L4 SHIPPED and ARCHIVED: grilled (openspec, owner-closed), implemented, security/test/architecture reviewed with three-state verdicts, live-proven against a local model. Archived changes: `openspec/changes/archive/2026-09-0{5,6}-layer-0{1,2,3,4}-*`. **L5 SHIPPED and ARCHIVED 2026-09-07** (openspec/changes/archive/2026-09-07-layer-05-execution-environment). **L6 Durable State grill open** (openspec/changes/layer-06-durable-state).
 
 ## Architecture flow
 

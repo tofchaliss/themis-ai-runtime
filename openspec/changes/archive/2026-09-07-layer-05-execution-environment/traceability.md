@@ -1,0 +1,35 @@
+# Layer 5 Traceability — grill invariants → tests
+
+Tests in `src/harness/execution` unless noted. Invariants from `design.md` §2 (D-L5-1..10) and §3 (Q-L5-1..12 closures + implementation amendments).
+
+| Invariant | Evidence |
+| --- | --- |
+| ProvisionSpec ⊆ WorkspaceExecutionCeiling, total over the closed dimension vocabulary; pinned 40-hex SHA mandatory, branch structurally refused (D-L5-2, Q-L5-3) | `TestSpecFailsClosed` (branch-not-pin, traversal-segment pinned to its own branch), `TestSpecCeilingContainment` (incl. mem_bytes totality), `TestCeilingFailsClosed`, `TestLoadSpecFromFile` |
+| Declared strength enforced/observed/absent — never "supported"; observation never satisfies an enforced requirement; unclaimed dimension refuses (Q-L5-9) | `TestAdmissionFailsClosed` ("observation is not enforcement" branch-asserted) |
+| Honest declaration: cpu_time_s/proc_count ABSENT, identity `inherited` (Q-L5-6/9 + amendment 3) | `TestAdmissionFailsClosed` asserts the declaration itself |
+| Non-elevation floor; setuid/world-writable/symlinked binary refused; attestation digest+mode recorded; attestation ≠ behavioral trust (Q-L5-6) | `TestAttestation`, `TestProviderConstructionFailsClosed`, trace assertions in `TestLocalProvisionLifecycle` |
+| Empty environment allowlist, no PATH; dangerous variables never exist (Q-L5-5) | `TestNoPATHInEnvironment`, allowlist enumeration in `TestNoPushStructuralProof` |
+| In-process executors mechanically barred from ambient env (Q-L5-5.2) | `TestNoAmbientEnvInExecutorSources` (recursive source walk) |
+| Endpoint-naming argv refused typed: schemes, scp with/without user, `::` transport helpers, colon-before-slash (Q-L5-7, M1 MED-1) | `TestEndpointRefusal` |
+| ACTIVE exec seam is a closed vocabulary; all caller flags refused; push/fetch/remote outside vocabulary (M1 MED-2, D-L5-5) | `TestExecVocabularyClosed`, `TestNoPushStructuralProof` (+ decoded registry-v2 scan) |
+| Provisioning is execution: audited ops, neutralized invocation, post-condition HEAD==pin (Q-L5-3) | `TestLocalProvisionLifecycle` (op audit + sentinel), `TestProvisionFailurePaths` (nonexistent repo, unknown SHA, mirror escape — env returns with typed trace, verified terminal) |
+| Monotonic lifecycle with SEALED; invariants by reachability; no backward edges; terminals closed (D-L5-9, Q-L5-12) | `TestLifecycleReachability`, `TestLifecycleEdgeProductExhaustive` (full 8×8 product vs declared legal set) |
+| Seal is an OS-level mechanism: post-seal mutation fails at the filesystem through EVERY channel incl. L4 dispatch (amendment 2, arch review F8) | `TestSealedWorkspaceReadOnly` (direct write, direct create, L4 write_file dispatch → write-refused; egress still reads; teardown restores) |
+| SEALED means stable: Seal refuses while executions are in flight (M1 MED-4) | `TestSealRefusesInflight` |
+| Envelope wall-clock budget enforced: pre-exec exhaustion and mid-op drain both seal `env-deadline`; per-op group kill (M1 MED-3, Q-L5-2) | `TestBudgetExhaustionSeals`, `TestBudgetMidDrainAutoSeals`, `TestExecTimeoutGroupKill` |
+| Two-mode confinement, one implementation (leaf `confine`): CreateMode refuses every symlink in a write path, parent chain must exist, `.git*` deny-list case-folded (Q-L5-4, M2/M3 HIGH) | `src/harness/context/confine_test.go` `TestConfineCreatePath` (incl. `.GIT`/`.Git`/`.GitHub`), `TestModeSplitIsDeliberate` (the motivating escape), `TestVCSComponentCaseFold` |
+| Mutating capability requires visible `mutating:true` grant; denial zero-detail availability-class (D-L5-4) | `src/harness/tools/mutate_test.go` `TestMutatingVisibilityRequired` |
+| write_file records old/new hashes; nothing lands outside; apply_patch transactional incl. phase-2 rollback (Q-L5-4.4; test review HIGH) | `TestWriteFileExecutor`, `TestApplyPatchTransactional` (validation atomicity + duplicate-delete and triple-rename rollback fixtures, byte-exact restore) |
+| Egress only from a cleanly sealed environment; no partial artifacts; state asserted in the read itself (Q-L5-10/12) | `TestEgressRequiresCleanSeal`, beginEgress guard in `TestLifecycleReachability` |
+| Artifact = diff against the pin: old/new hashes, symlink recorded-never-followed, deleted carries pinned hash only, staged-rename two-field porcelain consumed as one entry (Q-L5-10, M2/M3 MED) | `TestEgressAcknowledged`, `TestEgressStagedRename` |
+| Observed dimensions gate acceptance deterministically: file_bytes, disk_bytes, file_count, mem_bytes (peak RSS), encoded-artifact bound (Q-L5-9.5, M2/M3 MED, arch review F13) | `TestEgressObservedBreachRefuses`, `TestEgressCountAndTotalBounds`, `TestEgressMemObservedGate`, `TestEgressEncodedArtifactBound` |
+| `.git*` excluded-and-noted by the contract, not by git (Q-L5-10) | `TestEgressVCSExcludedAndNoted` |
+| Store: write-once, content-addressed, verify-on-read, idempotent Put, occupied-address refusal, outside the provider boundary (checked), survives teardown (Q-L5-11, arch review F10) | `TestArtifactStoreImmutability`, `TestEgressStoreInsideEnvRefused`, survival assertion in `TestEgressAcknowledged` |
+| Custody ends at acknowledgment; persistence failure fails closed with NO workspace retention; teardown proceeds (Q-L5-11; test review HIGH) | `TestEgressPersistenceFailure` |
+| Teardown unconditional (force-seal from ACTIVE, typed caller-abort); DESTROYED only verified; anomaly typed, never false success (Q-L5-12, M1 MED-5) | `TestLifecycleReachability` (force-seal + idempotent terminal), `TestLocalProvisionLifecycle`, `TestTeardownAnomalous` (uchg fixture) |
+| Trace deep-copied (declaration, argv, transitions unforgeable through the accessor) (M1 LOW) | `TestTraceIsDeepCopy` |
+| L4 gate identical inside the environment — containment, never a second permission system | `TestL4DecisionTableInsideEnvironment` |
+| Repository activation four-control chain: identity-bound registration, unregistered-quiet, symlink refusal, pattern gate, shadowed claims, protected abort, hand-built source structurally impossible, sealed file list, activation-time content hashes (D-L5-8, M4 MED) | `src/harness/instructions/repository_test.go` — `TestRepoRegistrationFailsClosed` (incl. nested/case-folded `.git`, duplicate paths), `TestActivationEligibility`, `TestHandBuiltRepositorySourceRefused`, `TestRepositoryPatternGate`, `TestRepositoryAuthorityCaps` |
+| Operational proof (design §4 gate) | **`TestLiveExecutionProof` PASS 7.84s vs qwen2.5:7b** (re-passed after every remediation): provision @ pin with attestation → live model `write_file` lands → live escape target-refused, `.git` write-refused (layered) → post-seal exec refused → egress acknowledged, artifact verified by address → teardown verified DESTROYED → complete typed transition record, host untouched |
+
+Reviews: M1 security (5 MED + 4 LOW → 3c82720), M2/M3 security (1 HIGH + 2 MED + 2 LOW → befcc33), M4 security (1 MED + 3 LOW → 79e0205), test review (2 HIGH gaps → ab1632c), architecture review (2 MED mechanisms + 7 amendments → f3858d4). Residuals recorded in design.md (M4 block + amendments).

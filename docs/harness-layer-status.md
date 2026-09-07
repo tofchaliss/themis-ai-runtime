@@ -1,6 +1,6 @@
-# Harness Layer Status — L1 · L2 · L3 · L4 · L5
+# Harness Layer Status — L1 · L2 · L3 · L4 · L5 · L6
 
-Status date: 2026-09-06. L1–L4 SHIPPED and ARCHIVED: grilled (openspec, owner-closed), implemented, security/test/architecture reviewed with three-state verdicts, live-proven against a local model. Archived changes: `openspec/changes/archive/2026-09-0{5,6}-layer-0{1,2,3,4}-*`. **L5 SHIPPED and ARCHIVED 2026-09-07** (openspec/changes/archive/2026-09-07-layer-05-execution-environment). **L6 Durable State grill open** (openspec/changes/layer-06-durable-state).
+Status date: 2026-09-06. L1–L4 SHIPPED and ARCHIVED: grilled (openspec, owner-closed), implemented, security/test/architecture reviewed with three-state verdicts, live-proven against a local model. Archived changes: `openspec/changes/archive/2026-09-0{5,6}-layer-0{1,2,3,4}-*`. **L5 SHIPPED and ARCHIVED 2026-09-07** (openspec/changes/archive/2026-09-07-layer-05-execution-environment). **L6 Durable State implemented and live-proven 2026-09-07** (openspec/changes/layer-06-durable-state; close pending owner).
 
 ## Architecture flow
 
@@ -102,9 +102,19 @@ The safe computer: provisioned, isolated, provenance-pinned, torn down verified.
 - Registered repositories may speak at repository scope through the four-control chain (registration + pinned provenance + scope cap + pattern gate); an unregistered `AGENTS.md` is data, not instructions.
 - Live-proven vs qwen2.5:7b: model-driven mutation landed in the worktree, escapes refused typed, artifact acknowledged, teardown verified clean.
 
+### L6 — Durable State (`src/harness/state`)
+
+The record plane: what the harness did, kept honestly.
+
+- Every layer's typed events land in an **append-only, per-entry-hashed stream per task** — the authoritative record; the manifest is a derived projection, re-verified claim by claim by a cold verifier that trusts nothing. Objects (evidence payloads, egress artifacts) are content-addressed, write-once, published crash-safe (an address is only ever absent or complete).
+- **Durable means fsync-committed before acknowledgment**, at honestly-declared local-substrate strength; a durable record references only already-durable material — orphans are waste, dangles are lies, and the ordering makes lies unproducible. **Record-before-effect:** the audit event commits before a tool result reaches the model; the delivery record commits before the payload does.
+- Crash yields a typed `FAILED_PARTIAL` established by recovery, which holds projection authority and structural-fact authority and **zero origination authority** — it can finish projecting what the record already says, never invent an outcome; corruption is a verdict about the record, never a rewrite of what the task did.
+- Retention is graph reachability (retain-all v1, no deletion path in code — a structural absence proof); the model has no L6 verb; L7 gets a status view that structurally cannot carry contents; Themis remains the system of record — `durable(local)` / `transferred` / `accepted` are permanently distinct words.
+- Proven three ways: an exhaustive 9-point fault-injection sweep, a real SIGKILL mid-task with cold recovery, and a live full-stack task (qwen2.5:7b) reconstructed **byte-exactly** from disk alone.
+
 ### What the model then gets — and cannot do
 
-A system message stating its rules (minus the rejected injection), evidence labeled by who authored it, honest markers for everything absent, tools that refuse everything ungranted, an execution environment whose blast radius is one disposable worktree — and no path anywhere in L1–L5 that converts its output into authority. Its reply is advisory input to deterministic verification and Themis governance — the layers that come next.
+A system message stating its rules (minus the rejected injection), evidence labeled by who authored it, honest markers for everything absent, tools that refuse everything ungranted, an execution environment whose blast radius is one disposable worktree, and a durable record plane that remembers every decision without ever making one — and no path anywhere in L1–L6 that converts its output into authority. Its reply is advisory input to deterministic verification and Themis governance — the layers that come next.
 
 ## Standing safety property (owner-accepted, applies to all three)
 

@@ -43,14 +43,38 @@ Status date: 2026-09-06. L1–L4 SHIPPED and ARCHIVED: grilled (openspec, owner-
                               └───────────────┬─────────────────┘
                                               ▼
                                      Model (advisory only)
-                                              │
+                                              │ tool call (advisory data)
                                               ▼
-                          L4 authorization · verification · governance
-                          (enforcement — future layers; nothing above
-                           this line can grant authority)
+                              ┌─────────────────────────────────┐
+                              │ L4  AUTHORIZE                   │
+                              │ grant ∩ registry ∩ target       │
+                              │ typed denials · audit per call  │
+                              └───────────────┬─────────────────┘
+                                              │ authorized action
+                                              ▼
+                              ┌─────────────────────────────────┐
+                              │ L5  ENVIRONMENT                 │
+                              │ worktree @ pinned SHA · empty   │
+                              │ env · sealed → egress → ack     │──► artifact store
+                              └───────────────┬─────────────────┘    (content-addressed,
+                                              │ every event,          write-once)
+                                              │ committed before
+                                              │ its effect
+                                              ▼
+                              ┌─────────────────────────────────┐
+                              │ L6  DURABLE STATE (record plane)│
+                              │ append-only stream · crash-safe │
+                              │ objects · verified recovery ·   │
+                              │ byte-exact reconstruction       │
+                              └───────────────┬─────────────────┘
+                                              │ operational record
+                                              ▼
+                             Themis governance (system of record)
+                             (verification · acceptance — nothing
+                              above this line can grant authority)
 ```
 
-One-line ownership: **L1 decides what the model is told · L2 decides how facts reach it · L3 decides what survives the budget · none of them decides what the evidence means.**
+One-line ownership: **L1 decides what the model is told · L2 decides how facts reach it · L3 decides what survives the budget · L4 decides what its output may do · L5 decides where it runs and what may leave · L6 remembers all of it without deciding anything · none of them decides what the evidence means.**
 
 ## What each layer does — one use case, end to end
 

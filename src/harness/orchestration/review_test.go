@@ -77,15 +77,13 @@ func TestTurnsExhaustedFires(t *testing.T) {
 	if err != nil || res.Status != state.StatusFailed {
 		t.Fatalf("turn budget must bind: %+v %v", res, err)
 	}
-	evs, _ := f.o.root.ReadEvents("t-turns")
-	fired := false
-	for _, ev := range evs {
-		if ev.Class == state.EvWorkflowTransition && strings.Contains(string(ev.Body), `"edge":"turns-exhausted"`) {
-			fired = true
-		}
-	}
-	if !fired {
-		t.Fatal("the turns-exhausted edge itself must fire and be recorded")
+	// Register D covers this termination class: the replayer re-derives
+	// turns-exhausted from turn counting and must match the recorded
+	// tuple, causal seq included.
+	tr := replayAndVerify(t, f, "t-turns")
+	last := tr[len(tr)-1]
+	if last.EdgeID != "ANALYZE/"+EvTurnsExhausted || last.To != "@fail" || last.Exhausted {
+		t.Fatalf("the turns-exhausted edge itself must fire and be recorded: %+v", tr)
 	}
 }
 
@@ -102,15 +100,13 @@ func TestToolErrorEdge(t *testing.T) {
 	if err != nil || res.Status != state.StatusFailed {
 		t.Fatalf("declared tool-error must reach its exhaustion edge: %+v %v", res, err)
 	}
-	evs, _ := f.o.root.ReadEvents("t-toolerr")
-	fired := false
-	for _, ev := range evs {
-		if ev.Class == state.EvWorkflowTransition && strings.Contains(string(ev.Body), `"edge":"tool-error"`) {
-			fired = true
-		}
-	}
-	if !fired {
-		t.Fatal("tool-error transition must be recorded")
+	// Register D covers this termination class too — and the countered
+	// edge's branch identity: the third error rides the EXHAUSTION
+	// branch of ANALYZE/tool-error, and the record must say so.
+	tr := replayAndVerify(t, f, "t-toolerr")
+	last := tr[len(tr)-1]
+	if last.EdgeID != "ANALYZE/"+EvToolError || last.To != "@fail" || !last.Exhausted {
+		t.Fatalf("tool-error exhaustion branch must be recorded as such: %+v", tr)
 	}
 
 	// Undeclared variant: same failures, but the workflow does not
@@ -421,6 +417,43 @@ func TestContractWorkflowBindingRefused(t *testing.T) {
 	p := writeJSON(t, f.envDir, "envelope-t-cbind-2.json", env)
 	if _, err := f.o.SubmitTask(p); !errors.Is(err, ErrAssembly) || !strings.Contains(err.Error(), "other-lattice") {
 		t.Fatalf("cross-workflow contract must refuse at assembly: %v", err)
+	}
+}
+
+// Register A (conformance audit 2026-09-07): edge identity in the
+// record is "<phase>/<on>" — that names exactly ONE governed Edge only
+// because the loader refuses a phase mapping the same event twice.
+// The single-authority proof depends on this refusal, so it is pinned
+// here as the edge-identity invariant, not left as an incidental
+// loader behavior.
+func TestEdgeIdentityUnique(t *testing.T) {
+	dup := strings.Replace(defaultWorkflow,
+		`{"on":"signal:phase-completion-requested","to":"VERIFY"},`,
+		`{"on":"signal:phase-completion-requested","to":"VERIFY"},
+    {"on":"signal:phase-completion-requested","to":"@fail"},`, 1)
+	ceiling, err := LoadWorkflowCeiling(writeJSON(t, t.TempDir(), "c.json", defaultCeiling))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadWorkflow(writeJSON(t, t.TempDir(), "w.json", dup), ceiling); err == nil || !strings.Contains(err.Error(), "maps event") {
+		t.Fatalf("duplicate (phase, on) must be unloadable — edge_id identity depends on it: %v", err)
+	}
+	// And the positive half: in a loaded definition, every (phase, on)
+	// pair resolves to exactly one edge.
+	wf, err := LoadWorkflow(writeJSON(t, t.TempDir(), "ok.json", defaultWorkflow), ceiling)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range wf.Phases {
+		seen := map[string]int{}
+		for _, e := range p.Edges {
+			seen[p.Name+"/"+e.On]++
+		}
+		for id, n := range seen {
+			if n != 1 {
+				t.Fatalf("edge_id %q resolves to %d edges", id, n)
+			}
+		}
 	}
 }
 

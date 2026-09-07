@@ -248,10 +248,16 @@ func (w *walk) step(event string) (string, error) {
 		return "", fmt.Errorf("%w: declared event %q has no edge in phase %q — static totality violated", ErrInvariant, event, w.phase)
 	}
 	target := edge.To
+	// Edge identity is (phase, on): the loader statically refuses a
+	// phase mapping one event twice, so "<from>/<on>" names exactly one
+	// governed Edge under the definition hash (pinned by Register A's
+	// TestEdgeIdentityUnique — the proof depends on that refusal).
 	key := w.phase + "/" + event
+	exhausted := false
 	if edge.Counter > 0 {
 		if w.edgeFires[key] >= edge.Counter {
 			target = edge.ExhaustedTo
+			exhausted = true
 		} else {
 			w.edgeFires[key]++
 		}
@@ -260,12 +266,15 @@ func (w *walk) step(event string) (string, error) {
 		return TargetStay, nil
 	}
 	// Record-before-effect: the transition event commits before the
-	// cursor moves (D-L6-10; cause-carrying per Q-L7-11).
+	// cursor moves (D-L6-10; cause-carrying per Q-L7-11). A countered
+	// edge has two governed targets, so which branch fired is recorded
+	// (exhausted), not left derivable.
 	if err := faultAt("loop.pre-transition-commit"); err != nil {
 		return "", err
 	}
 	body, _ := json.Marshal(map[string]any{
-		"from": w.phase, "to": target, "edge": event, "cause_seq": w.lastSeq,
+		"from": w.phase, "to": target, "edge_id": key,
+		"exhausted": exhausted, "cause_seq": w.lastSeq,
 	})
 	if _, err := w.task.AppendEvent(state.EvWorkflowTransition, "l7", body); err != nil {
 		return "", err

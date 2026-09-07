@@ -220,22 +220,42 @@ func TestHappyWalkAndReplay(t *testing.T) {
 		t.Fatalf("unexpected result: %+v", res)
 	}
 	transitions := replayAndVerify(t, f, "t-happy")
-	want := [][2]string{{"ANALYZE", "VERIFY"}, {"VERIFY", "@complete"}}
+	want := []transition{
+		{From: "ANALYZE", To: "VERIFY", EdgeID: "ANALYZE/" + SignalPhaseCompletionRequested},
+		{From: "VERIFY", To: "@complete", EdgeID: "VERIFY/" + SignalPhaseCompletionRequested},
+	}
 	if len(transitions) != len(want) {
 		t.Fatalf("transitions: %+v", transitions)
 	}
 	for i, tr := range transitions {
-		if tr[0] != want[i][0] || tr[1] != want[i][1] {
-			t.Fatalf("transition %d: got %v want %v", i, tr, want[i])
+		if tr.From != want[i].From || tr.To != want[i].To || tr.EdgeID != want[i].EdgeID || tr.Exhausted {
+			t.Fatalf("transition %d: got %+v want %+v", i, tr, want[i])
 		}
 	}
 }
 
+// transition is the full single-authority tuple: which governed edge
+// fired (edge_id + branch), from where to where, caused by which
+// committed event. The replayer derives these independently and the
+// record must match tuple-for-tuple — not merely the from/to shape
+// (conformance audit 2026-09-07: sequence correspondence is weaker
+// than the locked property).
+type transition struct {
+	From, To, EdgeID string
+	Exhausted        bool
+	CauseSeq         int64
+}
+
 // replayAndVerify is the Register-D replayer: it re-derives the walk
-// from (definition-at-hash, recorded events), checks every recorded
-// transition against its own derivation (single authority), verifies
-// CallState by recount, and reconstructs what the model saw.
-func replayAndVerify(t *testing.T, f *fixture, taskID string) [][2]string {
+// — including the causal identity of every transition — from
+// (definition-at-hash, recorded events), checks every recorded
+// transition tuple {from, to, edge_id, exhausted, cause_seq} against
+// its own derivation (single authority), verifies CallState by
+// recount, and reconstructs what the model saw. It covers every
+// transition-producing event class: control signals, no-action,
+// provider-error, tool-error, and turns-exhausted (re-derived by
+// counting model turns per phase visit against the definition).
+func replayAndVerify(t *testing.T, f *fixture, taskID string) []transition {
 	t.Helper()
 	evs, err := f.o.root.ReadEvents(taskID)
 	if err != nil {
@@ -253,12 +273,22 @@ func replayAndVerify(t *testing.T, f *fixture, taskID string) [][2]string {
 	if man.GovernedHashes["workflow"] != wf.Hash {
 		t.Fatal("recorded workflow hash mismatch")
 	}
+	declared := map[string]bool{}
+	for _, e := range wf.DeclaredEvents {
+		declared[e] = true
+	}
 
-	// Re-derive the causal event sequence δ would have consumed.
-	var derived [][2]string
+	// Re-derive the causal event sequence δ would have consumed,
+	// mirroring the loop's lastSeq discipline: every committed
+	// delivery, model-turn, and audit event updates the causal
+	// frontier, and each derived transition carries the seq of the
+	// event that caused it.
+	var derived []transition
 	phase := wf.Initial
 	fires := map[string]int64{}
-	stepδ := func(event string) {
+	visitActive := false // an open phase visit (composed, walking)
+	var visitTurns int64
+	stepδ := func(event string, causeSeq int64) {
 		p := wf.phase(phase)
 		var edge *Edge
 		for i := range p.Edges {
@@ -271,9 +301,11 @@ func replayAndVerify(t *testing.T, f *fixture, taskID string) [][2]string {
 		}
 		target := edge.To
 		key := phase + "/" + event
+		exhausted := false
 		if edge.Counter > 0 {
 			if fires[key] >= edge.Counter {
 				target = edge.ExhaustedTo
+				exhausted = true
 			} else {
 				fires[key]++
 			}
@@ -281,15 +313,32 @@ func replayAndVerify(t *testing.T, f *fixture, taskID string) [][2]string {
 		if target == TargetStay {
 			return
 		}
-		derived = append(derived, [2]string{phase, target})
+		derived = append(derived, transition{From: phase, To: target, EdgeID: key, Exhausted: exhausted, CauseSeq: causeSeq})
+		visitActive = false // the walk left this phase visit
 		if !strings.HasPrefix(target, "@") {
 			phase = target
+		}
+	}
+	var lastSeq int64
+	// The loop fires turns-exhausted at its top — after the previous
+	// turn's block (model-turn + its audits) fully committed, before
+	// any further model call. In stream terms: the visit's turn count
+	// reached the phase budget and the walk has not left the phase.
+	exhaustionCheck := func() {
+		if visitActive && visitTurns >= wf.phase(phase).MaxModelTurns {
+			stepδ(EvTurnsExhausted, lastSeq)
 		}
 	}
 	callCounts := map[string]int{}
 	for _, ev := range evs {
 		switch ev.Class {
+		case state.EvL2Delivery:
+			// One composition per phase entry: a fresh visit opens.
+			lastSeq = ev.Seq
+			visitActive = true
+			visitTurns = 0
 		case state.EvModelTurn:
+			exhaustionCheck()
 			var b struct {
 				Fact string `json:"fact"`
 			}
@@ -300,11 +349,13 @@ func replayAndVerify(t *testing.T, f *fixture, taskID string) [][2]string {
 					t.Fatalf("model turn %d not reconstructable: %v", ev.Seq, err)
 				}
 			}
+			lastSeq = ev.Seq
+			visitTurns++
 			switch b.Fact {
 			case "no-action":
-				stepδ(EvTurnNoAction)
+				stepδ(EvTurnNoAction, ev.Seq)
 			case "provider-error":
-				stepδ(EvTurnProviderError)
+				stepδ(EvTurnProviderError, ev.Seq)
 			}
 		case state.EvL4Audit:
 			var audit struct {
@@ -312,41 +363,51 @@ func replayAndVerify(t *testing.T, f *fixture, taskID string) [][2]string {
 				Decision string `json:"Decision"`
 			}
 			_ = json.Unmarshal(ev.Body, &audit)
+			lastSeq = ev.Seq
 			callCounts[audit.Tool]++
 			if audit.Decision == "authorized" {
 				if sig, ok := controlVerbs[audit.Tool]; ok {
-					stepδ(sig)
+					stepδ(sig, ev.Seq)
 				}
+			}
+			if audit.Decision == "error" && declared[EvToolError] {
+				stepδ(EvToolError, ev.Seq)
 			}
 		}
 	}
-	// Compare derived vs recorded transitions: exactly one governing
-	// edge and one causing event per recorded transition.
-	var recorded [][2]string
+	exhaustionCheck() // a visit that ran out with no later events
+
+	// Compare derived vs recorded transitions tuple-for-tuple: exactly
+	// one governing edge (edge_id, unique by the loader's duplicate-On
+	// refusal under the definition hash) and exactly one typed causing
+	// event (cause_seq must equal the derived causal identity — a
+	// valid-but-wrong earlier seq fails).
+	var recorded []transition
 	for _, ev := range evs {
 		if ev.Class != state.EvWorkflowTransition {
 			continue
 		}
 		var b struct {
-			From     string `json:"from"`
-			To       string `json:"to"`
-			Edge     string `json:"edge"`
-			CauseSeq int64  `json:"cause_seq"`
+			From      string `json:"from"`
+			To        string `json:"to"`
+			EdgeID    string `json:"edge_id"`
+			Exhausted bool   `json:"exhausted"`
+			CauseSeq  int64  `json:"cause_seq"`
 		}
 		_ = json.Unmarshal(ev.Body, &b)
-		// Cause-carrying verification (Q-L7-11 sharpening 1): the edge
-		// names a declared event, and the causing event precedes the
-		// transition in the committed record.
-		if !transitionEvents[b.Edge] && b.Edge != EvTurnsExhausted {
-			t.Fatalf("transition %d carries unknown edge %q", ev.Seq, b.Edge)
+		// The edge_id must name this definition's edge: its event part
+		// is declared, and the pair resolves to exactly one Edge.
+		on := strings.TrimPrefix(b.EdgeID, b.From+"/")
+		if b.EdgeID != b.From+"/"+on || !declared[on] {
+			t.Fatalf("transition %d carries foreign edge_id %q", ev.Seq, b.EdgeID)
 		}
 		if b.CauseSeq < 0 || b.CauseSeq >= ev.Seq {
 			t.Fatalf("transition %d cause_seq %d must precede it", ev.Seq, b.CauseSeq)
 		}
-		recorded = append(recorded, [2]string{b.From, b.To})
+		recorded = append(recorded, transition{From: b.From, To: b.To, EdgeID: b.EdgeID, Exhausted: b.Exhausted, CauseSeq: b.CauseSeq})
 	}
 	if fmt.Sprint(derived) != fmt.Sprint(recorded) {
-		t.Fatalf("single-authority violation: derived %v recorded %v", derived, recorded)
+		t.Fatalf("single-authority violation:\n derived %+v\nrecorded %+v", derived, recorded)
 	}
 	// CallState recount (Q-L7-4): audits per tool never exceed caps.
 	if callCounts["read_file"] > 8 || callCounts["declare_done"] > 4 {

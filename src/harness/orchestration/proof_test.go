@@ -308,7 +308,7 @@ func TestLiveWalkProof(t *testing.T) {
 		t.Fatalf("live walk must complete verified with an artifact: %+v", res)
 	}
 	transitions := replayAndVerify(t, f, "t-live")
-	if len(transitions) != 2 || transitions[0][1] != "VERIFY" || transitions[1][1] != "@complete" {
+	if len(transitions) != 2 || transitions[0].To != "VERIFY" || transitions[1].To != "@complete" {
 		t.Fatalf("declare_done must route through the governed edges, not bypass them: %v", transitions)
 	}
 	// Negative: ungranted declare_done is not-available live — a phase

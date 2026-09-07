@@ -46,7 +46,7 @@ Grill closed 2026-09-07 (Q-L7-1..12, all CLOSED; design.md §3 is the record, §
 - [x] CallState record-recount verifier rule
 - [x] Reviews with three-state verdicts (2026-09-07: test-evidenced YES — 80%+ coverage, all registers green; operationally-proven YES — live walk + real-kill vs qwen2.5:7b through the production loop; architecture-conformant YES — after arch HIGH 2a closed by owner decision "implement": full L2 composition wired into the loop)
 - [x] Code map + status doc updated (2026-09-07)
-- [ ] Traceability.md (written at archive) · artifact update · push/archive on owner approval
+- [x] Traceability.md written · artifact updated · pushed d82054b · archived 2026-09-07 on owner approval
 
 ## 6. Deferred (NOT L7 scope — recorded IOUs, never silently promoted)
 

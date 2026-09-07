@@ -1,0 +1,27 @@
+# Layer 7 Traceability — grill invariants → tests
+
+Tests in `src/harness/orchestration`. Invariants from `design.md` §2 (D-L7-1..12), §3 (Q-L7-1..12 closures), §5 (review record incl. the owner-decided 2a implementation).
+
+| Invariant | Evidence |
+| --- | --- |
+| Envelope is the sole task input; nothing defaulted; every missing reference refused BY NAME; paths absolute; payload capped 64KiB, external-untrusted forever (D-L7-1, Q-L7-10) | `TestEnvelopeNoDefaulting` (per-field ablation), `TestPayloadCap`, relative-path refusal |
+| δ over (definition-at-hash, cursor, declared typed event, counters); model content never reaches control — prose, JSON-in-prose, invented control arguments all inert (D-L7-2/5) | `TestProseCannotTransition`, `TestJSONInProseIsNotAction`, `TestControlVerbInventedArgs`, `TestStepInvariantBranches` |
+| Static totality + boundedness at load: every phase maps every declared event exactly once; counter-free non-forward edges unloadable; every counter has a strictly-forward exhaustion edge; finite worst-case walk ≤ ceiling; approval vocabulary reserved-unloadable (D-L7-3/4, Q-L7-9) | `TestLoaderRefusals` (each rule pinned by a doctored definition), `TestWorstCaseWalkBound` |
+| Runtime-producible events load-mandatory; control verb exposure requires its signal declared; turns-exhausted cannot @stay (security MED-3/4) | loader-refusal cases in `review_test.go` + `TestTurnsExhaustedFires` |
+| Control vocabulary constitution-owned, verb-per-signal, zero args; two-way registry ⊆ (D-L7-6) | `TestControlVocabularyTwoWay` (real registry-v3 + doctored refusal), `TestAPIClosureAndConstitution` |
+| ⊆-checkpoint at assembly: workflow ⊆ ceiling ⊆ registry; grant ⊆ workflow ceiling; spec ⊆ exec ceiling; context contract bound to workflow; task_id bound across spec/grant/envelope; root disjointness (D-L7-10, security MED-1) | `TestGrantCeilingRefusals`, `TestGrantToolAboveCeiling`, `TestCrossArtifactIdentityBinding`, `TestContractWorkflowBindingRefused` |
+| Grant instantiation is narrowing only: @workspace placeholder-only, field-scoped; literal workspace refused (arch 2d) | `TestLiteralWorkspaceRefused` |
+| Phase capabilities narrow the grant at the gate; granted-but-out-of-phase control verb is not-available and signals nothing (test-review HIGH) | `TestPhaseCapabilityNarrowing` |
+| Full L2 composition per phase entry — fenced, provenance-labeled, never raw; composed bytes stored as the delivery object; `l2-composed-v1` + contract/render/payload hashes recorded; contract hash in manifest attribution (arch HIGH 2a, owner decision 2026-09-07: implement) | `TestComposedDeliveryThroughL2` |
+| Record-before-next-turn: compose→commit→deliver; model turn→object+event→commit; audit→execute→commit→result; every tool result and no-action prose appended to the conversation (D-L7-11, security MED-2, arch 2e) | `TestHappyWalkAndReplay` event-order assertions, Register C fault sweep |
+| Constitution floors never workflow edges: wall-clock exhaustion → seal(env-deadline) → FAILED (D-L7-3, arch 4.3) | `TestWallClockBudgetFloor` |
+| Budgets independent gates: turn budgets per phase, CallState monotonic, runtime quota exhaustion typed (D-L7-4) | `TestRuntimeQuotaExhaustion`, `TestToolErrorEdge`, CallState recount in replayer |
+| Invariant-failure fixed path: freeze → typed event → fatal-breach seal → FAILED; undeclared event at δ is invariant, never edge (D-L7-7) | `TestStepInvariantBranches`, `TestUndeclaredEventInvariant` |
+| Startup closes the past before opening the future; resume unproducible; fails closed on unreadable roots; CORRUPT surfaced-preserved, discriminated from transient IO (D-L7-8, MED-5, arch 2c) | `TestStartupSweep`, `TestStartupSweepHermetic` |
+| Duplicate submission structurally refused; retry is a new identity via retry_of (D-L7-12) | `TestDuplicateSubmit`, real-kill retry assertion |
+| Public seam exactly Open/SubmitTask/ReadStatus; SubmitTask loads the envelope itself (no stale-hash execution, arch 1.3) | `TestAPIClosureAndConstitution` (AST audit), fixture design |
+| Register C — fault sweep at every loop boundary + sync meta-test; real SIGKILL child → cold Open → typed terminal, **no continuation**, retry_of proven | `TestLoopFaultSweep`, `TestFaultPointsSyncWithSource`, `TestRealKillNoContinuation` (skip→fatal hardened per test-review CRITICAL) |
+| Register D — deterministic walk: replayer re-derives every cursor/transition/counter/terminal from (definition-at-hash, events); recorded edge + cause_seq checked against derivation; single-authority; model-visible bytes reconstructable | `replayAndVerify` wired into happy walk + determinism test |
+| Register E — live proof through the production loop vs qwen2.5:7b: full walk to COMPLETED with fenced L2 delivery; negative proofs (prose can't move the workflow, ungranted declare_done not-available) | **`TestLiveWalkProof` PASS** (re-passed after every remediation incl. the L2 composition change, 25s) |
+
+Reviews: security (6 MED remediated, commit 25d57a4), test (CRITICAL kill-test skip + HIGHs → hardened + ~15 regressions in review_test.go), architecture (MEDs remediated; HIGH 2a closed by owner decision "implement" → commit 94de516). Coverage 80.6%. Verdicts: architecture-conformant YES · test-evidenced YES · operationally-proven YES. Residuals recorded (tasks.md §6): approval channel grill, cross-process orchestrator exclusion, run_command (OPEN-2), subagents (L8), token/cost budget dimensions, L2 durable-record source kind, Themis transfer/anchor.

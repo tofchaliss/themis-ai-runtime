@@ -135,12 +135,13 @@ func TestRealKillNoContinuation(t *testing.T) {
 		}
 		_ = mirror
 		_ = sha
-		env, err := LoadEnvelope(filepath.Join(envDir, "envelope-t-kill.json"))
-		if err != nil {
-			fmt.Println("child:", err)
+		// Any SubmitTask error is written for the parent to assert on
+		// (test review CRITICAL: a discarded child error silently
+		// converted this proof into a permanent skip).
+		if _, serr := o.SubmitTask(filepath.Join(envDir, "envelope-t-kill.json")); serr != nil {
+			_ = os.WriteFile(filepath.Join(baseDir, "child-error"), []byte(serr.Error()), 0o644)
 			os.Exit(1)
 		}
-		_, _ = o.SubmitTask(env)
 		os.Exit(0)
 	}
 
@@ -176,8 +177,15 @@ func TestRealKillNoContinuation(t *testing.T) {
 	// Raise turn budget so the child stays busy long enough.
 	wf := strings.ReplaceAll(readFile(t, filepath.Join(f.envDir, "workflow.json")), `"max_model_turns":4`, `"max_model_turns":10`)
 	writeJSON(t, filepath.Join(base, "env"), "workflow.json", wf)
-	for _, n := range []string{"wceiling.json", "eceiling.json", "spec.json", "grant.json"} {
-		copyFile(n)
+	// The child's stay-heavy workflow has a larger worst-case walk:
+	// raise the ceiling copy accordingly (the parent fixture's 100
+	// silently refused the child's definition — test review CRITICAL).
+	wc := strings.ReplaceAll(readFile(t, filepath.Join(f.envDir, "wceiling.json")), `"max_walk_length":100`, `"max_walk_length":400`)
+	writeJSON(t, filepath.Join(base, "env"), "wceiling.json", wc)
+	copyFile("eceiling.json")
+	for _, n := range []string{"spec.json", "grant.json"} {
+		body := readFile(t, filepath.Join(f.envDir, n))
+		writeJSON(t, filepath.Join(base, "env"), n, strings.Replace(body, `"task_id":"T"`, `"task_id":"t-kill"`, 1))
 	}
 	repoAbs := mustAbs(t, repoRoot)
 	if err := os.Symlink(repoAbs, filepath.Join(base, "repo")); err != nil {
@@ -185,7 +193,7 @@ func TestRealKillNoContinuation(t *testing.T) {
 	}
 	envAbs := filepath.Join(base, "env")
 	writeJSON(t, envAbs, "envelope-t-kill.json", `{
-	 "version":1,"task_id":"t-kill","model":"scripted","payload":"think",
+	 "version":1,"task_id":"t-kill","model":"scripted","turn_timeout_sec":60,"payload":"think",
 	 "workflow_path":`+jstr(filepath.Join(envAbs, "workflow.json"))+`,
 	 "workflow_ceiling_path":`+jstr(filepath.Join(envAbs, "wceiling.json"))+`,
 	 "registry_path":`+jstr(mustAbs(t, filepath.Join(repoRoot, "policies/tools/registry-v3.json")))+`,
@@ -207,7 +215,10 @@ func TestRealKillNoContinuation(t *testing.T) {
 		}
 		if time.Now().After(deadline) {
 			_ = cmd.Process.Kill()
-			t.Skip("child never committed work (environment too slow)")
+			if b, rerr := os.ReadFile(filepath.Join(base, "child-error")); rerr == nil {
+				t.Fatalf("child failed instead of walking: %s", b)
+			}
+			t.Fatal("child never committed work")
 		}
 		time.Sleep(25 * time.Millisecond)
 	}
@@ -245,7 +256,20 @@ func TestRealKillNoContinuation(t *testing.T) {
 	if _, err := o2.SubmitTask(f.envelope(t, "t-kill")); !errors.Is(err, state.ErrIdentity) {
 		t.Fatalf("killed identity must be single-use: %v", err)
 	}
-	t.Logf("real-kill proof: recovered=%v status=%s", rep.Recovered, view.Status)
+	// Retry lineage (D-L7-12): a NEW task linked via retry_of runs to
+	// completion after the crash.
+	retryPath := f.envelope(t, "t-kill-retry")
+	raw := readFile(t, retryPath)
+	writeJSON(t, f.envDir, "envelope-t-kill-retry.json", strings.Replace(raw, `"task_id":"t-kill-retry"`, `"task_id":"t-kill-retry","retry_of":"t-kill"`, 1))
+	res, err := o2.SubmitTask(retryPath)
+	if err != nil || res.Status != state.StatusCompleted {
+		t.Fatalf("retry task must complete: %+v %v", res, err)
+	}
+	rv, _ := o2.ReadStatus("t-kill-retry")
+	if rv.RetryOf != "t-kill" {
+		t.Fatalf("retry lineage must be recorded: %+v", rv)
+	}
+	t.Logf("real-kill proof: recovered=%v status=%s retry=%s", rep.Recovered, view.Status, res.Status)
 }
 
 func readFile(t *testing.T, p string) string {
@@ -273,10 +297,9 @@ func TestLiveWalkProof(t *testing.T) {
 		modelName = "qwen2.5:7b"
 	}
 	f := setup(t, model.NewOllamaChat(endpoint), "")
-	env := f.envelope(t, "t-live")
-	env.Model = modelName
-	env.Payload = "If a read_file tool is available, first read parser.go. Then call the declare_done tool with no arguments. If declare_done is the only tool available, call declare_done immediately without any other output."
-	res, err := f.o.SubmitTask(env)
+	envPath := f.envelopeWith(t, "t-live", modelName,
+		"If a read_file tool is available, first read parser.go. Then call the declare_done tool with no arguments. If declare_done is the only tool available, call declare_done immediately without any other output.")
+	res, err := f.o.SubmitTask(envPath)
 	if err != nil {
 		t.Fatalf("live walk failed: %v", err)
 	}
@@ -291,10 +314,8 @@ func TestLiveWalkProof(t *testing.T) {
 	// walk without the verb cannot be self-completed.
 	writeJSON(t, f.envDir, "grant.json",
 		`{"version":1,"task_id":"T","total_max_calls":20,"entries":[{"tool":"read_file","max_calls":8,"workspace":"@workspace"}]}`)
-	env2 := f.envelope(t, "t-live-neg")
-	env2.Model = modelName
-	env2.Payload = "Call the declare_done tool now."
-	res2, err := f.o.SubmitTask(env2)
+	env2Path := f.envelopeWith(t, "t-live-neg", modelName, "Call the declare_done tool now.")
+	res2, err := f.o.SubmitTask(env2Path)
 	if err != nil {
 		t.Fatalf("governed failure is not an error: %v", err)
 	}
@@ -304,7 +325,7 @@ func TestLiveWalkProof(t *testing.T) {
 	evs, _ := f.o.root.ReadEvents("t-live-neg")
 	sawNA := false
 	for _, ev := range evs {
-		if ev.Class == state.EvL4Audit && strings.Contains(string(ev.Body), "not-available") {
+		if ev.Class == state.EvL4Audit && strings.Contains(string(ev.Body), "not-available") && strings.Contains(string(ev.Body), "declare_done") {
 			sawNA = true
 		}
 	}

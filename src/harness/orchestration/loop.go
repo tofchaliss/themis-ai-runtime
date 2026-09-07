@@ -10,6 +10,7 @@ package orchestration
 import (
 	stdctx "context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -18,6 +19,9 @@ import (
 	"github.com/tofchaliss/themis/state"
 	"github.com/tofchaliss/themis/tools"
 )
+
+// errBudgetFloor marks the constitution's wall-clock budget floor.
+var errBudgetFloor = fmt.Errorf("wall-clock budget floor")
 
 // fault is the deterministic fault-injection seam for Register C.
 var fault func(point string) error
@@ -45,6 +49,8 @@ type walk struct {
 	edgeFires map[string]int64 // "phase/event" -> fires
 	callState tools.CallState
 	turnSeq   int64
+	deadline  time.Time // the spec's wall_deadline_s — the budget floor
+	lastSeq   int64     // seq of the most recent causally-relevant event
 }
 
 // run drives the walk to a typed terminal. Every exit path seals and
@@ -54,6 +60,9 @@ func (w *walk) run() (TaskResult, error) {
 	w.phase = w.wf.Initial
 	w.edgeFires = map[string]int64{}
 	w.callState = tools.CallState{Calls: map[string]int{}}
+	if l, ok := w.spec.Limit(execution.DimWallDeadlineS); ok {
+		w.deadline = time.Now().Add(time.Duration(l.Value) * time.Second)
+	}
 
 	if err := w.task.Transition(state.StatusRunning, "assembled"); err != nil {
 		return w.invariant(res, err)
@@ -61,6 +70,17 @@ func (w *walk) run() (TaskResult, error) {
 
 	for {
 		outcome, err := w.runPhase()
+		if errors.Is(err, errBudgetFloor) {
+			// Constitution floor: seal(env-deadline) → FAILED — never
+			// a workflow edge (D-L7-3).
+			_ = w.l5.Seal(execution.SealDeadline)
+			w.l5.Teardown()
+			if terr := w.task.Transition(state.StatusFailed, "floor: wall-clock budget exhausted"); terr != nil {
+				return w.invariant(res, terr)
+			}
+			res.Status = state.StatusFailed
+			return res, nil
+		}
 		if err != nil {
 			return w.invariant(res, err)
 		}
@@ -96,10 +116,16 @@ func (w *walk) runPhase() (string, error) {
 		if turns >= p.MaxModelTurns {
 			return w.step(EvTurnsExhausted)
 		}
+		// The wall-clock budget floor (constitution: floor:budget →
+		// seal(env-deadline) → FAILED) — constitution-owned, never a
+		// workflow edge.
+		if !w.deadline.IsZero() && time.Now().After(w.deadline) {
+			return "", errBudgetFloor
+		}
 		if err := faultAt("loop.pre-model-turn"); err != nil {
 			return "", err
 		}
-		ctx, cancel := stdctx.WithTimeout(stdctx.Background(), 180*time.Second)
+		ctx, cancel := stdctx.WithTimeout(stdctx.Background(), time.Duration(w.env.TurnTimeoutSec)*time.Second)
 		resp, mErr := w.o.cfg.Model.Execute(ctx, model.ExecutionRequest{
 			Model: w.env.Model, Messages: conversation,
 			Tools: w.toolDefs(p), Options: model.DefaultOptions()})
@@ -129,6 +155,10 @@ func (w *walk) runPhase() (string, error) {
 		}
 
 		if fact == "no-action" {
+			// The model's own prose is model-visible later: append it
+			// (architecture review 2e — the conversation is append-only
+			// AND complete, matching the durable record).
+			conversation = append(conversation, model.Message{Role: model.RoleAssistant, Content: resp.Content})
 			next, err := w.step(EvTurnNoAction)
 			if err != nil || next != TargetStay {
 				return next, err
@@ -137,8 +167,14 @@ func (w *walk) runPhase() (string, error) {
 		}
 
 		conversation = append(conversation, model.Message{Role: model.RoleAssistant, ToolCalls: resp.ToolCalls, Content: resp.Content})
+		// The phase capability set narrows the grant (D-L7-6 "granted
+		// per phase by the definition"): a granted tool outside this
+		// phase is not-available HERE, through the genuine gate —
+		// narrowing by instantiation, never a second permission system
+		// (test review HIGH: this was an implementation hole).
+		phaseGrant := w.phaseGrant(p)
 		for _, call := range resp.ToolCalls {
-			msg, ev, audit := tools.Handle(w.reg, w.grant, w.table, call, w.callState)
+			msg, ev, audit := tools.Handle(w.reg, phaseGrant, w.table, call, w.callState)
 			// Record-before-effect: evidence object + audit event
 			// committed before the result re-enters the loop.
 			var refs []state.Ref
@@ -150,13 +186,21 @@ func (w *walk) runPhase() (string, error) {
 				refs = append(refs, state.Ref{ID: id, Class: state.ObjEvidencePayload})
 			}
 			ab, _ := json.Marshal(audit)
-			if _, aerr := w.task.AppendEvent(state.EvL4Audit, "l4", ab, refs...); aerr != nil {
+			aev, aerr := w.task.AppendEvent(state.EvL4Audit, "l4", ab, refs...)
+			if aerr != nil {
 				return "", aerr
 			}
+			w.lastSeq = aev.Seq
 			// CallState increment between calls: the recorded L4
 			// obligation, monotonic by construction.
 			w.callState.Calls[call.Name]++
 			w.callState.Total++
+
+			// Every tool result — control verbs included — re-enters
+			// the conversation, keeping the tool_call/result protocol
+			// pairing intact (security review MED-2: a dropped result
+			// would let model behavior steer provider-protocol errors).
+			conversation = append(conversation, msg)
 
 			// Control signal? (a typed GATE OUTCOME, not model
 			// content): only an authorized control verb produces one.
@@ -178,7 +222,6 @@ func (w *walk) runPhase() (string, error) {
 					}
 				}
 			}
-			conversation = append(conversation, msg)
 		}
 	}
 }
@@ -220,7 +263,7 @@ func (w *walk) step(event string) (string, error) {
 		return "", err
 	}
 	body, _ := json.Marshal(map[string]any{
-		"from": w.phase, "to": target, "edge": event, "cause_seq": w.lastEventSeq(),
+		"from": w.phase, "to": target, "edge": event, "cause_seq": w.lastSeq,
 	})
 	if _, err := w.task.AppendEvent(state.EvWorkflowTransition, "l7", body); err != nil {
 		return "", err
@@ -240,6 +283,24 @@ func (w *walk) declared(event string) bool {
 	return false
 }
 
+// phaseGrant is the per-phase narrowing of the task grant: entries
+// filtered to the phase's declared capability set. Quotas (CallState,
+// TotalMaxCalls) remain task-global.
+func (w *walk) phaseGrant(p *Phase) *tools.Grant {
+	inPhase := map[string]bool{}
+	for _, c := range p.Capabilities {
+		inPhase[c] = true
+	}
+	g := *w.grant
+	g.Entries = nil
+	for _, e := range w.grant.Entries {
+		if inPhase[e.Tool] {
+			g.Entries = append(g.Entries, e)
+		}
+	}
+	return &g
+}
+
 func (w *walk) isControl(name string) bool {
 	for _, t := range w.reg.Tools {
 		if t.Name == name {
@@ -256,15 +317,23 @@ func (w *walk) composePhase(p *Phase) ([]model.Message, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Recorded truthfully (security review MED-6): v1 composes
+	// {rendered EIS + raw payload} in-loop — the L2 slot/fence
+	// machinery is NOT invoked; the writer says so, and wiring the
+	// full L2 composer into the loop is a recorded follow-through,
+	// not a quiet equivalence claim.
 	body, _ := json.Marshal(map[string]any{
 		"phase": p.Name, "eis_hash": w.o.eis.Hash, "payload": payloadObj,
+		"framing": "eis+raw-payload-v1",
 	})
 	if err := faultAt("loop.pre-compose-commit"); err != nil {
 		return nil, err
 	}
-	if _, err := w.task.AppendEvent(state.EvL2Delivery, "l2", body, state.Ref{ID: payloadObj, Class: state.ObjEvidencePayload}); err != nil {
+	ev, err := w.task.AppendEvent(state.EvL2Delivery, "l7", body, state.Ref{ID: payloadObj, Class: state.ObjEvidencePayload})
+	if err != nil {
 		return nil, err
 	}
+	w.lastSeq = ev.Seq
 	return []model.Message{
 		{Role: model.RoleSystem, Content: w.o.eisTx},
 		{Role: model.RoleUser, Content: w.env.Payload},
@@ -297,28 +366,17 @@ func (w *walk) toolDefs(p *Phase) []model.ToolDef {
 
 func (w *walk) recordTurn(fact string, outObj *string, content string) error {
 	w.turnSeq++
-	body, _ := json.Marshal(map[string]any{"fact": fact, "turn": w.turnSeq})
+	// Model provenance preserved per turn (architecture review 4.2).
+	body, _ := json.Marshal(map[string]any{"fact": fact, "turn": w.turnSeq, "model": w.env.Model})
 	var refs []state.Ref
 	if outObj != nil {
 		refs = append(refs, state.Ref{ID: *outObj, Class: state.ObjEvidencePayload})
 	}
-	_, err := w.task.AppendEvent(state.EvModelTurn, "l7", body, refs...)
+	ev, err := w.task.AppendEvent(state.EvModelTurn, "l7", body, refs...)
+	if err == nil {
+		w.lastSeq = ev.Seq
+	}
 	return err
-}
-
-func (w *walk) lastEventSeq() int64 {
-	view, err := w.o.root.ReadStatus(w.env.TaskID)
-	if err != nil {
-		return -1
-	}
-	_ = view
-	// The causing event is the most recently committed one; the
-	// replayer re-derives and checks this independently.
-	evs, err := w.o.root.ReadEvents(w.env.TaskID)
-	if err != nil || len(evs) == 0 {
-		return -1
-	}
-	return evs[len(evs)-1].Seq
 }
 
 func turnBytes(resp *model.ExecutionResponse) []byte {
@@ -398,7 +456,11 @@ func (w *walk) failClosed(res TaskResult, reason string) (TaskResult, error) {
 // FAILED. Never reroutable by any workflow.
 func (w *walk) invariant(res TaskResult, cause error) (TaskResult, error) {
 	body, _ := json.Marshal(map[string]string{"cause": cause.Error()})
-	_, _ = w.task.AppendEvent(state.EvL7Invariant, "l7", body)
+	if _, aerr := w.task.AppendEvent(state.EvL7Invariant, "l7", body); aerr != nil {
+		// An unrecordable invariant still fails closed; the append
+		// failure joins the returned cause so nothing is silent.
+		cause = fmt.Errorf("%v (invariant event unrecordable: %v)", cause, aerr)
+	}
 	_ = w.l5.Seal(execution.SealFatalBreach)
 	w.l5.Teardown()
 	_ = w.task.Transition(state.StatusFailed, "invariant: "+cause.Error())

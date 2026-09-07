@@ -10,10 +10,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/tofchaliss/themis/execution"
 	"github.com/tofchaliss/themis/instructions"
@@ -97,14 +97,31 @@ func Open(cfg Config) (*Orchestrator, *StartupReport, error) {
 	// Startup sweep: close the past before opening the future.
 	rep := &StartupReport{}
 	tasksDir := filepath.Join(cfg.StateRoot, "tasks")
-	entries, _ := os.ReadDir(tasksDir)
+	entries, rdErr := os.ReadDir(tasksDir)
+	if rdErr != nil && !os.IsNotExist(rdErr) {
+		// Fail closed: an unreadable task root means unknowable
+		// non-terminal state — the past cannot be closed, so the
+		// future does not open (security review MED-5).
+		return nil, nil, fmt.Errorf("%w: startup sweep cannot enumerate tasks: %v", ErrAssembly, rdErr)
+	}
 	for _, e := range entries {
 		if !e.IsDir() {
 			continue
 		}
 		id := e.Name()
 		view, verr := root.ReadStatus(id)
-		if verr != nil || view.Verdict == state.VerdictCorrupt {
+		if verr != nil {
+			// A record CORRUPT verdict is surfaced-and-preserved; a
+			// transient IO failure is NOT corruption — the past cannot
+			// be examined, so the future does not open (architecture
+			// review 2c: verdicts and IO errors must not conflate).
+			if errors.Is(verr, state.ErrCorrupt) {
+				rep.Corrupt = append(rep.Corrupt, id)
+				continue
+			}
+			return nil, nil, fmt.Errorf("%w: startup sweep cannot read task %s: %v", ErrAssembly, id, verr)
+		}
+		if view.Verdict == state.VerdictCorrupt {
 			rep.Corrupt = append(rep.Corrupt, id)
 			continue // surfaced, preserved, untouched
 		}
@@ -113,10 +130,13 @@ func Open(cfg Config) (*Orchestrator, *StartupReport, error) {
 			rep.Terminal = append(rep.Terminal, id)
 		default:
 			if _, rerr := root.Recover(id); rerr != nil {
-				rep.Corrupt = append(rep.Corrupt, id)
-			} else {
-				rep.Recovered = append(rep.Recovered, id)
+				if errors.Is(rerr, state.ErrCorrupt) {
+					rep.Corrupt = append(rep.Corrupt, id)
+					continue
+				}
+				return nil, nil, fmt.Errorf("%w: startup sweep cannot recover task %s: %v", ErrAssembly, id, rerr)
 			}
+			rep.Recovered = append(rep.Recovered, id)
 		}
 	}
 	return o, rep, nil
@@ -136,10 +156,18 @@ type TaskResult struct {
 }
 
 // SubmitTask is the single typed assembly + execution boundary. It
-// loads every governed artifact fail-closed, performs the
-// ⊆-checkpoint, mints the single-use identity, and runs the walk to
-// a typed terminal. It trusts the submitter for nothing.
-func (o *Orchestrator) SubmitTask(env *Envelope) (TaskResult, error) {
+// takes the envelope PATH and loads it here — an in-process caller
+// can therefore never execute a mutated envelope under a stale hash
+// (architecture review 1.3: the recorded attribution is always the
+// executed configuration). It loads every governed artifact
+// fail-closed, performs the ⊆-checkpoint, mints the single-use
+// identity, and runs the walk to a typed terminal. It trusts the
+// submitter for nothing.
+func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
+	env, err := LoadEnvelope(envelopePath)
+	if err != nil {
+		return TaskResult{}, err
+	}
 	res := TaskResult{TaskID: env.TaskID}
 
 	// Governed artifacts, fail closed.
@@ -185,6 +213,12 @@ func (o *Orchestrator) SubmitTask(env *Envelope) (TaskResult, error) {
 	if err != nil {
 		return res, fmt.Errorf("%w: %v", ErrAssembly, err)
 	}
+	// Cross-artifact identity binding (security review MED-1): a
+	// grant or spec minted for another task is refused, not accepted
+	// on faith.
+	if spec.TaskID != env.TaskID {
+		return res, fmt.Errorf("%w: spec task_id %q does not bind to envelope task %q", ErrAssembly, spec.TaskID, env.TaskID)
+	}
 
 	// L5 provisioning (the loop owns the environment lifecycle).
 	envn, err := o.prov.Provision(execCeiling, spec)
@@ -204,6 +238,10 @@ func (o *Orchestrator) SubmitTask(env *Envelope) (TaskResult, error) {
 		return res, err
 	}
 	defer os.Remove(effPath)
+	if grant.TaskID != env.TaskID {
+		envn.Teardown()
+		return res, fmt.Errorf("%w: grant task_id %q does not bind to envelope task %q", ErrAssembly, grant.TaskID, env.TaskID)
+	}
 	if err := grantWithinCeiling(grant, wfCeiling); err != nil {
 		envn.Teardown()
 		return res, err
@@ -275,15 +313,35 @@ func grantWithinCeiling(g *tools.Grant, c *WorkflowCeiling) error {
 }
 
 // instantiateGrant substitutes the @workspace placeholder with the
-// provisioned root and loads the effective grant through the normal
+// provisioned root — ONLY in workspace fields, post-parse (security
+// review LOW: a token anywhere else stays literal and fails its own
+// validation) — and loads the effective grant through the normal
 // fail-closed loader.
 func instantiateGrant(raw []byte, wsRoot string) (*tools.Grant, string, error) {
-	var probe map[string]any
-	if err := json.Unmarshal(raw, &probe); err != nil {
+	var doc map[string]any
+	if err := json.Unmarshal(raw, &doc); err != nil {
 		return nil, "", fmt.Errorf("%w: envelope grant: %v", ErrAssembly, err)
 	}
-	quoted, _ := json.Marshal(wsRoot)
-	sub := []byte(strings.ReplaceAll(string(raw), `"@workspace"`, string(quoted)))
+	if entries, ok := doc["entries"].([]any); ok {
+		for _, e := range entries {
+			if entry, ok := e.(map[string]any); ok {
+				if ws, ok := entry["workspace"].(string); ok {
+					// Placeholder-only workspace bindings (architecture
+					// review 2d): a literal path could bind a read tool
+					// into the state root or any host directory — the
+					// workspace is the one value only assembly may bind.
+					if ws != "@workspace" {
+						return nil, "", fmt.Errorf("%w: grant workspace bindings must use the @workspace placeholder, got %q", ErrAssembly, ws)
+					}
+					entry["workspace"] = wsRoot
+				}
+			}
+		}
+	}
+	sub, err := json.Marshal(doc)
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: %v", ErrAssembly, err)
+	}
 	f, err := os.CreateTemp("", "effective-grant-")
 	if err != nil {
 		return nil, "", fmt.Errorf("%w: %v", ErrAssembly, err)
@@ -291,6 +349,7 @@ func instantiateGrant(raw []byte, wsRoot string) (*tools.Grant, string, error) {
 	path := f.Name()
 	if _, err := f.Write(sub); err != nil {
 		f.Close()
+		os.Remove(path)
 		return nil, "", fmt.Errorf("%w: %v", ErrAssembly, err)
 	}
 	f.Close()

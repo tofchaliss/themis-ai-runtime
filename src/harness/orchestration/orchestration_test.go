@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/tofchaliss/themis/runtime/model"
 	"github.com/tofchaliss/themis/state"
@@ -26,11 +27,15 @@ type scriptedModel struct {
 	steps []model.ExecutionResponse
 	i     int
 	fail  bool
+	delay time.Duration // per-turn wall-clock cost, for budget-floor tests
 }
 
 func (s *scriptedModel) Name() string { return "scripted" }
 
 func (s *scriptedModel) Execute(ctx stdctx.Context, req model.ExecutionRequest) (*model.ExecutionResponse, error) {
+	if s.delay > 0 {
+		time.Sleep(s.delay)
+	}
 	if s.fail {
 		return nil, errors.New("scripted provider failure")
 	}
@@ -161,20 +166,26 @@ func setup(t *testing.T, m model.Interface, workflowJSON string) *fixture {
 	return f
 }
 
-func (f *fixture) envelope(t *testing.T, taskID string) *Envelope {
+// envelope writes a per-task envelope (grant/spec bound to the task
+// identity) and returns its PATH — SubmitTask loads it itself, so
+// the executed configuration is always the hashed one.
+func (f *fixture) envelope(t *testing.T, taskID string) string {
+	return f.envelopeWith(t, taskID, "scripted", "Read parser.go, then call declare_done.")
+}
+
+func (f *fixture) envelopeWith(t *testing.T, taskID, modelName, payload string) string {
 	t.Helper()
 	abs := func(n string) string { return filepath.Join(f.envDir, n) }
-	p := writeJSON(t, f.envDir, "envelope-"+taskID+".json", `{
-	 "version":1,"task_id":"`+taskID+`","model":"scripted","payload":"Read parser.go, then call declare_done.",
+	for _, tmpl := range []string{"grant.json", "spec.json"} {
+		body := readFile(t, abs(tmpl))
+		writeJSON(t, f.envDir, taskID+"-"+tmpl, strings.Replace(body, `"task_id":"T"`, `"task_id":"`+taskID+`"`, 1))
+	}
+	return writeJSON(t, f.envDir, "envelope-"+taskID+".json", `{
+	 "version":1,"task_id":"`+taskID+`","model":`+jstr(modelName)+`,"turn_timeout_sec":180,"payload":`+jstr(payload)+`,
 	 "workflow_path":`+jstr(abs("workflow.json"))+`,"workflow_ceiling_path":`+jstr(abs("wceiling.json"))+`,
 	 "registry_path":`+jstr(mustAbs(t, filepath.Join(repoRoot, "policies/tools/registry-v3.json")))+`,
-	 "grant_path":`+jstr(abs("grant.json"))+`,"exec_ceiling_path":`+jstr(abs("eceiling.json"))+`,
-	 "spec_path":`+jstr(abs("spec.json"))+`}`)
-	e, err := LoadEnvelope(p)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return e
+	 "grant_path":`+jstr(abs(taskID+"-grant.json"))+`,"exec_ceiling_path":`+jstr(abs("eceiling.json"))+`,
+	 "spec_path":`+jstr(abs(taskID+"-spec.json"))+`}`)
 }
 
 func mustAbs(t *testing.T, p string) string {
@@ -316,10 +327,21 @@ func replayAndVerify(t *testing.T, f *fixture, taskID string) [][2]string {
 			continue
 		}
 		var b struct {
-			From string `json:"from"`
-			To   string `json:"to"`
+			From     string `json:"from"`
+			To       string `json:"to"`
+			Edge     string `json:"edge"`
+			CauseSeq int64  `json:"cause_seq"`
 		}
 		_ = json.Unmarshal(ev.Body, &b)
+		// Cause-carrying verification (Q-L7-11 sharpening 1): the edge
+		// names a declared event, and the causing event precedes the
+		// transition in the committed record.
+		if !transitionEvents[b.Edge] && b.Edge != EvTurnsExhausted {
+			t.Fatalf("transition %d carries unknown edge %q", ev.Seq, b.Edge)
+		}
+		if b.CauseSeq < 0 || b.CauseSeq >= ev.Seq {
+			t.Fatalf("transition %d cause_seq %d must precede it", ev.Seq, b.CauseSeq)
+		}
 		recorded = append(recorded, [2]string{b.From, b.To})
 	}
 	if fmt.Sprint(derived) != fmt.Sprint(recorded) {
@@ -490,6 +512,7 @@ func TestWorkflowLoaderFailsClosed(t *testing.T) {
 func TestEnvelopeNoDefaulting(t *testing.T) {
 	dir := t.TempDir()
 	full := map[string]any{"version": 1, "task_id": "t", "model": "m", "payload": "p",
+		"turn_timeout_sec": 60,
 		"workflow_path": "/w", "workflow_ceiling_path": "/c", "registry_path": "/r",
 		"grant_path": "/g", "exec_ceiling_path": "/e", "spec_path": "/s"}
 	for missing := range full {
@@ -504,7 +527,8 @@ func TestEnvelopeNoDefaulting(t *testing.T) {
 		}
 		raw, _ := json.Marshal(m)
 		_, err := LoadEnvelope(writeJSON(t, dir, "e-"+missing+".json", string(raw)))
-		if err == nil || !errors.Is(err, ErrEnvelope) || !strings.Contains(err.Error(), missing) {
+		want := missing
+		if err == nil || !errors.Is(err, ErrEnvelope) || !strings.Contains(err.Error(), want) {
 			t.Errorf("missing %s must be refused BY NAME: %v", missing, err)
 		}
 	}
@@ -581,10 +605,16 @@ func TestExportedAPIClosure(t *testing.T) {
 								t.Errorf("unlisted exported type %s", sp.Name.Name)
 							}
 						case *ast.ValueSpec:
+							allowValues := map[string]bool{
+								"ErrConstitution": true, "ErrWorkflow": true, "ErrCeiling": true,
+								"ErrEnvelope": true, "ErrAssembly": true, "ErrInvariant": true,
+								"VerbDeclareDone": true, "SignalPhaseCompletionRequested": true,
+								"EvTurnNoAction": true, "EvTurnProviderError": true,
+								"EvTurnsExhausted": true, "EvToolError": true,
+								"TargetStay": true, "TargetComplete": true, "TargetFail": true,
+							}
 							for _, n := range sp.Names {
-								if n.IsExported() && !strings.HasPrefix(n.Name, "Err") &&
-									!strings.HasPrefix(n.Name, "Verb") && !strings.HasPrefix(n.Name, "Signal") &&
-									!strings.HasPrefix(n.Name, "Ev") && !strings.HasPrefix(n.Name, "Target") {
+								if n.IsExported() && !allowValues[n.Name] {
 									t.Errorf("unlisted exported value %s", n.Name)
 								}
 							}

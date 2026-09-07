@@ -120,8 +120,15 @@ func LoadWorkflow(path string, ceiling *WorkflowCeiling) (*WorkflowDef, error) {
 		}
 		declared[e] = true
 	}
-	if !declared[EvTurnsExhausted] {
-		return nil, fmt.Errorf("%w: %s must be declared — every phase has a turn budget", ErrWorkflow, EvTurnsExhausted)
+	// Runtime-producible events are load-mandatory (security review
+	// MED-3): any model turn can produce no-action or a provider
+	// error, and every phase has a turn budget — a definition that
+	// cannot map them would route ordinary model behavior onto the
+	// fatal-breach invariant path, which is never model-triggerable.
+	for _, mandatory := range []string{EvTurnsExhausted, EvTurnNoAction, EvTurnProviderError} {
+		if !declared[mandatory] {
+			return nil, fmt.Errorf("%w: %s must be declared — it is runtime-producible in every phase", ErrWorkflow, mandatory)
+		}
 	}
 
 	phaseIdx := map[string]int{}
@@ -161,6 +168,12 @@ func LoadWorkflow(path string, ceiling *WorkflowCeiling) (*WorkflowDef, error) {
 			if !allowed[c] {
 				return nil, fmt.Errorf("%w: phase %q capability %q exceeds the workflow ceiling", ErrWorkflow, p.Name, c)
 			}
+			// A phase exposing a control verb must declare its signal,
+			// else an authorized call would reach δ undeclared — the
+			// invariant path fed by legal model behavior (MED-3).
+			if sig, isControl := controlVerbs[c]; isControl && !declared[sig] {
+				return nil, fmt.Errorf("%w: phase %q exposes control verb %q but does not declare its signal %q", ErrWorkflow, p.Name, c, sig)
+			}
 		}
 		// TOTALITY: exactly one edge per declared event; no undeclared
 		// edges; no implicit anything (Q-L7-3).
@@ -175,6 +188,12 @@ func LoadWorkflow(path string, ceiling *WorkflowCeiling) (*WorkflowDef, error) {
 			seen[e.On] = true
 			if _, ok := phaseIdx[e.To]; !ok && !terminalOK[e.To] {
 				return nil, fmt.Errorf("%w: phase %q edge targets unknown %q", ErrWorkflow, p.Name, e.To)
+			}
+			// turns-exhausted cannot stay: the budget is spent, so a
+			// stay target would be statically-verified-yet-unexecutable
+			// (security review MED-4).
+			if e.On == EvTurnsExhausted && (e.To == TargetStay || e.ExhaustedTo == TargetStay) {
+				return nil, fmt.Errorf("%w: phase %q: %s cannot target @stay — the turn budget is spent", ErrWorkflow, p.Name, EvTurnsExhausted)
 			}
 			// Static boundedness (Q-L7-4): every non-forward edge must
 			// carry a counter, and every counter its explicit forward
@@ -232,11 +251,3 @@ func (w *WorkflowDef) phase(name string) *Phase {
 	return nil
 }
 
-func (w *WorkflowDef) phaseIndex(name string) int {
-	for i := range w.Phases {
-		if w.Phases[i].Name == name {
-			return i
-		}
-	}
-	return -1
-}

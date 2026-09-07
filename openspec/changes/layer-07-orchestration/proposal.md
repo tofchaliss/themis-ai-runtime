@@ -1,7 +1,7 @@
 # Proposal: Layer 7 — Orchestration
 
-**Change ID:** layer-07-orchestration · **Status:** DRAFT for grilling · 2026-09-07
-**Owner gate:** ships only after the grill closes Q-L7-1..n (design.md) and the owner accepts.
+**Change ID:** layer-07-orchestration · **Status:** GRILL CLOSED (Q-L7-1..12), awaiting Gate 0 · 2026-09-07
+**Owner gate:** ships only after owner Gate-0 acceptance of the folded design (design.md §2 D-L7-1..12 + constitution amendments + residuals, §3 grill record).
 
 ## Why
 

@@ -31,12 +31,24 @@ Grill closed 2026-09-08 (all questions CLOSED; design.md §3 is the record, §2 
 - [ ] Governance registration in the catalog (OWNER ACT — written as catalog.proposed.json; the machinery has no write API and never self-registers)
 - [x] Security review (2026-09-08: P0 bundle pinned to the v1 capability set; ANALYZE proven read-only against the registry's mutating flag)
 
+## 3b. L9-M5 — D-L9-11a: composition-bound artifact identity (Class 3, NEW — architecture decision 2026-09-08)
+
+- [ ] Compact composition manifest crosses the SubmitTask seam as part of the ordinary governed envelope (identities only — never artifact bytes; envelope size stays fixed regardless of artifact size)
+- [ ] Mandatory pins: an envelope naming a Skill artifact WITHOUT its committed identity is refused (path-only is not a reference)
+- [ ] L7 verifies every materialized Skill artifact against the manifest-committed identity; missing pin, manifest/hash inconsistency, or artifact/hash mismatch → invariant failure → freeze → seal → FAILED
+- [ ] L7 remains Skill-blind: zero dependency on the skills package (`go list -deps ./orchestration`), no catalog access, origin still uninterpreted
+- [ ] Register D split per D-L9-11a: execution-integrity mismatch REFUSED; internally-consistent forged composition NOT claimed governance-verified, detectable post-hoc only — the distinction survives into the test names
+- [ ] Mutation-verify the binding (a matched-but-foreign path+SHA pair must fail); the tests must be coupled to the invariant, not to an incidental event
+- [ ] Re-run the three Class-3 reviews and the live proof against the changed seam
+
 ## 4. L9-M4 — Proof registers + close (Class 2/3)
 
 - [x] Register A structural (skills/skills_test.go) · Register B adversarial (skills/adversarial_test.go) · Register C equivalence + provenance-swap (orchestration/skill_seam_test.go) · Register E live proof PASSED vs qwen2.5:7b through the unmodified loop (orchestration/skill_e2e_test.go), plus the zero-trust-discount bypass proven against the real skill
 - [x] Register D cold reconstruction (orchestration/skill_reconstruct_test.go): record + catalog + pinned bytes recover the exact reviewed composition; declared-vs-recorded artifact identity drift is deterministically detectable after the fact
 - [x] Three Class-3 reviews run and remediated (security, test, architecture); every CRITICAL and HIGH closed with a mutation-verified regression
+- [ ] Reviews MUST be re-run after L9-M5: the seam changes, so the prior review verdicts do not carry over
 - [ ] Traceability; owner acceptance of the three-state verdicts
+- [ ] Test-evidence gate: record explicitly that the pre-review green tests did NOT establish the invariants they claimed, and that mutation testing — not passing tests — is what couples a test to its invariant (owner, 2026-09-08). This is part of the evidence, not a footnote to hide.
 - [ ] Code map + status doc + artifact updates; push/archive on owner approval
 
 ## 5. Deferred (recorded residuals — design.md §3; never silently promoted)

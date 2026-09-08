@@ -10,6 +10,7 @@ package orchestration
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -115,24 +116,91 @@ func TestP0SkillRunsThroughProductionLoop(t *testing.T) {
 	if man.GovernedHashes["origin:skill_composition"] == "" {
 		t.Fatal("composition hash must be recorded for post-hoc catalog verification")
 	}
-	// The procedure genuinely reached the model as instruction
-	// material: the composed delivery carries its text.
-	evs, _ := f.o.root.ReadEvents("t-p0")
-	sawProcedure := false
+	// The procedure genuinely reached the model as instruction material.
+	// An earlier version of this check set a boolean when a delivery
+	// event existed and discarded the bytes — it passed even with the
+	// procedure removed from the render entirely (test review CRITICAL).
+	// Assert the actual text, from the actual delivered system message.
+	assertProcedureDelivered(t, f, "t-p0", env, "Establish what the code actually does")
+}
+
+// assertProcedureDelivered checks the delivered instruction text for a
+// distinctive sentence of the skill's procedure — the bytes, not the
+// existence of an event.
+func assertProcedureDelivered(t *testing.T, f *fixture, taskID, envelopePath, phrase string) {
+	t.Helper()
+	sys, err := recordedSystemMessage(t, f, taskID, envelopePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(sys, phrase) {
+		t.Fatalf("the delivered system message does not carry the procedure text %q", phrase)
+	}
+	// And it arrives under its own untrusted-tier heading, not merged
+	// into the harness-owned section (security review HIGH-2).
+	if !strings.Contains(sys, "## Skill procedure") {
+		t.Fatal("procedure text must render under its own provenance heading")
+	}
+	// Negative control: a walk with no skill procedure must NOT carry
+	// either, so the assertions above cannot be passing for some
+	// unrelated reason.
+	f2 := setup(t, happyScript(), "")
+	plain := f2.envelope(t, "t-noproc-control")
+	if _, err := f2.o.SubmitTask(plain); err != nil {
+		t.Fatal(err)
+	}
+	plainSys, err := recordedSystemMessage(t, f2, "t-noproc-control", plain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(plainSys, phrase) || strings.Contains(plainSys, "## Skill procedure") {
+		t.Fatal("a walk without a skill procedure must not deliver one")
+	}
+}
+
+// recordedSystemMessage returns the instruction text the task actually
+// delivered, recovered from the envelope the task ran under and
+// cross-checked against the render hash the delivery record committed.
+// The hash equality is what makes this the model's view rather than a
+// plausible re-render.
+func recordedSystemMessage(t *testing.T, f *fixture, taskID, envelopePath string) (string, error) {
+	t.Helper()
+	evs, err := f.o.root.ReadEvents(taskID)
+	if err != nil {
+		return "", err
+	}
+	var renderHash string
 	for _, ev := range evs {
 		if ev.Class != state.EvL2Delivery {
 			continue
 		}
-		composed, err := f.o.root.Resolve(ev, 0)
-		if err != nil {
-			t.Fatal(err)
+		var b struct {
+			RenderHash string `json:"render_hash"`
 		}
-		_ = composed
-		sawProcedure = true
+		if err := json.Unmarshal(ev.Body, &b); err != nil {
+			return "", err
+		}
+		renderHash = b.RenderHash
 	}
-	if !sawProcedure {
-		t.Fatal("no composed delivery recorded")
+	if renderHash == "" {
+		return "", fmt.Errorf("no delivery recorded for %s", taskID)
 	}
+	env, err := LoadEnvelope(envelopePath)
+	if err != nil {
+		return "", err
+	}
+	eis, err := f.o.resolveTaskEIS(env)
+	if err != nil {
+		return "", err
+	}
+	text, hash, err := eis.Render(f.o.policy)
+	if err != nil {
+		return "", err
+	}
+	if hash != renderHash {
+		return "", fmt.Errorf("re-rendered instructions do not match the delivered render hash (%s vs %s)", hash, renderHash)
+	}
+	return text, nil
 }
 
 // Register E (live half): the authored skill, a real local model, and

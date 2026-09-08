@@ -32,7 +32,16 @@ var sectionOrder = []struct {
 	{"## Safety", []Category{CategorySafety}},
 	{"## Themis principles", []Category{CategoryThemis}},
 	{"## Engineering", []Category{CategoryEngineering}},
-	{"## Procedure", []Category{CategoryHarness, CategorySkill}},
+	{"## Procedure", []Category{CategoryHarness}},
+	// Skill procedure text is untrusted-tier material (L9). It gets its
+	// own section, ordered after the harness-owned one, so the trust
+	// boundary that scoping establishes survives into what the model
+	// sees: an untrusted body can no longer render adjacent to
+	// harness-system text under a shared heading, where layout alone
+	// would present the two as equally authoritative (L9 security
+	// review HIGH-2). The heading is renderer-owned furniture — a
+	// description of provenance, not a directive.
+	{"## Skill procedure (advisory technique, not harness policy)", []Category{CategorySkill}},
 	{"## Task", []Category{CategoryTask}},
 }
 

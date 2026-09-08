@@ -10,6 +10,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
@@ -294,26 +297,57 @@ func TestCatalogAppendOnly(t *testing.T) {
 	}
 }
 
-// D-L9-3: the skills package has NO catalog-write API — machinery
-// cannot self-register. Pinned by an exported-surface audit.
-func TestNoCatalogWriteAPI(t *testing.T) {
-	entries, err := os.ReadDir(".")
+// D-L9-3 / D-L9-16: the skills package can never write catalog storage
+// — machinery cannot self-register or self-promote. An earlier version
+// of this test grepped for five function NAMES and was defeated by a
+// function called PromoteSkill (test review CRITICAL). This audits the
+// CAPABILITY instead: the package legitimately writes only the three
+// effective artifacts inside the caller's OutDir, so every filesystem
+// write in non-test sources must occur in Instantiate and nowhere else.
+func TestNoCatalogWriteCapability(t *testing.T) {
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, ".", func(fi os.FileInfo) bool {
+		return !strings.HasSuffix(fi.Name(), "_test.go")
+	}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, e := range entries {
-		if !strings.HasSuffix(e.Name(), ".go") || strings.HasSuffix(e.Name(), "_test.go") {
-			continue
+	writers := map[string]bool{
+		"WriteFile": true, "Create": true, "OpenFile": true,
+		"Rename": true, "Remove": true, "RemoveAll": true, "Truncate": true,
+	}
+	scanned := 0
+	for _, pkg := range pkgs {
+		for name, file := range pkg.Files {
+			scanned++
+			var fn string
+			ast.Inspect(file, func(n ast.Node) bool {
+				switch node := n.(type) {
+				case *ast.FuncDecl:
+					fn = node.Name.Name
+				case *ast.SelectorExpr:
+					pkgIdent, ok := node.X.(*ast.Ident)
+					if !ok || pkgIdent.Name != "os" {
+						return true
+					}
+					if !writers[node.Sel.Name] {
+						return true
+					}
+					// Instantiate emits the effective grant/spec/envelope
+					// into the caller's OutDir; that is its whole job.
+					// Any OTHER function gaining a write is the capability
+					// this test exists to refuse.
+					if fn != "Instantiate" {
+						t.Errorf("%s: %s writes the filesystem via os.%s — only Instantiate may write, and never catalog storage (D-L9-3/D-L9-16)",
+							filepath.Base(name), fn, node.Sel.Name)
+					}
+				}
+				return true
+			})
 		}
-		src, err := os.ReadFile(e.Name())
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, forbidden := range []string{"func Register", "func Withdraw", "func Publish", "func SaveCatalog", "func WriteCatalog"} {
-			if strings.Contains(string(src), forbidden) {
-				t.Fatalf("%s: %q would let machinery self-register — registration is a governance act (D-L9-3)", e.Name(), forbidden)
-			}
-		}
+	}
+	if scanned == 0 {
+		t.Fatal("scanned no sources — the audit would be vacuously true")
 	}
 }
 

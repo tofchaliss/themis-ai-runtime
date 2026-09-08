@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tofchaliss/themis/runtime/model"
 	"github.com/tofchaliss/themis/state"
 )
 
@@ -54,9 +55,10 @@ func TestSkillProvenanceDoesNotChangeTheWalk(t *testing.T) {
 	}
 	plainWalk := replayAndVerify(t, f, "t-plain")
 
-	// Skill-attributed: same executable fields, plus origin.
-	f2 := setup(t, happyScript(), "")
-	base := f2.envelope(t, "t-skill")
+	// Skill-attributed: the SAME fixture, so every governed artifact is
+	// byte-identical and the origin block is the only difference.
+	f.o.cfg.Model = happyScript()
+	base := f.envelope(t, "t-skill")
 	attributed := withEnvelopeFields(t, base, map[string]any{
 		"origin": map[string]string{
 			"skill":             "investigate-cve@1",
@@ -64,16 +66,97 @@ func TestSkillProvenanceDoesNotChangeTheWalk(t *testing.T) {
 			"skill_catalog":     strings.Repeat("b", 64),
 		},
 	}, "envelope-t-skill-attributed.json")
-	resSkill, err := f2.o.SubmitTask(attributed)
+	resSkill, err := f.o.SubmitTask(attributed)
 	if err != nil || resSkill.Status != state.StatusCompleted {
 		t.Fatalf("skill-attributed walk: %v %+v", err, resSkill)
 	}
-	skillWalk := replayAndVerify(t, f2, "t-skill")
+	skillWalk := replayAndVerify(t, f, "t-skill")
 
 	// The complete recorded control-transition tuples must match.
 	if fmt.Sprint(plainWalk) != fmt.Sprint(skillWalk) {
 		t.Fatalf("provenance changed the walk:\n plain %+v\n skill %+v", plainWalk, skillWalk)
 	}
+	// Transitions alone are too weak: a happy walk never approaches a
+	// counter, so provenance could raise a budget or a quota and the
+	// tuples would still match (test review HIGH). Every governed
+	// identity except the attribution itself must be identical.
+	assertGovernedHashesEqual(t, f, "t-plain", f, "t-skill")
+}
+
+// assertGovernedHashesEqual compares every recorded governed identity
+// between two tasks, ignoring only the opaque origin: attribution. If
+// provenance influenced ANY governed input — grant, ceiling, spec,
+// workflow, instruction set — this fails.
+func assertGovernedHashesEqual(t *testing.T, a *fixture, aID string, b *fixture, bID string) {
+	t.Helper()
+	manA, err := a.o.root.ReadManifest(aID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manB, err := b.o.root.ReadManifest(bID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	strip := func(m map[string]string) map[string]string {
+		out := map[string]string{}
+		for k, v := range m {
+			// The attribution itself, and the three artifacts whose bytes
+			// carry the task id, differ by construction. Everything else
+			// is a governed input that provenance must not touch.
+			if strings.HasPrefix(k, "origin:") || k == "envelope" || k == "spec" ||
+				k == "grant_envelope" || k == "grant_effective" {
+				continue
+			}
+			out[k] = v
+		}
+		return out
+	}
+	ga, gb := strip(manA.GovernedHashes), strip(manB.GovernedHashes)
+	if len(ga) == 0 {
+		t.Fatal("no governed identities to compare — the check would be vacuous")
+	}
+	for k, va := range ga {
+		if vb, ok := gb[k]; !ok || va != vb {
+			t.Errorf("governed identity %q differs between the plain and skill-attributed walks (%q vs %q) — provenance must influence nothing", k, va, vb)
+		}
+	}
+}
+
+// The equivalence pair under PRESSURE: a script that trips the
+// no-action counter to exhaustion drives the walk against its governed
+// limits, where a provenance-influenced budget would actually show.
+func TestSkillProvenanceDoesNotChangeASaturatingWalk(t *testing.T) {
+	script := func() *scriptedModel {
+		return &scriptedModel{steps: []model.ExecutionResponse{
+			prose("thinking"), prose("thinking"), prose("thinking"),
+			prose("thinking"), prose("thinking"), prose("thinking"),
+		}}
+	}
+	f := setup(t, script(), "")
+	plainRes, err := f.o.SubmitTask(f.envelope(t, "t-sat-plain"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	plainWalk := replayAndVerify(t, f, "t-sat-plain")
+
+	f.o.cfg.Model = script()
+	base := f.envelope(t, "t-sat-skill")
+	attributed := withEnvelopeFields(t, base, map[string]any{
+		"origin": map[string]string{"skill": "investigate-cve@1", "skill_composition": strings.Repeat("a", 64)},
+	}, "envelope-t-sat-attributed.json")
+	skillRes, err := f.o.SubmitTask(attributed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	skillWalk := replayAndVerify(t, f, "t-sat-skill")
+
+	if plainRes.Status != skillRes.Status {
+		t.Fatalf("terminal differs under pressure: %v vs %v", plainRes.Status, skillRes.Status)
+	}
+	if fmt.Sprint(plainWalk) != fmt.Sprint(skillWalk) {
+		t.Fatalf("provenance changed a saturating walk:\n plain %+v\n skill %+v", plainWalk, skillWalk)
+	}
+	assertGovernedHashesEqual(t, f, "t-sat-plain", f, "t-sat-skill")
 }
 
 // D-L9-13: provenance is preserved verbatim into task attribution —

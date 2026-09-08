@@ -287,16 +287,35 @@ func TestOriginCarriesTemplateAndEffectiveHashes(t *testing.T) {
 	if !ok {
 		t.Fatal("skill-instantiated envelopes must carry origin attribution")
 	}
-	// The grant's post-workspace-binding identity is L7's to record
-	// (grant_effective); L9 records the bytes it actually emitted.
-	for _, key := range []string{"skill", "skill_composition", "skill_catalog",
-		"grant_template", "grant_instantiated", "spec_template", "spec_effective"} {
-		if v, ok := origin[key].(string); !ok || v == "" {
-			t.Fatalf("origin missing %q: %v", key, origin)
-		}
+	// Every recorded identity must equal the bytes it claims to
+	// identify. Asserting non-emptiness let a mutation record the
+	// template hash as the effective one, or any 64-hex string as the
+	// catalog anchor (test review HIGH: attribution honesty defeated).
+	cat, err := LoadCatalog(b.catalogPath)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if origin["skill"] != "investigate-cve@1" {
-		t.Fatalf("origin skill handle wrong: %v", origin["skill"])
+	_, m, err := cat.Resolve("investigate-cve@1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	outDir := filepath.Dir(envPath)
+	recomputed := map[string]string{
+		"skill":              "investigate-cve@1",
+		"skill_composition":  m.CompositionHash,
+		"skill_catalog":      cat.Hash,
+		"grant_template":     m.GrantTemplate.SHA256,
+		"spec_template":      m.SpecTemplate.SHA256,
+		"skill_procedure":    m.Procedure.SHA256,
+		"skill_workflow":     m.Workflow.SHA256,
+		"grant_instantiated": shaFile(t, filepath.Join(outDir, "t-1-grant.json")),
+		"spec_effective":     shaFile(t, filepath.Join(outDir, "t-1-spec.json")),
+	}
+	for key, want := range recomputed {
+		got, _ := origin[key].(string)
+		if got != want {
+			t.Errorf("origin[%q] = %q, but the bytes it names hash to %q", key, got, want)
+		}
 	}
 	if origin["grant_template"] == origin["grant_instantiated"] {
 		t.Fatal("template and instantiated identities must be distinguishable")
@@ -339,4 +358,15 @@ func repin(t *testing.T, b *bundle, pinField, file, body string) {
 		sha(out))
 	write(t, b.catalogDir, "catalog.json", cat)
 	b.composition = sha(out)
+}
+
+// shaFile hashes a file's bytes — used to recompute the identity an
+// origin field claims, rather than trusting the claim.
+func shaFile(t *testing.T, path string) string {
+	t.Helper()
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return sha(b)
 }

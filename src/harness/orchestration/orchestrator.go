@@ -14,6 +14,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 
 	l2 "github.com/tofchaliss/themis/context"
 	"github.com/tofchaliss/themis/execution"
@@ -285,8 +287,19 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	governed := map[string]string{
 		"envelope": env.Hash, "workflow": wf.Hash, "workflow_ceiling": wfCeiling.Hash,
 		"registry": reg.Hash, "grant_envelope": hashBytes(rawGrant), "grant_effective": grant.Hash,
-		"exec_ceiling": execCeiling.Hash, "spec": spec.Hash, "context_contract": contract.Hash,
+		// The authority the grant confers, hashed independently of the
+		// task-bound bytes: two tasks differing only in identity have
+		// the same authority digest, so any influence on caps, tools,
+		// or the aggregate is visible in the record even though the
+		// grant hashes legitimately differ (L9 test review HIGH).
+		"grant_authority": grantAuthorityDigest(grant),
+		"exec_ceiling":    execCeiling.Hash, "spec": spec.Hash, "context_contract": contract.Hash,
 		"l1_eis": eis.Hash, "l1_policy": eis.PolicyHash,
+		// The EIS hash covers delivered bodies only, so two resolutions
+		// with different conflict outcomes can share it. Record the
+		// status so the record distinguishes a clean resolution from one
+		// that dropped material (L9 security MED-2).
+		"l1_status":       string(eis.Status),
 		"l6_constitution": state.ConstitutionHash(), "l7_constitution": ConstitutionHash(),
 	}
 	// Opaque attribution: recorded verbatim, interpreted by nobody
@@ -306,6 +319,13 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	}
 	defer task.Close()
 
+	// Record-before-effect extends to authority: the grant handed to the
+	// walk must be the one whose authority was just recorded. Any
+	// divergence between recording and use — however introduced — is an
+	// invariant violation, not a difference to tolerate.
+	if grantAuthorityDigest(grant) != governed["grant_authority"] {
+		return res, fmt.Errorf("%w: the grant changed between attribution and execution", ErrInvariant)
+	}
 	w := &walk{
 		o: o, env: env, wf: wf, reg: reg, grant: grant, table: table,
 		task: task, l5: envn, execCeiling: execCeiling, spec: spec,
@@ -325,7 +345,15 @@ func (o *Orchestrator) resolveTaskEIS(env *Envelope) (*instructions.EffectiveSet
 		{Kind: instructions.ScopeHarnessSafety, Root: o.cfg.SafetyRoot},
 		{Kind: instructions.ScopeHarnessSystem, Root: o.cfg.SystemRoot},
 	}
-	if env.SkillProcedurePath != "" {
+	declaredProcedure := env.SkillProcedurePath != ""
+	if declaredProcedure {
+		// The no-symlink/regular-file property must hold at READ time,
+		// not merely when the path was written — the same re-check the
+		// repository activation path performs before reading.
+		info, err := os.Lstat(env.SkillProcedurePath)
+		if err != nil || !info.Mode().IsRegular() {
+			return nil, fmt.Errorf("%w: skill procedure must be a regular file", ErrAssembly)
+		}
 		procedure, err := os.ReadFile(env.SkillProcedurePath)
 		if err != nil {
 			return nil, fmt.Errorf("%w: skill procedure: %v", ErrAssembly, err)
@@ -339,6 +367,30 @@ func (o *Orchestrator) resolveTaskEIS(env *Envelope) (*instructions.EffectiveSet
 	eis, err := instructions.Resolve(instructions.Config{Policy: o.policy, TaskID: env.TaskID}, sources...)
 	if err != nil {
 		return nil, err
+	}
+	if declaredProcedure {
+		// A declared procedure is a MANDATORY member of the composition,
+		// unlike an optional repository instruction: if resolution
+		// dropped it (directive-pattern rejection), the task would run
+		// under an attribution asserting a composition whose instruction
+		// half never reached the model. That is loss of attribution
+		// integrity, so it fails closed here rather than completing
+		// cleanly with an unfalsifiable record (L9 security MED-2).
+		delivered := false
+		for _, inst := range eis.Instructions {
+			if inst.Scope == instructions.ScopeSkill {
+				delivered = true
+				break
+			}
+		}
+		if !delivered {
+			return nil, fmt.Errorf("%w: the declared skill procedure was not admitted into the instruction set (%d conflict(s)) — the reviewed composition cannot be affirmed", ErrAssembly, len(eis.Conflicts))
+		}
+	}
+	// Render at assembly, mirroring Open's rule: an unrenderable
+	// instruction configuration fails the task here, not mid-walk.
+	if _, _, err := eis.Render(o.policy); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrAssembly, err)
 	}
 	return eis, nil
 }
@@ -420,6 +472,25 @@ func instantiateGrant(raw []byte, wsRoot string) (*tools.Grant, string, error) {
 		return nil, "", err
 	}
 	return g, path, nil
+}
+
+// grantAuthorityDigest hashes exactly what a grant PERMITS — tools,
+// per-tool caps, workspace bindings, mutating flags, and the aggregate
+// — excluding the task identity that legitimately differs between two
+// otherwise identical tasks. Recording it makes "same authority?" a
+// question the record can answer directly.
+func grantAuthorityDigest(g *tools.Grant) string {
+	entries := append([]tools.GrantEntry(nil), g.Entries...)
+	sort.Slice(entries, func(i, j int) bool { return entries[i].Tool < entries[j].Tool })
+	var b strings.Builder
+	fmt.Fprintf(&b, "v%d;total=%d;", g.Version, g.TotalMaxCalls)
+	for _, e := range entries {
+		// The workspace path is per-task by construction (L7 binds it to
+		// the provisioned root), so the digest records only WHETHER an
+		// entry is workspace-scoped, not which instance.
+		fmt.Fprintf(&b, "%s:%d:%t:%t;", e.Tool, e.MaxCalls, e.Workspace != "", e.Mutating)
+	}
+	return hashBytes([]byte(b.String()))
 }
 
 func hashBytes(b []byte) string {

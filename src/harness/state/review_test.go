@@ -336,7 +336,12 @@ func TestExportedAPIClosure(t *testing.T) {
 		// Types and their fields are shape, not verbs; functions and
 		// methods are the mutation/read surface.
 		"OpenRoot": true, "CheckDisjointRoots": true, "ConstitutionHash": true,
-		"Root": true, "TaskRecord": true, "TaskOptions": true, "ObjectStore": true,
+		// ValidTaskID exposes the single task-identity predicate so a
+		// caller building paths from a task id (L9 instantiation)
+		// enforces THIS rule rather than a twin that can drift. Read-
+		// only judgment; it grants nothing and mutates nothing.
+		"ValidTaskID": true,
+		"Root":        true, "TaskRecord": true, "TaskOptions": true, "ObjectStore": true,
 		"Event": true, "Ref": true, "Manifest": true, "StatusView": true,
 		"VerifyResult": true, "ScanResult": true, "RecoveryOutcome": true,
 		"TaskStatus": true, "Verdict": true,

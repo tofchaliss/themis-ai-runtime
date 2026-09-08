@@ -7,10 +7,13 @@ package skills
 // under test here is the proposed one.
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tofchaliss/themis/tools"
 )
 
 const (
@@ -86,6 +89,65 @@ func TestP0SkillCompositionCoheres(t *testing.T) {
 		if strings.Contains(string(wfRaw), `"`+cap+`"`) && !strings.Contains(string(ceilRaw), `"`+cap+`"`) {
 			t.Errorf("workflow uses %q but the skill ceiling does not allow it", cap)
 		}
+	}
+
+	// The ceiling must stay inside the v1 capability set. Subset-of-
+	// ceiling alone let run_command into the ceiling with every test
+	// still green (test review HIGH) — and D-L9-15's approval-by-
+	// unreachability rests on exactly that not happening.
+	var ceiling struct {
+		AllowedTools []string `json:"allowed_tools"`
+	}
+	if err := json.Unmarshal(ceilRaw, &ceiling); err != nil {
+		t.Fatal(err)
+	}
+	v1 := map[string]bool{
+		"read_file": true, "list_directory": true, "search_code": true,
+		"get_finding": true, "get_product": true, "write_file": true,
+		"apply_patch": true, "declare_done": true,
+	}
+	for _, tool := range ceiling.AllowedTools {
+		if !v1[tool] {
+			t.Errorf("ceiling allows %q, which is outside the v1 capability set — run_command (OPEN-2) and approval verbs must remain unreachable", tool)
+		}
+	}
+
+	// ANALYZE is the read-only phase: it must hold no mutating
+	// capability. Checked against the registry's own mutating flag, not
+	// a hardcoded name list, so a future mutating tool is caught too.
+	reg, err := tools.LoadRegistry(mustAbs(t, filepath.Join(repoRoot, "policies/tools/registry-v3.json")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mutating := map[string]bool{}
+	for _, td := range reg.Tools {
+		if td.Mutating {
+			mutating[td.Name] = true
+		}
+	}
+	var wf struct {
+		Phases []struct {
+			Name         string   `json:"name"`
+			Capabilities []string `json:"capabilities"`
+		} `json:"phases"`
+	}
+	if err := json.Unmarshal(wfRaw, &wf); err != nil {
+		t.Fatal(err)
+	}
+	sawAnalyze := false
+	for _, p := range wf.Phases {
+		if p.Name != "ANALYZE" {
+			continue
+		}
+		sawAnalyze = true
+		for _, cap := range p.Capabilities {
+			if mutating[cap] {
+				t.Errorf("ANALYZE is the read-only phase but holds the mutating capability %q", cap)
+			}
+		}
+	}
+	if !sawAnalyze {
+		t.Fatal("the authored workflow must have an ANALYZE phase")
 	}
 }
 

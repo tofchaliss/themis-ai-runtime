@@ -328,7 +328,7 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	// with one, the activated skill source joins it — resolved and
 	// byte-verified here so the walk never re-reads instruction bytes
 	// from mutable storage (D-L9-11).
-	eis, err := o.resolveTaskEIS(env)
+	eis, procedureBytes, err := o.resolveTaskEIS(env)
 	if err != nil {
 		envn.Teardown()
 		return res, err
@@ -384,6 +384,15 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	// come from an envelope claim — which is the independent source an
 	// equality assertion could never supply. The bytes are the ones
 	// already captured and verified; nothing is re-read.
+	// R-L9-2: the submitted grant bytes and the verified procedure bytes
+	// join the durable set — the exact bytes already held, never a
+	// re-read (a re-read yields identity over A with durability over B).
+	// L1 remains the sole authority for procedure IDENTITY; L6 owns only
+	// the durable bytes, so no second identity mechanism is created.
+	materialized["grant_submitted"] = rawGrant
+	if len(procedureBytes) > 0 {
+		materialized["procedure"] = procedureBytes
+	}
 	if err := recordMaterializedArtifacts(task, materialized); err != nil {
 		return res, err
 	}
@@ -433,23 +442,24 @@ func recordMaterializedArtifacts(task *state.TaskRecord, materialized map[string
 // source. Byte verification against the envelope's stated pin happens
 // inside the activation seam: L7 resolves no skill and consults no
 // catalog — it verifies bytes against a hash it was given.
-func (o *Orchestrator) resolveTaskEIS(env *Envelope) (*instructions.EffectiveSet, error) {
+func (o *Orchestrator) resolveTaskEIS(env *Envelope) (*instructions.EffectiveSet, []byte, error) {
 	sources := []instructions.Source{
 		{Kind: instructions.ScopeHarnessSafety, Root: o.cfg.SafetyRoot},
 		{Kind: instructions.ScopeHarnessSystem, Root: o.cfg.SystemRoot},
 	}
 	declaredProcedure := env.SkillProcedurePath != ""
+	var procedureBytes []byte
 	if declaredProcedure {
 		// The no-symlink/regular-file property must hold at READ time,
 		// not merely when the path was written — the same re-check the
 		// repository activation path performs before reading.
 		info, err := os.Lstat(env.SkillProcedurePath)
 		if err != nil || !info.Mode().IsRegular() {
-			return nil, fmt.Errorf("%w: skill procedure must be a regular file", ErrAssembly)
+			return nil, nil, fmt.Errorf("%w: skill procedure must be a regular file", ErrAssembly)
 		}
 		procedure, err := os.ReadFile(env.SkillProcedurePath)
 		if err != nil {
-			return nil, fmt.Errorf("%w: skill procedure: %v", ErrAssembly, err)
+			return nil, nil, fmt.Errorf("%w: skill procedure: %v", ErrAssembly, err)
 		}
 		// The procedure becomes model INSTRUCTION text, so its identity is
 		// verified against bytes L7 hashed itself — never by comparing two
@@ -457,18 +467,19 @@ func (o *Orchestrator) resolveTaskEIS(env *Envelope) (*instructions.EffectiveSet
 		// (the option-A state D-L9-11a rejected; M5 review HIGH-1).
 		if c := env.Composition; c != nil {
 			if err := c.verify("procedure", c.Procedure, hashBytes(procedure)); err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 		src, err := instructions.ActivateSkillSource(procedure, env.SkillProcedureSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrAssembly, err)
+			return nil, nil, fmt.Errorf("%w: %v", ErrAssembly, err)
 		}
+		procedureBytes = procedure
 		sources = append(sources, src)
 	}
 	eis, err := instructions.Resolve(instructions.Config{Policy: o.policy, TaskID: env.TaskID}, sources...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if declaredProcedure {
 		// A declared procedure is a MANDATORY member of the composition,
@@ -486,15 +497,15 @@ func (o *Orchestrator) resolveTaskEIS(env *Envelope) (*instructions.EffectiveSet
 			}
 		}
 		if !delivered {
-			return nil, fmt.Errorf("%w: the declared skill procedure was not admitted into the instruction set (%d conflict(s)) — the reviewed composition cannot be affirmed", ErrAssembly, len(eis.Conflicts))
+			return nil, nil, fmt.Errorf("%w: the declared skill procedure was not admitted into the instruction set (%d conflict(s)) — the reviewed composition cannot be affirmed", ErrAssembly, len(eis.Conflicts))
 		}
 	}
 	// Render at assembly, mirroring Open's rule: an unrenderable
 	// instruction configuration fails the task here, not mid-walk.
 	if _, _, err := eis.Render(o.policy); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrAssembly, err)
+		return nil, nil, fmt.Errorf("%w: %v", ErrAssembly, err)
 	}
-	return eis, nil
+	return eis, procedureBytes, nil
 }
 
 func checkControlVocabulary(reg *tools.Registry) error {

@@ -593,3 +593,118 @@ func TestMaterializedArtifactsAreRecoverableFromTheRecord(t *testing.T) {
 		}
 	}
 }
+
+// R-L9-2 cross-layer proof. NOT "BodyHash == recorded BodyHash" — that
+// is the tautology already rejected. This proves the bytes L1 hashed
+// for identity and the bytes L6 stored for durability are the SAME
+// bytes, and that cold reconstruction recovers them.
+//
+//	L1 BodyHash(bytes_A) == recorded l1 identity
+//	L6 ObjectID(bytes_B) == recorded object address
+//	bytes_A == bytes_B
+//	retrieve by ObjectID → SHA256(bytes) == ObjectID → L1 BodyHash matches
+func TestProcedureBytesAreDurableAndCrossLayerConsistent(t *testing.T) {
+	f := setup(t, happyScript(), "")
+	env := instantiateP0(t, f, "t-xlayer", skills.Request{})
+	if _, err := f.o.SubmitTask(env); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := LoadEnvelope(env)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Recover the procedure bytes from L6 alone (cold).
+	recovered, addr := recoverMaterialized(t, f, "t-xlayer", "procedure")
+	if recovered == nil {
+		t.Fatal("procedure bytes must be durably recoverable — an identity without bytes cannot reconstruct what the model received")
+	}
+	// L6's address is its own hash of what it stored.
+	if !strings.HasSuffix(addr, hashBytes(recovered)) {
+		t.Fatalf("object %s is not addressed by a hash of its own bytes", addr)
+	}
+	// The bytes L6 stored are the bytes the envelope committed to, and
+	// therefore the bytes L1 hashed for identity.
+	if hashBytes(recovered) != loaded.SkillProcedureSHA256 {
+		t.Fatal("the durably stored procedure is not the one the composition committed to")
+	}
+	// And they are byte-identical to the artifact on disk: bytes_A ==
+	// bytes_B, computed independently on both sides.
+	onDisk, err := os.ReadFile(loaded.SkillProcedurePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(recovered) != string(onDisk) {
+		t.Fatal("L6-stored procedure bytes differ from the artifact L1 activated")
+	}
+}
+
+// R-L9-2 grant half: the submitted bytes are recoverable and hash to
+// grant_envelope, while grant_effective and grant_authority remain the
+// distinct, non-substitutable facts about the transformed grant.
+func TestGrantBytesAreDurableAndDistinctFromEffective(t *testing.T) {
+	f := setup(t, happyScript(), "")
+	env := f.envelope(t, "t-grantrec")
+	if _, err := f.o.SubmitTask(env); err != nil {
+		t.Fatal(err)
+	}
+	man, err := f.o.root.ReadManifest("t-grantrec")
+	if err != nil {
+		t.Fatal(err)
+	}
+	recovered, addr := recoverMaterialized(t, f, "t-grantrec", "grant_submitted")
+	if recovered == nil {
+		t.Fatal("the submitted grant bytes must be durably recoverable")
+	}
+	if !strings.HasSuffix(addr, hashBytes(recovered)) {
+		t.Fatalf("object %s is not addressed by a hash of its own bytes", addr)
+	}
+	// The recovered bytes ARE what grant_envelope names.
+	if man.GovernedHashes["grant_envelope"] != hashBytes(recovered) {
+		t.Fatal("the durably stored grant is not the one grant_envelope names")
+	}
+	// The three grant facts stay distinct: the submitted bytes are not
+	// the effective artifact, and neither is the authority digest.
+	if man.GovernedHashes["grant_effective"] == man.GovernedHashes["grant_envelope"] {
+		t.Fatal("submitted and effective grant identities must not collapse — L7 rewrites the grant")
+	}
+	for _, k := range []string{"grant_envelope", "grant_effective", "grant_authority"} {
+		if man.GovernedHashes[k] == "" {
+			t.Errorf("%s must be recorded: composition and execution reconstruction ask different questions", k)
+		}
+	}
+}
+
+// recoverMaterialized returns the durably stored bytes for one label,
+// read back through L6 by the reference in the record.
+func recoverMaterialized(t *testing.T, f *fixture, taskID, label string) ([]byte, string) {
+	t.Helper()
+	evs, err := f.o.root.ReadEvents(taskID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ev := range evs {
+		var b struct {
+			Kind    string            `json:"kind"`
+			Objects map[string]string `json:"objects"`
+		}
+		if err := json.Unmarshal(ev.Body, &b); err != nil || b.Kind != "materialized-governed-artifacts" {
+			continue
+		}
+		want, ok := b.Objects[label]
+		if !ok {
+			continue
+		}
+		for i := range ev.Refs {
+			if ev.Refs[i].ID != want {
+				continue
+			}
+			body, rerr := f.o.root.Resolve(ev, i)
+			if rerr != nil {
+				t.Fatal(rerr)
+			}
+			return body, want
+		}
+	}
+	return nil, ""
+}

@@ -320,6 +320,20 @@ func TestNoCatalogWriteCapability(t *testing.T) {
 	for _, pkg := range pkgs {
 		for name, file := range pkg.Files {
 			scanned++
+			// Resolve the local name actually bound to "os" in THIS file:
+			// matching the literal identifier "os" was defeated by an
+			// import alias (final test review H-1).
+			osNames := map[string]bool{}
+			for _, imp := range file.Imports {
+				if imp.Path == nil || imp.Path.Value != `"os"` {
+					continue
+				}
+				if imp.Name != nil {
+					osNames[imp.Name.Name] = true
+				} else {
+					osNames["os"] = true
+				}
+			}
 			var fn string
 			ast.Inspect(file, func(n ast.Node) bool {
 				switch node := n.(type) {
@@ -327,23 +341,35 @@ func TestNoCatalogWriteCapability(t *testing.T) {
 					fn = node.Name.Name
 				case *ast.SelectorExpr:
 					pkgIdent, ok := node.X.(*ast.Ident)
-					if !ok || pkgIdent.Name != "os" {
+					if !ok || !osNames[pkgIdent.Name] {
 						return true
 					}
 					if !writers[node.Sel.Name] {
 						return true
 					}
 					// Instantiate emits the effective grant/spec/envelope
-					// into the caller's OutDir; that is its whole job.
-					// Any OTHER function gaining a write is the capability
-					// this test exists to refuse.
+					// into the caller's OutDir; that is its whole job. Any
+					// OTHER function gaining a write is the capability this
+					// test exists to refuse.
 					if fn != "Instantiate" {
-						t.Errorf("%s: %s writes the filesystem via os.%s — only Instantiate may write, and never catalog storage (D-L9-3/D-L9-16)",
-							filepath.Base(name), fn, node.Sel.Name)
+						t.Errorf("%s: %s writes the filesystem via %s.%s — only Instantiate may write, and never catalog storage (D-L9-3/D-L9-16)",
+							filepath.Base(name), fn, pkgIdent.Name, node.Sel.Name)
 					}
 				}
 				return true
 			})
+			// Writes can also travel through an io.Writer or bufio; the
+			// package needs neither, so their presence outside Instantiate
+			// is itself the finding.
+			for _, indirect := range []string{"io.Writer", "bufio.NewWriter", "io.Copy"} {
+				src, rerr := os.ReadFile(name)
+				if rerr != nil {
+					t.Fatal(rerr)
+				}
+				if strings.Contains(string(src), indirect) {
+					t.Errorf("%s: uses %s — an indirect write path the skills package must not need", filepath.Base(name), indirect)
+				}
+			}
 		}
 	}
 	if scanned == 0 {

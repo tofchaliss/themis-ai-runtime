@@ -84,9 +84,17 @@ func TestPinSymlinkEscapeRefused(t *testing.T) {
 		t.Skipf("symlinks unavailable: %v", err)
 	}
 	// Even though the target bytes hash correctly, the symlink escapes
-	// the bundle and must be refused on confinement grounds.
-	if _, err := Instantiate(b.catalogPath, "investigate-cve@1", b.request(t)); err == nil {
+	// the bundle and must be refused on CONFINEMENT grounds specifically.
+	// Asserting only err != nil let the confinement predicate be removed
+	// entirely while a second guard caught it (final test review M-1):
+	// the property held, but this test did not establish the mechanism
+	// it names.
+	_, err := Instantiate(b.catalogPath, "investigate-cve@1", b.request(t))
+	if err == nil {
 		t.Fatal("a pin resolving through a symlink out of the bundle must refuse")
+	}
+	if !strings.Contains(err.Error(), "escapes the confinement root") {
+		t.Fatalf("the refusal must come from the confinement predicate, got: %v", err)
 	}
 }
 

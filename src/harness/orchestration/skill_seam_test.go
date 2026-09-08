@@ -308,3 +308,54 @@ func TestSkillProcedureReachesTheModelAsInstructions(t *testing.T) {
 		t.Fatal("an activated skill procedure must change the recorded EIS identity")
 	}
 }
+
+// Register C, turn-budget dimension. The saturating pair above trips
+// the no-action COUNTER, which exhausts in 3 turns and never reaches
+// max_model_turns — so the turn budget itself was unobserved, and
+// provenance could buy an extra model turn with the whole suite green
+// (final test review CRITICAL C-1). This pair drives the walk into
+// ANALYZE/turns-exhausted, where a provenance-influenced budget shows.
+func TestSkillProvenanceDoesNotChangeATurnSaturatingWalk(t *testing.T) {
+	// Successful read_file turns: they neither complete the phase nor
+	// trip the no-action counter, so the TURN BUDGET is what binds.
+	script := func() *scriptedModel {
+		m := &scriptedModel{}
+		for i := 0; i < 8; i++ {
+			m.steps = append(m.steps, toolCall("read_file", `{"path":"parser.go"}`))
+		}
+		return m
+	}
+	f := setup(t, script(), "")
+	plainRes, err := f.o.SubmitTask(f.envelope(t, "t-turnsat-plain"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	plainWalk := replayAndVerify(t, f, "t-turnsat-plain")
+
+	f.o.cfg.Model = script()
+	base := f.envelope(t, "t-turnsat-skill")
+	attributed := withEnvelopeFields(t, base, map[string]any{
+		"origin":      map[string]string{"skill": "investigate-cve@1", "skill_composition": strings.Repeat("a", 64)},
+		"composition": genuineCommitment(t, base),
+	}, "envelope-t-turnsat-attributed.json")
+	skillRes, err := f.o.SubmitTask(attributed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	skillWalk := replayAndVerify(t, f, "t-turnsat-skill")
+
+	// The walk must actually have hit the turn budget, or this test
+	// proves nothing about that dimension.
+	if len(plainWalk) == 0 || !strings.Contains(plainWalk[len(plainWalk)-1].EdgeID, EvTurnsExhausted) {
+		t.Fatalf("this pair must saturate the TURN budget, not another edge: %+v", plainWalk)
+	}
+	if plainRes.Status != skillRes.Status {
+		t.Fatalf("terminal differs under turn pressure: %v vs %v", plainRes.Status, skillRes.Status)
+	}
+	// Complete tuples, cause_seq included: an extra turn shifts the
+	// causing event and is caught here.
+	if fmt.Sprint(plainWalk) != fmt.Sprint(skillWalk) {
+		t.Fatalf("provenance changed a turn-saturating walk:\n plain %+v\n skill %+v", plainWalk, skillWalk)
+	}
+	assertGovernedHashesEqual(t, f, "t-turnsat-plain", f, "t-turnsat-skill")
+}

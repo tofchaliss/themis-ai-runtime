@@ -11,7 +11,6 @@ package skills
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 )
@@ -103,15 +102,6 @@ func parseSchema(raw []byte) (*InputSchema, error) {
 		}
 	}
 	return &s, nil
-}
-
-// LoadInputSchema is the standalone loader (registers/tests).
-func LoadInputSchema(path string) (*InputSchema, error) {
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrInputs, err)
-	}
-	return parseSchema(raw)
 }
 
 // Validate checks caller inputs against the schema: type, required,

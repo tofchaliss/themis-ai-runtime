@@ -6,7 +6,7 @@ Grill closed 2026-09-08 (all questions CLOSED; design.md §3 is the record, §2 
 
 - [x] Grill session held; boundary + all questions answered and recorded (incl. Q-L9-7′ instantiation surface taken early)
 - [x] Decisions folded into design.md §2; fold-completeness cross-check: no orphans; two architecture-doc fields dispositioned (failure conditions = workflow edges; expected outputs flagged OPEN to owner)
-- [ ] Gate 0: design accepted by owner
+- [x] Gate 0: design accepted by owner (2026-09-08, "GATE 0 — PASSED / IMPLEMENTATION AUTHORIZED"; expected-outputs v1 omission accepted as residual; M3 constraint: registration is the governed admission act, machinery must not self-register; M2 constraint: L7 attribution amendment non-semantic)
 
 ## 1. L9-M1 — Skill manifest + catalog (Class 3)
 
@@ -39,4 +39,4 @@ Grill closed 2026-09-08 (all questions CLOSED; design.md §3 is the record, §2 
 
 ## 5. Deferred (recorded residuals — design.md §3; never silently promoted)
 
-- Governed multi-Skill pipelines (L8-vs-L9 OPEN) · L8 delegation · runtime revocation/cancellation · approval channel · repository/external skill activation · model-property predicate · richer input schema · evaluation-purpose attribution (L11/L6) · proposal lifecycle (L11) · deterministic verification capabilities (OPEN-2/L10) · expected-outputs contract (owner decision pending)
+- Governed multi-Skill pipelines (L8-vs-L9 OPEN) · L8 delegation · runtime revocation/cancellation · approval channel · repository/external skill activation · model-property predicate · richer input schema · evaluation-purpose attribution (L11/L6) · proposal lifecycle (L11) · deterministic verification capabilities (OPEN-2/L10) · expected-outputs contract (Gate 0: accepted v1 omission; future owner unassigned)

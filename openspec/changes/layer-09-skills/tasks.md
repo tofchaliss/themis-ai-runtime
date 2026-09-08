@@ -51,7 +51,9 @@ Grill closed 2026-09-08 (all questions CLOSED; design.md §3 is the record, §2 
 - [x] Three Class-3 reviews run and remediated (security, test, architecture); every CRITICAL and HIGH closed with a mutation-verified regression
 - [ ] Reviews MUST be re-run after L9-M5: the seam changes, so the prior review verdicts do not carry over
 - [ ] Traceability; owner acceptance of the three-state verdicts
-- [ ] **R-L9-1 (blocking): cold-reconstruction provenance proof.** Mutation escapes: recorded artifact identities cannot be shown to originate from L7-materialized bytes rather than envelope-supplied claims. Requires a proof-design exercise for a structurally independent evidence source, then mutation testing. Stop at the Architecture Decision Gate if it needs an L6 schema change. No further assertion accepted as closure.
+- [x] **R-L9-1 CLOSED** for the four L7-materialized artifacts (six mutations fail; L6-derived object identity is the independent source)
+- [ ] **R-L9-2 (blocking): grant + procedure reconstruction.** Submitted vs effective grant must not be conflated; procedure must not gain a second identity mechanism outside L1 — verify the EIS path derives identity from actual bytes, not a recorded claim.
+- [ ] (superseded) **R-L9-1 original: cold-reconstruction provenance proof.** Mutation escapes: recorded artifact identities cannot be shown to originate from L7-materialized bytes rather than envelope-supplied claims. Requires a proof-design exercise for a structurally independent evidence source, then mutation testing. Stop at the Architecture Decision Gate if it needs an L6 schema change. No further assertion accepted as closure.
 - [ ] Test-evidence gate: record explicitly that the pre-review green tests did NOT establish the invariants they claimed, and that mutation testing — not passing tests — is what couples a test to its invariant (owner, 2026-09-08). This is part of the evidence, not a footnote to hide.
 - [ ] Code map + status doc + artifact updates; push/archive on owner approval
 

@@ -211,6 +211,7 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 			{"workflow", c.Workflow, wf.Hash},
 			{"workflow_ceiling", c.WorkflowCeiling, wfCeiling.Hash},
 			{"context_contract", c.ContextContract, contract.Hash},
+			{"spec", c.Spec, spec.Hash},
 		} {
 			if err := c.verify(check.label, check.want, check.got); err != nil {
 				return res, err
@@ -243,6 +244,15 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	rawGrant, err := os.ReadFile(env.GrantPath)
 	if err != nil {
 		return res, fmt.Errorf("%w: %v", ErrAssembly, err)
+	}
+	// The grant carries actual tool authority, so its identity is
+	// committed like the rest — against the ENVELOPE bytes, since L7
+	// rewrites the grant to bind @workspace and the executed bytes are
+	// deliberately not the submitted ones.
+	if c := env.Composition; c != nil {
+		if err := c.verify("grant", c.Grant, hashBytes(rawGrant)); err != nil {
+			return res, err
+		}
 	}
 	// Cross-artifact identity binding (security review MED-1): a
 	// grant or spec minted for another task is refused, not accepted
@@ -374,6 +384,15 @@ func (o *Orchestrator) resolveTaskEIS(env *Envelope) (*instructions.EffectiveSet
 		procedure, err := os.ReadFile(env.SkillProcedurePath)
 		if err != nil {
 			return nil, fmt.Errorf("%w: skill procedure: %v", ErrAssembly, err)
+		}
+		// The procedure becomes model INSTRUCTION text, so its identity is
+		// verified against bytes L7 hashed itself — never by comparing two
+		// envelope-supplied strings, which is integrity without binding
+		// (the option-A state D-L9-11a rejected; M5 review HIGH-1).
+		if c := env.Composition; c != nil {
+			if err := c.verify("procedure", c.Procedure, hashBytes(procedure)); err != nil {
+				return nil, err
+			}
 		}
 		src, err := instructions.ActivateSkillSource(procedure, env.SkillProcedureSHA256)
 		if err != nil {

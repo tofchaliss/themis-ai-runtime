@@ -19,7 +19,11 @@ L9 sits *before* submission: it is authoring-and-instantiation machinery. The L7
 
 ## 2. Locked decisions (fold target)
 
-*(empty until questions close)*
+### D-L9-0 — Runtime position: L9 never executes at runtime (LOCKED 2026-09-08)
+L9 is a pre-submission plane: define → resolve → validate → instantiate. Instantiation produces an ordinary governed envelope; L7 alone executes the resulting walk. There is no L9 runtime walker to constrain — second-orchestrator prevention by reachability, not discipline. The older architecture wording "L9 executes procedure" is superseded: execution responsibility was absorbed into shipped L7.
+
+### D-L9-1 — A Skill is a governed, hash-pinned atomic composition (LOCKED 2026-09-08, Q-L9-1)
+A Skill is a governed manifest pinning by SHA-256 one complete set of the artifact kinds L1–L7 already execute — workflow definition, workflow ceiling, context contract, grant template, spec template — plus a typed input schema and a **pinned procedure artifact reference** (not embedded: L1 owns instruction identity; embedding would mint a second instruction-identity mechanism inside L9), under a name and version. It is inert data, not an execution engine. **Atomic composition invariant:** the pinned artifacts are resolved as one governed set and cannot be independently mixed or substituted during instantiation (skill A's workflow with grant B is structurally impossible); the composition hash is the identity of the reviewed combination and lands in the L6 record. **Registry NOT pinned:** the capability vocabulary and authorization contracts stay L4-owned; a Skill references required capabilities through its grant template (skill grant ⊆ workflow ceiling ⊆ L4 registry, with L7 phase narrowing at execution) but cannot define or authorize capabilities. If capability-contract pinning is ever needed for reproducibility, that is a specific L4 contract identity, never L9 ownership of the registry. Skill = composition, not capability.
 
 ## 3. Open questions — Q-L9-1..16 (owner list 2026-09-08, absorbing the draft 10)
 

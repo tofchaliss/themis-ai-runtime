@@ -39,9 +39,13 @@ Not touched.
 
 ## Git
 
-**41 commits unpushed on main**, tree clean. The L9 sequence runs
-`415ce1d` → `e9314d9`. Nothing has been pushed at any point; every push in this
-project requires explicit owner approval.
+**Pushed to origin/main 2026-09-08 at `2ae121a`** (owner-approved), tree clean,
+nothing outstanding. The L9 sequence runs `415ce1d` → `2ae121a`. Every push in
+this project requires explicit owner approval; this one was given when the work
+was parked.
+
+Verified immediately before the push: whole module green (every package, both
+live proofs), `gofmt` clean, `go vet` clean.
 
 ## The four things that remain
 
@@ -53,7 +57,10 @@ project requires explicit owner approval.
    enforces that it never gains one.
 3. **traceability.md** — written at archive, mapping each decision to its
    mechanism, register, test, and evidence (see the L7 archive for the format).
-4. **Code map + status doc + artifact updates**, then push/archive on approval.
+4. **Archive on approval** — move the change to
+   `openspec/changes/archive/YYYY-MM-DD-layer-09-skills/`, following the L7
+   archive as the pattern. (Code map, status doc, and the review artifact are
+   already updated and pushed.)
 
 ## Decisions a newcomer must not re-derive
 

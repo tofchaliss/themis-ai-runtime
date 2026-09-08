@@ -14,7 +14,7 @@ Grill closed 2026-09-08 (all questions CLOSED; design.md §3 is the record, §2 
 - [x] Catalog (skills/catalog.go): immutable name@version→composition bindings, two-way identity agreement, rebind refusal, active|withdrawn, atomic resolve-verify-instantiate, CheckAppendOnly detects deletion/rebinding/un-withdrawal
 - [x] Input-schema validator (skills/schema.go): closed v1 vocabulary; rich features unrepresentable via DisallowUnknownFields; string bounds mandatory; integer inputs bounded
 - [x] Catalog root disjointness at the instantiation call site (state.CheckDisjointRoots); decoded registry scan proves no catalog verb (TestNoCatalogVerbInRegistries)
-- [ ] Security review
+- [x] Security review (2026-09-08: no CRITICAL; HIGH-1 arbitrary-write + MED-1 wall-2 vacuity remediated with regressions)
 
 ## 2. L9-M2 — Instantiation (Class 3)
 
@@ -23,19 +23,20 @@ Grill closed 2026-09-08 (all questions CLOSED; design.md §3 is the record, §2 
 - [x] Placeholder-only substitution (@task_id/@repo/@pinned_sha; @workspace stays for L7 to bind); never procedure text/workflow/contract/ceiling. NOTE: `@input.<field>` is NOT implemented — inputs travel via the payload only; recorded as a deliberate v1 narrowing for owner review
 - [x] Effective grant + spec emission with template AND instantiated/effective identities in origin; spec re-validated through execution.LoadSpec; grant shape-checked (it cannot be loaded pre-workspace by design — L7 records grant_effective after binding)
 - [x] L7 additive envelope amendment: optional non-semantic skill_procedure_path/sha256 + opaque origin, preserved verbatim into attribution under an origin: prefix; L7 interprets none of it
-- [ ] Security review
+- [x] Security review (2026-09-08: HIGH-2 render trust-merge + MED-2 silent procedure drop remediated; MED-3 re-Lstat added)
 
 ## 3. L9-M3 — investigate-cve@1 (Class 2/3)
 
 - [x] P0 skill composition authored (policies/skills/investigate-cve/): two-phase lattice (ANALYZE read-only, ASSESS adds write_file), ceiling, contract, grant template, spec template, closed input schema, advisory procedure artifact
 - [ ] Governance registration in the catalog (OWNER ACT — written as catalog.proposed.json; the machinery has no write API and never self-registers)
-- [ ] Security review
+- [x] Security review (2026-09-08: P0 bundle pinned to the v1 capability set; ANALYZE proven read-only against the registry's mutating flag)
 
 ## 4. L9-M4 — Proof registers + close (Class 2/3)
 
 - [x] Register A structural (skills/skills_test.go) · Register B adversarial (skills/adversarial_test.go) · Register C equivalence + provenance-swap (orchestration/skill_seam_test.go) · Register E live proof PASSED vs qwen2.5:7b through the unmodified loop (orchestration/skill_e2e_test.go), plus the zero-trust-discount bypass proven against the real skill
 - [x] Register D cold reconstruction (orchestration/skill_reconstruct_test.go): record + catalog + pinned bytes recover the exact reviewed composition; declared-vs-recorded artifact identity drift is deterministically detectable after the fact
-- [ ] Traceability, coverage-verified; reviews with three-state verdicts
+- [x] Three Class-3 reviews run and remediated (security, test, architecture); every CRITICAL and HIGH closed with a mutation-verified regression
+- [ ] Traceability; owner acceptance of the three-state verdicts
 - [ ] Code map + status doc + artifact updates; push/archive on owner approval
 
 ## 5. Deferred (recorded residuals — design.md §3; never silently promoted)

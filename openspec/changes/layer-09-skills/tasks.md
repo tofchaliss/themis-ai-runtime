@@ -40,6 +40,9 @@ Grill closed 2026-09-08 (all questions CLOSED; design.md §3 is the record, §2 
 - [ ] Register D split per D-L9-11a: execution-integrity mismatch REFUSED; internally-consistent forged composition NOT claimed governance-verified, detectable post-hoc only — the distinction survives into the test names
 - [ ] Mutation-verify the binding (a matched-but-foreign path+SHA pair must fail); the tests must be coupled to the invariant, not to an incidental event
 - [ ] Re-run the three Class-3 reviews and the live proof against the changed seam
+- [ ] **Constraint (owner): the manifest must NOT become a second Skill identity system.** Identity stays name@version → catalog → composition_hash. The M5 manifest is evidence of a composition crossing the execution boundary — never an independently resolvable manifest_id → Skill, never an alternative admission path.
+- [ ] **Constraint (owner): a hand-assembled governed envelope must still execute** without L7 understanding it came from L9. The equivalence property survives M5 unchanged: a Skill-instantiated envelope and an equivalent hand-assembled one with identical executable fields produce identical L7 control behavior.
+- [ ] **Vocabulary (owner): C3 must not leak into M5 through language.** No "trusted composition", "verified Skill", or "authenticated Skill" — those imply an attestation mechanism v1 does not have. The v1 verb is integrity-verified, never authenticated.
 
 ## 4. L9-M4 — Proof registers + close (Class 2/3)
 

@@ -38,6 +38,22 @@ type Envelope struct {
 	// 2026-09-07: the payload travels through the full L2 pipeline).
 	ContextContractPath string `json:"context_contract_path"`
 
+	// SkillProcedurePath/SHA: OPTIONAL activated skill-instruction
+	// artifact (L9). When present the loop activates it as the L1
+	// ScopeSkill source with byte verification against the pin; when
+	// absent nothing changes. L7 never resolves a skill — it verifies
+	// bytes against a hash the envelope states (D-L9-11).
+	SkillProcedurePath   string `json:"skill_procedure_path,omitempty"`
+	SkillProcedureSHA256 string `json:"skill_procedure_sha256,omitempty"`
+
+	// Origin: OPAQUE governed attribution (D-L9-13). L7 records it
+	// verbatim into the task's governed hashes and exercises ZERO
+	// semantics on it: it never selects a workflow, derives a grant,
+	// authorizes anything, or influences δ. Skill-blindness means the
+	// loop cannot tell a skill-instantiated envelope from a
+	// hand-assembled one except by the presence of these strings.
+	Origin map[string]string `json:"origin,omitempty"`
+
 	Hash string `json:"-"`
 }
 
@@ -88,6 +104,22 @@ func LoadEnvelope(path string) (*Envelope, error) {
 	// tool evidence path already has its cap; security review LOW).
 	if len(e.Payload) > 64<<10 {
 		return nil, fmt.Errorf("%w: payload exceeds the 64KiB envelope cap", ErrEnvelope)
+	}
+	// The optional skill-procedure pair travels together or not at
+	// all, and its path is absolute like every other reference. The
+	// pin is mandatory when the path is present: unverifiable
+	// instruction bytes are never delivered.
+	if (e.SkillProcedurePath == "") != (e.SkillProcedureSHA256 == "") {
+		return nil, fmt.Errorf("%w: skill_procedure_path and skill_procedure_sha256 are set together or not at all", ErrEnvelope)
+	}
+	if e.SkillProcedurePath != "" && !filepath.IsAbs(e.SkillProcedurePath) {
+		return nil, fmt.Errorf("%w: skill_procedure_path must be absolute", ErrEnvelope)
+	}
+	// Attribution is bounded strings — opaque, but not unbounded.
+	for k, v := range e.Origin {
+		if len(k) > 64 || len(v) > 256 {
+			return nil, fmt.Errorf("%w: origin attribution field %q exceeds its bound", ErrEnvelope, k)
+		}
 	}
 	sum := sha256.Sum256(raw)
 	e.Hash = hex.EncodeToString(sum[:])

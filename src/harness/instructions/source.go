@@ -53,14 +53,16 @@ type Source struct {
 
 // recognizedKinds are the source kinds v1 loads. ScopeRepository
 // activates through registered, pinned provenance (L5-M4 / D-L5-8);
-// ScopeDirectory still awaits its own activation contract; ScopeSkill
-// awaits Layer 9 registered skill identity. Passing an unrecognized
-// kind is a hard error, never a silent skip.
+// ScopeSkill activates through the L9 pinned skill composition
+// (ActivateSkillSource — Layer 9 registered skill identity);
+// ScopeDirectory still awaits its own activation contract. Passing an
+// unrecognized kind is a hard error, never a silent skip.
 var recognizedKinds = map[Scope]bool{
 	ScopeHarnessSafety: true,
 	ScopeHarnessSystem: true,
 	ScopeThemisDomain:  true,
 	ScopeRepository:    true,
+	ScopeSkill:         true,
 	ScopeTask:          true,
 }
 
@@ -89,6 +91,16 @@ func checkSource(s Source) error {
 	}
 	if s.files != nil {
 		return fmt.Errorf("%w: file-list sources are repository activation only, got %s", ErrUnrecognizedSource, s.Kind)
+	}
+	if s.Kind == ScopeSkill {
+		// Skill sources exist only through the L9 activation seam:
+		// pinned composition identity + verified bytes (D-L9-8: an
+		// unregistered skill-shaped artifact is data). Hand-built ones
+		// are not sources.
+		if !s.activated || s.Inline == nil || s.Root != "" {
+			return fmt.Errorf("%w: skill sources activate only through the pinned skill composition (ActivateSkillSource)", ErrUnrecognizedSource)
+		}
+		return nil
 	}
 	if (s.Root == "") == (s.Inline == nil) {
 		return fmt.Errorf("%w: source %s must set exactly one of Root or Inline", ErrUnrecognizedSource, s.Kind)

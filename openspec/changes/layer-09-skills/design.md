@@ -15,6 +15,7 @@ L9 sits *before* submission: it is authoring-and-instantiation machinery. The L7
 - Governed artifacts: versioned, DisallowUnknownFields, trailing-content refusal, SHA-256 into the record, fail-closed loaders.
 - Nothing is defaulted; every absence is a typed, named refusal.
 - Approval vocabulary stays reserved fail-closed (Q-L7-9) until its own grill.
+- A recorded deterministic state transition identifies the exact governing rule, the selected branch, and the actual causal event — the verifier never guesses (owner principle, L7 final acceptance 2026-09-08).
 
 ## 2. Locked decisions (fold target)
 

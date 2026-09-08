@@ -133,3 +133,16 @@ Re-running = new task_id + `retry_of`, new environment identity, fresh assembly.
 ## 6. Post-archive conformance audit (owner, 2026-09-07) — Register-D strengthening
 
 Owner code-vs-architecture audit found the loop CONFORM but the Register-D proof weaker than the locked single-authority property: (1) the transition event's `edge` field carried the event name, leaving edge identity implicit in the loader's duplicate-On refusal, and leaving the countered edge's normal-vs-exhaustion branch derivable but unrecorded; (2) the replayer checked `cause_seq` only for precedence and compared from/to sequences — sequence correspondence, not causal correspondence — and never re-derived `turns-exhausted` or `tool-error` walks. Remediation (owner-directed, all four): `step()` records `{from, to, edge_id: "<from>/<on>", exhausted, cause_seq}`; the replayer derives full tuples — mirroring the loop's lastSeq discipline — and asserts `recorded.cause_seq == derived.cause_seq` (a valid-but-wrong earlier seq fails); replay covers every transition-producing class including turns-exhausted (re-derived by per-visit turn counting) and tool-error (exhaustion-branch identity asserted); Register A pins the loader refusal as the edge-identity invariant (`TestEdgeIdentityUnique`, refusal + positive uniqueness halves). All registers re-run green, live proof re-passed (qwen2.5:7b), coverage 80.9%.
+
+## 7. Final acceptance (owner, 2026-09-08) — L7 CLOSED, CONFORMANT
+
+Owner re-audited main after the §6 remediation and issued final conformance across the full acceptance matrix (edge identity · causal correspondence · complete transition taxonomy · boundedness/totality · closed seam — all 22 properties CONFORM). Findings recorded CLOSED, not residual:
+
+- **L7-F1** Edge identity implicit → CLOSED (edge_id + documented loader-uniqueness dependency)
+- **L7-F2** Weak causal correspondence → CLOSED (tuple compare, recorded cause_seq == derived causal identity)
+- **L7-F3** Incomplete transition replay taxonomy → CLOSED (tool-error + turns-exhausted derived; branch identity asserted)
+- **L7-F4** Missing Register-A edge-uniqueness proof → CLOSED (TestEdgeIdentityUnique, both halves)
+
+No architecture amendment: the changes strengthen the existing implementation/proof model within the locked architecture.
+
+**Principle carried forward (owner, binding on subsequent layers):** whenever Themis records a deterministic state transition, the durable record must contain enough information to identify the exact governing rule, the selected branch, and the actual causal event — without requiring the verifier to guess.

@@ -48,7 +48,19 @@ Skills cannot call, include, or reference other Skills in v1. The manifest conta
 
 **Terminology (owner):** never say "cold reconstruction of the executed composition" without defining which composition. Two exist and do NOT have identical representations: (1) the reviewed/submitted Skill composition (workflow, ceiling, contract, grant template, spec template, procedure, input schema) and (2) the effective runtime execution after caller narrowing and L7 rewriting. The record must reconstruct both; the grant is where they diverge most sharply.
 
-### R-L9-2 — grant and procedure reconstruction (OPEN, owner-scoped 2026-09-08)
+### R-L9-2 — DECIDED (owner, 2026-09-08): store both, with single-home clarified
+
+**Inspection result.** Grant: three digests already recorded, all independently derived by L7 — grant_envelope (submitted bytes), grant_effective (post-@workspace artifact), grant_authority (what it permits, task identity excluded). The submitted/effective distinction is already preserved and must not change; only the BYTES behind grant_envelope are missing. Procedure: L1 derives BodyHash from the actual verified bytes (loader.go:113), so identity is sound — but a probe confirmed the bytes are recoverable from NO durable object. The record can establish "the procedure identity was X" and cannot establish "these are the exact bytes that produced X and reached the model." That is the R-L9-1 tautology one layer up.
+
+**LOCKED — single-home applies to SEMANTIC/IDENTITY ownership, not physical durability.** L1 remains the sole authority for procedure identity (BodyHash/EIS). L6 remains the sole authority for durable bytes (content-addressed object). L9 owns neither. Storing procedure bytes in L6 therefore creates NO second identity mechanism: BodyHash ≠ ObjectID even when both are SHA-256 of the same bytes, because they serve different architectural purposes — BodyHash is L1 identity, ObjectID is L6's durability address. **Do NOT move durability into L1**: that would turn L1 from instruction identity/resolution into identity + archival, a larger change than this residual needs.
+
+**Decisions.** (a) Grant: store the already-verified submitted grant bytes as an L6 evidence-payload; retain grant_envelope/grant_effective/grant_authority unchanged. (b) Procedure: store the exact verified procedure bytes as an L6 evidence-payload, identity ownership unmoved.
+
+**Implementation constraint (same as R-L9-1):** resolve → read bytes → verify pin → activate L1/EIS with those exact bytes → CreateTask → StoreObject(the bytes already held) → Ref. Never reopen the path after verification: that is a TOCTOU window producing identity over A with durability containing B.
+
+**Required proof — cross-layer, not self-consistency.** For the procedure: L1 BodyHash(bytes_A) == recorded BodyHash; L6 ObjectID(bytes_B) == recorded ObjectID; bytes_A == bytes_B; then cold reconstruction — retrieve by ObjectID, SHA256(bytes) == ObjectID, and L1 BodyHash(bytes) == recorded BodyHash. Equivalent proof for the grant against grant_envelope, plus separately proving grant_effective and grant_authority correspond to the deterministic L7 transformation. Do NOT test BodyHash == recorded BodyHash alone — that is the tautology already rejected.
+
+### R-L9-2 original scoping (superseded by the decision above)
 
 *Can cold reconstruction independently establish the Skill-fixed grant identity and the procedure identity, without conflating the submitted grant with the effective runtime authority, and without creating a second procedure identity mechanism outside L1?*
 

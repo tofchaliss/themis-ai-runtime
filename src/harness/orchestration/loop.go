@@ -16,6 +16,7 @@ import (
 
 	l2 "github.com/tofchaliss/themis/context"
 	"github.com/tofchaliss/themis/execution"
+	"github.com/tofchaliss/themis/instructions"
 	"github.com/tofchaliss/themis/runtime/model"
 	"github.com/tofchaliss/themis/state"
 	"github.com/tofchaliss/themis/tools"
@@ -46,6 +47,10 @@ type walk struct {
 	execCeiling *execution.WorkspaceExecutionCeiling
 	spec        *execution.ProvisionSpec
 	contract    *l2.Contract
+	// eis is the task's instruction set, resolved ONCE at assembly
+	// (D-L9-11): the walk holds instruction bytes, never a path it
+	// would re-read per phase.
+	eis *instructions.EffectiveSet
 
 	phase     string
 	edgeFires map[string]int64 // "phase/event" -> fires
@@ -347,7 +352,7 @@ func (w *walk) composePhase(p *Phase) ([]model.Message, error) {
 	if err != nil {
 		return nil, err
 	}
-	composed, err := l2.Compose(w.o.eis, w.o.policy, g)
+	composed, err := l2.Compose(w.eis, w.o.policy, g)
 	if err != nil {
 		return nil, err
 	}

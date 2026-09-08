@@ -270,16 +270,35 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 		return res, err
 	}
 
+	// Per-task instruction resolution, ONCE, before the walk begins.
+	// Without a skill procedure this is the orchestrator's base EIS;
+	// with one, the activated skill source joins it — resolved and
+	// byte-verified here so the walk never re-reads instruction bytes
+	// from mutable storage (D-L9-11).
+	eis, err := o.resolveTaskEIS(env)
+	if err != nil {
+		envn.Teardown()
+		return res, err
+	}
+
 	// Single-use identity + full governed attribution.
+	governed := map[string]string{
+		"envelope": env.Hash, "workflow": wf.Hash, "workflow_ceiling": wfCeiling.Hash,
+		"registry": reg.Hash, "grant_envelope": hashBytes(rawGrant), "grant_effective": grant.Hash,
+		"exec_ceiling": execCeiling.Hash, "spec": spec.Hash, "context_contract": contract.Hash,
+		"l1_eis": eis.Hash, "l1_policy": eis.PolicyHash,
+		"l6_constitution": state.ConstitutionHash(), "l7_constitution": ConstitutionHash(),
+	}
+	// Opaque attribution: recorded verbatim, interpreted by nobody
+	// (D-L9-13). L7 does not know what a skill is; it only preserves
+	// what the envelope stated, so the record can be checked against
+	// the catalog after the fact.
+	for k, v := range env.Origin {
+		governed["origin:"+k] = v
+	}
 	task, err := o.root.CreateTask(env.TaskID, state.TaskOptions{
-		RetryOf: env.RetryOf,
-		GovernedHashes: map[string]string{
-			"envelope": env.Hash, "workflow": wf.Hash, "workflow_ceiling": wfCeiling.Hash,
-			"registry": reg.Hash, "grant_envelope": hashBytes(rawGrant), "grant_effective": grant.Hash,
-			"exec_ceiling": execCeiling.Hash, "spec": spec.Hash, "context_contract": contract.Hash,
-			"l1_eis": o.eis.Hash, "l1_policy": o.eis.PolicyHash,
-			"l6_constitution": state.ConstitutionHash(), "l7_constitution": ConstitutionHash(),
-		},
+		RetryOf:        env.RetryOf,
+		GovernedHashes: governed,
 	})
 	if err != nil {
 		envn.Teardown()
@@ -290,9 +309,38 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	w := &walk{
 		o: o, env: env, wf: wf, reg: reg, grant: grant, table: table,
 		task: task, l5: envn, execCeiling: execCeiling, spec: spec,
-		contract: contract,
+		contract: contract, eis: eis,
 	}
 	return w.run()
+}
+
+// resolveTaskEIS resolves the instruction set for ONE task. The
+// orchestrator's governed roots are always present; an envelope
+// carrying a verified skill procedure adds it as the ScopeSkill
+// source. Byte verification against the envelope's stated pin happens
+// inside the activation seam: L7 resolves no skill and consults no
+// catalog — it verifies bytes against a hash it was given.
+func (o *Orchestrator) resolveTaskEIS(env *Envelope) (*instructions.EffectiveSet, error) {
+	sources := []instructions.Source{
+		{Kind: instructions.ScopeHarnessSafety, Root: o.cfg.SafetyRoot},
+		{Kind: instructions.ScopeHarnessSystem, Root: o.cfg.SystemRoot},
+	}
+	if env.SkillProcedurePath != "" {
+		procedure, err := os.ReadFile(env.SkillProcedurePath)
+		if err != nil {
+			return nil, fmt.Errorf("%w: skill procedure: %v", ErrAssembly, err)
+		}
+		src, err := instructions.ActivateSkillSource(procedure, env.SkillProcedureSHA256)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrAssembly, err)
+		}
+		sources = append(sources, src)
+	}
+	eis, err := instructions.Resolve(instructions.Config{Policy: o.policy, TaskID: env.TaskID}, sources...)
+	if err != nil {
+		return nil, err
+	}
+	return eis, nil
 }
 
 func checkControlVocabulary(reg *tools.Registry) error {

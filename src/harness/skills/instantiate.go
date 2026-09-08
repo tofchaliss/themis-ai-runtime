@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/tofchaliss/themis/confine"
 	"github.com/tofchaliss/themis/execution"
 	"github.com/tofchaliss/themis/state"
 )
@@ -53,19 +54,22 @@ func (d Deployment) checkCatalogDisjoint(catalogRoot string) error {
 	if err != nil {
 		return fmt.Errorf("%w: catalog root: %v", ErrCatalog, err)
 	}
+	// Every task-writable root is REQUIRED: the workspace is the root a
+	// task actually holds write_file on, so omitting it would leave the
+	// wall satisfied by luck (security MED-1 / architecture HIGH). The
+	// package's own posture is that nothing is defaulted.
 	roots := []string{abs}
-	for _, r := range []string{d.StateRoot, d.ArtifactDir, d.WorkspaceRoot} {
+	for name, r := range map[string]string{
+		"state root": d.StateRoot, "artifact dir": d.ArtifactDir, "workspace root": d.WorkspaceRoot,
+	} {
 		if r == "" {
-			continue
+			return fmt.Errorf("%w: %s is required to prove catalog disjointness — nothing is defaulted", ErrCatalog, name)
 		}
 		ra, err := filepath.Abs(r)
 		if err != nil {
 			return fmt.Errorf("%w: %v", ErrCatalog, err)
 		}
 		roots = append(roots, ra)
-	}
-	if len(roots) < 2 {
-		return fmt.Errorf("%w: catalog disjointness needs at least one task-writable root to compare — nothing is defaulted", ErrCatalog)
 	}
 	if err := state.CheckDisjointRoots(roots...); err != nil {
 		return fmt.Errorf("%w: the skill catalog must be disjoint from every task-writable root: %v", ErrCatalog, err)
@@ -117,8 +121,15 @@ func Instantiate(catalogPath, ref string, req Request) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if req.TaskID == "" {
-		return "", fmt.Errorf("%w: task_id required — nothing is defaulted", ErrResolve)
+	// The task id becomes part of the artifact filenames written below,
+	// so it is validated against L6's OWN predicate before it can steer
+	// a path (security review HIGH-1: an unvalidated id reached
+	// filepath.Join and could overwrite sibling governed artifacts).
+	if !state.ValidTaskID(req.TaskID) {
+		return "", fmt.Errorf("%w: task_id %q is not a valid task identity", ErrResolve, req.TaskID)
+	}
+	if req.RetryOf != "" && !state.ValidTaskID(req.RetryOf) {
+		return "", fmt.Errorf("%w: retry_of %q is not a valid task identity", ErrResolve, req.RetryOf)
 	}
 	if !repoSyntax.MatchString(req.Repo) {
 		return "", fmt.Errorf("%w: bad repository name %q", ErrResolve, req.Repo)
@@ -207,8 +218,17 @@ func Instantiate(catalogPath, ref string, req Request) (string, error) {
 	if err := os.MkdirAll(req.OutDir, 0o755); err != nil {
 		return "", fmt.Errorf("%w: %v", ErrResolve, err)
 	}
-	grantPath := filepath.Join(req.OutDir, req.TaskID+"-grant.json")
-	specPath := filepath.Join(req.OutDir, req.TaskID+"-spec.json")
+	// Every write resolves through the canonical mutation predicate: it
+	// refuses traversal, symlinked parents, and non-regular targets.
+	// filepath.Join refuses nothing (security review HIGH-1).
+	grantPath, err := confine.CreatePath(req.OutDir, req.TaskID+"-grant.json")
+	if err != nil {
+		return "", fmt.Errorf("%w: effective grant path: %v", ErrResolve, err)
+	}
+	specPath, err := confine.CreatePath(req.OutDir, req.TaskID+"-spec.json")
+	if err != nil {
+		return "", fmt.Errorf("%w: effective spec path: %v", ErrResolve, err)
+	}
 	if err := os.WriteFile(grantPath, effGrant, 0o644); err != nil {
 		return "", fmt.Errorf("%w: %v", ErrResolve, err)
 	}
@@ -295,7 +315,10 @@ func Instantiate(catalogPath, ref string, req Request) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrResolve, err)
 	}
-	envPath := filepath.Join(req.OutDir, "envelope-"+req.TaskID+".json")
+	envPath, err := confine.CreatePath(req.OutDir, "envelope-"+req.TaskID+".json")
+	if err != nil {
+		return "", fmt.Errorf("%w: envelope path: %v", ErrResolve, err)
+	}
 	if err := os.WriteFile(envPath, envBytes, 0o644); err != nil {
 		return "", fmt.Errorf("%w: %v", ErrResolve, err)
 	}

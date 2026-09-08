@@ -52,30 +52,42 @@ func TestColdReconstructionOfExecutedComposition(t *testing.T) {
 		t.Fatalf("declared composition %s does not match the registered %s", declared, entry.Composition)
 	}
 
-	// And the composition's own pins must equal the artifact identities
-	// L7 recorded independently at assembly — this is the check that
-	// closes the substitution gap between catalog resolution and
-	// execution.
+	// The substitution gap closes only when the catalog's pins are
+	// compared against what L7 recorded INDEPENDENTLY — L7 hashes the
+	// bytes it actually loaded, with no knowledge of the skill. An
+	// earlier version of this test compared origin:skill_* (written by
+	// L9 from the manifest pin) against the same manifest pin: x == x,
+	// which could never fail. These comparisons can.
 	for label, pair := range map[string][2]string{
-		"workflow":         {m.Workflow.SHA256, man.GovernedHashes["origin:skill_workflow"]},
-		"workflow_ceiling": {m.WorkflowCeiling.SHA256, man.GovernedHashes["origin:skill_workflow_ceiling"]},
-		"context_contract": {m.ContextContract.SHA256, man.GovernedHashes["origin:skill_context_contract"]},
-		"input_schema":     {m.InputSchema.SHA256, man.GovernedHashes["origin:skill_input_schema"]},
-		"procedure":        {m.Procedure.SHA256, man.GovernedHashes["origin:skill_procedure"]},
+		"workflow":         {m.Workflow.SHA256, man.GovernedHashes["workflow"]},
+		"workflow_ceiling": {m.WorkflowCeiling.SHA256, man.GovernedHashes["workflow_ceiling"]},
+		"context_contract": {m.ContextContract.SHA256, man.GovernedHashes["context_contract"]},
 	} {
+		if pair[0] == "" || pair[1] == "" {
+			t.Fatalf("%s: both identities must be present to compare (%q vs %q)", label, pair[0], pair[1])
+		}
 		if pair[0] != pair[1] {
-			t.Errorf("%s identity drifted: catalog pin %s vs recorded %s", label, pair[0], pair[1])
+			t.Errorf("%s drifted between review and execution: catalog pin %s vs L7-recorded %s", label, pair[0], pair[1])
 		}
 	}
 
-	// The record's own governed workflow hash must equal the reviewed
-	// workflow's bytes: what was reviewed is what L7 actually executed.
-	wfBytes, err := os.ReadFile(filepath.Join(m.Dir, m.Workflow.Path))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if man.GovernedHashes["workflow"] != hashBytes(wfBytes) {
-		t.Fatal("the executed workflow is not the reviewed workflow")
+	// The pins must also match the bytes on disk right now, so the
+	// three-way agreement (catalog pin = L7's independent hash = the
+	// reviewed bytes) is what actually holds.
+	for label, pin := range map[string]struct{ path, sha string }{
+		"workflow":         {m.Workflow.Path, m.Workflow.SHA256},
+		"workflow_ceiling": {m.WorkflowCeiling.Path, m.WorkflowCeiling.SHA256},
+		"context_contract": {m.ContextContract.Path, m.ContextContract.SHA256},
+		"procedure":        {m.Procedure.Path, m.Procedure.SHA256},
+		"input_schema":     {m.InputSchema.Path, m.InputSchema.SHA256},
+	} {
+		body, err := os.ReadFile(filepath.Join(m.Dir, pin.path))
+		if err != nil {
+			t.Fatalf("%s: %v", label, err)
+		}
+		if hashBytes(body) != pin.sha {
+			t.Errorf("%s bytes on disk do not match the reviewed pin", label)
+		}
 	}
 }
 

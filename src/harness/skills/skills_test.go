@@ -114,6 +114,7 @@ func (b *bundle) deployment(t *testing.T) Deployment {
 		ExecCeilingPath: write(t, other, "eceiling.json", `{"version":1,"mirror_root":"`+other+`","max_wall_deadline_sec":120,"max_file_bytes":1048576,"max_total_bytes":10485760,"max_file_count":500,"max_mem_bytes":1073741824,"max_cpu_time_sec":600,"max_proc_count":64}`),
 		StateRoot:       filepath.Join(other, "state"),
 		ArtifactDir:     filepath.Join(other, "artifacts"),
+		WorkspaceRoot:   filepath.Join(other, "workspaces"),
 	}
 }
 
@@ -129,11 +130,10 @@ func mustAbs(t *testing.T, p string) string {
 func (b *bundle) request(t *testing.T) Request {
 	t.Helper()
 	d := b.deployment(t)
-	if err := os.MkdirAll(d.StateRoot, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.MkdirAll(d.ArtifactDir, 0o755); err != nil {
-		t.Fatal(err)
+	for _, root := range []string{d.StateRoot, d.ArtifactDir, d.WorkspaceRoot} {
+		if err := os.MkdirAll(root, 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
 	return Request{
 		TaskID: "t-1", Repo: "demo", PinnedSHA: strings.Repeat("a", 40),

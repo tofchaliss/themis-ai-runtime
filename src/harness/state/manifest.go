@@ -29,6 +29,11 @@ type Manifest struct {
 	StreamSummary string `json:"stream_summary,omitempty"`
 }
 
+// ValidTaskID exposes the single task-identity rule so callers that
+// build filesystem paths from a task id (L9 instantiation) enforce the
+// SAME predicate L6 applies, rather than minting a twin that can drift.
+func ValidTaskID(id string) bool { return taskIDSyntax(id) }
+
 var taskIDSyntax = func(id string) bool {
 	if id == "" || len(id) > 128 {
 		return false

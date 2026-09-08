@@ -29,9 +29,15 @@ func instantiateP0(t *testing.T, f *fixture, taskID string, req skills.Request) 
 	if req.Deployment.Model == "" {
 		// The task-writable roots must exist: disjointness resolves
 		// them physically and fails closed on an unresolvable root.
-		artifacts := filepath.Join(t.TempDir(), "artifacts")
-		if err := os.MkdirAll(artifacts, 0o755); err != nil {
-			t.Fatal(err)
+		base := t.TempDir()
+		artifacts := filepath.Join(base, "artifacts")
+		// The workspace root is the one a task actually holds write_file
+		// on, so wall 2 requires it explicitly (security MED-1).
+		workspaces := filepath.Join(base, "workspaces")
+		for _, d := range []string{artifacts, workspaces} {
+			if err := os.MkdirAll(d, 0o755); err != nil {
+				t.Fatal(err)
+			}
 		}
 		req.Deployment = skills.Deployment{
 			Model: "scripted", TurnTimeoutSec: 180,
@@ -39,6 +45,7 @@ func instantiateP0(t *testing.T, f *fixture, taskID string, req skills.Request) 
 			ExecCeilingPath: filepath.Join(f.envDir, "eceiling.json"),
 			StateRoot:       f.stateDir,
 			ArtifactDir:     artifacts,
+			WorkspaceRoot:   workspaces,
 		}
 	}
 	req.TaskID = taskID
@@ -162,6 +169,11 @@ func TestLiveSkillWalk(t *testing.T) {
 		t.Fatal(err)
 	}
 	req.Deployment.ArtifactDir = artifacts
+	workspaces := filepath.Join(filepath.Dir(artifacts), "workspaces")
+	if err := os.MkdirAll(workspaces, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	req.Deployment.WorkspaceRoot = workspaces
 
 	env := instantiateP0(t, f, "t-live-skill", req)
 	res, err := f.o.SubmitTask(env)

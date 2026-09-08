@@ -249,8 +249,19 @@ func LoadEnvelope(path string) (*Envelope, error) {
 	// evading verification entirely, making C2 submitter-elective.
 	// The reverse stays legal: no attribution and no commitment is an
 	// ordinary hand-assembled envelope.
-	if e.Origin["skill"] != "" && e.Composition == nil {
-		return nil, fmt.Errorf("%w: an envelope attributing a skill must carry the composition commitment that attribution refers to", ErrInvariant)
+	// The gate must cover EVERY skill-attributing key, not one literal:
+	// L9 emits nine, and gating only "skill" let a fabricated
+	// attribution reach the durable record with zero verification
+	// (final security review H-1). The namespace is L9-authored, so it
+	// is treated as closed: "skill" or any "skill_" prefix attributes a
+	// skill and therefore requires the commitment it refers to.
+	for k := range e.Origin {
+		if k != "skill" && !strings.HasPrefix(k, "skill_") {
+			continue
+		}
+		if e.Composition == nil {
+			return nil, fmt.Errorf("%w: origin key %q attributes a skill, so the envelope must carry the composition commitment that attribution refers to", ErrInvariant, k)
+		}
 	}
 	if c := e.Composition; c != nil {
 		// Every sealed identity is a full digest; the procedure's is

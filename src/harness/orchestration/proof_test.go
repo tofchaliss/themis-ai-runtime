@@ -298,6 +298,11 @@ func TestLiveWalkProof(t *testing.T) {
 		modelName = "qwen2.5:7b"
 	}
 	f := setup(t, model.NewOllamaChat(endpoint), "")
+	// A live model under suite load is far slower than a scripted one;
+	// widen the deadline so this register exercises the walk rather than
+	// the wall-clock floor (which has its own dedicated test).
+	writeJSON(t, f.envDir, "spec.json",
+		`{"version":1,"task_id":"T","repo":"demo","pinned_sha":"`+f.sha+`","limits":[{"dimension":"wall_deadline_s","value":540}]}`)
 	envPath := f.envelopeWith(t, "t-live", modelName,
 		"If a read_file tool is available, first read parser.go. Then call the declare_done tool with no arguments. If declare_done is the only tool available, call declare_done immediately without any other output.")
 	res, err := f.o.SubmitTask(envPath)

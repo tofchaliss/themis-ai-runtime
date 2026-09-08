@@ -200,21 +200,35 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	if err != nil {
 		return res, err
 	}
-	// The EXACT bytes each loader accepted, captured once for durable
-	// storage after the task exists (ADG-L9/L6-1 option (i)). Read here
-	// and carried — never re-read after verification, which would
-	// reintroduce the second-materialization problem this closes.
+	// The EXACT bytes each loader accepted, for durable storage after
+	// the task exists (ADG-L9/L6-1). These are read once here and then
+	// PROVEN to be the same bytes the loaders hashed — a second
+	// independent read would produce identity over A with durability
+	// containing B, which is the TOCTOU shape R-L9-2 forbids and which
+	// this code previously had (final security review H-2).
 	materialized := map[string][]byte{}
-	for label, path := range map[string]string{
-		"workflow": env.WorkflowPath, "workflow_ceiling": env.WorkflowCeilingPath,
-		"context_contract": env.ContextContractPath, "spec": env.SpecPath,
+	for _, m := range []struct {
+		label, path, loaderHash string
+	}{
+		{"workflow", env.WorkflowPath, wf.Hash},
+		{"workflow_ceiling", env.WorkflowCeilingPath, wfCeiling.Hash},
+		{"context_contract", env.ContextContractPath, contract.Hash},
+		{"spec", env.SpecPath, spec.Hash},
 	} {
-		body, rerr := os.ReadFile(path)
+		body, rerr := os.ReadFile(m.path)
 		if rerr != nil {
-			return res, fmt.Errorf("%w: %s: %v", ErrAssembly, label, rerr)
+			return res, fmt.Errorf("%w: %s: %v", ErrAssembly, m.label, rerr)
 		}
-		materialized[label] = body
+		// The bytes stored as reconstruction evidence must be the bytes
+		// that were loaded, verified, and executed. If the artifact
+		// changed between the loader's read and this one, the record
+		// would misrepresent what ran.
+		if hashBytes(body) != m.loaderHash {
+			return res, fmt.Errorf("%w: %s changed between loading and durable capture", ErrInvariant, m.label)
+		}
+		materialized[m.label] = body
 	}
+
 	// C2 (D-L9-11a/b): the commitment's seal was verified at load, so
 	// these identities are one sealed unit rather than independently
 	// chosen strings. Each artifact L7 materialized must match the one
@@ -375,6 +389,7 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	// divergence between recording and use — however introduced — is an
 	// invariant violation, not a difference to tolerate.
 	if grantAuthorityDigest(grant) != governed["grant_authority"] {
+		envn.Teardown()
 		return res, fmt.Errorf("%w: the grant changed between attribution and execution", ErrInvariant)
 	}
 	// Reconstruction provenance (R-L9-1 / ADG-L9/L6-1): store the EXACT
@@ -394,6 +409,11 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 		materialized["procedure"] = procedureBytes
 	}
 	if err := recordMaterializedArtifacts(task, materialized); err != nil {
+		// Post-CreateTask failures must still tear the environment down;
+		// the record stays non-terminal and the startup sweep closes it
+		// (final security review M-1: these were the only paths that
+		// leaked a provisioned workspace).
+		envn.Teardown()
 		return res, err
 	}
 
@@ -497,7 +517,7 @@ func (o *Orchestrator) resolveTaskEIS(env *Envelope) (*instructions.EffectiveSet
 			}
 		}
 		if !delivered {
-			return nil, nil, fmt.Errorf("%w: the declared skill procedure was not admitted into the instruction set (%d conflict(s)) — the reviewed composition cannot be affirmed", ErrAssembly, len(eis.Conflicts))
+			return nil, nil, fmt.Errorf("%w: the declared skill procedure was not admitted into the instruction set (%d conflict(s)) — the submitted composition cannot be affirmed", ErrAssembly, len(eis.Conflicts))
 		}
 	}
 	// Render at assembly, mirroring Open's rule: an unrenderable

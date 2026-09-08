@@ -708,3 +708,62 @@ func recoverMaterialized(t *testing.T, f *fixture, taskID, label string) ([]byte
 	}
 	return nil, ""
 }
+
+// Final security review H-1: D-L9-11d gated only origin["skill"], but
+// L9 emits nine skill-attributing keys. A fabricated attribution using
+// a sibling key reached the durable record with zero verification —
+// the submitter-elective C2 the amendment exists to close.
+func TestAnySkillAttributingKeyRequiresACommitment(t *testing.T) {
+	f := setup(t, happyScript(), "")
+	for _, key := range []string{
+		"skill", "skill_composition", "skill_catalog", "skill_workflow",
+		"skill_procedure", "skill_input_schema",
+	} {
+		base := f.envelope(t, "t-h1-"+strings.TrimPrefix(key, "skill_"))
+		naked := withEnvelopeFields(t, base, map[string]any{
+			"origin": map[string]string{key: strings.Repeat("a", 64)},
+		}, "envelope-h1-"+key+".json")
+		if _, err := f.o.SubmitTask(naked); err == nil || !errors.Is(err, ErrInvariant) {
+			t.Fatalf("origin key %q attributes a skill and must require a commitment: %v", key, err)
+		}
+	}
+	// A non-attributing origin key stays legal without a commitment.
+	base := f.envelope(t, "t-h1-neutral")
+	neutral := withEnvelopeFields(t, base, map[string]any{
+		"origin": map[string]string{"submitter": "ops"},
+	}, "envelope-h1-neutral.json")
+	if res, err := f.o.SubmitTask(neutral); err != nil || res.Status != state.StatusCompleted {
+		t.Fatalf("a non-attributing origin must not require a commitment: %v %+v", err, res)
+	}
+}
+
+// Final security review H-2: the bytes stored as reconstruction
+// evidence must be the bytes the loaders hashed and executed. A second
+// independent read would give identity over A with durability over B —
+// the TOCTOU shape R-L9-2's own constraint forbids.
+func TestDurableBytesMustMatchWhatWasLoaded(t *testing.T) {
+	f := setup(t, happyScript(), "")
+	env := f.envelope(t, "t-h2")
+	if _, err := f.o.SubmitTask(env); err != nil {
+		t.Fatal(err)
+	}
+	man, err := f.o.root.ReadManifest("t-h2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Every durably stored artifact hashes to the identity L7 recorded
+	// from its own load — one read, one identity, one stored copy.
+	for _, label := range []string{"workflow", "workflow_ceiling", "context_contract", "spec"} {
+		body, addr := recoverMaterialized(t, f, "t-h2", label)
+		if body == nil {
+			t.Fatalf("%s must be durably recorded", label)
+			continue
+		}
+		if !strings.HasSuffix(addr, hashBytes(body)) {
+			t.Errorf("%s: object is not addressed by a hash of its own bytes", label)
+		}
+		if man.GovernedHashes[label] != hashBytes(body) {
+			t.Errorf("%s: durably stored bytes are not the ones L7 loaded and executed", label)
+		}
+	}
+}

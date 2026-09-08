@@ -156,7 +156,7 @@ func setup(t *testing.T, m model.Interface, workflowJSON string) *fixture {
 	writeJSON(t, f.envDir, "workflow.json", workflowJSON)
 	writeJSON(t, f.envDir, "wceiling.json", defaultCeiling)
 	writeJSON(t, f.envDir, "eceiling.json",
-		`{"version":1,"mirror_root":"`+f.mirror+`","max_wall_deadline_sec":120,"max_file_bytes":1048576,"max_total_bytes":10485760,"max_file_count":500,"max_mem_bytes":1073741824,"max_cpu_time_sec":600,"max_proc_count":64}`)
+		`{"version":1,"mirror_root":"`+f.mirror+`","max_wall_deadline_sec":600,"max_file_bytes":1048576,"max_total_bytes":10485760,"max_file_count":500,"max_mem_bytes":1073741824,"max_cpu_time_sec":600,"max_proc_count":64}`)
 	writeJSON(t, f.envDir, "spec.json",
 		`{"version":1,"task_id":"T","repo":"demo","pinned_sha":"`+f.sha+`","limits":[{"dimension":"wall_deadline_s","value":90}]}`)
 	writeJSON(t, f.envDir, "grant.json",

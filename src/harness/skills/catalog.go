@@ -15,6 +15,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/tofchaliss/themis/confine"
 )
 
 type EntryState string
@@ -165,7 +167,20 @@ func (c *Catalog) Resolve(ref string) (*Entry, *Manifest, error) {
 	if entry.State == StateWithdrawn {
 		return nil, nil, fmt.Errorf("%w: %s@%d is withdrawn — new instantiation is refused; historical records remain interpretable", ErrResolve, name, version)
 	}
-	m, err := LoadManifest(filepath.Join(c.dir, entry.ManifestPath))
+	// Confined resolution through the canonical predicate, exactly as
+	// resolvePin does one level down: a symlinked manifest_path passes
+	// the lexical load-time check but would read outside the catalog
+	// root AND set m.Dir to the foreign directory, so every subsequent
+	// pin would resolve confined to the attacker's root. That defeats
+	// D-L9-8 wall 2 by the same route the disjointness check closes.
+	manifestPath, err := confine.ResolvePath(c.dir, entry.ManifestPath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w: %s@%d manifest: %v", ErrResolve, name, version, err)
+	}
+	if info, serr := os.Lstat(manifestPath); serr != nil || !info.Mode().IsRegular() {
+		return nil, nil, fmt.Errorf("%w: %s@%d manifest must be a regular file within the catalog root", ErrResolve, name, version)
+	}
+	m, err := LoadManifest(manifestPath)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -370,3 +370,48 @@ func shaFile(t *testing.T, path string) string {
 	}
 	return sha(b)
 }
+
+// Final architecture review HIGH: manifest_path was validated only
+// lexically, so a symlink inside the catalog root passed and was then
+// followed — reading a manifest from outside the root AND setting
+// m.Dir to the foreign directory, so every subsequent pin resolved
+// confined to the attacker's root. This is the symmetric twin of
+// TestPinSymlinkEscapeRefused one level down.
+func TestManifestSymlinkEscapeRefused(t *testing.T) {
+	b := newBundle(t)
+	// A complete, internally valid bundle OUTSIDE the catalog root.
+	foreign := t.TempDir()
+	for name, body := range map[string]string{
+		"workflow.json": fxWorkflow, "ceiling.json": fxCeiling, "contract.json": fxContract,
+		"grant.json": fxGrant, "spec.json": fxSpec, "schema.json": fxSchema, "procedure.md": fxProc,
+	} {
+		write(t, foreign, name, body)
+	}
+	man := readFileT(t, filepath.Join(b.dir, "skill.json"))
+	write(t, foreign, "skill.json", man)
+
+	// Replace the in-root manifest with a symlink to the foreign one.
+	link := filepath.Join(b.dir, "skill.json")
+	if err := os.Remove(link); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(foreign, "skill.json"), link); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	cat, err := LoadCatalog(b.catalogPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := cat.Resolve("investigate-cve@1"); err == nil {
+		t.Fatal("a manifest_path resolving through a symlink out of the catalog root must refuse — otherwise every pin resolves against the attacker's directory")
+	}
+}
+
+func readFileT(t *testing.T, p string) string {
+	t.Helper()
+	b, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
+}

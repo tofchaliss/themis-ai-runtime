@@ -4,9 +4,11 @@ package instructions
 // slot the L1 grill pre-provisioned ("awaits Layer 9 registered skill
 // identity"). Mirrors the repository activation posture (D-L5-8):
 // a skill procedure becomes an instruction source ONLY through this
-// constructor, which demands the pinned identity the L9 catalog
-// established — hand-built ScopeSkill sources are structurally
-// unrecognizable. The procedure text is advisory technique with zero
+// constructor, which demands bytes matching the pin it was given —
+// hand-built ScopeSkill sources are structurally unrecognizable.
+// Activation establishes byte integrity ONLY: whether the composition
+// was governance-registered is a catalog property this path cannot
+// observe and never asserts. The procedure text is advisory technique with zero
 // authority (D-L9-2): it enters the untrusted-source tier, so
 // directive-pattern violations are rejected-and-recorded, never
 // silently delivered, and the L1 constitution cannot be shadowed by

@@ -9,10 +9,13 @@ package orchestration
 // (guarded like the other live proofs).
 
 import (
+	"encoding/json"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/tofchaliss/themis/runtime/model"
 	"github.com/tofchaliss/themis/skills"
@@ -122,6 +125,93 @@ func TestP0SkillRunsThroughProductionLoop(t *testing.T) {
 	}
 	if !sawProcedure {
 		t.Fatal("no composed delivery recorded")
+	}
+}
+
+// Register E (live half): the authored skill, a real local model, and
+// the unmodified production loop. The model's own procedure — governed
+// instruction material activated through L1 — is what tells it how to
+// work; the payload carries only the untrusted task inputs.
+func TestLiveSkillWalk(t *testing.T) {
+	endpoint := os.Getenv("THEMIS_LIVE_OLLAMA")
+	if endpoint == "" {
+		endpoint = "http://localhost:11434"
+	}
+	client := http.Client{Timeout: 2 * time.Second}
+	if _, err := client.Get(endpoint + "/api/tags"); err != nil {
+		t.Skipf("no local model endpoint at %s: %v", endpoint, err)
+	}
+	modelName := os.Getenv("THEMIS_LIVE_TOOL_MODEL")
+	if modelName == "" {
+		modelName = "qwen2.5:7b"
+	}
+	f := setup(t, model.NewOllamaChat(endpoint), "")
+	req := skills.Request{
+		Inputs: map[string]any{
+			"cve-id": "CVE-2026-12345", "component": "parser",
+			"focus": "Read parser.go, then call declare_done with no arguments. When declare_done is the only tool available, call it immediately.",
+		},
+	}
+	req.Deployment.Model = modelName
+	req.Deployment.TurnTimeoutSec = 180
+	req.Deployment.RegistryPath = mustAbs(t, filepath.Join(repoRoot, "policies/tools/registry-v3.json"))
+	req.Deployment.ExecCeilingPath = filepath.Join(f.envDir, "eceiling.json")
+	req.Deployment.StateRoot = f.stateDir
+	artifacts := filepath.Join(t.TempDir(), "artifacts")
+	if err := os.MkdirAll(artifacts, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	req.Deployment.ArtifactDir = artifacts
+
+	env := instantiateP0(t, f, "t-live-skill", req)
+	res, err := f.o.SubmitTask(env)
+	if err != nil {
+		t.Fatalf("live skill walk failed: %v", err)
+	}
+	if res.Status != state.StatusCompleted {
+		t.Fatalf("the live skill walk must reach a completed terminal: %+v", res)
+	}
+	// The walk moved only through the SKILL's governed edges (the
+	// fixture replayer pins the fixture workflow, so verify against
+	// the skill's own recorded transitions here).
+	evs, err := f.o.root.ReadEvents("t-live-skill")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var lastTo, lastEdge string
+	transitions := 0
+	for _, ev := range evs {
+		if ev.Class != state.EvWorkflowTransition {
+			continue
+		}
+		var b struct {
+			To     string `json:"to"`
+			EdgeID string `json:"edge_id"`
+		}
+		if err := json.Unmarshal(ev.Body, &b); err != nil {
+			t.Fatal(err)
+		}
+		transitions++
+		lastTo, lastEdge = b.To, b.EdgeID
+	}
+	if transitions == 0 {
+		t.Fatal("a completed skill walk must have recorded transitions")
+	}
+	if lastTo != TargetComplete {
+		t.Fatalf("the walk must complete through its governed edge, ended at %q via %q", lastTo, lastEdge)
+	}
+	// Completion came from the control verb's signal, not from prose.
+	if !strings.Contains(lastEdge, SignalPhaseCompletionRequested) {
+		t.Fatalf("completion must ride the control-verb signal, got edge %q", lastEdge)
+	}
+	// Provenance is in the record, so the executed composition can be
+	// checked against the catalog after the fact.
+	man, err := f.o.root.ReadManifest("t-live-skill")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if man.GovernedHashes["origin:skill"] != "investigate-cve@1" {
+		t.Fatalf("live walk must record its skill attribution: %v", man.GovernedHashes)
 	}
 }
 

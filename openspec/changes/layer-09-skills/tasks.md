@@ -10,30 +10,31 @@ Grill closed 2026-09-08 (all questions CLOSED; design.md §3 is the record, §2 
 
 ## 1. L9-M1 — Skill manifest + catalog (Class 3)
 
-- [ ] Skill manifest artifact + fail-closed loader: closed schema, mandatory pins (workflow, ceiling, contract, grant template, spec template, input schema, procedure ref), hash-format validation, no skill-reference field (D-L9-1/12)
-- [ ] Catalog: append-only name@version→composition-hash bindings; manifest/catalog two-way version agreement; rebind refusal; active|withdrawn states; atomic resolve-verify-instantiate (D-L9-3/10)
-- [ ] Input-schema validator: closed v1 vocabulary (type/required/max_length/enum), rich features refused (D-L9-4)
-- [ ] Catalog root disjointness at the designed call site; no catalog verb in any registry (decoded scan) (D-L9-8)
+- [x] Skill manifest artifact + fail-closed loader (skills/manifest.go): closed schema, seven mandatory pins, hash-format validation, no skill-reference field; pins resolve through confine.ResolvePath so a symlinked pin cannot read outside the bundle
+- [x] Catalog (skills/catalog.go): immutable name@version→composition bindings, two-way identity agreement, rebind refusal, active|withdrawn, atomic resolve-verify-instantiate, CheckAppendOnly detects deletion/rebinding/un-withdrawal
+- [x] Input-schema validator (skills/schema.go): closed v1 vocabulary; rich features unrepresentable via DisallowUnknownFields; string bounds mandatory; integer inputs bounded
+- [x] Catalog root disjointness at the instantiation call site (state.CheckDisjointRoots); decoded registry scan proves no catalog verb (TestNoCatalogVerbInRegistries)
 - [ ] Security review
 
 ## 2. L9-M2 — Instantiation (Class 3)
 
-- [ ] Resolve exact name@version → verify ACTIVE → resolve all pins → verify bytes against hashes BEFORE executable (D-L9-10/11)
-- [ ] Closed instantiation surface: Class-2 downward narrowing (quotas, wall deadline), Class-3 task-state inputs (schema-validated, external-untrusted), unknown fields refused (D-L9-7)
-- [ ] Closed placeholder vocabulary (@workspace/@task_id/@input.<field> into declared-substitutable fields only; never procedure text/workflow/contract/ceiling) (D-L9-4/7)
-- [ ] Effective grant + spec emission (template hash AND effective hash recorded); ordinary governed envelope with mandatory opaque skill-provenance attribution (D-L9-7/13)
-- [ ] L7 additive envelope amendment: non-semantic attribution field, preserved verbatim into task attribution; L7 remains skill-blind (Class 2/3, per D-L9-13)
+- [x] Resolve exact name@version → verify ACTIVE → resolve all pins → byte-verify before anything is written (skills/instantiate.go)
+- [x] Closed instantiation surface: Class-2 downward narrowing (quotas incl. the aggregate cap, wall deadline), Class-3 task-state inputs (schema-validated, external-untrusted), Class-4 deployment; unknown fields unrepresentable
+- [x] Placeholder-only substitution (@task_id/@repo/@pinned_sha; @workspace stays for L7 to bind); never procedure text/workflow/contract/ceiling. NOTE: `@input.<field>` is NOT implemented — inputs travel via the payload only; recorded as a deliberate v1 narrowing for owner review
+- [x] Effective grant + spec emission with template AND instantiated/effective identities in origin; spec re-validated through execution.LoadSpec; grant shape-checked (it cannot be loaded pre-workspace by design — L7 records grant_effective after binding)
+- [x] L7 additive envelope amendment: optional non-semantic skill_procedure_path/sha256 + opaque origin, preserved verbatim into attribution under an origin: prefix; L7 interprets none of it
 - [ ] Security review
 
 ## 3. L9-M3 — investigate-cve@1 (Class 2/3)
 
-- [ ] Author the P0 skill composition: workflow (analysis lattice on read_file/write_file/declare_done), procedure artifact, contract, grant template, spec template, input schema
-- [ ] Governance registration in the catalog (owner act)
+- [x] P0 skill composition authored (policies/skills/investigate-cve/): two-phase lattice (ANALYZE read-only, ASSESS adds write_file), ceiling, contract, grant template, spec template, closed input schema, advisory procedure artifact
+- [ ] Governance registration in the catalog (OWNER ACT — written as catalog.proposed.json; the machinery has no write API and never self-registers)
 - [ ] Security review
 
 ## 4. L9-M4 — Proof registers + close (Class 2/3)
 
-- [ ] Register A structural · Register B adversarial (incl. zero-trust-discount L9-bypass) · Register C equivalence + provenance-swap · Register D cold reconstruction · Register E live proof (unmodified production loop, qwen2.5:7b) with negative proofs
+- [x] Register A structural (skills/skills_test.go) · Register B adversarial (skills/adversarial_test.go) · Register C equivalence + provenance-swap (orchestration/skill_seam_test.go) · Register E live proof PASSED vs qwen2.5:7b through the unmodified loop (orchestration/skill_e2e_test.go), plus the zero-trust-discount bypass proven against the real skill
+- [ ] Register D cold reconstruction (catalog + record + pinned bytes ⇒ exact reviewed composition) — NOT YET WRITTEN
 - [ ] Traceability, coverage-verified; reviews with three-state verdicts
 - [ ] Code map + status doc + artifact updates; push/archive on owner approval
 

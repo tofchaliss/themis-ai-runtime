@@ -9,6 +9,7 @@ package orchestration
 // attribution of intent).
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -507,6 +508,88 @@ func TestRecordedIdentitiesAreComputedNotCopied(t *testing.T) {
 		}
 		if got := man.GovernedHashes[label]; got != hashBytes(body) {
 			t.Errorf("%s: recorded %q is not a hash of the bytes L7 read", label, got)
+		}
+	}
+}
+
+// R-L9-1: the reconstruction chain. The record must let an auditor
+// recover the ACTUAL bytes L7 executed, through an identity L6 derived
+// by hashing those bytes itself — a source the envelope structurally
+// cannot supply. This is what the equality assertions could never
+// establish: with a valid commitment, an envelope claim and L7's
+// computed hash are equal, so only an independently generated identity
+// distinguishes them.
+func TestMaterializedArtifactsAreRecoverableFromTheRecord(t *testing.T) {
+	f := setup(t, happyScript(), "")
+	env := f.envelope(t, "t-recon")
+	if _, err := f.o.SubmitTask(env); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := LoadEnvelope(env)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evs, err := f.o.root.ReadEvents("t-recon")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Find the materialization record and recover its objects.
+	recovered := map[string][]byte{}
+	for _, ev := range evs {
+		if ev.Class != state.EvL2Delivery {
+			continue
+		}
+		var b struct {
+			Kind    string            `json:"kind"`
+			Objects map[string]string `json:"objects"`
+		}
+		if err := json.Unmarshal(ev.Body, &b); err != nil || b.Kind != "materialized-governed-artifacts" {
+			continue
+		}
+		for i := range ev.Refs {
+			body, rerr := f.o.root.Resolve(ev, i)
+			if rerr != nil {
+				t.Fatalf("a referenced object must be recoverable: %v", rerr)
+			}
+			// The object's ADDRESS is L6's hash of these bytes. That the
+			// bytes hash back to the referenced id is the property no
+			// envelope claim can fake.
+			// The address is algorithm-prefixed; the digest half must be
+			// L6's hash of exactly these bytes.
+			if !strings.HasSuffix(ev.Refs[i].ID, hashBytes(body)) {
+				t.Fatalf("object %s does not hash to its address — content addressing broken", ev.Refs[i].ID)
+			}
+			for label, id := range b.Objects {
+				if id == ev.Refs[i].ID {
+					recovered[label] = body
+				}
+			}
+		}
+	}
+	if len(recovered) == 0 {
+		t.Fatal("the record must durably bind the artifacts L7 materialized — without them reconstruction has no independent source")
+	}
+	// Byte-exact: the recovered bytes ARE the governed artifacts.
+	for label, path := range map[string]string{
+		"workflow": loaded.WorkflowPath, "workflow_ceiling": loaded.WorkflowCeilingPath,
+		"context_contract": loaded.ContextContractPath, "spec": loaded.SpecPath,
+	} {
+		onDisk, rerr := os.ReadFile(path)
+		if rerr != nil {
+			t.Fatal(rerr)
+		}
+		got, ok := recovered[label]
+		if !ok {
+			t.Errorf("%s was not durably recorded", label)
+			continue
+		}
+		if string(got) != string(onDisk) {
+			t.Errorf("%s: recovered bytes are not the executed artifact", label)
+		}
+		// And the record's identity agrees with L7's own governed hash.
+		man, _ := f.o.root.ReadManifest("t-recon")
+		if man.GovernedHashes[label] != "" && man.GovernedHashes[label] != hashBytes(got) {
+			t.Errorf("%s: the recorded identity disagrees with the durably stored bytes", label)
 		}
 	}
 }

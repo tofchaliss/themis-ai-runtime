@@ -200,6 +200,21 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	if err != nil {
 		return res, err
 	}
+	// The EXACT bytes each loader accepted, captured once for durable
+	// storage after the task exists (ADG-L9/L6-1 option (i)). Read here
+	// and carried — never re-read after verification, which would
+	// reintroduce the second-materialization problem this closes.
+	materialized := map[string][]byte{}
+	for label, path := range map[string]string{
+		"workflow": env.WorkflowPath, "workflow_ceiling": env.WorkflowCeilingPath,
+		"context_contract": env.ContextContractPath, "spec": env.SpecPath,
+	} {
+		body, rerr := os.ReadFile(path)
+		if rerr != nil {
+			return res, fmt.Errorf("%w: %s: %v", ErrAssembly, label, rerr)
+		}
+		materialized[label] = body
+	}
 	// C2 (D-L9-11a/b): the commitment's seal was verified at load, so
 	// these identities are one sealed unit rather than independently
 	// chosen strings. Each artifact L7 materialized must match the one
@@ -362,12 +377,54 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	if grantAuthorityDigest(grant) != governed["grant_authority"] {
 		return res, fmt.Errorf("%w: the grant changed between attribution and execution", ErrInvariant)
 	}
+	// Reconstruction provenance (R-L9-1 / ADG-L9/L6-1): store the EXACT
+	// bytes verified at assembly as L6 content-addressed objects, and
+	// reference them from the record. L6 derives each object's address
+	// by hashing the bytes itself, so the recorded identity cannot have
+	// come from an envelope claim — which is the independent source an
+	// equality assertion could never supply. The bytes are the ones
+	// already captured and verified; nothing is re-read.
+	if err := recordMaterializedArtifacts(task, materialized); err != nil {
+		return res, err
+	}
+
 	w := &walk{
 		o: o, env: env, wf: wf, reg: reg, grant: grant, table: table,
 		task: task, l5: envn, execCeiling: execCeiling, spec: spec,
 		contract: contract, eis: eis,
 	}
 	return w.run()
+}
+
+// recordMaterializedArtifacts binds the governed artifact bytes L7
+// actually executed into the durable record through L6's existing
+// primitives: one content-addressed object per artifact, referenced
+// from a single event. No new object class and no new event class —
+// evidence-payload already means "durable bytes referenced by an
+// event", and the reference carries its own classification.
+func recordMaterializedArtifacts(task *state.TaskRecord, materialized map[string][]byte) error {
+	labels := make([]string, 0, len(materialized))
+	for label := range materialized {
+		labels = append(labels, label)
+	}
+	sort.Strings(labels)
+	ids := map[string]string{}
+	var refs []state.Ref
+	for _, label := range labels {
+		id, err := task.StoreObject(state.ObjEvidencePayload, materialized[label])
+		if err != nil {
+			return fmt.Errorf("%w: recording materialized %s: %v", ErrAssembly, label, err)
+		}
+		ids[label] = id
+		refs = append(refs, state.Ref{ID: id, Class: state.ObjEvidencePayload})
+	}
+	body, _ := json.Marshal(map[string]any{
+		"kind": "materialized-governed-artifacts", "objects": ids,
+	})
+	if _, err := task.AppendEvent(state.EvL2Delivery, "l7", body, refs...); err != nil {
+		return fmt.Errorf("%w: recording materialized artifacts: %v", ErrAssembly, err)
+	}
+	return nil
 }
 
 // resolveTaskEIS resolves the instruction set for ONE task. The

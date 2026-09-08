@@ -373,6 +373,11 @@ func TestComposedDeliveryThroughL2(t *testing.T) {
 		if err := json.Unmarshal(ev.Body, &b); err != nil {
 			t.Fatal(err)
 		}
+		// The delivery plane also carries the materialized-artifact
+		// record (R-L9-1); this test is about COMPOSITION records.
+		if b.Framing == "" && b.ContractHash == "" && b.L2PayloadHash == "" {
+			continue
+		}
 		if b.Framing != "l2-composed-v1" || b.ContractHash == "" || b.L2PayloadHash == "" {
 			t.Fatalf("delivery must record the L2 composition identity: %+v", b)
 		}

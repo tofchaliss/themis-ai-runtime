@@ -65,6 +65,7 @@ func TestSkillProvenanceDoesNotChangeTheWalk(t *testing.T) {
 			"skill_composition": strings.Repeat("a", 64),
 			"skill_catalog":     strings.Repeat("b", 64),
 		},
+		"composition": genuineCommitment(t, base),
 	}, "envelope-t-skill-attributed.json")
 	resSkill, err := f.o.SubmitTask(attributed)
 	if err != nil || resSkill.Status != state.StatusCompleted {
@@ -142,7 +143,8 @@ func TestSkillProvenanceDoesNotChangeASaturatingWalk(t *testing.T) {
 	f.o.cfg.Model = script()
 	base := f.envelope(t, "t-sat-skill")
 	attributed := withEnvelopeFields(t, base, map[string]any{
-		"origin": map[string]string{"skill": "investigate-cve@1", "skill_composition": strings.Repeat("a", 64)},
+		"origin":      map[string]string{"skill": "investigate-cve@1", "skill_composition": strings.Repeat("a", 64)},
+		"composition": genuineCommitment(t, base),
 	}, "envelope-t-sat-attributed.json")
 	skillRes, err := f.o.SubmitTask(attributed)
 	if err != nil {
@@ -169,6 +171,8 @@ func TestSkillProvenancePreservedIntoAttribution(t *testing.T) {
 			"skill":             "investigate-cve@1",
 			"skill_composition": strings.Repeat("c", 64),
 		},
+		// D-L9-11d: attribution requires a commitment.
+		"composition": genuineCommitment(t, base),
 	}, "envelope-t-attr-2.json")
 	if _, err := f.o.SubmitTask(env); err != nil {
 		t.Fatal(err)
@@ -198,6 +202,7 @@ func TestProvenanceSwapDoesNotRedirectExecution(t *testing.T) {
 			"skill":             "some-other-skill@99",
 			"skill_composition": strings.Repeat("f", 64),
 		},
+		"composition": genuineCommitment(t, base),
 	}, "envelope-t-swap-2.json")
 	res, err := f.o.SubmitTask(swapped)
 	if err != nil || res.Status != state.StatusCompleted {

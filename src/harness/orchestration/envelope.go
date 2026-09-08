@@ -82,24 +82,90 @@ var sha256Syntax = regexp.MustCompile(`^[0-9a-f]{64}$`)
 // cannot be resolved back to a skill and cannot become a second
 // identity system (owner constraint, M5).
 type CompositionCommitment struct {
+	// The Skill-fixed composition (D-L9-11c): every artifact whose
+	// identity must remain stable during execution. Deployment-governed
+	// inputs (registry, exec ceiling) are a different identity domain
+	// and are deliberately NOT sealed here.
 	Workflow        string `json:"workflow_sha256"`
 	WorkflowCeiling string `json:"workflow_ceiling_sha256"`
 	ContextContract string `json:"context_contract_sha256"`
-	// Grant/Spec: the authority-carrying artifacts. Grant is committed
-	// as the ENVELOPE-supplied bytes (pre-@workspace binding): L7
-	// rewrites the grant, so the executed bytes are deliberately not
-	// the submitted ones, but the submitted ones are what was named.
+	GrantTemplate   string `json:"grant_template_sha256"`
+	SpecTemplate    string `json:"spec_template_sha256"`
+	InputSchema     string `json:"input_schema_sha256"`
+	Procedure       string `json:"procedure_sha256,omitempty"`
+
+	// Grant/Spec: identities of the EFFECTIVE artifacts this envelope
+	// references. They are instantiated from the sealed templates, so
+	// they are covered by the seal transitively while still being
+	// checkable against what L7 materializes.
 	Grant string `json:"grant_sha256"`
 	Spec  string `json:"spec_sha256"`
-	// Procedure is present only when the envelope delivers one, and is
-	// verified against bytes L7 hashes itself.
-	Procedure string `json:"procedure_sha256,omitempty"`
+
+	// Seal: SHA-256 over the canonical serialization of every field
+	// above (D-L9-11b). Without it the commitment is N independently
+	// choosable claims — an adversary swaps a path and its identity
+	// together — which is the option-A shape D-L9-11a rejected. The
+	// seal makes the identities one indivisible unit.
+	//
+	// It seals the SUBMITTED composition. It does NOT authenticate a
+	// Skill: that the submitted composition is the governance-
+	// registered one is a separate fact, established only from catalog
+	// evidence (D-L9-11a Claim 2).
+	Seal string `json:"composition_sha256"`
+}
+
+// canonical serializes the sealed fields in a fixed order, length-
+// framed so no value can forge a field boundary. The seal is a hash
+// over exactly these bytes.
+func (c *CompositionCommitment) canonical() []byte {
+	var b strings.Builder
+	b.WriteString("themis-skill-composition-v1")
+	for _, f := range c.sealedFields() {
+		fmt.Fprintf(&b, "|%d:%s=%s", len(f.sha), f.label, f.sha)
+	}
+	return []byte(b.String())
+}
+
+type sealedField struct{ label, sha string }
+
+// sealedFields is the ordered, closed field list the seal covers.
+func (c *CompositionCommitment) sealedFields() []sealedField {
+	return []sealedField{
+		{"workflow", c.Workflow},
+		{"workflow_ceiling", c.WorkflowCeiling},
+		{"context_contract", c.ContextContract},
+		{"grant_template", c.GrantTemplate},
+		{"spec_template", c.SpecTemplate},
+		{"input_schema", c.InputSchema},
+		{"procedure", c.Procedure},
+		{"grant", c.Grant},
+		{"spec", c.Spec},
+	}
+}
+
+// sealed computes the seal over the current field values.
+func (c *CompositionCommitment) sealed() string {
+	sum := sha256.Sum256(c.canonical())
+	return hex.EncodeToString(sum[:])
+}
+
+// checkSeal verifies the commitment is internally intact: the seal
+// must be the hash of the identities it accompanies. A mismatch means
+// the identity set was altered after it was sealed.
+func (c *CompositionCommitment) checkSeal() error {
+	if !sha256Syntax.MatchString(c.Seal) {
+		return fmt.Errorf("%w: composition needs its sealing hash — unsealed identities are independently choosable claims, not a composition", ErrEnvelope)
+	}
+	if got := c.sealed(); got != c.Seal {
+		return fmt.Errorf("%w: the composition's identities do not match its seal (sealed %s, identities hash to %s)", ErrInvariant, c.Seal, got)
+	}
+	return nil
 }
 
 // verify checks one materialized artifact against the identity the
-// submission committed to. A mismatch means the executed artifact is
-// not the artifact the submission named — an integrity violation, not
-// a governance judgment.
+// sealed composition commits to. A mismatch means the executed
+// artifact is not the artifact the composition named — an integrity
+// violation, not a governance judgment.
 func (c *CompositionCommitment) verify(label, want, got string) error {
 	if want == "" {
 		return fmt.Errorf("%w: composition commits no identity for %s — a named artifact without its identity is not a reference", ErrEnvelope, label)
@@ -178,25 +244,38 @@ func LoadEnvelope(path string) (*Envelope, error) {
 	// materializes: a path without its committed identity is not a
 	// reference (D-L9-11a). Absent entirely is fine — a hand-assembled
 	// envelope carries no composition and executes exactly as before.
+	// D-L9-11d: Skill attribution REQUIRES a commitment. Without this
+	// an envelope could carry governance-looking attribution while
+	// evading verification entirely, making C2 submitter-elective.
+	// The reverse stays legal: no attribution and no commitment is an
+	// ordinary hand-assembled envelope.
+	if e.Origin["skill"] != "" && e.Composition == nil {
+		return nil, fmt.Errorf("%w: an envelope attributing a skill must carry the composition commitment that attribution refers to", ErrInvariant)
+	}
 	if c := e.Composition; c != nil {
-		// Ordered, so a refusal names the same rule every run.
-		for _, f := range []struct{ label, sha string }{
-			{"workflow", c.Workflow}, {"workflow_ceiling", c.WorkflowCeiling},
-			{"context_contract", c.ContextContract}, {"grant", c.Grant}, {"spec", c.Spec},
-		} {
+		// Every sealed identity is a full digest; the procedure's is
+		// present exactly when a procedure is delivered.
+		for _, f := range c.sealedFields() {
+			if f.label == "procedure" {
+				continue
+			}
 			if !sha256Syntax.MatchString(f.sha) {
 				return nil, fmt.Errorf("%w: composition needs a sha256 identity for %s", ErrEnvelope, f.label)
 			}
 		}
-		// Symmetric pairing: a commitment to an artifact L7 will never
-		// materialize is "a path without its identity" read the other way
-		// round, and would leave the record asserting a composition member
-		// that did not participate.
+		// Symmetric pairing: committing to an artifact L7 will never
+		// materialize would leave the record asserting a composition
+		// member that did not participate.
 		if (c.Procedure == "") != (e.SkillProcedurePath == "") {
 			return nil, fmt.Errorf("%w: the composition's procedure identity and skill_procedure_path are present together or not at all", ErrEnvelope)
 		}
 		if c.Procedure != "" && !sha256Syntax.MatchString(c.Procedure) {
 			return nil, fmt.Errorf("%w: composition needs a sha256 identity for procedure", ErrEnvelope)
+		}
+		// The seal makes the identities one unit (D-L9-11b): check it
+		// before any of them is used.
+		if err := c.checkSeal(); err != nil {
+			return nil, err
 		}
 	}
 	sum := sha256.Sum256(raw)

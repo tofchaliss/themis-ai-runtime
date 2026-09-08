@@ -23,6 +23,44 @@ import (
 	"github.com/tofchaliss/themis/state"
 )
 
+// sealedComposition builds the commitment L7 verifies against: the
+// Skill-fixed identities plus the effective artifacts this envelope
+// references, sealed with a hash over all of them. It seals the
+// SUBMITTED composition — it does not authenticate a Skill.
+func sealedComposition(m *Manifest, effGrant []byte, specHash string) map[string]string {
+	c := map[string]string{
+		"workflow_sha256":         m.Workflow.SHA256,
+		"workflow_ceiling_sha256": m.WorkflowCeiling.SHA256,
+		"context_contract_sha256": m.ContextContract.SHA256,
+		"grant_template_sha256":   m.GrantTemplate.SHA256,
+		"spec_template_sha256":    m.SpecTemplate.SHA256,
+		"input_schema_sha256":     m.InputSchema.SHA256,
+		"procedure_sha256":        m.Procedure.SHA256,
+		"grant_sha256":            hashBytes(effGrant),
+		"spec_sha256":             specHash,
+	}
+	// The seal must be computed over the same canonical form L7 uses,
+	// in the same order — one definition, mirrored deliberately here
+	// because L9 must not import the orchestration package.
+	var b strings.Builder
+	b.WriteString("themis-skill-composition-v1")
+	for _, f := range []struct{ label, key string }{
+		{"workflow", "workflow_sha256"},
+		{"workflow_ceiling", "workflow_ceiling_sha256"},
+		{"context_contract", "context_contract_sha256"},
+		{"grant_template", "grant_template_sha256"},
+		{"spec_template", "spec_template_sha256"},
+		{"input_schema", "input_schema_sha256"},
+		{"procedure", "procedure_sha256"},
+		{"grant", "grant_sha256"},
+		{"spec", "spec_sha256"},
+	} {
+		fmt.Fprintf(&b, "|%d:%s=%s", len(c[f.key]), f.label, c[f.key])
+	}
+	c["composition_sha256"] = hashBytes([]byte(b.String()))
+	return c
+}
+
 func hashBytes(b []byte) string {
 	sum := sha256.Sum256(b)
 	return hex.EncodeToString(sum[:])
@@ -289,12 +327,12 @@ func Instantiate(catalogPath, ref string, req Request) (string, error) {
 		// materialization is checked against them rather than against a
 		// pair the envelope author chose freely. Identities only — the
 		// artifacts themselves stay on disk.
-		"composition": map[string]string{
-			"workflow_sha256":         m.Workflow.SHA256,
-			"workflow_ceiling_sha256": m.WorkflowCeiling.SHA256,
-			"context_contract_sha256": m.ContextContract.SHA256,
-			"procedure_sha256":        m.Procedure.SHA256,
-		},
+		// The sealed composition commitment (D-L9-11a/b/c): the
+		// Skill-fixed identities L9 resolved and verified, sealed as one
+		// unit so they cannot be independently re-chosen downstream.
+		// Deployment-governed inputs (registry, exec ceiling) are a
+		// different identity domain and are deliberately excluded.
+		"composition": sealedComposition(m, effGrant, effSpecLoaded.Hash),
 
 		// Opaque provenance (D-L9-13): mandatory for skill-produced
 		// envelopes, preserved verbatim by L7, interpreted by nobody.

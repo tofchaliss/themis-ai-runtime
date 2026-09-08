@@ -40,6 +40,30 @@ L9 interacts with L7 only by producing an ordinary governed task envelope + its 
 ### D-L9-12 — No Skill references: recursion unrepresentable; sequencing external; lineage ≠ authority (LOCKED 2026-09-08, Q-L9-11)
 Skills cannot call, include, or reference other Skills in v1. The manifest contains no Skill-reference field, making recursion, nesting, and cycles structurally unrepresentable (no cycle/depth machinery to secure). Runtime Skill-to-Skill invocation stays prohibited (D-L9-8) and belongs to the future L8 delegation question. Reuse ≠ reference: two Skills pinning the same immutable artifact hashes (valid, independently reviewable) vs a Skill referencing a Skill (invalid — dependency semantics L9 would then govern: transitive review collapse, recursive identity, withdrawal propagation, workflow splicing). External sequencing permitted: an authorized caller may chain independently governed tasks; one task's output enters another only as Class-3 input through L2 classification/fencing — no authority inheritance, no trust transfer ("A completed" makes B neither more trusted nor authorized). **Lineage is not authority:** the record may carry input-origin lineage (T2.input.origin = T1.output) but T2 independently satisfies every submission/resolution/capability/execution/governance rule. **Residual (recorded, ownership L8-vs-L9 deliberately OPEN):** a governed multi-Skill pipeline — the sequence itself a reviewed executable object (sequence semantics, aggregate authority/budgets, failure propagation, cancellation, approval boundaries, atomicity, whether the sequence requires review) — is deferred to a dedicated grill and must never be implemented through Skill references or nesting (no skill_ref field, ever, under pipeline pressure).
 
+### D-L9-11b/c/d — AMENDMENTS (owner, 2026-09-08): seal the composition, bind all Skill-fixed material, require it for Skill attribution
+
+The three M5 Class-3 reviews found C2 under-delivered. Owner decided all three in favour of strengthening.
+
+**D-L9-11b — Composition self-hash: LOCKED YES.** A commitment carrying N artifact identities without a hash over ITSELF is N independently-supplied claims: an adversary changes workflow_path and workflow_sha256 together and every check passes. Grouping the pins into one hash-sealed unit is the entire difference between adopted-C and rejected-A. The relationship is three-level: composition_hash ↔ canonical commitment ↔ individual artifact identities ↔ materialized bytes. **No self-hash → not C2.**
+
+**D-L9-11c — Commitment scope: LOCKED.** The governing question is NOT "does L9 consume this?" but "is this part of the reviewed Skill composition whose identity must remain stable during execution?" Bind ALL Skill-fixed material: workflow, workflow_ceiling, context_contract, grant_template, spec_template, procedure, **input_schema**. The input schema is Skill-fixed under Q-L9-7′ and must not escape the identity commitment merely because L9 consumes it — otherwise a Skill's input contract could change while everything else stays "the same composition." EXCLUDE registry and exec_ceiling: they are Class-4 deployment-governed inputs, a different identity domain, and must not be smuggled into a Skill composition hash. Scope is recorded here, not defined by the implementation.
+
+**D-L9-11d — Skill attribution requires a commitment: LOCKED YES.** origin.skill present with composition absent made C2 submitter-elective: governance-looking attribution with the verification bypassed. This is not about trusting origin.skill — it is envelope-contract coherence. The matrix:
+
+| Envelope | Result |
+| --- | --- |
+| no skill origin + no composition | valid ordinary hand-assembled envelope |
+| skill origin + valid composition | valid Skill-attributed envelope |
+| skill origin + no composition | REFUSE (invariant failure) |
+| skill origin + inconsistent composition | REFUSE (invariant failure) |
+| no skill origin + composition | permitted; creates no governance authority |
+
+The mandatory relationship is Skill attribution → composition commitment. It is NOT composition → governance authority.
+
+**Terminology (owner):** never say "the composition hash authenticates the Skill." Under C2 it seals the internal composition represented by the submission. The strongest truthful statement stays: *the submitted composition is cryptographically self-consistent and its materialized artifacts match the identities sealed by that composition.* Governance registration is a separate fact, and that distinction must remain visible in architecture, tests, and traceability.
+
+**Closure requirements for the test-evidence gate (all mutation-coupled):** (1) a producer test proving L9 actually emits the commitment — deleting the producer block must FAIL, since otherwise a Skill-instantiated envelope silently degrades to an ordinary one; (2) per-artifact coupling — deleting ANY single verification must fail, not only deleting several at once; (3) cold reconstruction must compare identities L7 COMPUTED from bytes it read, so mutating the recording side fails the test; (4) refusal before any durable record — no misleading successful or partial execution record may exist at the invariant-failure boundary.
+
 ### D-L9-11a — AMENDMENT (owner, 2026-09-08): "resolved once" means one SEMANTIC resolution; C2 locked, C3 residual
 
 Conformance review found the L9→L7 handoff carried only paths for workflow, ceiling, and contract (the procedure alone shipped its pin), so the reviewed composition's identity depended on the equivalence of two independent reads rather than being carried. Owner marked D-L9-11 NOT CONFORMANT and required an architecture decision rather than an implementation patch.

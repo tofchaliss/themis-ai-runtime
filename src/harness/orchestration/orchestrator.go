@@ -200,7 +200,16 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	if err != nil {
 		return res, err
 	}
-	// C2 (D-L9-11a): when the envelope carries a composition
+	// C2 (D-L9-11a/b): the commitment's seal was verified at load, so
+	// these identities are one sealed unit rather than independently
+	// chosen strings. Each artifact L7 materialized must match the one
+	// the sealed composition names.
+	//
+	// The templates and input schema are sealed but not materialized by
+	// L7 (they are L9-side inputs); the seal binds them so the executed
+	// composition cannot silently differ from the reviewed one in those
+	// members either — detectable post-hoc against the catalog.
+	// (was: D-L9-11a) when the envelope carries a composition
 	// commitment, every artifact L7 just materialized must be the one
 	// that submission committed to. L7 learns nothing about skills from
 	// this — it compares hashes it computed against identities it was

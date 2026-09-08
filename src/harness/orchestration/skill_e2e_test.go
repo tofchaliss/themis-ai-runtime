@@ -307,7 +307,20 @@ func TestSkillEnvelopeGetsNoTrustDiscount(t *testing.T) {
 	bad := writeJSON(t, f.envDir, "over-grant.json",
 		`{"version":1,"task_id":"t-bypass","total_max_calls":99,"entries":[
 		  {"tool":"apply_patch","max_calls":9,"workspace":"@workspace","mutating":true}]}`)
-	tampered := withEnvelopeFields(t, env, map[string]any{"grant_path": bad}, "envelope-t-bypass-2.json")
+	// Update the commitment to match the swapped grant, so the
+	// composition check is SATISFIED and the ceiling check is the thing
+	// under test. A bypass must fail on its own merits, not because a
+	// different control happened to catch it first.
+	badBytes, rerr := os.ReadFile(bad)
+	if rerr != nil {
+		t.Fatal(rerr)
+	}
+	commit := genuineCommitment(t, env)
+	commit["grant_sha256"] = hashBytes(badBytes)
+	commit = reseal(commit) // seal intact, so the CEILING check is under test
+	tampered := withEnvelopeFields(t, env, map[string]any{
+		"grant_path": bad, "composition": commit,
+	}, "envelope-t-bypass-2.json")
 
 	if _, err := f.o.SubmitTask(tampered); err == nil {
 		t.Fatal("L7 must refuse an out-of-ceiling grant regardless of skill provenance")

@@ -22,6 +22,9 @@ L9 sits *before* submission: it is authoring-and-instantiation machinery. The L7
 ### D-L9-0 — Runtime position: L9 never executes at runtime (LOCKED 2026-09-08)
 L9 is a pre-submission plane: define → resolve → validate → instantiate. Instantiation produces an ordinary governed envelope; L7 alone executes the resulting walk. There is no L9 runtime walker to constrain — second-orchestrator prevention by reachability, not discipline. The older architecture wording "L9 executes procedure" is superseded: execution responsibility was absorbed into shipped L7.
 
+### D-L9-17 — Proof gate: five registers, investigate-cve@1 slice, unmodified production loop (LOCKED 2026-09-08, Q-L9-17)
+P0 slice: investigate-cve@1 — exercises the distinctive L9 path (composition, instantiation, seam, attribution, replay) on v1 capabilities only (read_file/write_file/declare_done; no run_command, no approval); remediate-dependency deferred until OPEN-2 provides meaningful deterministic verification. Five registers per §4. The live proof runs through the UNMODIFIED production L7 loop — a special L9 test executor would weaken the proof. **Owner's closing attack, adopted (Register C primary, live in E):** alter only the Skill provenance of a successfully instantiated envelope to claim a different registered Skill whose executable composition differs, submit directly to L7 — L7 must either preserve the claim as opaque attribution while executing the actual envelope, or reject the inconsistency deterministically if the envelope contract requires internally consistent attribution; it must NEVER resolve the claimed Skill or silently adopt its workflow (origin says S@99 ≠ L7 executes S@99). Acceptance: three-state verdicts per milestone, independently challenged; Class-3 security/test/architecture reviews; archive preserves traceability Q-L9 decision → design mechanism → register → test → live evidence → review disposition.
+
 ### D-L9-16 — Revision and the ratchet: two gates, informed governance, no auto-promotion (LOCKED 2026-09-08, Q-L9-16)
 Skill revision occurs only through the existing registration door (append-only, new version). **Two gates, never collapsed:** registration review = safety/architectural conformance — precedes ANY execution including ratchet evaluation (no evaluation backdoor; unregistered candidates cannot be evaluated by running); ratchet evaluation = quality — ordinary governed tasks under the registered candidate (ordinary SubmitTask/L7/L4/L5/L6; no evaluation execution mode, no special authority in either direction), producing evidence for governance. Registration establishes executability, never production endorsement or superiority; production reliance/non-reliance/withdrawal are governance/deployment decisions. **No auto-promotion:** no harness code path may register, promote, withdraw, or select a Skill version from evaluation results — no "if score < X: withdraw_skill()"; the ratchet informs, humans promote (L11 human-only-promotion pattern preserved); a poor score is evidence supporting withdrawal, never a trigger. **No reduced review:** identical registration gate for every authorship source; AI provenance may raise reviewer attention, never lower the bar (Q-L9-7 applied). **No proposal artifact type in v1** (no SkillProposal/status/lifecycle machinery; existing artifact/evidence mechanisms suffice; formal proposal lifecycle is the future L11 grill's question). **Evaluation attribution:** the evaluation-vs-operational distinction should be recordable but is task/deployment attribution, never Skill identity or execution semantics — use existing Class-4 context; if no suitable purpose dimension exists, record it as an L11/L6 attribution gap rather than adding an L9 field. Evaluation and operational walks use identical authority and machinery; physical workspace/state placement stays deployment policy (same governance/record plane ≠ mandated same physical topology).
 
@@ -70,29 +73,57 @@ A Procedure is the reusable method-of-work composed of one pinned workflow defin
 ### D-L9-1 — A Skill is a governed, hash-pinned atomic composition (LOCKED 2026-09-08, Q-L9-1)
 A Skill is a governed manifest pinning by SHA-256 one complete set of the artifact kinds L1–L7 already execute — workflow definition, workflow ceiling, context contract, grant template, spec template — plus a typed input schema and a **pinned procedure artifact reference** (not embedded: L1 owns instruction identity; embedding would mint a second instruction-identity mechanism inside L9), under a name and version. It is inert data, not an execution engine. **Atomic composition invariant:** the pinned artifacts are resolved as one governed set and cannot be independently mixed or substituted during instantiation (skill A's workflow with grant B is structurally impossible); the composition hash is the identity of the reviewed combination and lands in the L6 record. **Registry NOT pinned:** the capability vocabulary and authorization contracts stay L4-owned; a Skill references required capabilities through its grant template (skill grant ⊆ workflow ceiling ⊆ L4 registry, with L7 phase narrowing at execution) but cannot define or authorize capabilities. If capability-contract pinning is ever needed for reproducibility, that is a specific L4 contract identity, never L9 ownership of the registry. Skill = composition, not capability.
 
-## 3. Open questions — Q-L9-1..16 (owner list 2026-09-08, absorbing the draft 10)
+## 3. Grill record (2026-09-08) — all questions CLOSED
 
-**Boundary (owner-proposed, under grill):** L9 defines, resolves, and validates governed Skills and Procedures. It provides reusable domain execution patterns to L7 but owns no authorization, security truth, workflow state, or AI authority. Claude counter pending owner ruling: L9 never executes at runtime — instantiation produces an ordinary governed envelope; L7 alone executes (second-orchestrator prevention by reachability, not discipline).
+**Boundary (locked):** L9 defines, resolves, and validates governed Skills and Procedures in a pre-submission plane; instantiation produces an ordinary governed envelope; L7 alone executes (→ D-L9-0). **Starting principle (owner, locked):** a Skill/Procedure may describe or perform a governed method of work, but it cannot grant authority, create security truth, alter workflow semantics, or bypass the deterministic controls of L1–L7.
 
-**Starting principle (owner, locked):** a Skill/Procedure may describe or perform a governed method of work, but it cannot grant authority, create security truth, alter workflow semantics, or bypass the deterministic controls of L1–L7.
+| Q | Question | Closure |
+|---|---|---|
+| Q-L9-1 | What is a Skill? | governed hash-pinned atomic composition; inert data → D-L9-1 |
+| Q-L9-2 | What is a Procedure? | composition concept (workflow + procedure artifact), never a runtime entity → D-L9-2 |
+| Q-L9-3 | Who owns a Skill? | author ≠ governance ≠ machinery; catalog registration is the owning act → D-L9-3 |
+| Q-L9-4 | Executable logic? | zero new interpreters; schema cap; no procedure templating → D-L9-4 |
+| Q-L9-5 | Tool selection? | narrowing + advice only; quotas caller-narrowable upper bounds → D-L9-5 |
+| Q-L9-6 | Change the workflow? | frozen at review incl. ceiling; one Skill = one workflow → D-L9-6 |
+| Q-L9-7′ | Instantiation surface? (taken early; absorbed draft Q-L9-13) | closed four-class field taxonomy → D-L9-7 |
+| Q-L9-7 | Model-invented Skills? | author-never-admit; instantiation external to the walk → D-L9-8 |
+| Q-L9-8 | Authority of output? | zero added authority; provenance/evidence weight only → D-L9-9 |
+| Q-L9-9 | Versioning/pinning? | immutable name@version→hash; append-only catalog; exact pins → D-L9-10 |
+| Q-L9-10 | Change mid-task? | running tasks immutable; mid-walk mismatch = invariant failure → D-L9-11 |
+| Q-L9-11 | Skills calling Skills? | unrepresentable; sequencing external; lineage ≠ authority → D-L9-12 |
+| Q-L9-12 | L9 ↔ L7? | envelope is the seam; L7 skill-blind; zero trust discount → D-L9-13 |
+| Q-L9-14 | Verification steps? | skill-required structure, capability-executed, L10-evaluated → D-L9-14 |
+| Q-L9-15 | Approval requirements? | unrepresentable in v1; enforced by unreachability → D-L9-15 |
+| Q-L9-16 | Revision/ratchet? | two gates; no auto-promotion; no reduced review → D-L9-16 |
+| Q-L9-17 | Proof gate? | five registers; investigate-cve@1; unmodified production loop → D-L9-17 |
 
-1. **Q-L9-1 — What is a Skill?** Instructions, a reusable procedure, a capability bundle, a workflow fragment, or something else?
-2. **Q-L9-2 — What is a Procedure?** How does it differ from a Skill?
-3. **Q-L9-3 — Who owns a Skill?** Harness, Themis domain, a repository, or an external provider?
-4. **Q-L9-4 — Can a Skill contain executable logic?** If yes, where does it execute; if no, what exactly does a Skill produce?
-5. **Q-L9-5 — Can a Skill select tools?** L4 already owns authorization.
-6. **Q-L9-6 — Can a Skill change the workflow?** Owner initial position: no — L7 remains sole owner of workflow transition.
-7. **Q-L9-7 — Can the model invent a Skill/Procedure?** Hard distinction: model-generated reasoning vs governed reusable procedure vs executable capability.
-8. **Q-L9-8 — What is the authority of Skill output?** Cannot be security truth (constitution).
-9. **Q-L9-9 — How is a Skill versioned and pinned?**
-10. **Q-L9-10 — What happens when a Skill changes while a task is running?**
-11. **Q-L9-11 — Can Skills call other Skills?** Recursion, depth, authority propagation, cycle controls.
-12. **Q-L9-12 — How does L9 interact with L7?** The most important architectural question.
-13. **Q-L9-13 — The input contract.** Typed caller inputs, validation, injection posture, caps, no defaulting.
-14. **Q-L9-14 — Verification steps.** Per-skill Verification (Build=PASS etc.) — phases, tools, or an L10 seam; who owns the verdict.
-15. **Q-L9-15 — Approval requirements.** Skills declare approval points; no approval channel exists — v1 posture.
-16. **Q-L9-16 — Proof gate.** Registers + the P0 slice skill and what its live proof demonstrates.
+**Locked layer principle:** *L9 is a pre-submission plane that compiles reviewed method compositions into ordinary governed envelopes — it owns no runtime, no interpreter, no authority, and no second orchestrator; everything a Skill "does" is done by L1–L7 executing exactly the artifacts governance reviewed together, and nothing a model authors becomes executable except through the governance registration door.*
 
-## 4. Test plan
+### Fold-completeness audit (2026-09-08)
+All 17 closures map to D-L9-0..17; no orphaned locks found. Two architecture-doc skill-structure fields were never separately grilled and are dispositioned here: **Failure conditions** — covered structurally, no separate lock needed: failure conditions ARE workflow edges over the closed L7 event taxonomy (@fail targets, exhaustion edges); no skill-level failure vocabulary exists or can exist (D-L9-4/6). **Expected outputs** — NOT designed in this grill: v1 outputs are egress artifacts + advisory content with no skill-declared output contract; flagged to owner at Gate 0 — a declared output contract, if wanted, is a future addition (likely alongside the L10 verification work), not a silent v1 feature.
 
-*(drafted after the fold)*
+### Deliberate residuals (recorded, never silently promoted)
+1. Governed multi-Skill pipelines (sequence as reviewed executable object) — dedicated grill; L8-vs-L9 ownership OPEN; never via skill_ref (D-L9-12).
+2. Model-driven task creation/delegation (parent/child, authority derivation, budget division, recursion, cancellation propagation) — L8 grill (D-L9-8).
+3. Runtime Skill revocation/cancellation of running tasks — future control-plane grill (D-L9-11).
+4. Approval channel — its own grill; skills consume the resulting L7 workflow vocabulary (D-L9-15).
+5. Repository/externally sourced Skill activation architecture — future explicit activation + review gate (D-L9-3).
+6. Required-model-properties compatibility predicate — deferred (D-L9-7).
+7. Richer input-schema vocabulary — revisit only with a real requirement (D-L9-4).
+8. Evaluation-vs-operational purpose attribution dimension — L11/L6 gap if Class-4 context lacks it (D-L9-16).
+9. Formal proposal artifact lifecycle — future L11 grill (D-L9-16).
+10. Deterministic verification capabilities (run_build/run_tests/run_scan) — OPEN-2/L10 (D-L9-14).
+
+## 4. Test plan — five proof registers (Q-L9-17)
+
+**Register A — structural ("can the invalid object even exist?"):** closed manifest schema (unknown fields/trailing content refused); mandatory pins + hash-format validation; catalog immutability (rebind refusal; manifest/catalog version two-way agreement); no skill-reference field — recursion unrepresentable by schema audit; no catalog-writing capability in any registry (decoded scan); catalog/workspace root disjointness; withdrawn → typed instantiation refusal; floating references (name-only/@latest/ranges) refused; input-schema rich features refused (regex, $ref, conditionals, defaults, coercions…); closed instantiation surface (unknown fields refused); L9 package API closure.
+
+**Register B — adversarial:** unregistered skill-shaped artifacts unexecutable; byte-identical copy ≠ identity; quota/deadline raises refused; substitutions into procedure text/workflow/contract/ceiling unrepresentable; @input into undeclared fields refused; tampered artifact bytes vs pin refuse at resolution; TOCTOU withdrawal race observes one atomic catalog state; **zero-trust-discount proof:** bypass the L9 validator entirely, hand L7 a skill-produced envelope violating a ceiling — L7 refuses on its own (if this fails, L9 has become part of L7's trust base).
+
+**Register C — equivalence (the distinctive L9 proof):** skill-instantiated envelope vs hand-assembled envelope with identical executable fields ⇒ identical L7 control behavior (complete recorded transition-tuple equality via the Register-D replayer); origin changed/removed/falsified ⇒ walk unchanged; declared-composition vs recorded-artifact-hash inconsistency deterministically detectable from record + catalog; **provenance-swap attack:** origin claiming a different registered Skill with a different composition — L7 preserves-as-opaque or rejects-inconsistency deterministically, never resolves or adopts the claimed Skill's workflow.
+
+**Register D — reconstruction:** attribution carries name@version + composition hash + all pinned artifact hashes; L6 record + catalog history + pinned bytes reconstruct the exact reviewed composition cold; withdrawal after completion leaves the historical record byte-identical.
+
+**Register E — live proof (deliberately boring, unmodified production loop):** register investigate-cve@1 → instantiate with real CVE input against a pinned demo repo → ordinary SubmitTask → qwen2.5:7b walks the skill workflow through the production L7 loop (reads evidence, writes assessment, declares completion) → COMPLETED with verified durable egress artifact → causally-verified replay. Negative live: withdrawn skill refuses instantiation; unregistered skill files cannot run; narrowed quota enforced at the gate; live provenance-swap variant of the Register-C attack.
+
+Acceptance: three-state verdicts per milestone (architecture-conformant · test-evidenced · operationally-proven), independently challenged; Class-3 security/test/architecture reviews; traceability at archive maps decision → mechanism → register → test → evidence → disposition.

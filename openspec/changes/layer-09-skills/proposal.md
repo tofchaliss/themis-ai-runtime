@@ -1,6 +1,6 @@
 # Proposal: Layer 9 — Skills & Procedures
 
-**Change ID:** layer-09-skills · **Status:** GRILL OPEN (Q-L9-1..10) · 2026-09-07
+**Change ID:** layer-09-skills · **Status:** GRILL CLOSED (all questions, 2026-09-08), awaiting Gate 0
 **Owner gate:** ships only after owner Gate-0 acceptance of the folded design.
 
 ## Why

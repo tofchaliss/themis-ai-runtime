@@ -1,0 +1,9 @@
+{
+ "version": 1,
+ "fields": [
+  {"name": "cve-id", "type": "string", "required": true, "max_length": 32},
+  {"name": "component", "type": "string", "required": true, "max_length": 128},
+  {"name": "component-version", "type": "string", "required": false, "max_length": 64},
+  {"name": "focus", "type": "string", "required": false, "max_length": 512}
+ ]
+}

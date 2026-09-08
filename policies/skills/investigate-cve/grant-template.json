@@ -1,0 +1,12 @@
+{
+ "version": 1,
+ "task_id": "@task_id",
+ "total_max_calls": 40,
+ "entries": [
+  {"tool": "read_file", "max_calls": 20, "workspace": "@workspace"},
+  {"tool": "list_directory", "max_calls": 6, "workspace": "@workspace"},
+  {"tool": "search_code", "max_calls": 8, "workspace": "@workspace"},
+  {"tool": "write_file", "max_calls": 2, "workspace": "@workspace", "mutating": true},
+  {"tool": "declare_done", "max_calls": 4}
+ ]
+}

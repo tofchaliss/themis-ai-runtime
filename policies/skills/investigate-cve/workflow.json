@@ -1,0 +1,20 @@
+{
+ "version": 1,
+ "name": "investigate-cve",
+ "initial": "ANALYZE",
+ "declared_events": ["turn-no-action", "turn-provider-error", "turns-exhausted", "tool-error", "signal:phase-completion-requested"],
+ "phases": [
+  {"name": "ANALYZE", "capabilities": ["read_file", "list_directory", "search_code", "declare_done"], "max_model_turns": 8, "edges": [
+    {"on": "signal:phase-completion-requested", "to": "ASSESS"},
+    {"on": "turn-no-action", "to": "@stay", "counter": 3, "exhausted_to": "@fail"},
+    {"on": "turn-provider-error", "to": "@fail"},
+    {"on": "tool-error", "to": "@stay", "counter": 4, "exhausted_to": "@fail"},
+    {"on": "turns-exhausted", "to": "@fail"}]},
+  {"name": "ASSESS", "capabilities": ["read_file", "write_file", "declare_done"], "max_model_turns": 6, "edges": [
+    {"on": "signal:phase-completion-requested", "to": "@complete"},
+    {"on": "turn-no-action", "to": "@stay", "counter": 3, "exhausted_to": "@fail"},
+    {"on": "turn-provider-error", "to": "@fail"},
+    {"on": "tool-error", "to": "@stay", "counter": 3, "exhausted_to": "@fail"},
+    {"on": "turns-exhausted", "to": "@fail"}]}
+ ]
+}

@@ -1,0 +1,33 @@
+{
+ "version": 1,
+ "name": "investigate-cve",
+ "skill_version": 1,
+ "workflow": {
+  "path": "workflow.json",
+  "sha256": "ea30461a2d2d47c5275dd84480f300c01af3c7ea083f2ad01dbd9eab0bdea516"
+ },
+ "workflow_ceiling": {
+  "path": "ceiling.json",
+  "sha256": "804cf1a0a55934e3801d41db286d5f92e0c2238d0bd3ca411fe45c2bd28bc217"
+ },
+ "context_contract": {
+  "path": "contract.json",
+  "sha256": "cead594f2d5d16a83db8d554c2b40b565457a365861b85000e99e6cece3fe5c6"
+ },
+ "grant_template": {
+  "path": "grant-template.json",
+  "sha256": "d193f063a006d229eae4e4b3bc4d340825094c0333216deb2b8decef8df96dcf"
+ },
+ "spec_template": {
+  "path": "spec-template.json",
+  "sha256": "17c14c2a99a6e9cab3949ec13123058955db606f7579c17c5c4fe9fdb4c7aaaa"
+ },
+ "input_schema": {
+  "path": "input-schema.json",
+  "sha256": "5103b14baebfc84899b1d937124f9a429a01f85730b70d4acda5ed774d855cc1"
+ },
+ "procedure": {
+  "path": "procedure.md",
+  "sha256": "5a7aef82809db252619a95b9a62f39a9136a80033881d36f83233e7e7a28f3ca"
+ }
+}

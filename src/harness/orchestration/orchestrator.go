@@ -200,6 +200,23 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	if err != nil {
 		return res, err
 	}
+	// C2 (D-L9-11a): when the envelope carries a composition
+	// commitment, every artifact L7 just materialized must be the one
+	// that submission committed to. L7 learns nothing about skills from
+	// this — it compares hashes it computed against identities it was
+	// given. A mismatch means the executed artifact is not the named
+	// one: an integrity violation, not a governance judgment.
+	if c := env.Composition; c != nil {
+		for _, check := range []struct{ label, want, got string }{
+			{"workflow", c.Workflow, wf.Hash},
+			{"workflow_ceiling", c.WorkflowCeiling, wfCeiling.Hash},
+			{"context_contract", c.ContextContract, contract.Hash},
+		} {
+			if err := c.verify(check.label, check.want, check.got); err != nil {
+				return res, err
+			}
+		}
+	}
 	// Cross-artifact binding: the context contract is minted for one
 	// workflow; a contract for another lattice is refused, not adapted.
 	if contract.Workflow != wf.Name {

@@ -284,6 +284,18 @@ func Instantiate(catalogPath, ref string, req Request) (string, error) {
 		"skill_procedure_path":   abs(procPath),
 		"skill_procedure_sha256": m.Procedure.SHA256,
 
+		// The composition commitment (D-L9-11a / C2): the identities L9
+		// resolved and verified, carried across the seam so L7's own
+		// materialization is checked against them rather than against a
+		// pair the envelope author chose freely. Identities only — the
+		// artifacts themselves stay on disk.
+		"composition": map[string]string{
+			"workflow_sha256":         m.Workflow.SHA256,
+			"workflow_ceiling_sha256": m.WorkflowCeiling.SHA256,
+			"context_contract_sha256": m.ContextContract.SHA256,
+			"procedure_sha256":        m.Procedure.SHA256,
+		},
+
 		// Opaque provenance (D-L9-13): mandatory for skill-produced
 		// envelopes, preserved verbatim by L7, interpreted by nobody.
 		// Template AND effective identities travel together (D-L9-7,

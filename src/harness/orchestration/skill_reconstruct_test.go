@@ -9,10 +9,13 @@ package orchestration
 // attribution of intent).
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	l2 "github.com/tofchaliss/themis/context"
 	"github.com/tofchaliss/themis/skills"
 	"github.com/tofchaliss/themis/state"
 )
@@ -88,6 +91,110 @@ func TestColdReconstructionOfExecutedComposition(t *testing.T) {
 		if hashBytes(body) != pin.sha {
 			t.Errorf("%s bytes on disk do not match the reviewed pin", label)
 		}
+	}
+}
+
+// D-L9-11a claim 1 — EXECUTION INTEGRITY, REFUSED at assembly.
+// An envelope whose composition commits to an identity the materialized
+// artifact does not have is refused before the task runs. This is the
+// property C2 closes: L7's filesystem read is materialization of an
+// already-selected artifact, not selection of one.
+func TestCompositionArtifactMismatchIsRefused(t *testing.T) {
+	f := setup(t, happyScript(), "")
+	base := f.envelope(t, "t-cmis")
+	// Commit to a workflow identity that is not the workflow named.
+	bad := withEnvelopeFields(t, base, map[string]any{
+		"composition": map[string]string{
+			"workflow_sha256":         strings.Repeat("d", 64),
+			"workflow_ceiling_sha256": strings.Repeat("e", 64),
+			"context_contract_sha256": strings.Repeat("f", 64),
+		},
+	}, "envelope-t-cmis-2.json")
+	res, err := f.o.SubmitTask(bad)
+	if err == nil {
+		t.Fatal("an artifact that does not match its committed identity must be refused, not executed")
+	}
+	if !errors.Is(err, ErrInvariant) {
+		t.Fatalf("the mismatch must be an invariant failure: %v", err)
+	}
+	if res.Status == state.StatusCompleted {
+		t.Fatal("a refused composition must never reach a completed terminal")
+	}
+	// A path named without its committed identity is not a reference.
+	partial := withEnvelopeFields(t, base, map[string]any{
+		"composition": map[string]string{"workflow_sha256": strings.Repeat("d", 64)},
+	}, "envelope-t-cmis-3.json")
+	if _, err := f.o.SubmitTask(partial); err == nil ||
+		!strings.Contains(err.Error(), "sha256 identity") {
+		t.Fatalf("an incomplete composition must refuse at load: %v", err)
+	}
+}
+
+// D-L9-11a claim 2 — GOVERNANCE IDENTITY, NOT established by L7.
+// An internally consistent composition is executed: every artifact
+// matches what the submission committed to. L7 holds no governance
+// attestation in v1 (C3 is a residual), so it makes NO claim that the
+// submitted composition is the registered one. That mismatch is
+// recoverable post-hoc from record + catalog — detection, not refusal.
+func TestGovernanceIdentityIsNotEstablishedBySelfDeclaredAttribution(t *testing.T) {
+	f := setup(t, happyScript(), "")
+	base := f.envelope(t, "t-selfdecl")
+	// Consistent by construction: commit to the identities of the
+	// artifacts this envelope actually names, while CLAIMING to be the
+	// governed investigate-cve@1 composition.
+	ceiling, _ := LoadWorkflowCeiling(filepath.Join(f.envDir, "wceiling.json"))
+	wf, err := LoadWorkflow(filepath.Join(f.envDir, "workflow.json"), ceiling)
+	if err != nil {
+		t.Fatal(err)
+	}
+	probe, err := LoadEnvelope(f.envelope(t, "t-selfdecl-probe"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	contract, err := l2.LoadContract(probe.ContextContractPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	catPath := mustAbs(t, filepath.Join(repoRoot, "policies/skills/catalog.proposed.json"))
+	cat, err := skills.LoadCatalog(catPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry, _, err := cat.Resolve("investigate-cve@1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	forged := withEnvelopeFields(t, base, map[string]any{
+		"composition": map[string]string{
+			"workflow_sha256":         wf.Hash,
+			"workflow_ceiling_sha256": ceiling.Hash,
+			"context_contract_sha256": contract.Hash,
+		},
+		"origin": map[string]string{
+			"skill":             "investigate-cve@1",
+			"skill_composition": entry.Composition,
+		},
+	}, "envelope-t-selfdecl-2.json")
+
+	// v1 posture: this EXECUTES. L7 verified integrity, which holds.
+	res, err := f.o.SubmitTask(forged)
+	if err != nil || res.Status != state.StatusCompleted {
+		t.Fatalf("an internally consistent composition executes — L7 checks integrity, not admission: %v %+v", err, res)
+	}
+	// But the governance claim is false, and that is discoverable from
+	// record + catalog: the registered composition's workflow identity
+	// is not the one this task executed.
+	man, _ := f.o.root.ReadManifest("t-selfdecl")
+	_, registered, err := cat.Resolve(man.GovernedHashes["origin:skill"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if registered.Workflow.SHA256 == man.GovernedHashes["workflow"] {
+		t.Fatal("this fixture should NOT have executed the registered skill's workflow")
+	}
+	// The honest statement of what v1 provides.
+	if man.GovernedHashes["origin:skill_composition"] != entry.Composition {
+		t.Fatal("the self-declared claim is recorded verbatim, so an auditor can compare it")
 	}
 }
 

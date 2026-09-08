@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -46,6 +47,21 @@ type Envelope struct {
 	SkillProcedurePath   string `json:"skill_procedure_path,omitempty"`
 	SkillProcedureSHA256 string `json:"skill_procedure_sha256,omitempty"`
 
+	// Composition: OPTIONAL integrity commitment over the artifacts a
+	// submitted composition names (D-L9-11a / C2). It carries
+	// IDENTITIES ONLY — never bytes — so envelope size is fixed
+	// regardless of artifact size. L7 uses it for exactly one thing:
+	// verifying that each artifact it materializes is the one the
+	// submission committed to. It is NOT a skill identity: nothing
+	// resolves a skill from it, and it opens no admission path.
+	//
+	// What this establishes: the executed artifacts are cryptographically
+	// consistent with the submitted composition. What it does NOT
+	// establish: that the submitted composition is the one governance
+	// registered — that remains a catalog/post-hoc property in v1, and
+	// no field here may be described as authenticated or trusted.
+	Composition *CompositionCommitment `json:"composition,omitempty"`
+
 	// Origin: OPAQUE governed attribution (D-L9-13). L7 records it
 	// verbatim into the task's governed hashes and exercises ZERO
 	// semantics on it: it never selects a workflow, derives a grant,
@@ -55,6 +71,35 @@ type Envelope struct {
 	Origin map[string]string `json:"origin,omitempty"`
 
 	Hash string `json:"-"`
+}
+
+// sha256Syntax: a committed identity is a full hex digest, nothing else.
+var sha256Syntax = regexp.MustCompile(`^[0-9a-f]{64}$`)
+
+// CompositionCommitment names the expected SHA-256 of each artifact a
+// submitted composition covers. Every field is a plain identity; the
+// struct deliberately has no name, version, or reference field, so it
+// cannot be resolved back to a skill and cannot become a second
+// identity system (owner constraint, M5).
+type CompositionCommitment struct {
+	Workflow        string `json:"workflow_sha256"`
+	WorkflowCeiling string `json:"workflow_ceiling_sha256"`
+	ContextContract string `json:"context_contract_sha256"`
+	Procedure       string `json:"procedure_sha256,omitempty"`
+}
+
+// verify checks one materialized artifact against the identity the
+// submission committed to. A mismatch means the executed artifact is
+// not the artifact the submission named — an integrity violation, not
+// a governance judgment.
+func (c *CompositionCommitment) verify(label, want, got string) error {
+	if want == "" {
+		return fmt.Errorf("%w: composition commits no identity for %s — a named artifact without its identity is not a reference", ErrEnvelope, label)
+	}
+	if want != got {
+		return fmt.Errorf("%w: %s does not match the identity this composition commits to (want %s, materialized %s)", ErrInvariant, label, want, got)
+	}
+	return nil
 }
 
 func LoadEnvelope(path string) (*Envelope, error) {
@@ -119,6 +164,31 @@ func LoadEnvelope(path string) (*Envelope, error) {
 	for k, v := range e.Origin {
 		if len(k) > 64 || len(v) > 256 {
 			return nil, fmt.Errorf("%w: origin attribution field %q exceeds its bound", ErrEnvelope, k)
+		}
+	}
+	// A composition commitment must be complete for every artifact L7
+	// materializes: a path without its committed identity is not a
+	// reference (D-L9-11a). Absent entirely is fine — a hand-assembled
+	// envelope carries no composition and executes exactly as before.
+	if c := e.Composition; c != nil {
+		for label, sha := range map[string]string{
+			"workflow": c.Workflow, "workflow_ceiling": c.WorkflowCeiling,
+			"context_contract": c.ContextContract,
+		} {
+			if !sha256Syntax.MatchString(sha) {
+				return nil, fmt.Errorf("%w: composition needs a sha256 identity for %s", ErrEnvelope, label)
+			}
+		}
+		// The procedure identity appears in two places when a procedure
+		// is delivered; they must agree, or the envelope commits to two
+		// different artifacts.
+		if e.SkillProcedurePath != "" {
+			if c.Procedure == "" {
+				return nil, fmt.Errorf("%w: composition commits no identity for the skill procedure", ErrEnvelope)
+			}
+			if c.Procedure != e.SkillProcedureSHA256 {
+				return nil, fmt.Errorf("%w: the composition's procedure identity disagrees with skill_procedure_sha256", ErrEnvelope)
+			}
 		}
 	}
 	sum := sha256.Sum256(raw)

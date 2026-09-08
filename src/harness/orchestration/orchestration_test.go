@@ -623,6 +623,12 @@ func TestExportedAPIClosure(t *testing.T) {
 	allowTypes := map[string]bool{
 		"Config": true, "StartupReport": true, "Orchestrator": true, "TaskResult": true,
 		"Envelope": true, "WorkflowDef": true, "WorkflowCeiling": true, "Edge": true, "Phase": true,
+		// CompositionCommitment is an envelope field type (D-L9-11a):
+		// artifact identities L7 verifies what it materialized against.
+		// It carries no name, version, or reference, so it cannot
+		// resolve a skill and opens no admission path — data, not a
+		// control surface.
+		"CompositionCommitment": true,
 	}
 	allowFuncs := map[string]bool{
 		"Open": true, "LoadEnvelope": true, "LoadWorkflow": true, "LoadWorkflowCeiling": true,

@@ -34,7 +34,7 @@ Grill closed 2026-09-08 (all questions CLOSED; design.md §3 is the record, §2 
 ## 4. L9-M4 — Proof registers + close (Class 2/3)
 
 - [x] Register A structural (skills/skills_test.go) · Register B adversarial (skills/adversarial_test.go) · Register C equivalence + provenance-swap (orchestration/skill_seam_test.go) · Register E live proof PASSED vs qwen2.5:7b through the unmodified loop (orchestration/skill_e2e_test.go), plus the zero-trust-discount bypass proven against the real skill
-- [ ] Register D cold reconstruction (catalog + record + pinned bytes ⇒ exact reviewed composition) — NOT YET WRITTEN
+- [x] Register D cold reconstruction (orchestration/skill_reconstruct_test.go): record + catalog + pinned bytes recover the exact reviewed composition; declared-vs-recorded artifact identity drift is deterministically detectable after the fact
 - [ ] Traceability, coverage-verified; reviews with three-state verdicts
 - [ ] Code map + status doc + artifact updates; push/archive on owner approval
 

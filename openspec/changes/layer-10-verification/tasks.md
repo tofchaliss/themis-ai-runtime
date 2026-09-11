@@ -120,17 +120,40 @@ evidence. The L9 mutation-testing lesson applies from day one.
 
 ## 4. L10-M4 — First verifier capability (Class 3)
 
-- [ ] One closed verifier capability (run_go_build@v1 or run_go_tests@v1):
-      pinned invocation + toolchain identity, closed typed parameter
-      surface, result domain, environment-independent canonicalization via
-      already-governed mechanism, L5 spec class (D-L10-3/12/16)
-- [ ] L4 registration artifacts authored as PROPOSED (registration is a
-      Governance/owner act — machinery never self-registers)
-- [ ] Matching Verification Contract authored as PROPOSED
-- [ ] Registration-review obligations checklist applied (result-domain
-      honesty, completeness, freshness, sequencing, latest-per-contract,
-      canonicalization reproducibility)
-- [ ] Security review (Class 3)
+- [x] First verifier capability: **verify_report@v4** — in-process,
+      read-only raw capture (executor = read_file discipline), closed
+      typed parameters (path + exact contract ref), result domain
+      {report_valid, report_invalid} (total canonicalization — every
+      input maps; out-of-domain unreachable), pure environment-free
+      canonicalization registered in the seam (already-governed
+      mechanism per D-L10-12 amendment).
+      **SCOPE FINDING (recorded, owner attention):** run_go_build/
+      run_go_tests-class verifiers require process execution, and L5's
+      exec surface is deliberately git-only — a process-exec capability
+      is an L5 architectural amendment with its own gate. NEW RESIDUAL:
+      "L5 process-execution amendment for external-tool verifiers." The
+      M6 slice gates on verify_report (real deterministic verification
+      through the full seam) instead
+- [x] L4 registration artifacts PROPOSED: policies/tools/
+      registry-v4.proposed.json (registry-v3 + verify_report,
+      verifier_eligible: true) — owner registers
+- [x] Verification Contract PROPOSED: policies/verification/
+      report-valid/contract.json + contracts.proposed.json (report-valid@1
+      binds verify_report @ registry-v4 hash) — owner registers
+- [x] Registration-review obligations applied: result domain total and
+      honest; completeness = single required slot; freshness = read-at-
+      call from current workspace state (inherently current; noted);
+      sequencing = M6 lattice review obligation; canonicalization purity
+      proven by test; latest-per-contract understood
+- [x] Seam implementation (verification/seam): EvaluateCall composes
+      atomic resolution → canonicalization → pure evaluation; eligibility
+      = verifier_eligible AND pinned-registry-hash == registry-in-force;
+      pre-instance refusals typed (no contract, unregistered, floating,
+      capability mismatch, registry drift, withdrawn); no-reopen contract
+      bytes carried from resolution; proofs green
+- [ ] Security review (Class 3) — batched with M2/M3 into the close
+      reviews (recorded deviation: single seam review covers evaluator +
+      L7 amendment + capability together)
 
 ## 5. L10-M5 — Reconstruction + observability views (Class 2/3)
 

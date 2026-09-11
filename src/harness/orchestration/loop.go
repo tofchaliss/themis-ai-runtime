@@ -384,7 +384,10 @@ func (w *walk) evaluateVerification(call model.ToolCall, evidence []byte) (strin
 		// invariant, not a policy decision.
 		return "", "", fmt.Errorf("%w: verifier-eligible call %q with no evaluator wired", ErrInvariant, call.Name)
 	}
-	vo, err := w.o.cfg.Verifier.EvaluateCall(w.env.TaskID, call, evidence)
+	// executionRef names the committed L4 audit event of this call —
+	// the execution record the evaluation references (D-L10-10 #6).
+	execRef := fmt.Sprintf("l4:%d", w.lastSeq)
+	vo, err := w.o.cfg.Verifier.EvaluateCall(w.env.TaskID, call, evidence, execRef)
 	if err != nil {
 		// Evaluator machinery failure mints NO outcome (D-L10-8): the
 		// harness invariant path, fail closed.

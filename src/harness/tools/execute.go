@@ -77,6 +77,15 @@ func NewExecutorTable(reg *Registry, seam ThemisSeam) (map[string]Executor, erro
 		// is pure typed workflow signaling — the verb means nothing;
 		// the governed workflow definition's edge means everything.
 		"declare_done": execDeclareDone,
+		// Verifier executor (registry-v4 era, L10 amendment,
+		// D-L10-16): raw evidence capture ONLY — reads the target
+		// artifact under the same confinement as read_file. The
+		// registered canonicalization and the contract mapping happen
+		// in the L10 seam; the executor mints nothing and interprets
+		// nothing. In-process and read-only: process-execution
+		// verifier classes (run_go_build/run_go_tests) are blocked on
+		// an L5 process-exec amendment and remain unregistrable.
+		"verify_report": execVerifyReport,
 	}
 	for _, t := range reg.Tools {
 		if _, ok := table[t.Name]; !ok {
@@ -95,6 +104,26 @@ func NewExecutorTable(reg *Registry, seam ThemisSeam) (map[string]Executor, erro
 const maxToolEvidence = 256 * 1024
 
 func execReadFile(entry *GrantEntry, args map[string]any, target string) Outcome {
+	abs, err := confine(entry.Workspace, target)
+	if err != nil {
+		return Outcome{ErrClass: ErrFileUnreadable}
+	}
+	b, err := os.ReadFile(abs)
+	if err != nil {
+		return Outcome{ErrClass: ErrFileUnreadable}
+	}
+	if len(b) > maxToolEvidence {
+		return Outcome{ErrClass: ErrOversized}
+	}
+	return Outcome{Evidence: b}
+}
+
+// execVerifyReport captures the raw bytes of the artifact a
+// verification contract will evaluate. Identical confinement and caps
+// to execReadFile; deliberately no parsing, no judgment, no result
+// shaping — hostile or malformed content is somebody else's problem
+// (the L10 evaluator's, where it is untrusted domain data).
+func execVerifyReport(entry *GrantEntry, args map[string]any, target string) Outcome {
 	abs, err := confine(entry.Workspace, target)
 	if err != nil {
 		return Outcome{ErrClass: ErrFileUnreadable}

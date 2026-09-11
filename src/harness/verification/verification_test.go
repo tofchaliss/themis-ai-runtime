@@ -21,7 +21,7 @@ const validContractBody = `{
   "name": "go-build-clean",
   "contract_version": 1,
   "verifier": {
-    "capability": "run-go-build",
+    "capability": "run_go_build",
     "registry_sha256": "%s"
   },
   "evidence": [

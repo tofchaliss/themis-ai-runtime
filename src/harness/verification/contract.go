@@ -25,8 +25,12 @@ var (
 )
 
 var (
-	shaSyntax     = regexp.MustCompile(`^[0-9a-f]{64}$`)
-	nameSyntax    = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
+	shaSyntax  = regexp.MustCompile(`^[0-9a-f]{64}$`)
+	nameSyntax = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
+	// capSyntax mirrors the L4 registry's tool-name syntax — the
+	// binding references a capability under L4's naming rules, not
+	// L10's contract-name rules.
+	capSyntax     = regexp.MustCompile(`^[a-z][a-z0-9_]{1,63}$`)
 	slotSyntax    = regexp.MustCompile(`^[a-z0-9]+(_[a-z0-9]+)*$`)
 	versionSyntax = regexp.MustCompile(`^[1-9][0-9]*$`)
 )
@@ -113,6 +117,10 @@ type Contract struct {
 	Provenance []string `json:"provenance"`
 
 	SHA256 string `json:"-"` // of the exact contract bytes
+	// Raw carries the exact verified bytes so downstream durable
+	// storage never re-reads the file after verification — the
+	// R-L9-2 no-reopen window, structurally.
+	Raw []byte `json:"-"`
 }
 
 // provenanceRequired is the closed, complete v1 provenance element
@@ -174,8 +182,8 @@ func ParseContract(raw []byte, origin string) (*Contract, error) {
 	if c.Contract < 1 {
 		return nil, fmt.Errorf("%w: %s: contract_version must be a positive integer", ErrContract, origin)
 	}
-	if !nameSyntax.MatchString(c.Verifier.Capability) {
-		return nil, fmt.Errorf("%w: %s: verifier.capability required", ErrContract, origin)
+	if !capSyntax.MatchString(c.Verifier.Capability) {
+		return nil, fmt.Errorf("%w: %s: verifier.capability must be a valid L4 tool name", ErrContract, origin)
 	}
 	if !shaSyntax.MatchString(c.Verifier.RegistrySHA256) {
 		return nil, fmt.Errorf("%w: %s: verifier.registry_sha256 must be a sha256 hex digest", ErrContract, origin)
@@ -232,6 +240,7 @@ func ParseContract(raw []byte, origin string) (*Contract, error) {
 		return nil, fmt.Errorf("%w: %s: %v", ErrContract, origin, err)
 	}
 	c.SHA256 = hashBytes(raw)
+	c.Raw = raw
 	return &c, nil
 }
 

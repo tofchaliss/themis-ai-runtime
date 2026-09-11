@@ -85,6 +85,14 @@ type ToolDef struct {
 	// (Q-L4-3). "derived" is structurally rejected in v1: no tool may
 	// self-declare computational provenance it does not carry.
 	Trust hctx.AuthorityClass `json:"trust"`
+	// VerifierEligible marks a capability registered as
+	// deterministic-verifier-eligible (L10 constitution amendment,
+	// D-L10-3): eligibility is a registration property, verified by
+	// definition at registration review and enforced by refusal at
+	// contract bind time. Additive; absent = not eligible. It is a
+	// classification, never an authorization branch — verifier calls
+	// pass the identical L4 gate.
+	VerifierEligible bool `json:"verifier_eligible,omitempty"`
 }
 
 // Registry is the governed capability artifact. Absent = does not

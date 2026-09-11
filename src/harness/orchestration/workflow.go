@@ -14,17 +14,42 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 )
+
+// gateTokenSyntax pins the exact-pin discipline for gate tokens:
+// lowercase-hyphen name @ canonical positive integer. Opaque to L7
+// beyond this syntax (D-L10-13).
+var gateTokenSyntax = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*@[1-9][0-9]*$`)
 
 // Edge is one explicit governed transition. On a countered edge,
 // ExhaustedTo names the mandatory exhaustion target, which must be
 // strictly forward or terminal (static boundedness, Q-L7-4).
+//
+// Gate (L10 amendment, D-L10-13): an optional verification-gate
+// condition. A gated edge fires only when the walk's
+// latest-per-contract verification state holds the required outcome
+// for the named token. L7 matches the token by opaque equality — it
+// never resolves it. Multiple edges per event are permitted only when
+// all but exactly one carry gates; the ungated edge is the mandatory
+// fallback, so totality stays static. Gated edges are counter-free in
+// v1.
 type Edge struct {
-	On          string `json:"on"`
-	To          string `json:"to"`
-	Counter     int64  `json:"counter,omitempty"`
-	ExhaustedTo string `json:"exhausted_to,omitempty"`
+	On          string    `json:"on"`
+	To          string    `json:"to"`
+	Counter     int64     `json:"counter,omitempty"`
+	ExhaustedTo string    `json:"exhausted_to,omitempty"`
+	Gate        *GateCond `json:"gate,omitempty"`
+}
+
+// GateCond is the verification-gate condition: exact opaque contract
+// token + required outcome (D-L10-13). required=PASS means "the
+// latest committed evaluation for this token equals PASS" — never any
+// security proposition.
+type GateCond struct {
+	Contract string `json:"contract"`
+	Outcome  string `json:"outcome"`
 }
 
 // Phase is one workflow position: its granted capability subset, its
@@ -175,12 +200,42 @@ func LoadWorkflow(path string, ceiling *WorkflowCeiling) (*WorkflowDef, error) {
 				return nil, fmt.Errorf("%w: phase %q exposes control verb %q but does not declare its signal %q", ErrWorkflow, p.Name, c, sig)
 			}
 		}
-		// TOTALITY: exactly one edge per declared event; no undeclared
-		// edges; no implicit anything (Q-L7-3).
+		// TOTALITY: exactly one UNGATED edge per declared event; gated
+		// edges (L10 amendment) may precede it as guarded variants of
+		// the same event; no undeclared edges; no implicit anything
+		// (Q-L7-3, D-L10-13).
 		seen := map[string]bool{}
+		gated := map[string]bool{}
 		for _, e := range p.Edges {
 			if !declared[e.On] {
 				return nil, fmt.Errorf("%w: phase %q edge on undeclared event %q", ErrWorkflow, p.Name, e.On)
+			}
+			if e.Gate != nil {
+				// Gate validation: exact token syntax, outcome from the
+				// closed five-value vocabulary, counter-free (v1). The
+				// token is opaque — deliberately NOT resolved here.
+				if !gateTokenSyntax.MatchString(e.Gate.Contract) {
+					return nil, fmt.Errorf("%w: phase %q gate contract %q must be an exact name@version token", ErrWorkflow, p.Name, e.Gate.Contract)
+				}
+				if _, ok := verificationEventFor[e.Gate.Outcome]; !ok {
+					return nil, fmt.Errorf("%w: phase %q gate outcome %q is not in the closed outcome vocabulary", ErrWorkflow, p.Name, e.Gate.Outcome)
+				}
+				if e.Counter > 0 || e.ExhaustedTo != "" {
+					return nil, fmt.Errorf("%w: phase %q: gated edges are counter-free in v1", ErrWorkflow, p.Name)
+				}
+				if seen[e.On] {
+					return nil, fmt.Errorf("%w: phase %q: gated edges for %q must precede the ungated fallback", ErrWorkflow, p.Name, e.On)
+				}
+				// A gated edge must still be bounded: forward, terminal,
+				// or stay — same reachability discipline as any edge.
+				if e.To != TargetStay && !isForward(i, e.To) {
+					if _, ok := phaseIdx[e.To]; !ok && !terminalOK[e.To] {
+						return nil, fmt.Errorf("%w: phase %q gated edge targets unknown %q", ErrWorkflow, p.Name, e.To)
+					}
+					return nil, fmt.Errorf("%w: phase %q gated edge %q->%q must be forward, terminal, or @stay (counter-free)", ErrWorkflow, p.Name, e.On, e.To)
+				}
+				gated[e.On] = true
+				continue
 			}
 			if seen[e.On] {
 				return nil, fmt.Errorf("%w: phase %q maps event %q twice — edges must be unique", ErrWorkflow, p.Name, e.On)
@@ -215,8 +270,27 @@ func LoadWorkflow(path string, ceiling *WorkflowCeiling) (*WorkflowDef, error) {
 				return nil, fmt.Errorf("%w: phase %q edge %q declares exhaustion without a counter", ErrWorkflow, p.Name, e.On)
 			}
 		}
+		// Every event with gated edges must carry its mandatory ungated
+		// fallback — totality stays static under the gate ladder
+		// (D-L10-13).
+		for ev := range gated {
+			if !seen[ev] {
+				return nil, fmt.Errorf("%w: phase %q has gated edges for %q but no ungated fallback — totality is static", ErrWorkflow, p.Name, ev)
+			}
+		}
 		for ev := range declared {
 			if !seen[ev] {
+				// Verification events are conditionally mandatory
+				// (owner amendment 2, D-L10-13): totality over
+				// REACHABLE events. They can only fire in phases that
+				// expose a verifier-eligible capability, which the
+				// loader cannot see (no registry here); assembly
+				// enforces per-phase totality exactly where the
+				// capability makes them reachable. Artificial edges in
+				// unreachable phases are not required.
+				if verificationEvents[ev] {
+					continue
+				}
 				return nil, fmt.Errorf("%w: phase %q has no edge for declared event %q — totality is static", ErrWorkflow, p.Name, ev)
 			}
 		}

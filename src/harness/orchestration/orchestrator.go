@@ -39,6 +39,43 @@ type Config struct {
 	// Model is the model.Interface provider (injected so the loop is
 	// provider-agnostic and Register-testable with a scripted model).
 	Model model.Interface
+	// Verifier is the injected L10 evaluation seam (D-L10-13): the
+	// evaluator sits in the governed result-processing path as
+	// mechanical composition — L7 gains no semantic dependency (no
+	// verification import, no "evaluate contract C" query channel; the
+	// hook fires only on verifier-eligible capability results).
+	// Assembly refuses a task granting a verifier-eligible capability
+	// when no evaluator is wired (fail closed).
+	Verifier VerificationEvaluator
+}
+
+// VerificationEvaluator is the one-way L10 seam. The implementation
+// lives with the service wiring; orchestration defines only the
+// boundary types so the L7 package keeps zero dependency on the
+// verification package (the skill-blind pattern, applied to
+// contracts).
+type VerificationEvaluator interface {
+	// EvaluateCall runs the L10 pipeline for one executed
+	// verifier-eligible capability call. An error return is an
+	// evaluator machinery failure and follows the harness
+	// invariant-failure path — no outcome is minted (D-L10-8).
+	EvaluateCall(taskID string, call model.ToolCall, resultEvidence []byte) (*VerificationOutcome, error)
+}
+
+// VerificationOutcome is what crosses back: an opaque contract token,
+// one of the five outcome values, the durable payloads, or a typed
+// pre-instance refusal (D-L10-8 — refusals are not outcomes and never
+// reach δ).
+type VerificationOutcome struct {
+	ContractToken  string
+	Outcome        string
+	Record         []byte // evaluation record content (opaque to L7)
+	ContractBytes  []byte // resolved contract bytes (stored, R-L9-2 pattern)
+	RawBytes       []byte
+	CanonicalBytes []byte
+
+	Refused       bool
+	RefusalReason string
 }
 
 // StartupReport records what Open found and closed (Q-L7-8).
@@ -269,13 +306,49 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 		return res, err
 	}
 	registered := map[string]bool{}
+	verifierEligible := map[string]bool{}
 	for _, t := range reg.Tools {
 		registered[t.Name] = true
+		if t.VerifierEligible {
+			verifierEligible[t.Name] = true
+		}
+	}
+	declaredEv := map[string]bool{}
+	for _, e := range wf.DeclaredEvents {
+		declaredEv[e] = true
 	}
 	for _, p := range wf.Phases {
+		phaseEdges := map[string]bool{}
+		for _, e := range p.Edges {
+			phaseEdges[e.On] = true
+		}
+		exposesVerifier := false
 		for _, c := range p.Capabilities {
 			if !registered[c] {
 				return res, fmt.Errorf("%w: workflow capability %q is not in the registry", ErrAssembly, c)
+			}
+			if verifierEligible[c] {
+				exposesVerifier = true
+			}
+		}
+		if exposesVerifier {
+			// Declaration-gated verification exposure + reachability
+			// totality (D-L10-13, L10 amendment): a phase exposing a
+			// verifier-eligible capability makes all five verification
+			// events reachable, so the workflow must declare them and
+			// THIS phase must map each — a load/assembly refusal, never
+			// a runtime surprise. No evaluator wired = the events could
+			// never be produced correctly = refusal (fail closed).
+			if o.cfg.Verifier == nil {
+				return res, fmt.Errorf("%w: phase %q exposes verifier-eligible capability but no L10 evaluator is wired", ErrAssembly, p.Name)
+			}
+			for ev := range verificationEvents {
+				if !declaredEv[ev] {
+					return res, fmt.Errorf("%w: phase %q exposes a verifier-eligible capability but the workflow does not declare %q", ErrAssembly, p.Name, ev)
+				}
+				if !phaseEdges[ev] {
+					return res, fmt.Errorf("%w: phase %q exposes a verifier-eligible capability but has no edge for reachable event %q", ErrAssembly, p.Name, ev)
+				}
 			}
 		}
 	}

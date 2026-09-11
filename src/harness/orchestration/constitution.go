@@ -58,6 +58,46 @@ const (
 	EvToolError         = "tool-error"
 )
 
+// Verification outcome events (L10 constitution amendment, D-L10-13):
+// the five typed L10 outcomes as they cross into δ. Each occurrence
+// carries an opaque contract-identity token in its recorded body; the
+// verification-specific semantic payload entering δ is exactly
+// (token, outcome). L7 never resolves the token, never consults the
+// L10 Contract Registry, and never interprets outcome meaning — a
+// nonexistent contract is an unsatisfiable gate, not an L7 error.
+const (
+	EvVerificationPass         = "verification-pass"
+	EvVerificationFail         = "verification-fail"
+	EvVerificationInconclusive = "verification-inconclusive"
+	EvVerificationUnavailable  = "verification-unavailable"
+	EvVerificationInvalid      = "verification-invalid"
+)
+
+// verificationEvents is the closed five-event family. Reachability is
+// declaration-gated (D-L10-13): assembly refuses a verifier-eligible
+// capability in any grant unless the workflow declares ALL five, and
+// totality for these events is enforced per phase where a
+// verifier-eligible capability is exposed — reachability-based, never
+// artificially total (owner amendment 2).
+var verificationEvents = map[string]bool{
+	EvVerificationPass:         true,
+	EvVerificationFail:         true,
+	EvVerificationInconclusive: true,
+	EvVerificationUnavailable:  true,
+	EvVerificationInvalid:      true,
+}
+
+// verificationEventFor maps an L10 outcome value to its typed event
+// name; unknown outcomes map to nothing (the caller treats that as an
+// invariant — outcomes are minted only by the L10 evaluator).
+var verificationEventFor = map[string]string{
+	"PASS":         EvVerificationPass,
+	"FAIL":         EvVerificationFail,
+	"INCONCLUSIVE": EvVerificationInconclusive,
+	"UNAVAILABLE":  EvVerificationUnavailable,
+	"INVALID":      EvVerificationInvalid,
+}
+
 // transitionEvents is the complete system vocabulary a workflow
 // definition may declare (declared ⊆ this set; Q-L7-3). Invariant
 // and recovery classes are structurally absent — a workflow cannot
@@ -71,6 +111,11 @@ var transitionEvents = map[string]bool{
 	EvTurnsExhausted:               true,
 	EvToolError:                    true,
 	SignalPhaseCompletionRequested: true,
+	EvVerificationPass:             true,
+	EvVerificationFail:             true,
+	EvVerificationInconclusive:     true,
+	EvVerificationUnavailable:      true,
+	EvVerificationInvalid:          true,
 }
 
 // reservedApprovalPrefix marks the approval condition vocabulary:

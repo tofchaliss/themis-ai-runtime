@@ -629,6 +629,15 @@ func TestExportedAPIClosure(t *testing.T) {
 		// resolve a skill and opens no admission path — data, not a
 		// control surface.
 		"CompositionCommitment": true,
+		// L10 verification-seam amendment (D-L10-13, L7 amendment
+		// record): GateCond is workflow-definition data (an opaque
+		// token + outcome pair — L7 resolves nothing from it);
+		// VerificationEvaluator/VerificationOutcome form the one-way
+		// injected evaluation seam — L7 defines the boundary types so
+		// it keeps zero dependency on the verification package, and
+		// the hook fires only in the governed result-processing path
+		// (no query channel).
+		"GateCond": true, "VerificationEvaluator": true, "VerificationOutcome": true,
 	}
 	allowFuncs := map[string]bool{
 		"Open": true, "LoadEnvelope": true, "LoadWorkflow": true, "LoadWorkflowCeiling": true,
@@ -681,6 +690,14 @@ func TestExportedAPIClosure(t *testing.T) {
 								"EvTurnNoAction": true, "EvTurnProviderError": true,
 								"EvTurnsExhausted": true, "EvToolError": true,
 								"TargetStay": true, "TargetComplete": true, "TargetFail": true,
+								// L10 verification-seam amendment (D-L10-13, recorded
+								// in the L7 amendment record): the five typed
+								// verification outcome events. Deliberate allowlist
+								// extension, not a widening shortcut.
+								"EvVerificationPass": true, "EvVerificationFail": true,
+								"EvVerificationInconclusive": true,
+								"EvVerificationUnavailable":  true,
+								"EvVerificationInvalid":      true,
 							}
 							for _, n := range sp.Names {
 								if n.IsExported() && !allowValues[n.Name] {

@@ -94,18 +94,29 @@ evidence. The L9 mutation-testing lesson applies from day one.
 
 ## 3. L10-M3 — L7 amendment: verification seam (Class 3, archived-layer amendment per D-L10-17)
 
-- [ ] Workflow-schema gate vocabulary: (opaque contract token, required
-      outcome), exact-pin only; five verification events join the control
-      vocabulary; declaration-gated verification exposure as load refusal;
-      reachability-based totality (D-L10-13, both owner amendments)
-- [ ] δ latest-per-token walk state (CallState pattern); Register D
-      replayer extended to re-derive it
-- [ ] Every new loader rule pinned by a doctored definition
-- [ ] Archived L7 suite re-run green; formal amendment record created at
-      openspec/changes/archive/2026-09-07-layer-07-orchestration/
-      amendments/L10-verification-seam/ (definition, affected invariants,
-      loader changes, new proofs, suite result, scoped review, hashes)
-- [ ] Scoped architecture review of the amendment (not a re-grill)
+- [x] Workflow-schema gate vocabulary: Edge.Gate (opaque token +
+      outcome), exact-pin syntax, closed outcome vocabulary, gate-ladder
+      w/ mandatory ungated fallback, counter-free gated edges; five
+      verification events in the constitution (ConstitutionHash changed,
+      deliberate); declaration-gated exposure + reachability totality
+      enforced at assembly (registry-aware); L6 gains the additive
+      l10-verification event class; L4 ToolDef gains verifier_eligible
+- [x] δ gate-aware edge selection + verifState latest-per-token walk
+      state (CallState pattern); fired branch recorded in the transition
+      body w/ gated edge identity "<phase>/<on>#g<idx>". Register-R
+      replay proofs over gate-bearing walks deferred to M6 (need M4's
+      capability + scripted walks) — recorded in the amendment
+- [x] Every new loader/assembly rule pinned by a doctored definition
+      (verification_seam_test.go: 9 refusals + ladder determinism +
+      conditional totality + pre-amendment invariance)
+- [x] Archived L7 suite re-run GREEN (105.9s full suite incl. fault
+      sweeps + kill recovery + skill registers); tools/ + state/ green;
+      formal amendment record created (archive/2026-09-07-layer-07-
+      orchestration/amendments/L10-verification-seam/AMENDMENT.md); the
+      two API-closure allowlist extensions were guard-caught first, then
+      deliberately recorded; go list -deps proves L7 verification-blind
+- [ ] Scoped architecture review of the amendment — batched into the
+      L10 close reviews (M7), scope-tagged to the amendment record
 
 ## 4. L10-M4 — First verifier capability (Class 3)
 

@@ -58,6 +58,17 @@ type walk struct {
 	turnSeq   int64
 	deadline  time.Time // the spec's wall_deadline_s — the budget floor
 	lastSeq   int64     // seq of the most recent causally-relevant event
+	// verifState is the latest-per-contract verification walk state
+	// (D-L10-9, the CallState pattern): opaque token -> latest
+	// committed outcome. Updated only after the EvVerification record
+	// commits (record-before-event); re-derived by the replayer from
+	// the event prefix. Gate satisfaction is checked against it
+	// statelessly at each transition evaluation.
+	verifState map[string]string
+	// storedContracts dedups the per-task contract-bytes store (the
+	// object store is content-addressed, so this is an I/O nicety,
+	// not a correctness mechanism).
+	storedContracts map[string]bool
 }
 
 // run drives the walk to a typed terminal. Every exit path seals and
@@ -67,6 +78,8 @@ func (w *walk) run() (TaskResult, error) {
 	w.phase = w.wf.Initial
 	w.edgeFires = map[string]int64{}
 	w.callState = tools.CallState{Calls: map[string]int{}}
+	w.verifState = map[string]string{}
+	w.storedContracts = map[string]bool{}
 	if l, ok := w.spec.Limit(execution.DimWallDeadlineS); ok {
 		w.deadline = time.Now().Add(time.Duration(l.Value) * time.Second)
 	}
@@ -209,6 +222,34 @@ func (w *walk) runPhase() (string, error) {
 			// would let model behavior steer provider-protocol errors).
 			conversation = append(conversation, msg)
 
+			// Verifier-eligible capability result → the injected L10
+			// evaluator (D-L10-6 stages 4-5, mechanical composition at
+			// the execution-result boundary — L7 calls no L10 API and
+			// interprets nothing). Assembly guarantees the hook exists
+			// and the five events are declared whenever such a
+			// capability is granted.
+			if audit.Decision == "authorized" && w.isVerifier(call.Name) {
+				var evidence []byte
+				if ev != nil {
+					evidence = ev.Evidence
+				}
+				vmsg, next, verr := w.evaluateVerification(call, evidence)
+				if verr != nil {
+					return "", verr
+				}
+				if vmsg != "" {
+					// The typed result reaches the model as data in the
+					// conversation (aperture 2 is the record; this is
+					// the in-walk tool-result view of the same fact).
+					conversation = append(conversation, model.Message{
+						Role: model.RoleTool, ToolCallID: call.ID, Content: vmsg})
+				}
+				if next != "" && next != TargetStay {
+					return next, nil
+				}
+				continue
+			}
+
 			// Control signal? (a typed GATE OUTCOME, not model
 			// content): only an authorized control verb produces one.
 			if audit.Decision == "authorized" && w.isControl(call.Name) {
@@ -242,22 +283,44 @@ func (w *walk) step(event string) (string, error) {
 		return "", fmt.Errorf("%w: event %q reached δ without declaration", ErrInvariant, event)
 	}
 	p := w.wf.phase(w.phase)
+	// Edge selection (L10 amendment, D-L10-13/9): gated edges for the
+	// event are evaluated in definition order against the
+	// latest-per-contract walk state — first satisfied gate wins; the
+	// mandatory ungated fallback fires otherwise. Gate satisfaction is
+	// derived at THIS transition evaluation, never cached; the
+	// replayer re-derives the identical choice from the event prefix.
 	var edge *Edge
+	var gateIdx = -1
+	idx := 0
 	for i := range p.Edges {
-		if p.Edges[i].On == event {
-			edge = &p.Edges[i]
-			break
+		e := &p.Edges[i]
+		if e.On != event {
+			continue
+		}
+		if e.Gate != nil {
+			if edge == nil && w.verifState[e.Gate.Contract] == e.Gate.Outcome {
+				edge, gateIdx = e, idx
+			}
+			idx++
+			continue
+		}
+		if edge == nil {
+			edge = e
 		}
 	}
 	if edge == nil {
 		return "", fmt.Errorf("%w: declared event %q has no edge in phase %q — static totality violated", ErrInvariant, event, w.phase)
 	}
 	target := edge.To
-	// Edge identity is (phase, on): the loader statically refuses a
-	// phase mapping one event twice, so "<from>/<on>" names exactly one
-	// governed Edge under the definition hash (pinned by Register A's
-	// TestEdgeIdentityUnique — the proof depends on that refusal).
+	// Edge identity: ungated edges keep "<from>/<on>" (one per event,
+	// loader-refused otherwise — pinned by TestEdgeIdentityUnique);
+	// gated edges are "<from>/<on>#g<idx>" by definition order among
+	// that event's gated edges, so the fired branch is recorded, not
+	// derivable.
 	key := w.phase + "/" + event
+	if gateIdx >= 0 {
+		key = fmt.Sprintf("%s/%s#g%d", w.phase, event, gateIdx)
+	}
 	exhausted := false
 	if edge.Counter > 0 {
 		if w.edgeFires[key] >= edge.Counter {
@@ -277,10 +340,17 @@ func (w *walk) step(event string) (string, error) {
 	if err := faultAt("loop.pre-transition-commit"); err != nil {
 		return "", err
 	}
-	body, _ := json.Marshal(map[string]any{
+	tb := map[string]any{
 		"from": w.phase, "to": target, "edge_id": key,
 		"exhausted": exhausted, "cause_seq": w.lastSeq,
-	})
+	}
+	if edge.Gate != nil {
+		// The fired gate is recorded (opaque token + required outcome)
+		// so the branch choice is record content, never re-derivation
+		// guesswork (D-L10-13).
+		tb["gate"] = map[string]string{"contract": edge.Gate.Contract, "outcome": edge.Gate.Outcome}
+	}
+	body, _ := json.Marshal(tb)
 	if _, err := w.task.AppendEvent(state.EvWorkflowTransition, "l7", body); err != nil {
 		return "", err
 	}
@@ -288,6 +358,103 @@ func (w *walk) step(event string) (string, error) {
 		return "", err
 	}
 	return target, nil
+}
+
+// isVerifier reports whether a granted tool is registered
+// verifier-eligible — a registry classification, never an
+// authorization branch (the call already passed the identical L4
+// gate).
+func (w *walk) isVerifier(name string) bool {
+	for i := range w.reg.Tools {
+		if w.reg.Tools[i].Name == name {
+			return w.reg.Tools[i].VerifierEligible
+		}
+	}
+	return false
+}
+
+// evaluateVerification runs the injected L10 evaluation for one
+// executed verifier call and applies D-L10-6 stage 5: durable stores
+// and the EvVerification record commit BEFORE the typed event enters
+// δ, and BEFORE the walk state updates. Returns the conversation
+// message for the model, and δ's outcome when a transition fired.
+func (w *walk) evaluateVerification(call model.ToolCall, evidence []byte) (string, string, error) {
+	if w.o.cfg.Verifier == nil {
+		// Assembly refuses this configuration; reaching here is an
+		// invariant, not a policy decision.
+		return "", "", fmt.Errorf("%w: verifier-eligible call %q with no evaluator wired", ErrInvariant, call.Name)
+	}
+	vo, err := w.o.cfg.Verifier.EvaluateCall(w.env.TaskID, call, evidence)
+	if err != nil {
+		// Evaluator machinery failure mints NO outcome (D-L10-8): the
+		// harness invariant path, fail closed.
+		return "", "", fmt.Errorf("%w: L10 evaluator failure: %v", ErrInvariant, err)
+	}
+	if vo.Refused {
+		// Pre-instance typed refusal (D-L10-8): recorded as evidence,
+		// surfaced to the model as data, never an outcome, never an
+		// event. The L4 audit of the call is already committed.
+		refBody, _ := json.Marshal(map[string]string{
+			"verification_refusal": vo.RefusalReason, "call": call.Name})
+		if _, oerr := w.task.StoreObject(state.ObjEvidencePayload, refBody); oerr != nil {
+			return "", "", oerr
+		}
+		return "verification refused: " + vo.RefusalReason, "", nil
+	}
+	evName, ok := verificationEventFor[vo.Outcome]
+	if !ok {
+		// Outcomes are minted only by the L10 evaluator; anything else
+		// is machinery breakage.
+		return "", "", fmt.Errorf("%w: unknown verification outcome %q", ErrInvariant, vo.Outcome)
+	}
+
+	// Durable stores in the no-reopen window (D-L10-10/R-L9-2): the
+	// bytes the evaluator actually held. Content addressing dedups.
+	var refs []state.Ref
+	if len(vo.ContractBytes) > 0 && !w.storedContracts[vo.ContractToken] {
+		cid, oerr := w.task.StoreObject(state.ObjEvidencePayload, vo.ContractBytes)
+		if oerr != nil {
+			return "", "", oerr
+		}
+		w.storedContracts[vo.ContractToken] = true
+		refs = append(refs, state.Ref{ID: cid, Class: state.ObjEvidencePayload})
+	}
+	for _, b := range [][]byte{vo.RawBytes, vo.CanonicalBytes, vo.Record} {
+		if len(b) == 0 {
+			continue
+		}
+		id, oerr := w.task.StoreObject(state.ObjEvidencePayload, b)
+		if oerr != nil {
+			return "", "", oerr
+		}
+		refs = append(refs, state.Ref{ID: id, Class: state.ObjEvidencePayload})
+	}
+
+	// Record-before-event (D-L10-6 stage 5): the evaluation fact
+	// commits to durable history before workflow control can see it.
+	body, _ := json.Marshal(map[string]string{
+		"contract": vo.ContractToken, "outcome": vo.Outcome})
+	aev, aerr := w.task.AppendEvent(state.EvVerification, "l10", body, refs...)
+	if aerr != nil {
+		return "", "", aerr
+	}
+	w.lastSeq = aev.Seq
+	// Latest-per-contract walk state updates only after the commit
+	// (D-L10-9); the replayer re-derives it from EvVerification
+	// events in the prefix.
+	w.verifState[vo.ContractToken] = vo.Outcome
+
+	msg := fmt.Sprintf("verification %s: %s", vo.ContractToken, vo.Outcome)
+	if !w.declared(evName) {
+		// Declaration-gated exposure makes this unreachable when
+		// assembly held; fail as the invariant it is.
+		return "", "", fmt.Errorf("%w: verification event %q undeclared yet produced", ErrInvariant, evName)
+	}
+	next, err := w.step(evName)
+	if err != nil {
+		return "", "", err
+	}
+	return msg, next, nil
 }
 
 func (w *walk) declared(event string) bool {

@@ -77,6 +77,13 @@ const (
 	EvWorkflowTransition = "workflow-transition"
 	EvModelTurn          = "model-turn"
 	EvL7Invariant        = "l7-invariant"
+	// L10 constitution amendment (deliberate, additive — the layer-10
+	// fold, D-L10-6 stage 5): the verification evaluation record — one
+	// committed L10 evaluation instance {contract token, outcome,
+	// evaluation record ref}. A new semantic gets its own class rather
+	// than a third meaning on an existing one (the L9 event-class
+	// lesson). L6 validates the envelope, never the content.
+	EvVerification = "l10-verification"
 )
 
 var eventClasses = map[string]bool{
@@ -84,6 +91,7 @@ var eventClasses = map[string]bool{
 	EvL1Conflict: true, EvL2Delivery: true, EvL3Selection: true,
 	EvL4Audit: true, EvL5Transition: true, EvL5Op: true, EvArtifact: true,
 	EvWorkflowTransition: true, EvModelTurn: true, EvL7Invariant: true,
+	EvVerification: true,
 }
 
 // primitiveOnlyEvents may be appended only by L6's own primitives

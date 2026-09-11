@@ -87,7 +87,7 @@ outcome ("what did the registered verifier establish?") → security meaning
 ("what does this mean for the CVE / product / release?"). The first two
 belong to L10; the third never does.
 
-### D-L10-1a — The verification ladder (PROPOSED 2026-09-11, closing Q-L10-2; awaiting explicit owner lock)
+### D-L10-1a — The verification ladder (LOCKED 2026-09-11, Q-L10-2; owner lock confirmed after D-L10-15)
 
 Four positions, none skippable, each upward transition requiring its own
 mechanism: (1) **model says X** — advisory, external-untrusted, zero
@@ -915,6 +915,67 @@ remediation accepted, Enterprise Position, or security approval —
 preventing terminology from becoming a semantic backdoor where "verified"
 drifts into "secure."
 
+### D-L10-16 — OPEN-2 dissolved: no generic run_command (LOCKED 2026-09-11, Q-L10-19)
+
+**Verification capability is not command execution.** No generic
+command-execution capability exists or may be registered in v1 —
+run_command(command, args) as a capability shape is refused: it would make
+L4 identity open-ended, L5 generic code execution, L10 eligibility post-hoc
+interpretation, contract semantics runtime-dependent, deterministic
+registration meaningless, and the attack surface "what commands can the
+model construct."
+
+**What registers instead: closed, specific verifier capabilities**
+(run_go_tests@v1, run_govulncheck@v1, run_go_build@v1, …), each pinning at
+registration: the invocation as a registration-time constant (toolchain/
+binary identity + argument template, inside the capability hash — never a
+runtime input); a closed typed parameter surface (validated like the
+D-L9-7 instantiation surface, deterministically assembled, no shell
+interpretation — the injection surface is unrepresentable, not filtered);
+the result domain (D-L10-8 obligation); the canonicalization (D-L10-3/12
+constraints); and environment requirements as an L5 spec class.
+
+**Network precision (owner):** a network-dependent verifier does not fail
+merely for using a network; it fails v1 eligibility if its behavior cannot
+satisfy D-L10-3's deterministic boundary. The chain is: network dependency
+→ L5 environment requirement → determinism eligibility → registration
+decision. In the current v1 environment L5 denies network anyway, but
+"network = nondeterministic" is not hard-coded into L10 — D-L10-3 stays
+focused on determinism, not on one environmental mechanism.
+
+**Toolchain attestation:** L5's BinaryAttestation records what ran;
+registration pins expected identity; drift caught by the D-L10-10
+two-source check → INVALID.
+
+**The policy artifact lives nowhere new.** The policy IS the closed
+registration: the L4 capability entry (what executable capability is
+authorized) + the L10 contract (what proposition/result semantics are
+accepted from it) — two independent governed identities, each with its own
+review. No run_command policy file; that would duplicate authority already
+owned by L4/L5/L10/Governance.
+
+**Registration friction is intentional:** every new verifier is a
+registration event (L4 capability + L10 contract, both Governance acts),
+never a configuration change. **Parameterization is the escape valve:**
+same reviewed capability + different permitted input = parameterization
+(no new identity); changing executable, toolchain, invocation, argument
+structure, result interpretation, canonicalization, environment
+requirements, or determinism assumptions = new governed registration.
+
+**Recorded refusal for the future:** a generic or parameterized command
+runner — including allowlisted-command-string designs — remains
+unregistrable in v1; reopening it is a dedicated architecture decision
+with the burden of proof on need. Allowlists are weaker than closed
+capabilities in identity (a string is not a hash), review (a pattern is
+not a binary), and attestation (a match is not an execution record).
+
+**Consequences:** OPEN-2 closes as dissolved into registration discipline.
+D-L9-14's v1-honesty clause becomes dischargeable — the first registered
+verifier capability + contract makes deterministic verification real — and
+the deferred remediate-dependency slice becomes viable (live-proof
+candidate for Q-L10-18). The model never receives the ability to turn
+"run a verifier" into "execute arbitrary software."
+
 ## 3. Grill — question list (OPEN; owner's sequence 2026-09-11, implementer's 12 merged in)
 
 Owner's proposed starting boundary (working text, pending Q-L10-1 lock):
@@ -931,7 +992,7 @@ facts Governance subsequently uses.
 | Q | Question |
 |---|---|
 | Q-L10-1 | **CLOSED → D-L10-1.** Boundary and authority: two mechanisms under one layer; trace-consistency stays single-homed with L6/L7; three-proposition model foundational. |
-| Q-L10-2 | **Closure PROPOSED → D-L10-1a (ladder, X vs X′ narrowing); awaiting explicit owner lock.** |
+| Q-L10-2 | **CLOSED → D-L10-1a (LOCKED).** Four-position ladder; X′ narrower than X; no 1→3 or 2→4 shortcut; each upward transition has its own owning mechanism. |
 | Q-L10-3 | **CLOSED → D-L10-2.** Contracts: L10-owned registry (fork (a)), governance-only registration, closed schema, exact pins, anti-smuggling invariant. |
 | Q-L10-4 | **CLOSED → D-L10-3.** Determinism = registration property; canonical-result standard w/ registered canonicalization; model categorically not a verifier in v1. |
 | Q-L10-5 | **CLOSED → D-L10-4.** Five-value closed vocabulary, ESTABLISHED/NOT-ESTABLISHED partition, machinery-reserved statuses, distinct typed L7 events, fail-closed gates without collapse. |
@@ -949,7 +1010,7 @@ facts Governance subsequently uses.
 | Q-L10-16 | **CLOSED → D-L10-14.** Two owned halves; inheritance w/o declassification; classification-enforcement without second detector; fail-closed on absent classification; no view→model path except via L2. |
 | Q-L10-17 | **CLOSED → D-L10-15.** Four propositions w/ owners and non-implication matrix; transition-time anchor; egress fields separate; vocabulary rule. |
 | Q-L10-18 | Proof gate: structural, adversarial, provenance, replay/reconstruction registers + live operational proof + independent architecture/security/test reviews; close as L7/L9 were closed. |
-| Q-L10-19 | (merged from implementer) OPEN-2 proper: the deterministic policy artifact gating run_command / run_build / run_tests / run_scan as verification capabilities — allowlisted or manifest-pinned invocations, where the artifact lives, who reviews it. |
+| Q-L10-19 | **CLOSED → D-L10-16.** OPEN-2 dissolved: no generic run_command; closed per-verifier capabilities w/ pinned invocations; policy = registration itself; parameterization as escape valve. |
 | Q-L10-20 | (merged) Extend-the-strongest-subsystem: precise relationship to benchmarks validators/gate/guardrails — generalize, wrap, or leave in place; no second validator family (and no second evaluation subsystem — that line belongs to L11). |
 | Q-L10-21 | (merged) Expected-outputs contract (L9 Gate-0 residual, owner unassigned) and verification-evidence egress to Themis: does L10 own either; what stops a verification summary from becoming an Enterprise Position? |
 

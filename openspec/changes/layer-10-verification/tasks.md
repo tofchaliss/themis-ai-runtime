@@ -68,20 +68,29 @@ evidence. The L9 mutation-testing lesson applies from day one.
 
 ## 2. L10-M2 — Evaluator + evaluation record (Class 3)
 
-- [ ] Bounded evaluator: mechanical-validity checks + declarative mapping;
-      machinery-reserved UNAVAILABLE/INVALID with closed per-class reason
-      vocabulary; evaluator invariant-failure mints NO outcome (D-L10-4/6/8)
-- [ ] Evidence admissibility validation against contract input spec
-      (kind, authority class, task binding); INVALID w/ execution skipped
-      recorded; unresolvable object → UNAVAILABLE (D-L10-7/8 amendment)
-- [ ] Evaluation record: references + L10-computed facts per D-L10-10;
-      contract-bytes (and externalized config) stored as L6
-      evidence-payloads in the no-reopen window; raw + canonical results
-      both durable; recorded through the existing L7→L6 discipline,
-      record-before-event (D-L10-6 stage 5)
-- [ ] Hostile-verifier proofs (vocabulary-string outputs, out-of-domain,
-      garbage) + Register T evaluator entries
-- [ ] Security review (Class 3)
+- [x] Bounded PURE evaluator (verification/evaluate.go): stage-indexed
+      mechanical-validity checks + declarative mapping; closed per-class
+      reason vocabulary with class-integrity checker; evaluator
+      invariant-failure returns error and mints NO outcome (the sixth
+      terminal, D-L10-8)
+- [x] Evidence admissibility: closed-world slot filling, task binding,
+      object-identity syntax → INVALID; structurally-valid-but-unreadable
+      → UNAVAILABLE (owner amendment honored); deterministic facts
+      supplied by the governed caller, never the model
+- [x] Evaluation record type: references + L10-computed facts (contract
+      identity computed from loaded bytes, execution by reference,
+      matched-mapping recorded as non-authoritative convenience).
+      NOTE: the L6 stores (contract bytes, raw+canonical objects) and the
+      record-before-event write are the L7 seam's half of stage 5 —
+      implemented in M3 where the seam forms; the evaluator itself is
+      deliberately I/O-free
+- [x] Hostile-verifier proofs: PASS/FAIL/NOT_AFFECTED/SECURE/garbage as
+      canonical results are inert domain data → INVALID; a contract
+      mapping domain string "PASS"→FAIL proves the mapping mints, not
+      the spelling. 3 evaluator mutation probes killed (nearest-match
+      laundering, config-check removal, task-binding drop)
+- [ ] Security review (Class 3) — batched with M3 (the seam review needs
+      both sides; recorded deviation, evaluator is pure and unwired)
 
 ## 3. L10-M3 — L7 amendment: verification seam (Class 3, archived-layer amendment per D-L10-17)
 

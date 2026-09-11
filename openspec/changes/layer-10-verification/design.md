@@ -752,6 +752,70 @@ E789→FAIL (fresh re-evaluation) are two legitimate historical facts; the
 second does not rewrite the first. Neither audit nor re-execution can
 retroactively mutate truth.
 
+### D-L10-13 — The L7 seam: contract-blind L7 (LOCKED 2026-09-11, Q-L10-14; two owner amendments)
+
+**L7 is contract-blind.** A gate is (opaque_contract_token, required_outcome);
+a verification event carries (opaque_contract_token, outcome); δ applies
+token equality + the D-L10-9 latest-per-token rule. L7 never resolves the
+token, queries the Contract Registry, checks contract existence/state, or
+inspects contract semantics, verifier identity, evidence, mapping, or
+outcome meaning. A nonexistent/withdrawn contract is an unsatisfiable gate
+from L7's perspective — the reviewed exhaustion/failure path, fail-closed,
+with zero L7→registry dependency. L7 remains correct even if L10 is
+completely buggy (zero-trust-discount, third instance).
+
+**Semantic payload (owner amendment 1):** the verification-specific
+semantic payload crossing into δ is exactly (contract_identity_token,
+outcome). Existing L7 structural event metadata (sequence, cause linkage)
+remains structural and cannot participate in gate evaluation — payload
+minimalism must not make the L7 event model inconsistent. Explicitly
+prohibited from δ: reason codes, evidence refs, scores, mapping entry,
+verifier identity, config, provenance, registry state, eligibility,
+reconstruction discrepancies, observability views, model explanation.
+
+**Gate vocabulary (Class-3 L7 workflow-schema amendment):** closed —
+contract_identity as exact opaque token (no name-only/@latest/ranges;
+pinning discipline verbatim) + required_outcome from the five-value
+vocabulary, unknown refused. All five values are declarable as required
+outcomes; declaring one confers no semantic interpretation — required=PASS
+means "latest evaluation for this token equals PASS," never "CVE is fixed";
+required=FAIL never means "vulnerability exists." D-L10-4 and D-L10-13 stay
+separated. The five verification events join the L7 control-vocabulary
+registration (constitution-owned, two-way registry ⊆, D-L7-6).
+
+**Declaration-gated exposure (load-time refusal, MED-3/4 generalized):** a
+verification event must never arrive at δ unless the assembled workflow
+declares the verification event vocabulary. Declares → events may be
+structurally reachable; does not declare → verification capability cannot
+be reachable → the events cannot legally arrive. Load/assembly refusal,
+never a runtime surprise.
+
+**Totality (owner amendment 2): reachability-based, not artificially
+total.** For every verification event structurally reachable at a phase, δ
+must have an explicit (phase, event) transition. Declared vocabulary
+determines the admissible event family; reachability analysis determines
+which events can arrive per phase; totality requires transitions for those.
+No artificial INVALID edges in phases that cannot receive INVALID — total
+over reachable events, not over impossible ones (L7's existing principle).
+
+**Skill coherence is L9's check:** at instantiation L9 verifies the Skill's
+pinned contract set contains exactly the contract identities its workflow
+gates require. L7 does not perform this. Hand-assembled envelopes may
+contain unsatisfiable gates — acceptable, fail-closed. (L9: composition
+coherence · L7: executable workflow correctness · L10: contract semantics ·
+Governance: registration authority.)
+
+**Execution boundary:** model proposes ordinary verifier call → L4 → L5
+(raw + canonical) → L10 evaluator → typed result → L7→L6 record →
+verification event → δ. **L7 does not call L10** — no "evaluate contract C"
+API exists; the evaluator sits in the governed result-processing path as
+mechanical composition. One-way semantic boundary: L10 establishes the
+verification outcome; L7 consumes only the typed outcome token.
+
+**Three-layer separation:** L10 knows what the verification means
+mechanically; L7 knows only which opaque token produced which typed
+outcome; Governance knows what the outcome means for security.
+
 ## 3. Grill — question list (OPEN; owner's sequence 2026-09-11, implementer's 12 merged in)
 
 Owner's proposed starting boundary (working text, pending Q-L10-1 lock):
@@ -781,7 +845,7 @@ facts Governance subsequently uses.
 | Q-L10-11 | **CLOSED → D-L10-10.** References + L10-computed facts; no identity without bytes; two-source checks; raw+canonical both durable; outcome is historical fact, reconstruction verifies. |
 | Q-L10-12 | **CLOSED → D-L10-11.** Five-adversary tamper model, Governance registration as trust root, Register T with ten mutation obligations, detection-at-read-boundary precision. |
 | Q-L10-13 | **CLOSED → D-L10-12.** Two-way dichotomy (reconstruction/re-evaluation), no replay authority; canonicalization via already-governed mechanism; discrepancy artifacts in audit scope; no retroactive truth mutation. |
-| Q-L10-14 | Verification gates in L7: what exactly crosses from L10 back into L7 — likely a tightly bounded typed outcome, never arbitrary verifier output. |
+| Q-L10-14 | **CLOSED → D-L10-13.** Contract-blind L7 (opaque tokens); minimal semantic payload; gate vocabulary + declaration-gated exposure as load-time rules; reachability-based totality; coherence in L9; no L7→L10 API. |
 | Q-L10-15 | **RESIDUAL per D-L10-5** (owner, 2026-09-11): live operational telemetry deferred out of v1; future dedicated grill (evidentiary status, retention, privacy/secrets, clocks, correlation, availability, second-history risk). |
 | Q-L10-16 | Security-sensitive observability: can observability leak secrets, credentials, sensitive context, protected evidence, prompts, tool arguments? Connect to L5 secret-contamination + L6 durability rules. |
 | Q-L10-17 | Completion semantics: workflow COMPLETED ≠ verification PASSED ≠ security condition established ≠ Enterprise Position accepted — formally separated propositions. |

@@ -43,13 +43,68 @@ revision, Themis knowledge ingestion) exercised by humans.
 
 ## 2. Locked decisions (fold target)
 
-*(empty — populated as questions close)*
+### D-L11-1 — Boundary and authority (LOCKED 2026-09-11, Q-L11-1; owner amendment)
+
+The Ratchet turns governed execution history, evaluation evidence, and
+approved comparison criteria into improvement candidates and
+comparative evidence for Governance, and **provides
+regression-resistance evidence at the existing consumption/admission
+doors** (owner amendment — never "enforces": if the Ratchet were the
+final gate, it would have acquired promotion authority). It owns
+candidate/evidence lifecycle machinery, but owns no promotion authority
+and no security meaning. Every promotion remains an existing Governance
+act — skill catalog, contract registry, instruction revision, or Themis
+knowledge ingestion — exercised through its existing governed
+mechanism. The Ratchet may make a suggestion evaluable and establish
+comparative/regression evidence for that suggestion; it can never make
+the suggestion become behavior. The door remains owned by the layer
+that already owns the artifact; the Ratchet can make the door
+refuseable/evaluable on regression evidence, never replace it.
+
+**Ownership split (foundational, prevents a meta-governance layer):**
+Ratchet owns — comparative machinery over L6-supplied history;
+candidate construction and lifecycle; baseline-vs-candidate comparison;
+evaluation orchestration/consumption of governed evidence (subject to
+existing mechanisms); comparative and regression evidence; provenance
+for reproducible comparison. Ratchet never owns — security meaning
+(Governance); Skill promotion (L9 catalog governance); Contract
+promotion (L10 registry governance); Instruction revision (L1
+governance); enterprise knowledge ingestion (Knowledge Builder/Themis);
+candidate acceptance (the existing door); any direct runtime behavior
+change.
+
+**No second evaluation subsystem, sharpened:** L10 answers "what did
+this governed verification establish?"; L11 answers "is this proposed
+improvement demonstrably better and regression-resistant relative to
+the approved baseline?" — a separately defined improvement/comparison
+semantics that may CAUSE ordinary governed evaluation to happen and
+COMPARE its resulting evidence, but introduces no new PASS/FAIL,
+verifier contracts, or verification semantics, and never redefines
+L10's.
+
+**Hard prohibitions:** the Ratchet cannot activate a candidate; modify
+a Skill, Contract, Instruction, or Knowledge artifact directly; create
+security meaning; create an Enterprise Position; bypass an existing
+governance door; weaken an existing review requirement; substitute its
+own evaluation semantics for L10; create a second evaluation subsystem;
+convert comparative evidence into runtime behavior by itself.
+
+**Positive authority:** observe governed history; construct candidates;
+compare baseline and candidate behavior; orchestrate/consume governed
+evaluation evidence; establish comparative evidence; establish
+regression evidence; expose that evidence to the existing owner of the
+relevant promotion door; retain the provenance needed to make the
+comparison reproducible.
+
+**Constitutional sentence:** *Ratchet can establish that an improvement
+is worth considering; only the existing owner of the affected artifact
+can make it real.*
 
 ## 3. Grill — question list (OPEN, implementer draft — owner may restructure)
 
 | Q | Question |
 |---|---|
-| Q-L11-1 | Boundary and authority: what may the Ratchet establish (comparative evidence, regression facts, candidate lifecycles) and never establish (promotion, selection, meaning)? One layer over four ratchet categories (knowledge/skill/evaluation/instruction), or distinct mechanisms per category? |
+| Q-L11-1 | **CLOSED → D-L11-1.** Evidence-not-authority boundary; provides-not-enforces at existing doors; ownership split; L10/L11 question separation; hard prohibitions + positive authority. |
 | Q-L11-2 | The improvement ladder: observed-better (anecdote) ≠ evaluated-better (governed comparative evidence) ≠ promoted (governance act) ≠ relied-upon (deployment). What mechanism does each transition require? |
 | Q-L11-3 | The candidate: which artifact families may be ratchet candidates (skill revisions, instruction revisions, verification contracts, benchmarks/regression tests, knowledge summaries); candidate identity, lifecycle states, and the D-L9-16 proposal-lifecycle residual — is a formal proposal artifact needed now, and who owns it? |
 | Q-L11-4 | Comparative evaluation semantics: baseline-vs-candidate comparison as a governed, registered computation — relation to L10 verification contracts (is a comparison a contract? a distinct registered artifact?); who defines the metric; how variants (A/B) generalize beyond prompts. |

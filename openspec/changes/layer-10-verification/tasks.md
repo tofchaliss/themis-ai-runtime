@@ -14,23 +14,57 @@ evidence. The L9 mutation-testing lesson applies from day one.
       Q-L10-10a; Q-L10-15 → residual)
 - [x] Decisions folded into design.md §2 (D-L10-1..18, D-L10-1a); proof
       registers proposed (§4)
-- [ ] Gate 0: design + proof plan accepted by owner
+- [x] Gate 0: design + proof plan accepted by owner (2026-09-11, "PASS /
+      IMPLEMENTATION AUTHORIZED"; all five registers judged sufficient;
+      milestones approved as written; **Gate-0 condition: implementation
+      must never convert a PROPOSED Governance registration into an active
+      registration merely because the machinery exists — registration
+      authority remains outside the machinery, surviving implementation
+      and the proof suite**; M6 closure demonstration = the full
+      PROPOSED→registered→instantiate→walk→verify→reconstruct trace with
+      negative Governance-boundary paths)
 
 ## 1. L10-M1 — Contract registry + schema (Class 3)
 
-- [ ] Verification Contract artifact + fail-closed loader: closed schema,
+- [x] Verification Contract artifact + fail-closed loader
+      (src/harness/verification/contract.go): closed schema,
       DisallowUnknownFields, trailing-content refusal, exact name@version,
-      capability pin, evidence input spec (kinds + constraints), pinned
-      config, result mapping (PASS/FAIL/INCONCLUSIVE only), failure
-      mapping, provenance requirements, SHA-256 commitment (D-L10-2)
-- [ ] L10 Contract Registry: append-only, two-way identity agreement,
-      rebind refusal, active|withdrawn, atomic resolve snapshot (D-L10-2,
-      D-L9-10 pattern); no harness/model write capability (AST audit +
-      decoded registry scan — the no-catalog-verb wall)
-- [ ] Eligibility enforcement: binding a capability not registered
-      deterministic-verifier-eligible refused fail-closed (D-L10-3)
-- [ ] Register A registry/schema proofs
-- [ ] Security review (Class 3)
+      capability pin (name + registry hash), evidence input spec (closed
+      kind vocabulary, task_bound mandatory true), config by value inside
+      the canonical representation (64KiB bound — no external config store
+      needed in v1, D-L10-10 #3 trivially satisfied), result mapping
+      (PASS/FAIL/INCONCLUSIVE only; machinery statuses and Governance
+      vocabulary unrepresentable), provenance completeness not
+      contract-relaxable, SHA-256 commitment. NOTE: the D-L10-2
+      failure-semantics mapping is realized as the INCONCLUSIVE entries of
+      the result mapping + the machinery-reserved statuses — no separate
+      free-form field (recorded for owner review)
+- [x] L10 Contract Registry (registry.go): append-only + CheckAppendOnly
+      (deletion/rebind/un-withdrawal detected), two-way identity
+      agreement, rebind refusal at load (duplicate = refusal),
+      active|withdrawn, atomic single-load resolve, confine.ResolvePath +
+      Lstat on contract paths; no write API — pinned by AST audit
+      (alias-resistant, the L9 wall)
+- [x] Eligibility enforcement fail-closed: nil checker, checker error, or
+      ineligible → refusal (EligibilityChecker seam; L4 wiring lands with
+      M3/M4 under the archived-layer amendment discipline)
+- [x] Register A registry/schema proofs (verification_test.go) + 4
+      mutation probes killed (mapping wall, nil-checker, two-way
+      identity, rebind detection); gofmt/vet/tests green
+- [x] Security review (Class 3, 2026-09-11): H-1 (write wall was
+      string-matching, PoC-bypassed by alias/newline/function-value
+      binding) → remediated with a true AST SelectorExpr walk flagging
+      any REFERENCE to os writers, extended writer set, forbidden
+      indirect-import check, and an audit-of-the-audit test; probe
+      re-run confirms the doctored binding is flagged. M-1 (duplicate
+      JSON keys last-wins) → token-level duplicate-key refusal in both
+      loaders. L-1..L-6 all hardened (object-only config, canonical
+      version syntax, size bounds, name length cap, required-slot rule,
+      symlink-escape test). Suite green post-remediation.
+- [ ] FOLLOW-UP (archived-layer hardening, from review): the L9
+      catalog/manifest loaders share the duplicate-key and
+      version-syntax latencies — fix under the D-L10-17 amendment
+      discipline as a separate small change, not silently
 
 ## 2. L10-M2 — Evaluator + evaluation record (Class 3)
 

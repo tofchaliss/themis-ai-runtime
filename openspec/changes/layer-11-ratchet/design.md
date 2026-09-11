@@ -100,12 +100,98 @@ comparison reproducible.
 is worth considering; only the existing owner of the affected artifact
 can make it real.*
 
+### D-L11-2 — The improvement ladder (LOCKED 2026-09-11, Q-L11-2; two owner amendments)
+
+Four epistemic positions for an improvement candidate — Observed,
+Evaluated, Promoted, Relied-upon. No position implies the next; each
+upward transition is performed only by its owning mechanism; no
+mechanism may perform a skip (1→3, 2→4, or otherwise). The Ratchet may
+establish comparative and regression evidence; it never promotes,
+activates, or makes an artifact relied-upon.
+
+**1. Observed** — a claim or observation that something may be better
+(AI suggestion, human observation, single execution outcome, informal
+metric, unexpected behavior). Authority: none. A governed task's
+COMPLETED or L10 PASS is still only position 1 with respect to
+improvement — success is not betterness; the leak "PASS → the current
+thing works → the new thing is better" is closed here. AI authorship →
+Observed, nothing more.
+
+**2. Evaluated (owner tightening)** — *a reproducible comparative
+result showing a candidate/baseline difference under a registered
+comparison criterion, with both artifacts/runs admitted through their
+normal governance mechanisms.* The Ratchet establishes "C compared
+with B under K → Δ"; it does not establish "C is better" unless
+"better" is itself precisely defined by the registered criterion.
+Required conditions, all of: candidate identity; baseline identity;
+both registered/admitted; both executions governed; registered
+criterion + version/hash; comparable input/evidence; run identities;
+deterministic Δ computation; complete provenance sufficient to
+reproduce. **Baseline rule, constitutional (the CheckBaseline lesson
+as ladder law): an unadmitted baseline cannot establish position 2** —
+otherwise an apparently excellent improvement can be manufactured
+against an artifact never legitimately allowed to govern.
+
+**3. Promoted** — solely an act of the existing owning Governance door
+(Skill → catalog; Instruction → L1 governance; Contract → registry;
+Knowledge → Themis ingestion). The Ratchet supplies the evidence
+package; the door decides; evidence never obligates. **Promotion
+without position-2 evidence is permitted** — Governance authority does
+not derive from Ratchet evaluation. **Amendment A: where no position-2
+evidence exists, the promotion record must not imply that comparative
+evaluation occurred; evidence absence is explicit** (e.g.
+comparative_evidence = absent), closing the backdoor where a bare
+"promoted" is later read as "the Ratchet found it better."
+
+**4. Relied-upon** — the normal consumption machinery actually causes
+the artifact to govern work (skill resolved and instantiated; revision
+becomes the active instruction set; contract actually selected;
+regression test in the effective evaluation set). Promotion
+establishes admissibility/executability, never reliance; a promoted
+artifact may never be used. Position 4 is an established fact about
+consumption, not another Ratchet decision.
+
+**Non-implication matrix (constitutional):** 1⇏2 (observation isn't
+comparison) · 2⇏3 (no auto-promotion) · 3⇏4 (registration isn't
+reliance) · 4⇏2 (incumbency is not evidence) · 3⇏2 (promotion doesn't
+manufacture evaluation) · 2-under-K ⇏ generally-better (Δ is
+criterion-relative) · 4 ⇏ good (usage isn't validation). An artifact
+can be relied upon for years with no valid comparative evidence.
+
+**Downward movement (Amendment B):** *withdrawal, demotion,
+retirement, or replacement are acts of the owning
+governance/consumption mechanism. Ratchet evidence may support such an
+act but never triggers it.* The ladder records positions established
+by their owning mechanisms; it is not an L11 state machine and must
+not become one.
+
+**Uniformity:** the ladder is identical in shape across candidate
+families (Skill, Instruction, Contract, Regression test, Knowledge);
+the mechanism at each arrow changes by family, the proposition being
+established does not.
+
+**Vocabulary rule (owner precision):** in governed artifacts, *better*
+is not a free-standing proposition — it is shorthand only for a
+position-2 comparative result whose criterion and baseline are
+explicitly identified ("C produced Δ under K against admitted baseline
+B"; "C is better than B under K" only where K defines the ordering).
+Prohibited semantic upgrades: PASS→better, COMPLETED→better,
+PROMOTED→better, RELIED-UPON→better.
+
+**L10/L11 relationship:** L10's PASS can be an INPUT to an L11
+comparison; L11 cannot reinterpret PASS as "better."
+
+**Constitutional invariant (carried):** *the Ratchet may establish
+that an improvement is comparatively supported under a declared
+criterion; only the existing owner of the affected artifact can make
+it governed behavior.*
+
 ## 3. Grill — question list (OPEN, implementer draft — owner may restructure)
 
 | Q | Question |
 |---|---|
 | Q-L11-1 | **CLOSED → D-L11-1.** Evidence-not-authority boundary; provides-not-enforces at existing doors; ownership split; L10/L11 question separation; hard prohibitions + positive authority. |
-| Q-L11-2 | The improvement ladder: observed-better (anecdote) ≠ evaluated-better (governed comparative evidence) ≠ promoted (governance act) ≠ relied-upon (deployment). What mechanism does each transition require? |
+| Q-L11-2 | **CLOSED → D-L11-2.** Four positions w/ owning mechanisms; baseline rule as ladder law; evidence-absence explicit at promotion; downward moves are acts; criterion-relative vocabulary. |
 | Q-L11-3 | The candidate: which artifact families may be ratchet candidates (skill revisions, instruction revisions, verification contracts, benchmarks/regression tests, knowledge summaries); candidate identity, lifecycle states, and the D-L9-16 proposal-lifecycle residual — is a formal proposal artifact needed now, and who owns it? |
 | Q-L11-4 | Comparative evaluation semantics: baseline-vs-candidate comparison as a governed, registered computation — relation to L10 verification contracts (is a comparison a contract? a distinct registered artifact?); who defines the metric; how variants (A/B) generalize beyond prompts. |
 | Q-L11-5 | Promotion mechanics: enumerate each promotion act as an EXISTING governance door; what evidence package accompanies a promotion request; is there any new registry at all (candidate registry?) and its write-wall discipline. |

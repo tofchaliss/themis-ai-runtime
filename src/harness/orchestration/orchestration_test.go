@@ -286,14 +286,30 @@ func replayAndVerify(t *testing.T, f *fixture, taskID string) []transition {
 	var derived []transition
 	phase := wf.Initial
 	fires := map[string]int64{}
-	visitActive := false // an open phase visit (composed, walking)
+	verifState := map[string]string{} // latest-per-token, re-derived (L10 amendment)
+	visitActive := false              // an open phase visit (composed, walking)
 	var visitTurns int64
 	stepδ := func(event string, causeSeq int64) {
 		p := wf.phase(phase)
+		// Mirror of the production gate ladder (D-L10-13): gated edges
+		// in definition order against the re-derived latest-per-token
+		// state, first satisfied wins; ungated fallback otherwise.
 		var edge *Edge
+		gateIdx, idx := -1, 0
 		for i := range p.Edges {
-			if p.Edges[i].On == event {
-				edge = &p.Edges[i]
+			e := &p.Edges[i]
+			if e.On != event {
+				continue
+			}
+			if e.Gate != nil {
+				if edge == nil && verifState[e.Gate.Contract] == e.Gate.Outcome {
+					edge, gateIdx = e, idx
+				}
+				idx++
+				continue
+			}
+			if edge == nil {
+				edge = e
 			}
 		}
 		if edge == nil {
@@ -301,6 +317,9 @@ func replayAndVerify(t *testing.T, f *fixture, taskID string) []transition {
 		}
 		target := edge.To
 		key := phase + "/" + event
+		if gateIdx >= 0 {
+			key = fmt.Sprintf("%s/%s#g%d", phase, event, gateIdx)
+		}
 		exhausted := false
 		if edge.Counter > 0 {
 			if fires[key] >= edge.Counter {
@@ -357,6 +376,20 @@ func replayAndVerify(t *testing.T, f *fixture, taskID string) []transition {
 			case "provider-error":
 				stepδ(EvTurnProviderError, ev.Seq)
 			}
+		case state.EvVerification:
+			// L10 amendment: the committed evaluation updates the
+			// re-derived latest-per-token state BEFORE its typed event
+			// enters δ (record-before-event, mirrored).
+			var vb struct {
+				Contract string `json:"contract"`
+				Outcome  string `json:"outcome"`
+			}
+			_ = json.Unmarshal(ev.Body, &vb)
+			lastSeq = ev.Seq
+			verifState[vb.Contract] = vb.Outcome
+			if evName, ok := verificationEventFor[vb.Outcome]; ok && declared[evName] {
+				stepδ(evName, ev.Seq)
+			}
 		case state.EvL4Audit:
 			var audit struct {
 				Tool     string `json:"Tool"`
@@ -398,7 +431,10 @@ func replayAndVerify(t *testing.T, f *fixture, taskID string) []transition {
 		// The edge_id must name this definition's edge: its event part
 		// is declared, and the pair resolves to exactly one Edge.
 		on := strings.TrimPrefix(b.EdgeID, b.From+"/")
-		if b.EdgeID != b.From+"/"+on || !declared[on] {
+		if gi := strings.Index(on, "#g"); gi >= 0 {
+			on = on[:gi] // gated edge identity (L10 amendment)
+		}
+		if !strings.HasPrefix(b.EdgeID, b.From+"/") || !declared[on] {
 			t.Fatalf("transition %d carries foreign edge_id %q", ev.Seq, b.EdgeID)
 		}
 		if b.CauseSeq < 0 || b.CauseSeq >= ev.Seq {

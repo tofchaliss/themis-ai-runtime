@@ -185,15 +185,34 @@ evidence. The L9 mutation-testing lesson applies from day one.
 
 ## 6. L10-M6 — remediate-dependency@1 + live proof (Class 2/3)
 
-- [ ] remediate-dependency@1 Skill bundle authored (ANALYZE read-only →
-      REMEDIATE write → VERIFY gated on contract PASS → COMPLETE);
-      L9 composition-coherence check covers gate/contract pin agreement
-      (D-L10-13)
-- [ ] Governance registration of capability + contract + skill (OWNER ACTS)
-- [ ] Register E live proof vs local model through the unmodified L7 loop;
-      negative live proofs (no-proposal exhaustion, genuine FAIL re-entry,
-      equivalence)
-- [ ] Register R replay/multiplicity proofs incl. downgrade scenarios
+- [x] remediate-dependency@1 Skill bundle authored PROPOSED
+      (policies/skills/remediate-dependency/: ANALYZE read-only →
+      REMEDIATE write + verify_report + PASS-gated completion; procedure,
+      schema, templates, ceiling, manifest); catalog.proposed.json v2
+      resolves both skills through the real L9 machinery. Contract pins
+      are realized as the pinned workflow's gate tokens (exact immutable
+      pins inside a pinned artifact — no L9 manifest change needed;
+      recorded reading of D-L10-2/13)
+- [ ] Governance registration of capability + contract + skill (OWNER
+      ACTS: registry-v4.proposed.json → registry-v4.json;
+      contracts.proposed.json → contracts.json;
+      catalog.proposed.json → catalog.json)
+- [x] Register E: **LIVE PASS vs qwen2.5:7b through the unmodified
+      production loop with the REAL seam** — write report → verify under
+      report-valid@1 → PASS → gate → COMPLETED → cold reconstruction
+      consistent (14.6s). Scripted closure demonstration + FAIL-closes-
+      gate negative with the real contract. Negative paths deterministic
+      via scripted walks (no-proposal exhaustion, refusal-is-not-outcome);
+      a live mis-tooled walk (write_file w/ unknown field, prose stall)
+      failed closed through the reviewed exhaustion path — recorded as
+      incidental live negative evidence
+- [x] Register R: gate-walk proofs through the production loop —
+      FAIL→PASS remediation (both instances durable, causal replay fires
+      the gated edge #g0), no-verification non-completion, PASS→
+      UNAVAILABLE downgrade closes the gate, refusal produces no event,
+      both assembly refusals; the Register D replayer extended with the
+      gate ladder + latest-per-token re-derivation, all archived replay
+      proofs green
 
 ## 7. Close
 

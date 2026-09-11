@@ -3,3 +3,6 @@ bin/
 
 # Claude Code transient state
 .claude/.verification-pending
+
+# graphify output (generated, user-local)
+graphify-out/

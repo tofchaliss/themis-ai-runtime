@@ -873,6 +873,48 @@ computes facts about the artifact; the owning mechanism decides authority.
 recorded dimension owns applying the redaction/classification discipline
 to it before it lands.
 
+### D-L10-15 — Completion semantics: four propositions, never collapsed (LOCKED 2026-09-11, Q-L10-17)
+
+1. **Workflow COMPLETED** (L7): the historical fact that the reviewed
+   workflow legitimately reached its terminal, **with each traversed
+   transition's required gates satisfied according to the latest committed
+   evaluation available when that transition was taken** (owner wording,
+   binding this directly to the D-L10-9 gate rule). A historical workflow
+   fact, not a present-state assertion: a later FAIL or reconstruction
+   discrepancy does not change, reopen, or mutate the completed task.
+2. **Verification PASSED** (L10): one registered contract evaluation
+   produced PASS — proposition X′ established for that instance. PASS ≠
+   CVE fixed ≠ not affected ≠ secure ≠ remediated ≠ accepted.
+3. **Security condition established** (Governance): a determination that
+   the verification proposition establishes security condition X. No
+   L1–L10 mechanism may implement "PASS → SecurityConditionEstablished" —
+   that would turn the contract registry into a security-governance
+   engine. Governance weighs the outcome, evidence, policy, applicability,
+   compensating controls, and other governed facts.
+4. **Enterprise Position accepted** (Governance/Themis): a separate
+   acceptance act with its own lifecycle (durable(local)/transferred/
+   accepted); technical determination ≠ organizational decision.
+
+**Non-implication matrix (explicit invariant):** COMPLETED⇏PASS,
+PASS⇏COMPLETED, COMPLETED⇏security-condition, PASS⇏security-condition,
+security-condition⇏EP-accepted, EP-accepted⇏any lower historical fact. No
+L1–L10 mechanism may collapse any pair. Authority ladder: reviewed L7
+lattice → registered L10 contract evaluation → Governance determination →
+Governance acceptance act.
+
+**Egress reporting:** reports may present all four together as separate
+typed fields with separate provenance; they may never merge them.
+"verification: PASS" asserts proposition 2 exactly; it must never be
+rendered "verification: CVE FIXED" unless the report explicitly represents
+an independent Governance determination as such.
+
+**Vocabulary rule (invariant, not style):** within Harness artifacts,
+*complete* → proposition 1; *verified* → proposition 2 or reconstruction
+consistency. Neither is shorthand for security condition established,
+remediation accepted, Enterprise Position, or security approval —
+preventing terminology from becoming a semantic backdoor where "verified"
+drifts into "secure."
+
 ## 3. Grill — question list (OPEN; owner's sequence 2026-09-11, implementer's 12 merged in)
 
 Owner's proposed starting boundary (working text, pending Q-L10-1 lock):
@@ -905,7 +947,7 @@ facts Governance subsequently uses.
 | Q-L10-14 | **CLOSED → D-L10-13.** Contract-blind L7 (opaque tokens); minimal semantic payload; gate vocabulary + declaration-gated exposure as load-time rules; reachability-based totality; coherence in L9; no L7→L10 API. |
 | Q-L10-15 | **RESIDUAL per D-L10-5** (owner, 2026-09-11): live operational telemetry deferred out of v1; future dedicated grill (evidentiary status, retention, privacy/secrets, clocks, correlation, availability, second-history risk). |
 | Q-L10-16 | **CLOSED → D-L10-14.** Two owned halves; inheritance w/o declassification; classification-enforcement without second detector; fail-closed on absent classification; no view→model path except via L2. |
-| Q-L10-17 | Completion semantics: workflow COMPLETED ≠ verification PASSED ≠ security condition established ≠ Enterprise Position accepted — formally separated propositions. |
+| Q-L10-17 | **CLOSED → D-L10-15.** Four propositions w/ owners and non-implication matrix; transition-time anchor; egress fields separate; vocabulary rule. |
 | Q-L10-18 | Proof gate: structural, adversarial, provenance, replay/reconstruction registers + live operational proof + independent architecture/security/test reviews; close as L7/L9 were closed. |
 | Q-L10-19 | (merged from implementer) OPEN-2 proper: the deterministic policy artifact gating run_command / run_build / run_tests / run_scan as verification capabilities — allowlisted or manifest-pinned invocations, where the artifact lives, who reviews it. |
 | Q-L10-20 | (merged) Extend-the-strongest-subsystem: precise relationship to benchmarks validators/gate/guardrails — generalize, wrap, or leave in place; no second validator family (and no second evaluation subsystem — that line belongs to L11). |

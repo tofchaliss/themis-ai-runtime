@@ -260,6 +260,53 @@ security state. No ordering, severity scale, or partial credit exists among
 outcomes; scores a verifier produces are raw evidence collapsed by the
 contract mapping, never vocabulary members.
 
+### D-L10-5 — Observability is derivation, never recording (LOCKED 2026-09-11, Q-L10-6 + Q-L10-7)
+
+L6 is the sole authoritative durable execution record. L10 observability is a
+read-only deterministic derivation layer over: (a) the authoritative L6
+durable record, including its event stream, content-addressed objects,
+manifests, and task records; (b) registered governed artifacts used as
+interpretation keys; and (c) results of owning structural mechanisms,
+including L6 structural verification and L7 workflow replay, consumed
+through their owning APIs and never reimplemented by L10. **Direction lock:
+L6 records → L10 derives. Never L10 records → L6.** The second-history
+problem is thereby structurally impossible, not merely prohibited.
+
+The observability mechanism has no L6 write capability. L10 views cannot
+create, mutate, delete, or amend durable history.
+
+L10 produces deterministic, versioned, reproducible views. A view is a pure
+function over its declared record slice and registered interpretation
+artifacts and carries provenance identifying the consumed event/object range
+and view-function version. Views are recomputable and discardable. A
+discrepancy between a view and its source record is a view defect; the view
+never supersedes the record.
+
+L10 does not collect execution information through agents, hooks,
+interceptors, or parallel observation paths. If an execution dimension is
+absent from the authoritative record, L10 reports the absence rather than
+reconstructing it from a side channel. Closing such a recording gap belongs
+to the layer that owns the underlying fact.
+
+Observability output never controls workflow, authorization, or verification
+outcomes. Any computation whose result is intended to act as a verification
+gate is a Verification Contract and must enter through the D-L10-2 contract
+mechanism rather than the observability mechanism.
+
+**Precision (owner amendment):** verification evaluation records are NOT an
+exception to L10's no-write rule. The verification mechanism produces
+verification facts; those facts become durable through the existing L6 write
+path; L10 observability then derives views over them. L10 does not write
+verification evaluation records either — L6 owns their durable recording.
+(The exact boundary sits in Q-L10-8.)
+
+v1 scope: observability consists only of record-derived views. Live
+operational telemetry is deferred as a recorded residual (Q-L10-15 becomes a
+residual, not a v1 design question) and, if introduced later, must be
+grilled separately (evidentiary status, retention, privacy/secrets, clock
+semantics, correlation, availability, second-history risk) and explicitly
+segregated from the authoritative/evidentiary record plane.
+
 ## 3. Grill — question list (OPEN; owner's sequence 2026-09-11, implementer's 12 merged in)
 
 Owner's proposed starting boundary (working text, pending Q-L10-1 lock):
@@ -280,8 +327,8 @@ facts Governance subsequently uses.
 | Q-L10-3 | **CLOSED → D-L10-2.** Contracts: L10-owned registry (fork (a)), governance-only registration, closed schema, exact pins, anti-smuggling invariant. |
 | Q-L10-4 | **CLOSED → D-L10-3.** Determinism = registration property; canonical-result standard w/ registered canonicalization; model categorically not a verifier in v1. |
 | Q-L10-5 | **CLOSED → D-L10-4.** Five-value closed vocabulary, ESTABLISHED/NOT-ESTABLISHED partition, machinery-reserved statuses, distinct typed L7 events, fail-closed gates without collapse. |
-| Q-L10-6 | Observability truth: what does L10 observe (transitions, tool calls, args, authz decisions, environment, files changed, artifacts, verification executions, model turns, errors, timeouts, termination) without creating a competing event/history system with L6? |
-| Q-L10-7 | L6 relationship: does L10 produce observations → L6 records them, or does L6 record → L10 derives views, or a combination? Never two authoritative histories. |
+| Q-L10-6 | **CLOSED → D-L10-5.** Observability = read-only deterministic derivation; views are pure functions w/ provenance; absent dimensions reported, never side-channel collected. |
+| Q-L10-7 | **CLOSED → D-L10-5.** Direction locked: L6 records → L10 derives, never the reverse; second history structurally impossible. |
 | Q-L10-8 | Verification execution: L10 defines semantics · L4 authorizes · L5 executes · L6 records — precisely what does L10 itself do vs L4/L5? |
 | Q-L10-9 | Model involvement: may the model request verification, select a verifier, interpret the result, declare success, override failure, manufacture evidence? Expected shape: model proposes → L4 authorizes → L5 executes → L10 verifies → typed result; the model cannot manufacture the result. |
 | Q-L10-10 | **Substantively pre-closed by D-L10-4** (taxonomy mapped: verified-false=FAIL, not-verified=INCONCLUSIVE, unavailable/verifier-error=UNAVAILABLE, invalid/nondeterminism=INVALID, evidence-insufficient splits by resolvability); formal confirmation at its turn. |
@@ -289,7 +336,7 @@ facts Governance subsequently uses.
 | Q-L10-12 | Tamper resistance (adversarial register): modify verifier / config / input evidence / raw output / derived result / execution record — can an apparently valid verification survive? |
 | Q-L10-13 | Replay and reproducibility: can L10 reproduce a verification from durable state; if replay ≠ original, what does that MEAN? Expectation: no automatic semantic rewrite of history — L6 records what happened, Governance decides what the discrepancy means. |
 | Q-L10-14 | Verification gates in L7: what exactly crosses from L10 back into L7 — likely a tightly bounded typed outcome, never arbitrary verifier output. |
-| Q-L10-15 | Observability vs audit: operational telemetry ≠ execution trace ≠ security audit evidence ≠ durable historical record — else L10 absorbs L6. |
+| Q-L10-15 | **RESIDUAL per D-L10-5** (owner, 2026-09-11): live operational telemetry deferred out of v1; future dedicated grill (evidentiary status, retention, privacy/secrets, clocks, correlation, availability, second-history risk). |
 | Q-L10-16 | Security-sensitive observability: can observability leak secrets, credentials, sensitive context, protected evidence, prompts, tool arguments? Connect to L5 secret-contamination + L6 durability rules. |
 | Q-L10-17 | Completion semantics: workflow COMPLETED ≠ verification PASSED ≠ security condition established ≠ Enterprise Position accepted — formally separated propositions. |
 | Q-L10-18 | Proof gate: structural, adversarial, provenance, replay/reconstruction registers + live operational proof + independent architecture/security/test reviews; close as L7/L9 were closed. |

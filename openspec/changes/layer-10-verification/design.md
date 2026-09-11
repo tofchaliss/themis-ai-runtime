@@ -87,6 +87,79 @@ outcome ("what did the registered verifier establish?") → security meaning
 ("what does this mean for the CVE / product / release?"). The first two
 belong to L10; the third never does.
 
+### D-L10-1a — The verification ladder (PROPOSED 2026-09-11, closing Q-L10-2; awaiting explicit owner lock)
+
+Four positions, none skippable, each upward transition requiring its own
+mechanism: (1) **model says X** — advisory, external-untrusted, zero
+verification standing; includes model-relayed claims *about* verifier runs (a
+claim about verification is not verification). (2) **evidence shows X** —
+governed recorded bytes with provenance; an *input* to verification, never a
+conclusion; its L2 class is whatever its source earned. (3) **deterministic
+verifier establishes X′** — typed contract outcome + mechanical validity from
+registered computation under the D-L9-14 preconditions. The prime is
+load-bearing: the verifier establishes the *contract proposition* ("test
+suite exited 0 on commit H"), always narrower than the security proposition X
+("the fix works"); the X′→X gap is permanent and belongs to Governance.
+(4) **Governance accepts X as security truth** — outside the harness, never
+automatic, never inferable from any L10/L7 state. Transition mechanisms:
+1→2 recording through governed channels (L2/L5/L6); 2→3 a registered contract
+executed via L4→L5 with complete provenance; 3→4 a governance act. No
+mechanism exists — or may be built — that performs 1→3 or 2→4 directly.
+
+### D-L10-2 — Verification contracts (LOCKED 2026-09-11, Q-L10-3; registry fork resolved (a))
+
+A Verification Contract is a governed, versioned, hash-pinned declarative
+specification that defines how a registered verifier capability evaluates
+specified governed evidence and maps its deterministic result into L10's
+closed outcome vocabulary.
+
+Contract authorship, governance registration, and Harness machinery ownership
+are distinct. Anyone permitted to author may produce a contract proposal;
+authorship confers no trust or authority. A contract becomes executable only
+through a Governance registration act into the append-only **L10 Contract
+Registry**. The registry has no model- or Harness-accessible write
+capability; registration is an external governed act. Registry admission is
+Governance-owned; registry machinery is Harness-owned; registry content is
+not Harness authority. An unregistered contract-shaped artifact is DATA ONLY
+and cannot be evaluated — no fallback to closest-match, latest, name-only
+resolution, or contract-by-value.
+
+A contract contains only the closed-schema fields defined by the L10 contract
+schema, unknown fields refused, loading fail-closed: exact name@version
+identity; exact L4-registered verifier capability identity/version/hash;
+typed evidence input specification — the contract specifies what evidence
+**kinds** it requires, and the *evaluation instance* resolves that
+specification to concrete governed evidence objects (task state stays outside
+contract identity, preserving reusability); pinned and hashed verifier
+configuration; mapping of registered verifier results into the fixed L10
+outcome vocabulary; failure-semantics mapping; required computational
+provenance; contract SHA-256 commitment over its canonical representation.
+
+A contract cannot contain executable logic, arbitrary expressions, scripts,
+custom interpreters, or contract-by-value verifier definitions. Its verifier
+binding is a reference into the closed L4 capability registry; it cannot
+create, redefine, or authorize a capability. L10 owns verification-contract
+identity and semantics; L4 owns capability identity and authorization; the
+contract references the capability, never absorbs or redefines it (the L9
+pattern).
+
+A Skill may require a registered Verification Contract only by exact
+immutable pin. A Skill cannot define, inline, parameterize, or alter
+verification semantics.
+
+**Outcome anti-smuggling (standing L10 invariant):** the L10 outcome
+vocabulary is constitution-owned and closed. A contract maps the registered
+verifier's defined results into that vocabulary but cannot introduce new
+outcome names or import Security Governance vocabulary. Security-semantic
+propositions (NOT_AFFECTED, REMEDIATED, SECURE) are structurally not L10
+outcomes. Contract names, descriptions, and descriptive metadata are
+uninterpreted and carry no authority. *A Verification Contract can determine
+an L10 outcome, but cannot manufacture a security proposition.*
+
+A Verification Contract establishes the deterministic relationship between
+governed evidence, a registered verifier, configuration, and an L10 outcome.
+It does not establish the security meaning of that outcome.
+
 ## 3. Grill — question list (OPEN; owner's sequence 2026-09-11, implementer's 12 merged in)
 
 Owner's proposed starting boundary (working text, pending Q-L10-1 lock):
@@ -103,8 +176,8 @@ facts Governance subsequently uses.
 | Q | Question |
 |---|---|
 | Q-L10-1 | **CLOSED → D-L10-1.** Boundary and authority: two mechanisms under one layer; trace-consistency stays single-homed with L6/L7; three-proposition model foundational. |
-| Q-L10-2 | What counts as verification? The ladder: model says X ≠ evidence shows X ≠ deterministic verifier establishes X ≠ Governance accepts X as security truth. |
-| Q-L10-3 | Verification contracts: who defines one; contents (inputs, expected evidence, algorithm, result vocabulary, failure semantics, provenance requirements, version, hash); can a Skill define verification semantics or only require execution of a registered verifier (L9 precedent says the latter)? |
+| Q-L10-2 | **Closure PROPOSED → D-L10-1a (ladder, X vs X′ narrowing); awaiting explicit owner lock.** |
+| Q-L10-3 | **CLOSED → D-L10-2.** Contracts: L10-owned registry (fork (a)), governance-only registration, closed schema, exact pins, anti-smuggling invariant. |
 | Q-L10-4 | Deterministic vs probabilistic verification: explicit boundary between deterministic verification, model assessment, model-relayed claims, human verification, Governance determination — incl. the derived-evidence eligibility rule (D-L9-14). |
 | Q-L10-5 | Verification authority: what does a result (PASS/FAIL/INCONCLUSIVE/UNAVAILABLE/INVALID) actually mean — fact, claim, evidence classification, workflow gate signal — and who may interpret it? |
 | Q-L10-6 | Observability truth: what does L10 observe (transitions, tool calls, args, authz decisions, environment, files changed, artifacts, verification executions, model turns, errors, timeouts, termination) without creating a competing event/history system with L6? |

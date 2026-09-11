@@ -211,6 +211,55 @@ redefine the verifier's trust level (the L4/L9 principle: trust properties
 are established at the registration boundary, not invented opportunistically
 during execution).
 
+### D-L10-4 — Outcome vocabulary and semantics (LOCKED 2026-09-11, Q-L10-5; substantively pre-closes Q-L10-10)
+
+L10 has a closed outcome vocabulary consisting of PASS, FAIL, INCONCLUSIVE,
+UNAVAILABLE, and INVALID. Two conceptual classes:
+
+ESTABLISHED — PASS (contract established the positive condition), FAIL
+(contract established the negative condition). NOT-ESTABLISHED —
+INCONCLUSIVE (verifier completed but could not determine), UNAVAILABLE
+(verification could not be performed), INVALID (verification / evidence /
+result was mechanically invalid). FAIL means the verifier established the
+negative condition defined by the contract; the other three mean the
+contract did not establish its proposition.
+
+PASS and FAIL are contract outcomes: they establish respectively the
+positive or negative condition defined by the registered verification
+contract. INCONCLUSIVE is a contract outcome indicating that the registered
+verifier completed but could not establish either condition. UNAVAILABLE and
+INVALID are machinery-reserved outcomes indicating that verification was
+unavailable or mechanically invalid; they cannot be produced through
+contract result mapping — otherwise a contract could launder machinery
+failure into a decision (or a decision into failure), destroying the
+mechanical-validity boundary.
+
+A Verification Contract may map registered verifier results only to PASS,
+FAIL, or INCONCLUSIVE. It cannot introduce additional outcome values or map
+machinery failure into a contract outcome.
+
+L10 preserves all five outcomes as distinct typed facts. When a verification
+result participates in workflow control, L7 receives the corresponding typed
+event (verification-pass / -fail / -inconclusive / -unavailable / -invalid,
+subject to the final event vocabulary) and the reviewed workflow lattice
+determines the transition — L10 says FAIL, never "FAIL → remediation"; one
+reviewed workflow may route FAIL to remediation and INCONCLUSIVE to
+evidence-gathering, another may legitimately choose differently. A
+PASS-requiring gate fails closed for every outcome other than PASS, but L7
+must not collapse the non-PASS outcomes into one event — that would discard
+deterministic information the reviewed walk legitimately uses. Gate safety
+does not require outcome collapse.
+
+None of the five outcomes carries security meaning. In particular, FAIL does
+not mean "vulnerability exists," "CVE is open," or any equivalent security
+proposition — only that the registered contract established its defined
+negative condition. The vocabulary is constitution-owned: any change is a
+constitutional amendment (owner act, version bump), never contract-supplied,
+and the amendment process must refuse any value that names or implies a
+security state. No ordering, severity scale, or partial credit exists among
+outcomes; scores a verifier produces are raw evidence collapsed by the
+contract mapping, never vocabulary members.
+
 ## 3. Grill — question list (OPEN; owner's sequence 2026-09-11, implementer's 12 merged in)
 
 Owner's proposed starting boundary (working text, pending Q-L10-1 lock):
@@ -230,12 +279,12 @@ facts Governance subsequently uses.
 | Q-L10-2 | **Closure PROPOSED → D-L10-1a (ladder, X vs X′ narrowing); awaiting explicit owner lock.** |
 | Q-L10-3 | **CLOSED → D-L10-2.** Contracts: L10-owned registry (fork (a)), governance-only registration, closed schema, exact pins, anti-smuggling invariant. |
 | Q-L10-4 | **CLOSED → D-L10-3.** Determinism = registration property; canonical-result standard w/ registered canonicalization; model categorically not a verifier in v1. |
-| Q-L10-5 | Verification authority: what does a result (PASS/FAIL/INCONCLUSIVE/UNAVAILABLE/INVALID) actually mean — fact, claim, evidence classification, workflow gate signal — and who may interpret it? |
+| Q-L10-5 | **CLOSED → D-L10-4.** Five-value closed vocabulary, ESTABLISHED/NOT-ESTABLISHED partition, machinery-reserved statuses, distinct typed L7 events, fail-closed gates without collapse. |
 | Q-L10-6 | Observability truth: what does L10 observe (transitions, tool calls, args, authz decisions, environment, files changed, artifacts, verification executions, model turns, errors, timeouts, termination) without creating a competing event/history system with L6? |
 | Q-L10-7 | L6 relationship: does L10 produce observations → L6 records them, or does L6 record → L10 derives views, or a combination? Never two authoritative histories. |
 | Q-L10-8 | Verification execution: L10 defines semantics · L4 authorizes · L5 executes · L6 records — precisely what does L10 itself do vs L4/L5? |
 | Q-L10-9 | Model involvement: may the model request verification, select a verifier, interpret the result, declare success, override failure, manufacture evidence? Expected shape: model proposes → L4 authorizes → L5 executes → L10 verifies → typed result; the model cannot manufacture the result. |
-| Q-L10-10 | Failure semantics: verified-false vs not-verified vs unavailable vs invalid vs failed vs verifier-error vs evidence-insufficient — distinctions that materially affect L7 behavior. |
+| Q-L10-10 | **Substantively pre-closed by D-L10-4** (taxonomy mapped: verified-false=FAIL, not-verified=INCONCLUSIVE, unavailable/verifier-error=UNAVAILABLE, invalid/nondeterminism=INVALID, evidence-insufficient splits by resolvability); formal confirmation at its turn. |
 | Q-L10-11 | Evidence provenance: which fields are NECESSARY (verification_id, verifier identity/version/hash, input object hashes, config hash, environment identity, timestamp/sequence, raw output ref, derived result, result hash) — establish, don't assume. |
 | Q-L10-12 | Tamper resistance (adversarial register): modify verifier / config / input evidence / raw output / derived result / execution record — can an apparently valid verification survive? |
 | Q-L10-13 | Replay and reproducibility: can L10 reproduce a verification from durable state; if replay ≠ original, what does that MEAN? Expectation: no automatic semantic rewrite of history — L6 records what happened, Governance decides what the discrepancy means. |

@@ -186,13 +186,90 @@ that an improvement is comparatively supported under a declared
 criterion; only the existing owner of the affected artifact can make
 it governed behavior.*
 
+### D-L11-3 — The Candidate (LOCKED 2026-09-11, Q-L11-3; owner amendments)
+
+A Candidate is a content-addressed proposal package representing a
+possible change to a governed artifact or governed knowledge. It is
+data, not a runtime artifact and not a source of governance truth. It
+identifies its family, target, proposed content commitment, admitted
+baseline, authorship/provenance, rationale, and any attached
+comparative evidence.
+
+Candidate existence confers no authority and creates no evaluation or
+execution path. **Executable candidates must pass the affected
+artifact's ordinary registration mechanism before they may participate
+in governed evaluation; there is no trial-registration, sandbox, or
+evaluation-only admission path** — that would be a second admission
+channel, exactly what D-L9-16 forbids. Registration-for-evaluation is
+ordinary registration under the ordinary rules: "admissible for
+governed execution," never "endorsed as better."
+
+**The ladder is epistemic, not temporal (owner: 1→3→2 PROVES the
+ladder is epistemic, not an exception to it).** Executable candidates
+legitimately proceed 1 → 3 (registered) → 2 (evaluated by ordinary
+governed tasks vs the admitted baseline); non-executable candidates
+may proceed 1 → 2 → 3, subject to actual family semantics. All
+non-implications hold in every direction regardless of temporal order.
+**No implication between 2 and 4 (owner tightening):** Governance/
+deployment may decide 3+2→4, 3+2→not-relied-upon, or 3→4 without
+position-2 evidence — discretion retained; evidence informs, never
+obligates; a candidate may never reach 4 at all.
+
+**Single-home promotion truth:** the Candidate does NOT record
+promoted, active, relied-upon, or withdrawn governance state —
+promotion truth lives solely at the affected door (two representations
+of one governance fact would demand reconciliation semantics L11 must
+not own). **A Candidate has no authoritative lifecycle state at all
+(owner amendment):** proposal disposition, if recorded, is owned by
+the mechanism that receives it, and any practical "withdrawn" marker
+is proposal disposition, never governance state, never confusable with
+withdrawal of the promoted artifact. **Lineage is not state:**
+candidates may reference candidates (supersedes) — answering "where
+did this proposal come from?", never "is this proposal governed?"
+
+**Candidate contents (closed, minimal):** family (skill-revision |
+instruction-revision | contract-revision | regression-test |
+knowledge); target descriptor — target identity + a closed declarative
+change relation (create-version | revise | replace), introduced only
+as the existing doors actually need it and never interpreted by L11
+into authority; proposed content commitment (SHA-256 pins); admitted
+baseline reference; authorship/provenance (AI provenance raises
+attention, never lowers the bar); advisory rationale; optional
+position-2 evidence references; optional lineage references.
+
+**No candidate machinery:** no candidate executor, no candidate
+registry with execution authority, no candidate runtime, no
+candidate-specific authorization, no candidate-specific evaluation
+engine — the existing walls do the work (unregistered = data,
+D-L9-8). **Proposal handoff (owner amendment):** Governance receives
+proposals through the existing governed proposal/registration
+mechanisms; L11 creates no parallel admission channel. The *.proposed.*
+convention is the v1 REPRESENTATION of proposal handoff where
+applicable — never an independent authority mechanism, and not
+constitutionalized as a filename pattern.
+
+**Knowledge:** the authoritative door is outside the Harness —
+candidate → L11 evidence package → governed egress → Themis knowledge
+ingestion; successful handoff never means "knowledge promoted"; the
+Themis-side mechanism owns that fact.
+
+**D-L9-16 residual disposition:** the "no proposal artifact in v1"
+deferral is matured here — the formal Candidate exists from L11 v1;
+v1 families: regression-test, skill-revision, contract-revision,
+instruction-revision (in-repo doors), knowledge as egress package.
+
+**Architectural principle:** *the Candidate describes what might
+change; the existing door decides whether it may govern; the Ratchet
+establishes what comparative evidence exists; the existing consumption
+mechanism determines whether it is relied upon.*
+
 ## 3. Grill — question list (OPEN, implementer draft — owner may restructure)
 
 | Q | Question |
 |---|---|
 | Q-L11-1 | **CLOSED → D-L11-1.** Evidence-not-authority boundary; provides-not-enforces at existing doors; ownership split; L10/L11 question separation; hard prohibitions + positive authority. |
 | Q-L11-2 | **CLOSED → D-L11-2.** Four positions w/ owning mechanisms; baseline rule as ladder law; evidence-absence explicit at promotion; downward moves are acts; criterion-relative vocabulary. |
-| Q-L11-3 | The candidate: which artifact families may be ratchet candidates (skill revisions, instruction revisions, verification contracts, benchmarks/regression tests, knowledge summaries); candidate identity, lifecycle states, and the D-L9-16 proposal-lifecycle residual — is a formal proposal artifact needed now, and who owns it? |
+| Q-L11-3 | **CLOSED → D-L11-3.** Candidate = content-addressed proposal data; no lifecycle state; single-home promotion truth; 1→3→2 for executable families (epistemic ladder proven); no trial admission; *.proposed.* as representation only. |
 | Q-L11-4 | Comparative evaluation semantics: baseline-vs-candidate comparison as a governed, registered computation — relation to L10 verification contracts (is a comparison a contract? a distinct registered artifact?); who defines the metric; how variants (A/B) generalize beyond prompts. |
 | Q-L11-5 | Promotion mechanics: enumerate each promotion act as an EXISTING governance door; what evidence package accompanies a promotion request; is there any new registry at all (candidate registry?) and its write-wall discipline. |
 | Q-L11-6 | Regression prevention: failures → regression tests (who authors, who registers, where they run); the ratchet-up rule generalized from the benchmark gate (baseline must itself be admitted — the stepwise-bypass lesson); admission-at-consumption beyond the router. |

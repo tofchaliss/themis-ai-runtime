@@ -157,18 +157,31 @@ evidence. The L9 mutation-testing lesson applies from day one.
 
 ## 5. L10-M5 — Reconstruction + observability views (Class 2/3)
 
-- [ ] Reconstruction tooling: read-only, all D-L10-10 two-source checks,
-      canon(raw) check, mapping recomputation; typed failure on missing
-      input; discrepancy artifact as L6 evidence-payload in audit scope
-      outside task streams; original record untouched (D-L10-12)
-- [ ] L6 vocabulary check (OPEN from D-L10-12): confirm evidence-payload
-      carries the discrepancy artifact without authority-semantics change;
-      stop at the Architecture Decision Gate if it does not
-- [ ] Record-derived views: pure functions w/ derived-from provenance;
-      sensitivity inheritance + classification enforcement, fail-closed on
-      absent required classification; no L6 write reachability (AST audit);
-      no view→model path (D-L10-5/14)
-- [ ] Register P proofs (mutation-coupled)
+- [x] Reconstruction: pure core (verification/reconstruct.go — supplied
+      bytes only, no I/O) + seam wrapper over the live L6 root
+      (ReconstructTask): two-source checks, canon(raw) recomputation,
+      mapping recomputation as the authoritative legitimacy check; typed
+      missing-input failures; discrepancy artifact stored via the root
+      ObjectStore as evidence-payload OUTSIDE all task streams; original
+      events proven byte-identical after reconstruction
+- [x] L6 vocabulary check RESULT: evidence-payload class + existing
+      store primitive carry the discrepancy artifact with no
+      authority-semantics change and no task-stream append — no new L6
+      object class needed. RECORDED ADG FOLLOW-UP: audit-scope objects
+      are unanchored under L6's future reachability GC (no deleter
+      exists today; "no probabilistic GC") — an anchoring decision must
+      precede any GC implementation
+- [x] Record-derived views: pure VerificationHistory w/ latest-per-
+      contract projection + derived-from provenance (event range + view
+      version); purity + downgrade-ordering proven. Views carry tokens/
+      outcomes/seqs only (no evidence content — minimal sensitivity
+      class); no L6 write reachability by construction (read seam only);
+      no view→model path exists
+- [x] Register P proofs: consistent-reconstructs; six single-element
+      swaps fail (foreign contract bytes, claimed outcome, swapped
+      raw/canonical, claimed identity, claimed capability); four typed
+      missing-input cases; machinery-outcome records skip the result
+      chain; end-to-end forged-outcome discrepancy over a real root
 
 ## 6. L10-M6 — remediate-dependency@1 + live proof (Class 2/3)
 

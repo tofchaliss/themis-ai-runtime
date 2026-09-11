@@ -307,6 +307,64 @@ grilled separately (evidentiary status, retention, privacy/secrets, clock
 semantics, correlation, availability, second-history risk) and explicitly
 segregated from the authoritative/evidentiary record plane.
 
+### D-L10-6 — Verification execution and record boundary (LOCKED 2026-09-11, Q-L10-8; trigger fork LOCKED: model-proposed only in v1)
+
+Verification consists of five owned stages:
+
+1. **Contract resolution — L10.** L10 resolves the exact registered C@v from
+   the append-only Contract Registry in one atomic snapshot, verifies its
+   active status, and obtains its immutable verifier binding, configuration,
+   evidence specification, and result mapping. The evaluation instance
+   resolves the contract's evidence requirements to concrete governed
+   evidence object references.
+2. **Authorization — L4.** The bound verifier capability is authorized
+   through the existing grant/ceiling chain. Verification receives no
+   special authority. There is no verification-specific authorization path.
+3. **Execution — L5.** The registered verifier capability executes under the
+   governed execution environment and pinned configuration. Raw output and
+   canonical verifier result are captured as evidence with complete
+   execution provenance.
+4. **Evaluation — L10.** L10 performs only bounded, deterministic evaluation
+   of the returned data: mechanical-validity checks and the contract's
+   closed declarative result mapping. Mechanical failure produces the
+   applicable machinery-reserved outcome; successful mapping produces PASS,
+   FAIL, or INCONCLUSIVE. The evaluator cannot invoke capabilities, re-run
+   verification, retry execution, or otherwise initiate execution.
+5. **Durable recording — L7 → L6.** The verification evaluation fact is
+   incorporated into the existing governed execution record through the
+   established L7/L6 recording discipline. The durable record includes the
+   contract identity, verifier capability identity/hash, configuration
+   identity, input object references, canonical-result reference, outcome,
+   and required provenance. The verification result is committed to durable
+   history before its typed event is made available to workflow control.
+   L7 records through existing machinery but does not own verification
+   semantics; L6 remains the durable-history owner.
+
+**Trigger: model-proposed only in v1.** A Skill or workflow may require a
+verification outcome for a transition, but the requirement does not itself
+cause execution. Verification is proposed as an ordinary capability call and
+passes through the existing L7 → L4 → L5 path. If the model does not propose
+a required verification, the gate cannot be satisfied and the governed
+workflow eventually follows its reviewed exhaustion/failure path. No new L7
+execution-initiation semantics are introduced. Standing invariant: *failure
+to request required verification can prevent completion, but can never
+produce successful verification or bypass its gate* — verification
+availability is not verification authorization.
+
+**Ownership:** L10 owns mechanical verification validity and contract
+evaluation; L4 owns authorization; L5 owns execution environment
+enforcement; L7 owns workflow control and recording sequencing; L6 owns
+durable history. The verifier itself has no authority to declare an L10
+outcome.
+
+**Hostile-verifier rule (anti-laundering, carried from D-L10-4):** verifier
+output — including strings like "PASS", "FAIL", "NOT_AFFECTED", "SECURE",
+garbage, malformed, unexpected, or contradictory data — is untrusted
+verifier-domain data until L10 validates result-domain membership and
+applies the registered mapping. Verifier output "PASS" is NOT automatically
+PASS; only the L10 evaluator creates PASS. The evaluator must remain safe
+against a completely hostile verifier (zero trust discount, L10 form).
+
 ## 3. Grill — question list (OPEN; owner's sequence 2026-09-11, implementer's 12 merged in)
 
 Owner's proposed starting boundary (working text, pending Q-L10-1 lock):
@@ -329,7 +387,7 @@ facts Governance subsequently uses.
 | Q-L10-5 | **CLOSED → D-L10-4.** Five-value closed vocabulary, ESTABLISHED/NOT-ESTABLISHED partition, machinery-reserved statuses, distinct typed L7 events, fail-closed gates without collapse. |
 | Q-L10-6 | **CLOSED → D-L10-5.** Observability = read-only deterministic derivation; views are pure functions w/ provenance; absent dimensions reported, never side-channel collected. |
 | Q-L10-7 | **CLOSED → D-L10-5.** Direction locked: L6 records → L10 derives, never the reverse; second history structurally impossible. |
-| Q-L10-8 | Verification execution: L10 defines semantics · L4 authorizes · L5 executes · L6 records — precisely what does L10 itself do vs L4/L5? |
+| Q-L10-8 | **CLOSED → D-L10-6.** Five owned stages; L10 evaluation = bounded declarative mapping + validity checks; verifier never mints outcomes; record-before-event; trigger = model-proposed only in v1. |
 | Q-L10-9 | Model involvement: may the model request verification, select a verifier, interpret the result, declare success, override failure, manufacture evidence? Expected shape: model proposes → L4 authorizes → L5 executes → L10 verifies → typed result; the model cannot manufacture the result. |
 | Q-L10-10 | **Substantively pre-closed by D-L10-4** (taxonomy mapped: verified-false=FAIL, not-verified=INCONCLUSIVE, unavailable/verifier-error=UNAVAILABLE, invalid/nondeterminism=INVALID, evidence-insufficient splits by resolvability); formal confirmation at its turn. |
 | Q-L10-11 | Evidence provenance: which fields are NECESSARY (verification_id, verifier identity/version/hash, input object hashes, config hash, environment identity, timestamp/sequence, raw output ref, derived result, result hash) — establish, don't assume. |

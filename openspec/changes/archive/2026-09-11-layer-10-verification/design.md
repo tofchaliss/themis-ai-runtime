@@ -1193,3 +1193,48 @@ Class-3 security/test/architecture reviews; traceability at archive maps
 Q-L10 decision → design mechanism → register → test → evidence →
 disposition. The mutation-testing lesson from L9 applies from day one:
 green tests begin the evidence question.
+
+## 5. Closure record (owner, 2026-09-11)
+
+**Gate 0 closure judgment: PASS.** Three-state final status:
+architecture-conformant YES · test-evidenced YES · operationally-proven
+YES for the implemented verify_report slice. L10 v1 CODE-COMPLETE /
+CLOSED.
+
+**D-L10-6 v1 clarification (owner, not a reversal):** the realized
+implementation resolves the contract AFTER the ordinary L4→L5 execution
+of a read-only verifier capability and evaluates over the captured
+result. Blessed as the v1 reading: the authorization/execution/
+evaluation boundaries remain intact, and resolution-after-execution is
+deterministic and auditable for read-only verifiers. The locked
+five-stage prose order becomes binding for side-effecting verifier
+classes at the L5 process-execution amendment.
+
+**Register E accepted via verify_report** — the architecture requires a
+real governed verifier, not specifically run_go_*; the run_go_* class
+stays a residual behind the L5 process-execution amendment and must not
+be weakened to make the slice look more representative. verify_report
+is NOT evidence that arbitrary process-backed verification is
+supported.
+
+**Contract pins as gate tokens: signed off, no duplicate pin set.** The
+workflow gate token is the exact contract identity and the Skill pins
+the exact workflow containing it; a second required_contracts set would
+duplicate the same authority and add a consistency relationship without
+assurance.
+
+**Governance registrations performed as owner acts** (directed
+in-session, 2026-09-11): registry-v4, the L10 contract registry, and
+the skill catalog promoted PROPOSED → ACTIVE. The machinery remains
+incapable of these acts (write walls proven). Audit trail:
+review/proof → PROPOSED → Governance act → ACTIVE.
+
+**Standing boundary after closure:** implementation no longer waits for
+architectural permission; newly discovered issues enter through the
+residual/ADG/amendment mechanisms, never by reopening the L10 design by
+default.
+
+**Owner caveat, recorded verbatim in substance:** the closure judgment
+was made against the implementation and proof evidence supplied
+in-session, not an independent code audit of af6599e (the owner's
+connected GitHub surface exposed no repositories at decision time).

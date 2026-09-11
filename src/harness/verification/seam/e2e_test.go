@@ -100,12 +100,12 @@ func e2eFixture(t *testing.T, m model.Interface) (*orchestration.Orchestrator, s
 	stateDir := filepath.Join(t.TempDir(), "state")
 	mirror, sha := mkMirror(t)
 
-	l4, err := tools.LoadRegistry(filepath.Join(root, "policies/tools/registry-v4.proposed.json"))
+	l4, err := tools.LoadRegistry(filepath.Join(root, "policies/tools/registry-v4.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	ev := &Evaluator{
-		RegistryPath: filepath.Join(root, "policies/verification/contracts.proposed.json"),
+		RegistryPath: filepath.Join(root, "policies/verification/contracts.json"),
 		L4:           l4,
 	}
 
@@ -173,7 +173,7 @@ func e2eFixture(t *testing.T, m model.Interface) (*orchestration.Orchestrator, s
 	 "payload":"Remediate the vulnerable dependency, write report.json, verify it, then declare done.",
 	 "workflow_path":`+js(filepath.Join(envDir, "workflow.json"))+`,
 	 "workflow_ceiling_path":`+js(filepath.Join(envDir, "wceiling.json"))+`,
-	 "registry_path":`+js(filepath.Join(root, "policies/tools/registry-v4.proposed.json"))+`,
+	 "registry_path":`+js(filepath.Join(root, "policies/tools/registry-v4.json"))+`,
 	 "grant_path":`+js(filepath.Join(envDir, "grant.json"))+`,
 	 "exec_ceiling_path":`+js(filepath.Join(envDir, "eceiling.json"))+`,
 	 "spec_path":`+js(filepath.Join(envDir, "spec.json"))+`,

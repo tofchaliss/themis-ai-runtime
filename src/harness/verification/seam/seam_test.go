@@ -29,12 +29,12 @@ func repoRoot(t *testing.T) string {
 func proposedEvaluator(t *testing.T) *Evaluator {
 	t.Helper()
 	root := repoRoot(t)
-	reg, err := tools.LoadRegistry(filepath.Join(root, "policies/tools/registry-v4.proposed.json"))
+	reg, err := tools.LoadRegistry(filepath.Join(root, "policies/tools/registry-v4.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	return &Evaluator{
-		RegistryPath: filepath.Join(root, "policies/verification/contracts.proposed.json"),
+		RegistryPath: filepath.Join(root, "policies/verification/contracts.json"),
 		L4:           reg,
 	}
 }

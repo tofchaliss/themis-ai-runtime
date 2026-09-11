@@ -260,12 +260,17 @@ evidence. The L9 mutation-testing lesson applies from day one.
 - [x] Traceability drafted (traceability.md); egress anti-smuggling is
       structural in v1 (no new egress surface; schema walls at the
       contract/gate layers proven)
-- [ ] OWNER ACTS + DECISIONS (see the close report): three-state
-      verdict acceptance; Governance registrations (registry-v4,
-      contracts, catalog); architecture M-1 stage-order blessing; M-3
-      Register E substitution acceptance; contract-pins-as-gate-tokens
-      sign-off; scaffold-dirs disposition; then code map + status doc +
-      push/archive on approval
+- [x] OWNER ACTS + DECISIONS (2026-09-11, closure judgment PASS):
+      three-state verdicts accepted (conformant / evidenced / proven
+      for the verify_report slice); Governance registrations performed
+      as directed owner acts (registry-v4.json, verification/
+      contracts.json, skills/catalog.json ACTIVE; tests retargeted);
+      D-L10-6 realized stage order BLESSED as v1 clarification;
+      Register E ACCEPTED via verify_report (run_go_* residual intact);
+      contract-pins-as-gate-tokens SIGNED OFF without a duplicate pin
+      set; stale scaffolds REMOVED (verification/{build,evidence,lint,
+      security,test}, observability/* — no artifacts lost, .gitkeep
+      only); status/code-map updates + push + archive APPROVED
 
 ## 8. Deferred (recorded residuals — never silently promoted)
 

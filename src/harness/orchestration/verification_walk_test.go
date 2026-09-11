@@ -113,7 +113,7 @@ func (f *fixture) verifEnvelope(t *testing.T, taskID string) string {
 	 "version":1,"task_id":"`+taskID+`","model":"scripted","turn_timeout_sec":180,
 	 "payload":"Remediate, verify the report, then declare done.",
 	 "workflow_path":`+jstr(abs("workflow.json"))+`,"workflow_ceiling_path":`+jstr(abs("wceiling.json"))+`,
-	 "registry_path":`+jstr(mustAbs(t, filepath.Join(repoRoot, "policies/tools/registry-v4.proposed.json")))+`,
+	 "registry_path":`+jstr(mustAbs(t, filepath.Join(repoRoot, "policies/tools/registry-v4.json")))+`,
 	 "grant_path":`+jstr(abs(taskID+"-grant.json"))+`,"exec_ceiling_path":`+jstr(abs("eceiling.json"))+`,
 	 "spec_path":`+jstr(abs(taskID+"-spec.json"))+`,
 	 "context_contract_path":`+jstr(abs("context-contract.json"))+`}`)

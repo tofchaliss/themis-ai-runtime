@@ -8,6 +8,14 @@
    "manifest_path": "investigate-cve/skill.json",
    "state": "active",
    "steward": "security-engineering"
+  },
+  {
+   "name": "remediate-dependency",
+   "version": 1,
+   "composition_sha256": "fd59500a97dec8120d8d0e5a1335bf3d4caccc0d2a34b6b6b962bef9eca3063d",
+   "manifest_path": "remediate-dependency/skill.json",
+   "state": "active",
+   "steward": "security-engineering"
   }
  ]
 }

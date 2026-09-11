@@ -33,24 +33,96 @@ their records live in L6. L10 adds no runtime authority to any layer below.
 
 ## 2. Locked decisions (fold target)
 
-*(empty — populated as questions close)*
+### D-L10-1 — Boundary and authority (LOCKED 2026-09-11, Q-L10-1)
 
-## 3. Grill — question list (OPEN)
+L10 is the deterministic evidence-verification and execution-observability
+layer.
+
+**Verification** is deterministic evaluation of governed evidence against a
+registered verification contract, producing a typed outcome with complete
+computational provenance. L10 owns the verification mechanism and evaluates
+the semantics of registered verification contracts; it does not author those
+contracts unilaterally.
+
+**Observability** is exposure of what governed execution actually did,
+derived from the authoritative record — expository, never evaluative. L10 may
+consume and expose structural-consistency results established by their owning
+mechanisms, including L6 durable-record verification (Verify/ScanReachable)
+and L7 workflow replay; L10 does not absorb or supersede those authorities.
+(Owner amendment closing the implementer's challenge: trace-consistency
+ownership stays single-homed — L6 owns "is the durable record structurally
+sound/reachable?", L7 owns "does this record replay as the governed workflow
+walk?"; L10 consumes/exposes those facts and may use registered contracts
+whose inputs include them, but cannot reimplement either proposition and
+declare it authoritative.)
+
+**L10 may establish:** a mechanical fact — evidence E satisfies contract C@v
+under verifier V@h in governed environment X; a typed contract outcome — the
+registered verification algorithm produced a defined outcome over the
+governed evidence; eligibility for L2 derived classification when the D-L9-14
+preconditions actually hold; a bounded typed gate signal into L7's existing
+event taxonomy. These facts never establish security meaning.
+
+**L10 can never establish or perform:** security meaning, Enterprise
+Position, acceptance/adequacy/safety judgments, promotion of model claims,
+authorization of anything, mutation or reinterpretation of history, or
+execution of capabilities outside the existing L4→L5 path.
+
+**Structure:** one layer with two distinct mechanisms — verification and
+observability. They share the constraints of no security authority and no
+second history, but their functions do not blend: verification computes new
+typed facts; observability exposes recorded facts. An observability view can
+never become a verdict, and a verification outcome enters durable history
+only through L6.
+
+**Three standing prohibitions:** L10 is not a second Security Governance
+engine. L10 is not a second durable-record plane; L6 remains the sole
+authoritative durable history. L10 is not a second orchestrator; verifier
+computations execute only through L4-authorized capabilities under L5, and
+L10 cannot create or alter workflow control.
+
+**Foundational three-proposition model (carried through the whole grill):**
+mechanical validity ("did verification execute correctly?") → contract
+outcome ("what did the registered verifier establish?") → security meaning
+("what does this mean for the CVE / product / release?"). The first two
+belong to L10; the third never does.
+
+## 3. Grill — question list (OPEN; owner's sequence 2026-09-11, implementer's 12 merged in)
+
+Owner's proposed starting boundary (working text, pending Q-L10-1 lock):
+*L10 is the deterministic evidence-verification and execution-observability
+layer. It establishes whether governed execution produced evidence satisfying
+a registered verification contract and whether the execution trace is
+structurally consistent. It does not decide security meaning, Enterprise
+Position, remediation acceptance, or business truth.* Standing prohibition:
+**L10 must not become a hidden second Security Governance engine** — it never
+independently decides "CVE fixed", "false positive", "not affected",
+"remediation acceptable", "release secure". It may establish deterministic
+facts Governance subsequently uses.
 
 | Q | Question |
 |---|---|
-| Q-L10-1 | What is a verification gate outcome? Closed vocabulary (PASS/FAIL/…, typed evidence)? Who may produce one, and what makes it *deterministic* rather than asserted? |
-| Q-L10-2 | The verification-capability class (run_build/run_tests/run_scan, OPEN-2): what is its L4 registration shape — contracts, result trust fixed at registration, derived-eligibility as a registration property? |
-| Q-L10-3 | Authority classification of verification outputs (the D-L9-9/D-L9-14 deferred decision): when does an individual result actually classify as derived, and who checks the preconditions? |
-| Q-L10-4 | What does L10 itself *execute*, if anything? Is it a pure evaluator over L6 records + capability results, or does it own any runtime step? (Second-orchestrator prevention: reachability, not discipline.) |
-| Q-L10-5 | Where does the gate-outcome → workflow-transition binding live? (L7 already enforces typed gate outcomes as transition conditions — what exactly does L10 add on top of the L7 event taxonomy?) |
-| Q-L10-6 | Observability: which of the architecture's recorded dimensions are already satisfied by L6 events + L7 audit + task attribution, and what is genuinely missing (metrics, timelines, verification-result records)? No second record plane. |
-| Q-L10-7 | Observability read surface: who consumes it (operator, Themis, governance), through what seam (StatusView extension? new read-only views over L6?), and with what authority (observation never mutates)? |
-| Q-L10-8 | run_command policy (OPEN-2 proper): what deterministic policy gates arbitrary-command execution as a verification capability — allowlisted invocations? manifest-pinned commands? Where does the policy artifact live and who reviews it? |
-| Q-L10-9 | Expected-outputs contract (Gate-0 residual from L9, owner deliberately unassigned): does L10 own it, and does v1 need it — or is it recorded again as a residual with a named owner condition? |
-| Q-L10-10 | Verification evidence egress: how do verification results reach Themis (governed egress hand-off? typed evidence records?), and what stops a verification summary from becoming an Enterprise Position? |
-| Q-L10-11 | Relationship to the benchmark validators and guardrails: generalize, wrap, or leave in place? ("Extend the strongest subsystem" — what does extension concretely mean without forking a second validator family?) |
-| Q-L10-12 | Proof gate: what are the L10 proof registers, which slice proves it live (remediate-dependency was deferred until OPEN-2 — is it the L10 slice?), and what does the unmodified-production-loop rule mean here? |
+| Q-L10-1 | **CLOSED → D-L10-1.** Boundary and authority: two mechanisms under one layer; trace-consistency stays single-homed with L6/L7; three-proposition model foundational. |
+| Q-L10-2 | What counts as verification? The ladder: model says X ≠ evidence shows X ≠ deterministic verifier establishes X ≠ Governance accepts X as security truth. |
+| Q-L10-3 | Verification contracts: who defines one; contents (inputs, expected evidence, algorithm, result vocabulary, failure semantics, provenance requirements, version, hash); can a Skill define verification semantics or only require execution of a registered verifier (L9 precedent says the latter)? |
+| Q-L10-4 | Deterministic vs probabilistic verification: explicit boundary between deterministic verification, model assessment, model-relayed claims, human verification, Governance determination — incl. the derived-evidence eligibility rule (D-L9-14). |
+| Q-L10-5 | Verification authority: what does a result (PASS/FAIL/INCONCLUSIVE/UNAVAILABLE/INVALID) actually mean — fact, claim, evidence classification, workflow gate signal — and who may interpret it? |
+| Q-L10-6 | Observability truth: what does L10 observe (transitions, tool calls, args, authz decisions, environment, files changed, artifacts, verification executions, model turns, errors, timeouts, termination) without creating a competing event/history system with L6? |
+| Q-L10-7 | L6 relationship: does L10 produce observations → L6 records them, or does L6 record → L10 derives views, or a combination? Never two authoritative histories. |
+| Q-L10-8 | Verification execution: L10 defines semantics · L4 authorizes · L5 executes · L6 records — precisely what does L10 itself do vs L4/L5? |
+| Q-L10-9 | Model involvement: may the model request verification, select a verifier, interpret the result, declare success, override failure, manufacture evidence? Expected shape: model proposes → L4 authorizes → L5 executes → L10 verifies → typed result; the model cannot manufacture the result. |
+| Q-L10-10 | Failure semantics: verified-false vs not-verified vs unavailable vs invalid vs failed vs verifier-error vs evidence-insufficient — distinctions that materially affect L7 behavior. |
+| Q-L10-11 | Evidence provenance: which fields are NECESSARY (verification_id, verifier identity/version/hash, input object hashes, config hash, environment identity, timestamp/sequence, raw output ref, derived result, result hash) — establish, don't assume. |
+| Q-L10-12 | Tamper resistance (adversarial register): modify verifier / config / input evidence / raw output / derived result / execution record — can an apparently valid verification survive? |
+| Q-L10-13 | Replay and reproducibility: can L10 reproduce a verification from durable state; if replay ≠ original, what does that MEAN? Expectation: no automatic semantic rewrite of history — L6 records what happened, Governance decides what the discrepancy means. |
+| Q-L10-14 | Verification gates in L7: what exactly crosses from L10 back into L7 — likely a tightly bounded typed outcome, never arbitrary verifier output. |
+| Q-L10-15 | Observability vs audit: operational telemetry ≠ execution trace ≠ security audit evidence ≠ durable historical record — else L10 absorbs L6. |
+| Q-L10-16 | Security-sensitive observability: can observability leak secrets, credentials, sensitive context, protected evidence, prompts, tool arguments? Connect to L5 secret-contamination + L6 durability rules. |
+| Q-L10-17 | Completion semantics: workflow COMPLETED ≠ verification PASSED ≠ security condition established ≠ Enterprise Position accepted — formally separated propositions. |
+| Q-L10-18 | Proof gate: structural, adversarial, provenance, replay/reconstruction registers + live operational proof + independent architecture/security/test reviews; close as L7/L9 were closed. |
+| Q-L10-19 | (merged from implementer) OPEN-2 proper: the deterministic policy artifact gating run_command / run_build / run_tests / run_scan as verification capabilities — allowlisted or manifest-pinned invocations, where the artifact lives, who reviews it. |
+| Q-L10-20 | (merged) Extend-the-strongest-subsystem: precise relationship to benchmarks validators/gate/guardrails — generalize, wrap, or leave in place; no second validator family (and no second evaluation subsystem — that line belongs to L11). |
+| Q-L10-21 | (merged) Expected-outputs contract (L9 Gate-0 residual, owner unassigned) and verification-evidence egress to Themis: does L10 own either; what stops a verification summary from becoming an Enterprise Position? |
 
 ## 4. Assets inventory (for the grill, factual)
 

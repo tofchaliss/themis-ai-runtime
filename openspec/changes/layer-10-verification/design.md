@@ -816,6 +816,63 @@ verification outcome; L7 consumes only the typed outcome token.
 mechanically; L7 knows only which opaque token produced which typed
 outcome; Governance knows what the outcome means for security.
 
+### D-L10-14 — Observability sensitivity (LOCKED 2026-09-11, Q-L10-16; one owner amendment)
+
+**Two owned halves:** record-entry sensitivity belongs to the
+producing/recording path (L5 capture/contamination handling, L2
+classification, redact-before-durable-storage); L10 owns view-exposure
+sensitivity — the protection class of derived views and respect for the
+existing read boundary. L10 collects nothing, so a view cannot leak what
+the record does not contain, and L10 cannot repair what upstream recording
+got wrong. L10 must not become a second data-governance layer.
+
+**Inheritance without declassification:** Sensitivity(view) =
+join(Sensitivity(inputs)); the transformation can never lower the result.
+Aggregation, summarization, and reformatting confer no declassification —
+a summary is not a sanitization operation. Mechanically computable from
+the view's declared derived-from provenance (D-L10-5).
+
+**The amended hard edge (owner):** *L10 performs no independent secret
+detection or masking in v1. It does, however, enforce the existing
+classification/access boundary on fields it exposes. Explicit sensitivity
+is never lowered by a view; absent or unusable classification cannot be
+treated as proof of safety, and a view requiring such classification fails
+closed rather than inventing a classification.* Detection/classification
+and exposure-enforcement are two separate mechanisms: L10 rejects the
+first (single-home detection stays upstream) and retains the second. L10
+trusts classification metadata for access enforcement, but does not trust
+absence or incorrect classification as evidence content is safe. Single
+detection home, but no single-point-of-failure exposure bypass.
+
+**Detect-and-report-only residual:** a future registered consistency
+checker may detect classification discrepancies and report upstream
+defects; it never masks-and-serves, and it must not become an implied
+prerequisite for safe viewing absent an explicit architecture decision.
+
+**No new read surface in v1:** views are tooling over the existing
+record-access boundary — no API, dashboard, network endpoint, export
+service, or privileged view channel; /healthz remains service-plane. Any
+future exposure surface is a new security boundary, not "another view."
+
+**No direct view→model channel (explicit invariant):** every L10-derived
+content path entering model context must re-enter through L2 and acquire a
+new classified context envelope. L10 cannot become an alternate context
+provider; otherwise observability bypasses the context-delivery contract.
+
+**Reconstruction discrepancies inherit sensitivity** from the underlying
+evaluation/evidence values they carry; never assumed safe for being audit
+artifacts. **Audit scope is an access scope, not a declassification
+scope** (retained as invariant).
+
+**Sensitivity vs authorization:** L10 determines/inherits the view's
+sensitivity class; the owning access-control mechanism decides whether a
+reader may access that class. L10 invents no authorization policy — it
+computes facts about the artifact; the owning mechanism decides authority.
+
+**Dual obligation on recording layers (restated):** a layer adding a newly
+recorded dimension owns applying the redaction/classification discipline
+to it before it lands.
+
 ## 3. Grill — question list (OPEN; owner's sequence 2026-09-11, implementer's 12 merged in)
 
 Owner's proposed starting boundary (working text, pending Q-L10-1 lock):
@@ -847,7 +904,7 @@ facts Governance subsequently uses.
 | Q-L10-13 | **CLOSED → D-L10-12.** Two-way dichotomy (reconstruction/re-evaluation), no replay authority; canonicalization via already-governed mechanism; discrepancy artifacts in audit scope; no retroactive truth mutation. |
 | Q-L10-14 | **CLOSED → D-L10-13.** Contract-blind L7 (opaque tokens); minimal semantic payload; gate vocabulary + declaration-gated exposure as load-time rules; reachability-based totality; coherence in L9; no L7→L10 API. |
 | Q-L10-15 | **RESIDUAL per D-L10-5** (owner, 2026-09-11): live operational telemetry deferred out of v1; future dedicated grill (evidentiary status, retention, privacy/secrets, clocks, correlation, availability, second-history risk). |
-| Q-L10-16 | Security-sensitive observability: can observability leak secrets, credentials, sensitive context, protected evidence, prompts, tool arguments? Connect to L5 secret-contamination + L6 durability rules. |
+| Q-L10-16 | **CLOSED → D-L10-14.** Two owned halves; inheritance w/o declassification; classification-enforcement without second detector; fail-closed on absent classification; no view→model path except via L2. |
 | Q-L10-17 | Completion semantics: workflow COMPLETED ≠ verification PASSED ≠ security condition established ≠ Enterprise Position accepted — formally separated propositions. |
 | Q-L10-18 | Proof gate: structural, adversarial, provenance, replay/reconstruction registers + live operational proof + independent architecture/security/test reviews; close as L7/L9 were closed. |
 | Q-L10-19 | (merged from implementer) OPEN-2 proper: the deterministic policy artifact gating run_command / run_build / run_tests / run_scan as verification capabilities — allowlisted or manifest-pinned invocations, where the artifact lives, who reviews it. |

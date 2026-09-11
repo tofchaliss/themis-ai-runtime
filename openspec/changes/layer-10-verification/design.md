@@ -552,6 +552,78 @@ appropriately — typically after the state-changing phase; (5)
 latest-per-contract semantics understood when reviewing retry/remediation
 workflows.
 
+### D-L10-10 — Evaluation provenance (LOCKED 2026-09-11, Q-L10-11)
+
+Governing principle: **no identity without bytes, no fact without two
+sources** — every hash in the provenance chain has durably retrievable bytes
+behind it (R-L9-1/2 generalized), and every legitimacy claim is checkable by
+comparing two independently derived values across a layer boundary, never a
+value against itself.
+
+1. **Contract identity:** name@version + contract hash. Component hashes are
+   not separately recorded — the contract hash commits the complete canonical
+   representation; separate recording would decompose one sealed unit into N
+   independently-suppliable claims (D-L9-11b inverted). Components are
+   retrieved from the stored contract bytes.
+2. **Verifier identity:** capability identity/version/hash, present twice by
+   construction and never copied — the pin inside the contract (covered by
+   the contract hash) and what L5 actually executed (attestation, by
+   reference to the execution record). Deterministic-verifier eligibility and
+   canonicalization identity are registration properties of that capability
+   version (immutable under rebind refusal); reconstruction reads them from
+   the registered entry, nothing restated.
+3. **Configuration:** config_hash sufficient iff its bytes are durably
+   reconstructable — inside the contract's canonical representation, or
+   stored with the identical at-instance-creation treatment. No hash enters
+   the chain whose bytes the record cannot produce.
+4. **Evidence:** concrete L6 ObjectIDs, each tagged with the contract
+   input-spec slot it filled, in proposal order; model selection is doubly
+   reconstructable (the proposing call's arguments are already in the L7
+   audit record).
+5. **Raw AND canonical results both durably retained** as separate L6
+   objects: canonical alone would make the one registered step that absorbs
+   nondeterminism — canonicalization — exactly the step nobody can audit;
+   canonicalization defect vs verifier drift is distinguishable only with
+   both.
+6. **L5 provenance:** the semantically necessary set is what D-L9-14 names —
+   environment identity, isolation/provider declaration, applied constraints,
+   termination class, binary attestation — all living in L5's own records;
+   the evaluation record references the execution record and restates
+   nothing. Latency/resource telemetry is not semantically required.
+7. **Mapping:** contract hash authoritative; stored contract bytes make the
+   mapping durably retrievable; the matched mapping entry is recorded as
+   non-authoritative convenience.
+8. **Outcome authority:** the committed evaluation record's outcome IS the
+   authoritative historical fact of what L10 evaluated at that execution
+   point. Reconstruction (canonical result + contract → outcome) is
+   verification of that fact, never its source. A recomputation mismatch
+   rewrites nothing — it produces a new typed discrepancy fact plus a defect
+   signal, and its meaning is Governance's. Aligns: L6 records what happened;
+   D-L10-9 taken-transitions-stand; outcomes exist only as committed records.
+9. **Cross-layer proof, tautology-free:** contract hash (L10-computed at
+   load) vs H(stored contract bytes) (L6-derived); capability pin (contract)
+   vs executed capability (L5 attestation); config pin (contract) vs applied
+   config (L5); evidence ObjectIDs (record) vs H(retrieved bytes) (L6);
+   canonical ObjectID vs H(canon(raw)) under the registered canonicalization;
+   recorded outcome vs mapping(contract bytes, canonical bytes) recomputed.
+   Mutation obligations: swap any element for a matched-but-foreign pair →
+   fail; replace any computed identity with a proposal-supplied claim → fail;
+   strip raw output → fail; drop the contract-bytes store → fail.
+10. **Identity ownership (owner amendment):** L1 → instruction identity;
+    L4 → capability identity; L5 → execution/environment identity +
+    attestation; L6 → durable object identity + event sequence; L9 → Skill
+    composition identity; **L10 → exactly one domain identity: Verification
+    Contract identity.** An evaluation instance is identified by its
+    committed L6 record and event sequence per D-L10-9; L10 does not
+    introduce a second evaluation identity. Contract hash vs stored-bytes
+    ObjectID is the BodyHash/ObjectID precedent — same bytes, two purposes,
+    no second identity mechanism.
+
+**The one new mechanism:** contract bytes (and any externalized config
+bytes) stored as L6 evidence-payloads at instance creation, inside the
+no-reopen window — resolve → hash → evaluate against the bytes held → store
+those same bytes (R-L9-2 pattern verbatim).
+
 ## 3. Grill — question list (OPEN; owner's sequence 2026-09-11, implementer's 12 merged in)
 
 Owner's proposed starting boundary (working text, pending Q-L10-1 lock):
@@ -578,7 +650,7 @@ facts Governance subsequently uses.
 | Q-L10-9 | **CLOSED → D-L10-7.** Two apertures (propose, read); bounded recorded evidence discretion; contract-identity-bound gates; claims inert; substitution unrepresentable. |
 | Q-L10-10a | **CLOSED → D-L10-9.** Latest-per-contract gate consumption; identity = committed record + event position; stateless-at-δ satisfaction; evidence scope out of gate identity; freshness is contract semantics. |
 | Q-L10-10 | **CLOSED → D-L10-8.** Stage-indexed failure taxonomy; instance-creation boundary; result-domain authoritative; evaluator failure mints no outcome; reasons never reach δ. |
-| Q-L10-11 | Evidence provenance: which fields are NECESSARY (verification_id, verifier identity/version/hash, input object hashes, config hash, environment identity, timestamp/sequence, raw output ref, derived result, result hash) — establish, don't assume. |
+| Q-L10-11 | **CLOSED → D-L10-10.** References + L10-computed facts; no identity without bytes; two-source checks; raw+canonical both durable; outcome is historical fact, reconstruction verifies. |
 | Q-L10-12 | Tamper resistance (adversarial register): modify verifier / config / input evidence / raw output / derived result / execution record — can an apparently valid verification survive? |
 | Q-L10-13 | Replay and reproducibility: can L10 reproduce a verification from durable state; if replay ≠ original, what does that MEAN? Expectation: no automatic semantic rewrite of history — L6 records what happened, Governance decides what the discrepancy means. |
 | Q-L10-14 | Verification gates in L7: what exactly crosses from L10 back into L7 — likely a tightly bounded typed outcome, never arbitrary verifier output. |

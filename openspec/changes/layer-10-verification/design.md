@@ -685,6 +685,73 @@ where applicable, and never rewrites historical records. No checker relies
 solely on the component being checked for the authority of its own
 integrity claim.
 
+### D-L10-12 — Reconstruction vs re-evaluation (LOCKED 2026-09-11, Q-L10-13)
+
+Governing rule: **reconstruction discovers whether the record is
+self-consistent; re-evaluation discovers what the world says now. Neither
+touches what the record said then. There is no third replay operation.**
+
+**Reconstruction** is an L10 observability-class, read-only derivation. It
+consumes only the durable evaluation record and its referenced durable
+inputs/artifacts; performs the D-L10-10 cross-layer identity checks;
+recomputes the contract mapping from the stored contract and canonical
+result; compares the reconstructed result with the historically recorded
+outcome; creates no new evaluation instance; invokes no verifier through
+L4/L5; does not enter L7; cannot alter gates, workflow state, or historical
+records. Anyone with existing read authority may reconstruct — it grants
+nothing and changes nothing; it is not model-reachable in-walk. A missing
+required reconstruction input is a typed reconstruction failure/defect
+signal, never a silent skip. Reconstruction has zero security authority
+despite detecting serious integrity problems.
+
+**Re-evaluation:** no replay_verification, reconstruct_and_rerun, or
+privileged replay path exists. A new verifier execution is an ordinary new
+evaluation instance (propose → L4 → L5 → L10 → L7→L6 record). If the
+original task is terminal, it belongs to a new governed task. Original and
+new evaluations are both historical facts; neither supersedes the other
+historically; current-task gate semantics apply only within the task
+containing the evaluation.
+
+**Canonicalization eligibility constraint (owner amendment):** the
+canonicalization function used by an L10-eligible verifier must be a
+registered, deterministic, environment-independent transformation whose
+identity and implementation are durably reproducible, and whose execution
+is provided by an **already-governed deterministic mechanism**. It may not
+depend on the verifier runtime, external state, network, filesystem state,
+time, host identity, or mutable configuration. Explicitly NOT locked:
+"runnable cold from registered hash" as an arbitrary-code execution
+mechanism — L10 must not gradually become an execution environment for
+verifier components; that would be a new execution capability requiring its
+own architecture decision. Registration consequence: a verifier whose
+canonicalization is inseparable from its environment-dependent runtime is
+not L10-deterministic-verifier-eligible in v1 unless restructured.
+**Registration-review obligation #6: canonicalization reproducibility.**
+
+**Reconstruction discrepancy (owner terminology amendment):** L10 creates a
+deterministic **reconstruction-discrepancy artifact/fact** — never a
+"finding" in the Security Governance sense. The artifact carries which link
+failed, both values, and the reconstruction's own provenance (inputs
+consumed, view-function version). Governance may subsequently classify it
+as tampering, evaluator defect, registration defect, or a Finding — that
+classification is Governance's alone. L10 says "these two independently
+reconstructed values do not agree"; Governance says what that constitutes.
+
+**Storage:** the discrepancy artifact is durably stored as an L6
+content-addressed evidence-payload in audit scope, OUTSIDE any task event
+sequence (the task is sealed history; startup-closes-the-past is not
+reopened), referencing the examined evaluation by its committed identity,
+reaching Governance through the ordinary reporting/egress path. **OPEN
+L10/L6 follow-up:** verify evidence-payload can represent the
+reconstruction-discrepancy artifact without changing its authority
+semantics; if yes, no new L6 object class (ADG-L9/L6-1 discipline).
+
+**No retroactive truth mutation (locked invariant):** a reconstruction
+discrepancy can never invalidate the original evaluation automatically.
+E123→PASS + R456→DISCREPANCY leaves both standing; E123→PASS +
+E789→FAIL (fresh re-evaluation) are two legitimate historical facts; the
+second does not rewrite the first. Neither audit nor re-execution can
+retroactively mutate truth.
+
 ## 3. Grill — question list (OPEN; owner's sequence 2026-09-11, implementer's 12 merged in)
 
 Owner's proposed starting boundary (working text, pending Q-L10-1 lock):
@@ -713,7 +780,7 @@ facts Governance subsequently uses.
 | Q-L10-10 | **CLOSED → D-L10-8.** Stage-indexed failure taxonomy; instance-creation boundary; result-domain authoritative; evaluator failure mints no outcome; reasons never reach δ. |
 | Q-L10-11 | **CLOSED → D-L10-10.** References + L10-computed facts; no identity without bytes; two-source checks; raw+canonical both durable; outcome is historical fact, reconstruction verifies. |
 | Q-L10-12 | **CLOSED → D-L10-11.** Five-adversary tamper model, Governance registration as trust root, Register T with ten mutation obligations, detection-at-read-boundary precision. |
-| Q-L10-13 | Replay and reproducibility: can L10 reproduce a verification from durable state; if replay ≠ original, what does that MEAN? Expectation: no automatic semantic rewrite of history — L6 records what happened, Governance decides what the discrepancy means. |
+| Q-L10-13 | **CLOSED → D-L10-12.** Two-way dichotomy (reconstruction/re-evaluation), no replay authority; canonicalization via already-governed mechanism; discrepancy artifacts in audit scope; no retroactive truth mutation. |
 | Q-L10-14 | Verification gates in L7: what exactly crosses from L10 back into L7 — likely a tightly bounded typed outcome, never arbitrary verifier output. |
 | Q-L10-15 | **RESIDUAL per D-L10-5** (owner, 2026-09-11): live operational telemetry deferred out of v1; future dedicated grill (evidentiary status, retention, privacy/secrets, clocks, correlation, availability, second-history risk). |
 | Q-L10-16 | Security-sensitive observability: can observability leak secrets, credentials, sensitive context, protected evidence, prompts, tool arguments? Connect to L5 secret-contamination + L6 durability rules. |

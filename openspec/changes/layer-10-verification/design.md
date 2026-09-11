@@ -487,6 +487,71 @@ vocabulary/workflow amendment. Refusals use the existing refusal taxonomy;
 evaluator failures use the existing invariant-failure taxonomy; neither is
 represented as a verification outcome.
 
+### D-L10-9 — Evaluation multiplicity and gate consumption (LOCKED 2026-09-11, Q-L10-10a)
+
+Multiple evaluation instances of the same C@v may exist within a task. Every
+evaluation instance is durable; no evaluation overwrites, supersedes, or
+erases another.
+
+An evaluation instance is identified by its committed L6 evaluation record
+and its position in the task's authoritative event sequence. No independent
+L10 evaluation identity scheme is introduced.
+
+Evaluation recency is determined exclusively by L6 commit sequence within
+the task. Wall-clock timestamps have no ordering authority.
+
+A verification gate is identified by exactly (contract identity, required
+outcome) in v1. At transition evaluation, the gate is satisfied only if the
+latest committed evaluation instance of that contract identity within the
+task has the required outcome. An older successful evaluation cannot satisfy
+a gate after a newer evaluation of the same contract has produced a
+different outcome: PASS→FAIL, PASS→INCONCLUSIVE, PASS→UNAVAILABLE,
+PASS→INVALID all render the gate unsatisfied; FAIL→PASS satisfies it. The
+downgrade asymmetry is deliberate and fail-closed — the model can only lose
+by gratuitous re-runs, never gain.
+
+Gate satisfaction is derived deterministically from the applicable record
+prefix at each transition evaluation and is not cached as independent
+authority. A transition already taken on the basis of then-current facts
+remains immutable historical execution; later evaluation results do not
+retroactively alter that transition. (Current gate satisfaction ≠ historical
+transition validity — otherwise a later verification could rewrite a
+workflow that legitimately progressed earlier.)
+
+L7 maintains the latest-per-contract state as walk state and its replay
+mechanism independently derives the same state from the event prefix (the
+CallState pattern). No L10 query channel is introduced and no
+workflow-defined evaluation-selection policy exists in v1.
+
+Evidence scope is not part of gate identity. The gate does not aggregate,
+compare, or select evaluation evidence. Evidence admissibility, task
+binding, completeness, and any required freshness/current-state property
+belong to the registered Verification Contract and its reviewed
+verification semantics. **Owner precision: gate machinery does not
+establish freshness, and a contract establishes it only where freshness is
+explicitly part of its reviewed input/verification semantics — "object
+belongs to this task" does not imply "object represents the current
+post-remediation state." L10 evaluates what the contract says; it does not
+invent freshness semantics.** Verify-last is a review obligation, not a
+runtime guarantee: a lattice that verifies before remediating can hold a
+perfectly valid PASS that says nothing about the post-remediation state,
+and L10 will not silently infer staleness.
+
+Multiple evaluations using different evidence are legitimate and remain
+independently durable; only the latest for the gate's contract identity
+participates in gate satisfaction. A workflow requiring multiple
+independently established propositions must express them through distinct
+reviewed contracts or a contract whose registered input semantics establish
+the required aggregate; v1 introduces no evaluation-set algebra.
+
+**Registration/Skill-review obligations (accumulating list):** (1) verifier
+result domain honestly defined (D-L10-8); (2) contract completeness
+requirements explicit (D-L10-7); (3) freshness/current-state requirements
+explicit where needed; (4) workflow sequencing places verification
+appropriately — typically after the state-changing phase; (5)
+latest-per-contract semantics understood when reviewing retry/remediation
+workflows.
+
 ## 3. Grill — question list (OPEN; owner's sequence 2026-09-11, implementer's 12 merged in)
 
 Owner's proposed starting boundary (working text, pending Q-L10-1 lock):
@@ -511,7 +576,7 @@ facts Governance subsequently uses.
 | Q-L10-7 | **CLOSED → D-L10-5.** Direction locked: L6 records → L10 derives, never the reverse; second history structurally impossible. |
 | Q-L10-8 | **CLOSED → D-L10-6.** Five owned stages; L10 evaluation = bounded declarative mapping + validity checks; verifier never mints outcomes; record-before-event; trigger = model-proposed only in v1. |
 | Q-L10-9 | **CLOSED → D-L10-7.** Two apertures (propose, read); bounded recorded evidence discretion; contract-identity-bound gates; claims inert; substitution unrepresentable. |
-| Q-L10-10a | (carved out of D-L10-7, owner 2026-09-11) Evaluation multiplicity and gate identity: multiple C@v evaluations per task (yes, all durable) — can an older PASS satisfy a gate after a newer FAIL; what uniquely identifies an evaluation instance; what ordering defines recency (L6 event seq? creation? completion? commit?); gate binds to contract identity alone or contract + evidence scope; can two different-evidence evaluations both satisfy one gate; does the workflow consume "latest" or does L10 expose the evaluation set with workflow-defined selection? |
+| Q-L10-10a | **CLOSED → D-L10-9.** Latest-per-contract gate consumption; identity = committed record + event position; stateless-at-δ satisfaction; evidence scope out of gate identity; freshness is contract semantics. |
 | Q-L10-10 | **CLOSED → D-L10-8.** Stage-indexed failure taxonomy; instance-creation boundary; result-domain authoritative; evaluator failure mints no outcome; reasons never reach δ. |
 | Q-L10-11 | Evidence provenance: which fields are NECESSARY (verification_id, verifier identity/version/hash, input object hashes, config hash, environment identity, timestamp/sequence, raw output ref, derived result, result hash) — establish, don't assume. |
 | Q-L10-12 | Tamper resistance (adversarial register): modify verifier / config / input evidence / raw output / derived result / execution record — can an apparently valid verification survive? |

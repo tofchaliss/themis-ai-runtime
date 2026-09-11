@@ -624,6 +624,67 @@ bytes) stored as L6 evidence-payloads at instance creation, inside the
 no-reopen window — resolve → hash → evaluate against the bytes held → store
 those same bytes (R-L9-2 pattern verbatim).
 
+### D-L10-11 — Tamper model and Register T (LOCKED 2026-09-11, Q-L10-12)
+
+L10's tamper model includes: (a) the hostile in-walk model, (b) a hostile
+verifier capability, (c) a hostile or compromised submitter, (d) a post-hoc
+tamperer with write access to stores, and (e) a hostile contract author. An
+adversary controlling the Governance registration act is outside the L10
+machinery trust boundary; Governance registration is the trust root. L10
+defends against unreviewed or unauthorized changes below that trust boundary
+but cannot establish that Governance approved a semantically correct
+contract.
+
+Register T covers:
+
+1. **Verifier substitution:** L4 capability identity/hash and L5 execution
+   attestation must agree with the verifier binding in the contract.
+2. **Configuration tampering:** the applied configuration must agree with
+   the registered configuration identity and its durable bytes.
+3. **Evidence tampering:** retrieved bytes must hash to their L6 ObjectIDs
+   and satisfy existing L6 structural verification.
+4. **Output forgery:** verifier output remains verifier-domain data until
+   L10 validates and maps it; canonical output must correspond to retained
+   raw output under the registered canonicalization.
+5. **Outcome-record forgery (owner precision):** an evaluation fact is
+   authoritative only when incorporated through the established L7→L6
+   recording discipline and reachable through the authoritative task event
+   sequence. Directly injected, altered, or structurally inconsistent
+   records must be DETECTED by the existing L6 integrity mechanisms at the
+   authoritative read/verification boundary — detection, not necessarily
+   physical prevention of every storage mutation; L10 does not create a
+   second record-integrity mechanism and claims no stronger
+   storage-integrity property than L6 actually has.
+6. **Reference redirection:** evaluation references must cross-check
+   against the independently recorded contract, verifier execution,
+   configuration, evidence, and canonical-result identities.
+7. **Registry tampering:** Contract Registry append-only and rebind
+   protections, together with registry/hash/bytes consistency, must detect
+   or refuse rebind, deletion, or unauthorized state reversal.
+8. **Cross-task replay:** only evaluation facts in the current task's
+   authoritative event sequence can participate in that task's gate state.
+   A foreign-task evaluation or an evaluation for another contract cannot
+   satisfy the gate — the task-bound event sequence is part of the
+   authority context in which the evaluation exists.
+9. **Contract-author smuggling:** closed schema and outcome-vocabulary
+   boundaries prevent machinery-level semantic laundering; a
+   Governance-approved contract whose declared semantics are undesirable
+   remains within the Governance trust boundary and is not a
+   machinery-detectable defect. The machinery establishes "this is the
+   registered contract," never "Governance should not have registered it."
+10. **Evaluator compromise:** evaluator implementation integrity is
+    protected by Class-3 engineering controls and API-closure checks;
+    independent reconstruction can detect discrepancies between the
+    recorded outcome and the registered contract applied to the durable
+    canonical result. Such discrepancies become new typed
+    defect/discrepancy facts and never rewrite the historical evaluation.
+
+Register T is an adversarial proof register; each entry is a mutation/test
+obligation. All detection is deterministic, produces new diagnostic facts
+where applicable, and never rewrites historical records. No checker relies
+solely on the component being checked for the authority of its own
+integrity claim.
+
 ## 3. Grill — question list (OPEN; owner's sequence 2026-09-11, implementer's 12 merged in)
 
 Owner's proposed starting boundary (working text, pending Q-L10-1 lock):
@@ -651,7 +712,7 @@ facts Governance subsequently uses.
 | Q-L10-10a | **CLOSED → D-L10-9.** Latest-per-contract gate consumption; identity = committed record + event position; stateless-at-δ satisfaction; evidence scope out of gate identity; freshness is contract semantics. |
 | Q-L10-10 | **CLOSED → D-L10-8.** Stage-indexed failure taxonomy; instance-creation boundary; result-domain authoritative; evaluator failure mints no outcome; reasons never reach δ. |
 | Q-L10-11 | **CLOSED → D-L10-10.** References + L10-computed facts; no identity without bytes; two-source checks; raw+canonical both durable; outcome is historical fact, reconstruction verifies. |
-| Q-L10-12 | Tamper resistance (adversarial register): modify verifier / config / input evidence / raw output / derived result / execution record — can an apparently valid verification survive? |
+| Q-L10-12 | **CLOSED → D-L10-11.** Five-adversary tamper model, Governance registration as trust root, Register T with ten mutation obligations, detection-at-read-boundary precision. |
 | Q-L10-13 | Replay and reproducibility: can L10 reproduce a verification from durable state; if replay ≠ original, what does that MEAN? Expectation: no automatic semantic rewrite of history — L6 records what happened, Governance decides what the discrepancy means. |
 | Q-L10-14 | Verification gates in L7: what exactly crosses from L10 back into L7 — likely a tightly bounded typed outcome, never arbitrary verifier output. |
 | Q-L10-15 | **RESIDUAL per D-L10-5** (owner, 2026-09-11): live operational telemetry deferred out of v1; future dedicated grill (evidentiary status, retention, privacy/secrets, clocks, correlation, availability, second-history risk). |

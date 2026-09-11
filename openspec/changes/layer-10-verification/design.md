@@ -420,6 +420,73 @@ the workflow's reviewed failure/exhaustion path.
 Model-authored contract-shaped artifacts remain untrusted data. They cannot
 become evaluable without the external Governance registration act.
 
+### D-L10-8 — Failure semantics (LOCKED 2026-09-11, Q-L10-10)
+
+Verification failure semantics are stage-indexed across the D-L10-6
+execution sequence. The boundary between refusal and verification outcome is
+successful atomic creation of the evaluation instance.
+
+**Before an evaluation instance exists: refusals are not verification
+outcomes.** A proposal naming an unresolvable contract — including an
+unregistered or withdrawn contract, unreadable registry, or contract
+pin/hash mismatch at resolution — produces a typed refusal through the
+existing refusal taxonomy and creates no evaluation record or verification
+outcome. An L4 authorization refusal remains an L4 authorization fact
+through the existing machinery and does not become an L10 outcome.
+
+**After an evaluation instance exists: outcomes use the closed five-value
+vocabulary.**
+
+- **INVALID:** the evaluation's governed inputs or execution result violate
+  a registered mechanical contract — evidence failing the contract's input
+  specification (wrong kind, wrong authority class, task-binding violation,
+  structurally invalid reference); mechanically unacceptable verifier
+  results; result outside the registered result domain;
+  canonicalization-integrity failure; incomplete required provenance;
+  configuration/pin mismatch discovered during evaluation; detected
+  nondeterminism. Evidence failing admissibility is recorded as INVALID and
+  execution is skipped. **Owner amendment:** a structurally valid evidence
+  reference whose required object cannot be resolved or read is UNAVAILABLE
+  rather than INVALID — INVALID is a proposition about validity;
+  UNAVAILABLE means the required thing could not be obtained.
+- **UNAVAILABLE:** the evaluation cannot obtain a canonical verifier
+  result — inability to provision the verifier environment, verifier crash,
+  timeout, forced termination, or unresolvable/read-unavailable governed
+  evidence. An execution that produces an in-domain result does not become
+  UNAVAILABLE merely because its process exit status is nonzero.
+- **PASS / FAIL / INCONCLUSIVE:** when execution produces an in-domain
+  canonical result, L10 applies the registered contract mapping.
+
+**The registered result domain is authoritative** for distinguishing an
+established result from execution failure: exit 1 + valid test report
+(in-domain) may map to FAIL; segmentation fault → UNAVAILABLE; malformed
+report → INVALID. Never generic "nonzero = failure." Consequence carried to
+the registration grill: the verifier's result domain must be explicit,
+bounded, and honestly defined — a registration-review obligation.
+
+**Evaluator failure:** a machinery defect in the L10 evaluator mints no
+verification outcome. Evaluation aborts through the existing harness
+invariant-failure handling; the gate remains unsatisfied. INVALID is a
+result produced by a functioning evaluator about the evaluation; it cannot
+classify failure of the evaluator itself. **Visible consequence: an
+evaluation instance does not always produce one of five outcomes — the
+sixth terminal is evaluator invariant failure with NO outcome.** This
+distinction must remain visible in the implementation.
+
+**Durable-record failure:** if the required L6 commit fails,
+record-before-effect applies — no committed evaluation, no verification
+event to workflow control.
+
+**Reason codes:** INVALID and UNAVAILABLE carry a closed typed reason
+vocabulary appropriate to their class. Reasons are diagnostic durable
+record content and do not participate in L7 workflow control — otherwise
+the diagnostic taxonomy becomes a hidden workflow language. Only the five
+typed verification outcomes can produce verification workflow events;
+timeout-specific routing, if ever genuinely needed, is a deliberate
+vocabulary/workflow amendment. Refusals use the existing refusal taxonomy;
+evaluator failures use the existing invariant-failure taxonomy; neither is
+represented as a verification outcome.
+
 ## 3. Grill — question list (OPEN; owner's sequence 2026-09-11, implementer's 12 merged in)
 
 Owner's proposed starting boundary (working text, pending Q-L10-1 lock):
@@ -445,7 +512,7 @@ facts Governance subsequently uses.
 | Q-L10-8 | **CLOSED → D-L10-6.** Five owned stages; L10 evaluation = bounded declarative mapping + validity checks; verifier never mints outcomes; record-before-event; trigger = model-proposed only in v1. |
 | Q-L10-9 | **CLOSED → D-L10-7.** Two apertures (propose, read); bounded recorded evidence discretion; contract-identity-bound gates; claims inert; substitution unrepresentable. |
 | Q-L10-10a | (carved out of D-L10-7, owner 2026-09-11) Evaluation multiplicity and gate identity: multiple C@v evaluations per task (yes, all durable) — can an older PASS satisfy a gate after a newer FAIL; what uniquely identifies an evaluation instance; what ordering defines recency (L6 event seq? creation? completion? commit?); gate binds to contract identity alone or contract + evidence scope; can two different-evidence evaluations both satisfy one gate; does the workflow consume "latest" or does L10 expose the evaluation set with workflow-defined selection? |
-| Q-L10-10 | **Substantively pre-closed by D-L10-4** (taxonomy mapped: verified-false=FAIL, not-verified=INCONCLUSIVE, unavailable/verifier-error=UNAVAILABLE, invalid/nondeterminism=INVALID, evidence-insufficient splits by resolvability); formal confirmation at its turn. |
+| Q-L10-10 | **CLOSED → D-L10-8.** Stage-indexed failure taxonomy; instance-creation boundary; result-domain authoritative; evaluator failure mints no outcome; reasons never reach δ. |
 | Q-L10-11 | Evidence provenance: which fields are NECESSARY (verification_id, verifier identity/version/hash, input object hashes, config hash, environment identity, timestamp/sequence, raw output ref, derived result, result hash) — establish, don't assume. |
 | Q-L10-12 | Tamper resistance (adversarial register): modify verifier / config / input evidence / raw output / derived result / execution record — can an apparently valid verification survive? |
 | Q-L10-13 | Replay and reproducibility: can L10 reproduce a verification from durable state; if replay ≠ original, what does that MEAN? Expectation: no automatic semantic rewrite of history — L6 records what happened, Governance decides what the discrepancy means. |

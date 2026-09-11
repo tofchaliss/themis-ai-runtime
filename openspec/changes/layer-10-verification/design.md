@@ -976,6 +976,57 @@ the deferred remediate-dependency slice becomes viable (live-proof
 candidate for Q-L10-18). The model never receives the ability to turn
 "run a verifier" into "execute arbitrary software."
 
+### D-L10-17 — Extension discipline: reuse-by-registration, absorb nothing, fork nothing (LOCKED 2026-09-11, Q-L10-20)
+
+**Standing extension rule:** L10 may consume a deterministic mechanism
+through its owning API or bind an existing engine by registration; it may
+not house a mechanism whose invariant another layer owns.
+
+1. **Benchmark validators (keyword/regex/json):** one engine, two
+   consumers, joined by rule not migration. The benchmark pipeline keeps
+   consuming the validator package directly; a future L10 validator
+   capability binds the existing engine's code identity — reimplementation
+   refused. No code moves in v1 (the v1 slice needs run_tests/build/scan
+   verifiers, not response validators); the deliverable is the rule.
+2. **Guardrails (SuspectInjection, CheckStance):** out of L10 scope —
+   service-plane input hygiene, gating requests not evidence; deterministic
+   ≠ verification. Their harness relatives are L2 classification/fencing.
+3. **Gate/verdict/compare/variants machinery:** L11 raw material,
+   untouched. Today's verdict-admission work is precedent already absorbed
+   as pattern (D-L10-10); the benchmark gate stays benchmark-plane; no L10
+   dependency; unification waits for the L11 grill. Don't solve an L11
+   problem inside L10.
+4. **L7 archived invariants — the amendment protocol (owner addition:
+   formal amendment record):** additive only — new workflow-schema
+   vocabulary + new loader refusals; no invariant weakened; pre-L10
+   workflow definitions load and walk identically. Every new loader rule
+   pinned by a doctored definition (TestLoaderRefusals pattern). Register D
+   replayer extended to re-derive latest-per-token state from the event
+   prefix. Archived L7 proofs re-run green (the archive is re-evidenced,
+   not reopened) + scoped architecture review of the amendment (full L7
+   re-grill REJECTED as disproportionate — D-L10-13 deliberately
+   constrained the change). **A formal amendment record is added under the
+   L7 archive** (amendments/L10-verification-seam/): amendment definition,
+   affected invariants, loader changes, new conformance proofs,
+   archived-suite result, scoped review, resulting artifact hashes —
+   establishing: old invariants not weakened; non-verification workflows
+   unchanged; new vocabulary additive; new refusals fail-closed; replay
+   extended not semantically changed. It is evidence of change, never a
+   second L7 specification.
+5. **Genuinely new code and its ceiling:** the L10 evaluator, contract
+   registry loader (L9 catalog pattern), reconstruction tooling,
+   record-derived views — each names its precedent. Anything in L10 that
+   cannot name its precedent is a design smell raising the review
+   question "why does this mechanism belong here rather than
+   extending/using an existing owner?"
+
+**General rule for archived layers (owner formulation):** an additive
+change to an archived layer is re-evidenced, not re-grilled: preserve the
+original archive, record the amendment formally, re-run the archived
+proofs, add focused proofs for the amendment, and perform a scoped
+architecture review. A full re-grill is required only if the amendment
+weakens, changes, or redistributes an existing architectural invariant.
+
 ## 3. Grill — question list (OPEN; owner's sequence 2026-09-11, implementer's 12 merged in)
 
 Owner's proposed starting boundary (working text, pending Q-L10-1 lock):
@@ -1011,7 +1062,7 @@ facts Governance subsequently uses.
 | Q-L10-17 | **CLOSED → D-L10-15.** Four propositions w/ owners and non-implication matrix; transition-time anchor; egress fields separate; vocabulary rule. |
 | Q-L10-18 | Proof gate: structural, adversarial, provenance, replay/reconstruction registers + live operational proof + independent architecture/security/test reviews; close as L7/L9 were closed. |
 | Q-L10-19 | **CLOSED → D-L10-16.** OPEN-2 dissolved: no generic run_command; closed per-verifier capabilities w/ pinned invocations; policy = registration itself; parameterization as escape valve. |
-| Q-L10-20 | (merged) Extend-the-strongest-subsystem: precise relationship to benchmarks validators/gate/guardrails — generalize, wrap, or leave in place; no second validator family (and no second evaluation subsystem — that line belongs to L11). |
+| Q-L10-20 | **CLOSED → D-L10-17.** Reuse-by-registration; guardrails out of scope; gate machinery stays L11 raw material; L7 amendment protocol w/ formal amendment record; re-evidenced-not-re-grilled rule for archived layers. |
 | Q-L10-21 | (merged) Expected-outputs contract (L9 Gate-0 residual, owner unassigned) and verification-evidence egress to Themis: does L10 own either; what stops a verification summary from becoming an Enterprise Position? |
 
 ## 4. Assets inventory (for the grill, factual)

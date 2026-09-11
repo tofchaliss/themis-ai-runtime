@@ -7,6 +7,7 @@ package seam
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/tofchaliss/themis/state"
@@ -24,7 +25,15 @@ func seedTask(t *testing.T, tamperOutcome bool) (*state.Root, string) {
 	}
 
 	e := proposedEvaluator(t)
-	vo, err := e.EvaluateCall("t-recon", verifyCall("report-valid@1", "r.json"), []byte(goodReport), "l4:3")
+	// Seed the committed L4 audit the evaluation references, as the
+	// loop would have (the M-1 cross-check resolves it).
+	auditBody, _ := json.Marshal(map[string]string{
+		"Tool": "verify_report", "RegistryHash": e.L4.Hash})
+	aev, err := task.AppendEvent(state.EvL4Audit, "l4", auditBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	vo, err := e.EvaluateCall("t-recon", verifyCall("report-valid@1", "r.json"), []byte(goodReport), fmt.Sprintf("l4:%d", aev.Seq), e.L4.Hash)
 	if err != nil || vo.Refused {
 		t.Fatalf("%v %+v", err, vo)
 	}
@@ -37,16 +46,19 @@ func seedTask(t *testing.T, tamperOutcome bool) (*state.Root, string) {
 		vo.Record, _ = json.Marshal(ev)
 	}
 
-	// The loop's stage-5 discipline, reproduced: stores then event.
+	// The loop's stage-5 discipline, reproduced: stores, then the
+	// event whose body NAMES the record object (H-1 discipline).
 	var refs []state.Ref
+	var recordID string
 	for _, b := range [][]byte{vo.ContractBytes, vo.RawBytes, vo.CanonicalBytes, vo.Record} {
 		id, oerr := task.StoreObject(state.ObjEvidencePayload, b)
 		if oerr != nil {
 			t.Fatal(oerr)
 		}
 		refs = append(refs, state.Ref{ID: id, Class: state.ObjEvidencePayload})
+		recordID = id // last stored = the record
 	}
-	body, _ := json.Marshal(map[string]string{"contract": vo.ContractToken, "outcome": vo.Outcome})
+	body, _ := json.Marshal(map[string]string{"contract": vo.ContractToken, "outcome": vo.Outcome, "record": recordID})
 	if _, err := task.AppendEvent(state.EvVerification, "l10", body, refs...); err != nil {
 		t.Fatal(err)
 	}

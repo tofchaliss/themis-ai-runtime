@@ -13,10 +13,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/tofchaliss/themis/orchestration"
 	"github.com/tofchaliss/themis/runtime/model"
+	"github.com/tofchaliss/themis/state"
 	"github.com/tofchaliss/themis/tools"
 	"github.com/tofchaliss/themis/verification"
 )
@@ -65,6 +68,22 @@ func canonReport(raw []byte, config json.RawMessage) (string, error) {
 type Evaluator struct {
 	RegistryPath string          // L10 contract registry (governed file)
 	L4           *tools.Registry // the decoded L4 registry in force
+
+	mu    sync.Mutex
+	prior *verification.Registry // last observed state (append-only wall, M-2)
+}
+
+// CheckDisjoint enforces the registry/workspace wall (security review
+// M-3, the L9 checkCatalogDisjoint precedent): the contract registry
+// root must be disjoint from every task-writable root, or write_file
+// could author registrations the machinery accepts. Deployment wiring
+// MUST call this with every writable root before serving evaluations.
+func (e *Evaluator) CheckDisjoint(taskWritableRoots ...string) error {
+	dir, err := filepath.Abs(filepath.Dir(e.RegistryPath))
+	if err != nil {
+		return err
+	}
+	return state.CheckDisjointRoots(append([]string{dir}, taskWritableRoots...)...)
 }
 
 // VerifierEligible implements verification.EligibilityChecker against
@@ -93,7 +112,7 @@ func (e *Evaluator) VerifierEligible(capability, registrySHA string) (bool, erro
 // registered mechanism, and the pure L10 evaluation. Refusals are
 // typed and pre-instance (D-L10-8); an error return is evaluator
 // machinery failure and mints nothing.
-func (e *Evaluator) EvaluateCall(taskID string, call model.ToolCall, resultEvidence []byte, executionRef string) (*orchestration.VerificationOutcome, error) {
+func (e *Evaluator) EvaluateCall(taskID string, call model.ToolCall, resultEvidence []byte, executionRef, authRegistrySHA256 string) (*orchestration.VerificationOutcome, error) {
 	refuse := func(reason string) *orchestration.VerificationOutcome {
 		return &orchestration.VerificationOutcome{Refused: true, RefusalReason: reason}
 	}
@@ -107,6 +126,13 @@ func (e *Evaluator) EvaluateCall(taskID string, call model.ToolCall, resultEvide
 		return refuse("no contract named — a verification proposal must reference an exact registered contract"), nil
 	}
 
+	// The registry that AUTHORIZED this call must be the registry this
+	// evaluator holds — drift between the two leaves an evaluation
+	// unattributable to its authorization (security review L-1).
+	if e.L4 == nil || authRegistrySHA256 == "" || authRegistrySHA256 != e.L4.Hash {
+		return refuse("authorizing registry does not match the evaluator's registry-in-force"), nil
+	}
+
 	// Stage 1 — atomic resolution from ONE registry load (D-L10-2 /
 	// D-L9-10 TOCTOU rule). Every resolution failure is a typed
 	// refusal: no evaluation instance exists yet.
@@ -114,6 +140,17 @@ func (e *Evaluator) EvaluateCall(taskID string, call model.ToolCall, resultEvide
 	if err != nil {
 		return refuse("contract registry unreadable: " + err.Error()), nil
 	}
+	// Live append-only verification (security review M-2): the prior
+	// observed registry state is held for the evaluator's lifetime;
+	// deletion, rebinding, or un-withdrawal between loads is TAMPER —
+	// a machinery error (invariant path), never a graded refusal.
+	e.mu.Lock()
+	if aerr := reg.CheckAppendOnly(e.prior); aerr != nil {
+		e.mu.Unlock()
+		return nil, fmt.Errorf("contract registry integrity: %v", aerr)
+	}
+	e.prior = reg
+	e.mu.Unlock()
 	entry, contract, err := reg.Resolve(ref, e)
 	if err != nil {
 		return refuse(err.Error()), nil
@@ -127,6 +164,13 @@ func (e *Evaluator) EvaluateCall(taskID string, call model.ToolCall, resultEvide
 		return refuse(fmt.Sprintf("contract %s binds capability %q, not %q", ref, contract.Verifier.Capability, call.Name)), nil
 	}
 
+	// v1 seam constraint, refused typed rather than degrading to a
+	// misleading INVALID (close architecture review L-2): this seam
+	// fills exactly one evidence slot (the captured artifact).
+	if len(contract.Evidence) != 1 {
+		return refuse(fmt.Sprintf("contract %s declares %d evidence slots; this seam supports exactly one in v1", ref, len(contract.Evidence))), nil
+	}
+
 	// The evaluation instance now exists. Canonicalization through the
 	// registered mechanism; absence of a canonicalizer for an eligible
 	// capability is machinery breakage, not a graded outcome.
@@ -135,25 +179,34 @@ func (e *Evaluator) EvaluateCall(taskID string, call model.ToolCall, resultEvide
 		return nil, fmt.Errorf("no registered canonicalization for eligible capability %q", call.Name)
 	}
 
+	// v1 degeneracy, recorded (close architecture review M-2): the
+	// applied-config hash is derived from the same pinned bytes this
+	// seam hands the canonicalizer, so the evaluator's config check
+	// cannot fail through THIS path — it is real only when an
+	// L5-applied config source exists. Hard obligation at the L5
+	// process-exec amendment: applied config must come from the L5
+	// execution record, never from the contract.
 	facts := verification.ExecutionFacts{
 		ExecutionRef:        executionRef,
 		AppliedConfigSHA256: hashBytes(contract.Config),
 	}
+	// The capture SUCCEEDED (executor errors never reach this branch);
+	// empty bytes are a successful read of an empty artifact and grade
+	// through canonicalization like any other content (close
+	// architecture review L-3 — resolvability is not emptiness).
 	var canonicalBytes []byte
-	if len(resultEvidence) > 0 {
-		canonical, cerr := canon(resultEvidence, contract.Config)
-		if cerr != nil {
-			// Canonicalization could not produce a canonical result:
-			// UNAVAILABLE territory — leave canonical facts empty and
-			// let the evaluator grade it (D-L10-8).
-			canonical = ""
-		}
-		if canonical != "" {
-			canonicalBytes = []byte(canonical)
-			facts.RawObjectID = hashBytes(resultEvidence)
-			facts.CanonicalObjectID = hashBytes(canonicalBytes)
-			facts.CanonicalResult = canonical
-		}
+	canonical, cerr := canon(resultEvidence, contract.Config)
+	if cerr != nil {
+		// Canonicalization could not produce a canonical result:
+		// UNAVAILABLE territory — leave canonical facts empty and
+		// let the evaluator grade it (D-L10-8).
+		canonical = ""
+	}
+	if canonical != "" {
+		canonicalBytes = []byte(canonical)
+		facts.RawObjectID = hashBytes(resultEvidence)
+		facts.CanonicalObjectID = hashBytes(canonicalBytes)
+		facts.CanonicalResult = canonical
 	}
 
 	// Evidence: the artifact the verifier consumed IS the captured
@@ -169,7 +222,7 @@ func (e *Evaluator) EvaluateCall(taskID string, call model.ToolCall, resultEvide
 		Slot:       slot,
 		ObjectID:   hashBytes(resultEvidence),
 		InTask:     true,
-		Resolvable: len(resultEvidence) > 0,
+		Resolvable: true, // the executor read succeeded (L-3)
 	}}
 
 	ev, err := verification.Evaluate(contract, refs, facts)

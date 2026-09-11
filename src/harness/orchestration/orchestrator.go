@@ -59,7 +59,7 @@ type VerificationEvaluator interface {
 	// verifier-eligible capability call. An error return is an
 	// evaluator machinery failure and follows the harness
 	// invariant-failure path — no outcome is minted (D-L10-8).
-	EvaluateCall(taskID string, call model.ToolCall, resultEvidence []byte, executionRef string) (*VerificationOutcome, error)
+	EvaluateCall(taskID string, call model.ToolCall, resultEvidence []byte, executionRef, authRegistrySHA256 string) (*VerificationOutcome, error)
 }
 
 // VerificationOutcome is what crosses back: an opaque contract token,

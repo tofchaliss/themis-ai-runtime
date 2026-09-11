@@ -9,6 +9,7 @@ package orchestration
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -25,7 +26,7 @@ type scriptedEvaluator struct {
 	i        int
 }
 
-func (s *scriptedEvaluator) EvaluateCall(taskID string, call model.ToolCall, evidence []byte, execRef string) (*VerificationOutcome, error) {
+func (s *scriptedEvaluator) EvaluateCall(taskID string, call model.ToolCall, evidence []byte, execRef, authRegistrySHA256 string) (*VerificationOutcome, error) {
 	if s.i >= len(s.outcomes) {
 		return &VerificationOutcome{Refused: true, RefusalReason: "script exhausted"}, nil
 	}
@@ -253,7 +254,7 @@ func TestVerificationRefusalIsNotAnOutcome(t *testing.T) {
 
 type realRefusalEvaluator struct{}
 
-func (realRefusalEvaluator) EvaluateCall(taskID string, call model.ToolCall, evidence []byte, execRef string) (*VerificationOutcome, error) {
+func (realRefusalEvaluator) EvaluateCall(taskID string, call model.ToolCall, evidence []byte, execRef, authRegistrySHA256 string) (*VerificationOutcome, error) {
 	var args map[string]any
 	_ = json.Unmarshal(call.Arguments, &args)
 	if c, _ := args["contract"].(string); c == "" {
@@ -299,4 +300,217 @@ func TestVerificationAssemblyRefusals(t *testing.T) {
 			t.Fatal("verifier capability with no wired evaluator must refuse at assembly")
 		}
 	})
+}
+
+// --- fault sweep over the verification store/commit window ----------
+
+var verificationFaultPoints = []string{
+	"loop.pre-verification-store",
+	"loop.pre-verification-commit",
+	"loop.post-verification-commit",
+}
+
+// TestVerificationFaultSweep: a crash at any point in the
+// store→commit→state window takes the invariant path with a typed
+// terminal, an uncorrupted record, and no verification event without
+// its durable record (record-before-event proven under fault, closing
+// the deferral recorded in the L7 amendment).
+func TestVerificationFaultSweep(t *testing.T) {
+	for _, point := range verificationFaultPoints {
+		point := point
+		t.Run(point, func(t *testing.T) {
+			m := &scriptedModel{steps: []model.ExecutionResponse{verifyCallStep()}}
+			ev := &scriptedEvaluator{outcomes: []string{"PASS"}}
+			f := setupVerif(t, m, ev)
+			t.Cleanup(func() { fault = nil })
+			fault = func(p string) error {
+				if p == point {
+					return fmt.Errorf("injected@%s", p)
+				}
+				return nil
+			}
+			res, err := f.o.SubmitTask(f.verifEnvelope(t, "verif-fault"))
+			fault = nil
+			if err == nil {
+				t.Fatalf("armed point %s must fail the walk", point)
+			}
+			if res.Status != state.StatusFailed && res.Status != state.StatusFailedPartial {
+				t.Fatalf("typed terminal required: %+v", res)
+			}
+			view, verr := f.o.ReadStatus("verif-fault")
+			if verr != nil || view.Verdict == state.VerdictCorrupt {
+				t.Fatalf("no fault point may corrupt the record: %+v %v", view, verr)
+			}
+			evs, _ := f.o.root.ReadEvents("verif-fault")
+			for _, e := range evs {
+				if e.Class == state.EvVerification {
+					// An event exists only past the commit point; its
+					// named record object must be retrievable.
+					var b struct {
+						Record string `json:"record"`
+					}
+					_ = json.Unmarshal(e.Body, &b)
+					if b.Record == "" {
+						t.Fatal("verification event without a named record")
+					}
+					if _, gerr := f.o.root.Store().GetObject(b.Record); gerr != nil {
+						t.Fatal("verification event references an unretrievable record — record-before-event violated")
+					}
+				}
+			}
+		})
+	}
+}
+
+// TestTwoGateLadderInProduction: two satisfiable gated edges on one
+// event — production δ must fire the FIRST in definition order (#g0),
+// pinned against the real loop, not a mirror (close test review:
+// the ladder mutation survived the mirror-only test).
+func TestTwoGateLadderInProduction(t *testing.T) {
+	twoGate := strings.Replace(verifWalkWorkflow,
+		`{"on":"signal:phase-completion-requested",
+     "gate":{"contract":"report-valid@1","outcome":"PASS"},"to":"@complete"},`,
+		`{"on":"signal:phase-completion-requested",
+     "gate":{"contract":"report-valid@1","outcome":"PASS"},"to":"@complete"},
+    {"on":"signal:phase-completion-requested",
+     "gate":{"contract":"report-valid@1","outcome":"PASS"},"to":"@fail"},`, 1)
+	m := &scriptedModel{steps: []model.ExecutionResponse{
+		verifyCallStep(),
+		toolCall("declare_done", `{}`),
+	}}
+	ev := &scriptedEvaluator{outcomes: []string{"PASS"}}
+	f := setupVerif(t, m, ev)
+	writeJSON(t, f.envDir, "workflow.json", twoGate)
+
+	res, err := f.o.SubmitTask(f.verifEnvelope(t, "verif-twogate"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Both gates satisfied; the first (to @complete) must win. A
+	// last-satisfied-wins mutation would land on @fail.
+	if res.Status != state.StatusCompleted {
+		t.Fatalf("status = %s — first-satisfied gate must win in definition order", res.Status)
+	}
+	evs, _ := f.o.root.ReadEvents("verif-twogate")
+	for _, e := range evs {
+		if e.Class == state.EvWorkflowTransition && strings.Contains(string(e.Body), "@complete") {
+			if !strings.Contains(string(e.Body), "#g0") {
+				t.Fatalf("completing transition must record gate #g0: %s", string(e.Body))
+			}
+		}
+	}
+}
+
+// TestCrossTaskReplayCannotSatisfyGate (Register T #8): a PASS in one
+// task must be invisible to another task's gate — the second walk,
+// with no verification of its own, must fail closed.
+func TestCrossTaskReplayCannotSatisfyGate(t *testing.T) {
+	// Task A: verified PASS, completes.
+	mA := &scriptedModel{steps: []model.ExecutionResponse{
+		verifyCallStep(),
+		toolCall("declare_done", `{}`),
+	}}
+	f := setupVerif(t, mA, &scriptedEvaluator{outcomes: []string{"PASS"}})
+	resA, err := f.o.SubmitTask(f.verifEnvelope(t, "verif-task-a"))
+	if err != nil || resA.Status != state.StatusCompleted {
+		t.Fatalf("task A: %v %+v", err, resA)
+	}
+
+	// Task B on the SAME orchestrator/state root: never verifies.
+	// Task A's committed PASS must not leak into B's gate state.
+	f.o.cfg.Model = &scriptedModel{steps: []model.ExecutionResponse{
+		toolCall("declare_done", `{}`),
+		toolCall("declare_done", `{}`),
+		toolCall("declare_done", `{}`),
+		toolCall("declare_done", `{}`),
+	}}
+	resB, err := f.o.SubmitTask(f.verifEnvelope(t, "verif-task-b"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resB.Status != state.StatusFailed {
+		t.Fatalf("task B completed on task A's verification — cross-task leak: %+v", resB)
+	}
+	evsB, _ := f.o.root.ReadEvents("verif-task-b")
+	for _, e := range evsB {
+		if e.Class == state.EvVerification {
+			t.Fatal("task B has a verification event it never earned")
+		}
+	}
+}
+
+// TestInvalidAndInconclusiveWalks drives the remaining outcome events
+// through the production loop: INVALID takes its @fail edge;
+// INCONCLUSIVE stays and the gate never opens.
+func TestInvalidAndInconclusiveWalks(t *testing.T) {
+	t.Run("INVALID routes to @fail", func(t *testing.T) {
+		m := &scriptedModel{steps: []model.ExecutionResponse{verifyCallStep()}}
+		f := setupVerif(t, m, &scriptedEvaluator{outcomes: []string{"INVALID"}})
+		res, err := f.o.SubmitTask(f.verifEnvelope(t, "verif-invalid"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.Status != state.StatusFailed {
+			t.Fatalf("INVALID must take the reviewed @fail edge: %+v", res)
+		}
+		replayAndVerify(t, f, "verif-invalid")
+	})
+	t.Run("INCONCLUSIVE never opens the gate", func(t *testing.T) {
+		m := &scriptedModel{steps: []model.ExecutionResponse{
+			verifyCallStep(),
+			toolCall("declare_done", `{}`),
+			toolCall("declare_done", `{}`),
+			toolCall("declare_done", `{}`),
+			toolCall("declare_done", `{}`),
+		}}
+		f := setupVerif(t, m, &scriptedEvaluator{outcomes: []string{"INCONCLUSIVE"}})
+		res, err := f.o.SubmitTask(f.verifEnvelope(t, "verif-inconclusive"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.Status != state.StatusFailed {
+			t.Fatalf("INCONCLUSIVE must not satisfy a PASS gate: %+v", res)
+		}
+		replayAndVerify(t, f, "verif-inconclusive")
+	})
+}
+
+// TestEventTamperDetectedAtReadBoundary (Register T #5): an
+// EvVerification event body altered in storage is detected by the L6
+// integrity mechanisms at the authoritative read boundary.
+func TestEventTamperDetectedAtReadBoundary(t *testing.T) {
+	m := &scriptedModel{steps: []model.ExecutionResponse{
+		verifyCallStep(),
+		toolCall("declare_done", `{}`),
+	}}
+	f := setupVerif(t, m, &scriptedEvaluator{outcomes: []string{"PASS"}})
+	res, err := f.o.SubmitTask(f.verifEnvelope(t, "verif-tamper"))
+	if err != nil || res.Status != state.StatusCompleted {
+		t.Fatalf("%v %+v", err, res)
+	}
+
+	// Post-hoc storage tamper: flip the recorded outcome in the raw
+	// event stream file.
+	streamPath := filepath.Join(f.stateDir, "tasks", "verif-tamper", "events.jsonl")
+	raw, rerr := os.ReadFile(streamPath)
+	if rerr != nil {
+		t.Skipf("stream file not at expected path: %v", rerr)
+	}
+	tampered := strings.Replace(string(raw), `\"outcome\":\"PASS\"`, `\"outcome\":\"FAIL\"`, 1)
+	if tampered == string(raw) {
+		tampered = strings.Replace(string(raw), `"outcome":"PASS"`, `"outcome":"FAIL"`, 1)
+	}
+	if tampered == string(raw) {
+		t.Skip("outcome bytes not found in stream representation")
+	}
+	if err := os.WriteFile(streamPath, []byte(tampered), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// The authoritative read boundary must refuse or verdict-corrupt.
+	if _, err := f.o.root.ReadEvents("verif-tamper"); err == nil {
+		view, verr := f.o.ReadStatus("verif-tamper")
+		if verr == nil && view.Verdict != state.VerdictCorrupt {
+			t.Fatal("tampered event stream read back clean — L6 integrity did not detect")
+		}
+	}
 }

@@ -387,21 +387,21 @@ func (w *walk) evaluateVerification(call model.ToolCall, evidence []byte) (strin
 	// executionRef names the committed L4 audit event of this call —
 	// the execution record the evaluation references (D-L10-10 #6).
 	execRef := fmt.Sprintf("l4:%d", w.lastSeq)
-	vo, err := w.o.cfg.Verifier.EvaluateCall(w.env.TaskID, call, evidence, execRef)
+	// The AUTHORIZING registry's hash crosses with the call so the
+	// evaluator can refuse drift between the registry that authorized
+	// and the registry the contract pins (close security review L-1).
+	vo, err := w.o.cfg.Verifier.EvaluateCall(w.env.TaskID, call, evidence, execRef, w.reg.Hash)
 	if err != nil {
 		// Evaluator machinery failure mints NO outcome (D-L10-8): the
 		// harness invariant path, fail closed.
 		return "", "", fmt.Errorf("%w: L10 evaluator failure: %v", ErrInvariant, err)
 	}
 	if vo.Refused {
-		// Pre-instance typed refusal (D-L10-8): recorded as evidence,
-		// surfaced to the model as data, never an outcome, never an
-		// event. The L4 audit of the call is already committed.
-		refBody, _ := json.Marshal(map[string]string{
-			"verification_refusal": vo.RefusalReason, "call": call.Name})
-		if _, oerr := w.task.StoreObject(state.ObjEvidencePayload, refBody); oerr != nil {
-			return "", "", oerr
-		}
+		// Pre-instance typed refusal (D-L10-8): surfaced to the model
+		// as data, never an outcome, never an event. The L4 audit of
+		// the call is already committed; no unanchored object is
+		// written (close review L-1 — an object no event references
+		// would be unreachable under retention-is-reachability).
 		return "verification refused: " + vo.RefusalReason, "", nil
 	}
 	evName, ok := verificationEventFor[vo.Outcome]
@@ -413,6 +413,9 @@ func (w *walk) evaluateVerification(call model.ToolCall, evidence []byte) (strin
 
 	// Durable stores in the no-reopen window (D-L10-10/R-L9-2): the
 	// bytes the evaluator actually held. Content addressing dedups.
+	if err := faultAt("loop.pre-verification-store"); err != nil {
+		return "", "", err
+	}
 	var refs []state.Ref
 	if len(vo.ContractBytes) > 0 && !w.storedContracts[vo.ContractToken] {
 		cid, oerr := w.task.StoreObject(state.ObjEvidencePayload, vo.ContractBytes)
@@ -422,7 +425,8 @@ func (w *walk) evaluateVerification(call model.ToolCall, evidence []byte) (strin
 		w.storedContracts[vo.ContractToken] = true
 		refs = append(refs, state.Ref{ID: cid, Class: state.ObjEvidencePayload})
 	}
-	for _, b := range [][]byte{vo.RawBytes, vo.CanonicalBytes, vo.Record} {
+	var recordID string
+	for _, b := range [][]byte{vo.RawBytes, vo.CanonicalBytes} {
 		if len(b) == 0 {
 			continue
 		}
@@ -432,14 +436,33 @@ func (w *walk) evaluateVerification(call model.ToolCall, evidence []byte) (strin
 		}
 		refs = append(refs, state.Ref{ID: id, Class: state.ObjEvidencePayload})
 	}
+	if len(vo.Record) > 0 {
+		id, oerr := w.task.StoreObject(state.ObjEvidencePayload, vo.Record)
+		if oerr != nil {
+			return "", "", oerr
+		}
+		recordID = id
+		refs = append(refs, state.Ref{ID: id, Class: state.ObjEvidencePayload})
+	}
 
 	// Record-before-event (D-L10-6 stage 5): the evaluation fact
 	// commits to durable history before workflow control can see it.
+	// The body NAMES the evaluation-record object explicitly —
+	// reconstruction must never content-sniff unlabeled refs, where a
+	// record-shaped hostile report could shadow the genuine record
+	// (close reviews: architecture H-1 / security H-1).
 	body, _ := json.Marshal(map[string]string{
-		"contract": vo.ContractToken, "outcome": vo.Outcome})
+		"contract": vo.ContractToken, "outcome": vo.Outcome,
+		"record": recordID})
+	if err := faultAt("loop.pre-verification-commit"); err != nil {
+		return "", "", err
+	}
 	aev, aerr := w.task.AppendEvent(state.EvVerification, "l10", body, refs...)
 	if aerr != nil {
 		return "", "", aerr
+	}
+	if err := faultAt("loop.post-verification-commit"); err != nil {
+		return "", "", err
 	}
 	w.lastSeq = aev.Seq
 	// Latest-per-contract walk state updates only after the commit

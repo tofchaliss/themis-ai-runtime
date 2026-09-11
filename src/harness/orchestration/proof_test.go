@@ -96,6 +96,9 @@ func TestLoopFaultPointsSyncWithSource(t *testing.T) {
 	for _, p := range loopFaultPoints {
 		swept[p] = true
 	}
+	for _, p := range verificationFaultPoints {
+		swept[p] = true
+	}
 	for p := range inSource {
 		if !swept[p] {
 			t.Errorf("fault point %q exists in source but is never swept", p)

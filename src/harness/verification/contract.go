@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -331,16 +332,30 @@ func checkNoDuplicateKeys(raw []byte) error {
 // are attacker-swappable before any hash check, so unbounded reads are
 // a memory-DoS surface (security review L-3).
 func readGoverned(path string, maxBytes int64, class error) ([]byte, error) {
-	info, err := os.Lstat(path)
+	// One open, stat on the HANDLE, bounded read on the same handle —
+	// no stat-then-reopen window a symlink swap could widen (close
+	// security review L-2).
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s: %v", class, path, err)
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", class, path, err)
+	}
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("%w: %s: not a regular file", class, path)
 	}
 	if info.Size() > maxBytes {
 		return nil, fmt.Errorf("%w: %s: exceeds %d bytes", class, path, maxBytes)
 	}
-	raw, err := os.ReadFile(path)
+	raw, err := io.ReadAll(io.LimitReader(f, maxBytes+1))
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s: %v", class, path, err)
+	}
+	if int64(len(raw)) > maxBytes {
+		return nil, fmt.Errorf("%w: %s: exceeds %d bytes", class, path, maxBytes)
 	}
 	return raw, nil
 }

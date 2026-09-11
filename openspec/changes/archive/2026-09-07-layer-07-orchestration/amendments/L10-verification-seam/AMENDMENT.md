@@ -101,11 +101,19 @@ suites green. The two API-closure allowlist extensions were caught by
 the guards first and then deliberately recorded — the mechanism
 constrained the implementation (the L9 process precedent).
 
-## Deferred to the L10 change (recorded, not hidden)
+## Deferred to the L10 change (recorded, not hidden) — CLOSED at the L10 close
 
-- Replay/Register-R proofs over gate-bearing walks (need M4's verifier
-  capability + M6's scripted walks); fault-point coverage of the
-  verification store/commit window.
+- Replay/Register-R proofs over gate-bearing walks: DELIVERED
+  (verification_walk_test.go — remediation, downgrade, two-gate
+  ladder, cross-task, INVALID/INCONCLUSIVE walks, all causally
+  replayed).
+- Fault-point coverage of the verification store/commit window:
+  DELIVERED (loop.pre-verification-store / pre-verification-commit /
+  post-verification-commit + TestVerificationFaultSweep + sync-guard
+  extension). Recorded equivalent mutant: moving the verifState update
+  before the commit is behaviorally unobservable because commit
+  failure is always fatal before any subsequent gate evaluation — the
+  ordering is enforced by the reviewed code path, not a test.
 - Scoped architecture review of this amendment: batched into the L10
   close reviews (M7), scope-tagged to this record.
 - Resulting artifact hashes: recorded at the L10 archive alongside the

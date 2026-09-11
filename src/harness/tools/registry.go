@@ -141,6 +141,13 @@ func LoadRegistry(path string) (*Registry, error) {
 		if !nameSyntax.MatchString(t.Name) {
 			return nil, fmt.Errorf("%w: bad tool name %q", ErrRegistryInvalid, t.Name)
 		}
+		if t.Control && t.VerifierEligible {
+			// A control verb's audit path continues into signal
+			// dispatch; the verifier branch would swallow it (L10
+			// close security review L-3). Distinct roles are distinct
+			// registrations — refused at load, not left to review.
+			return nil, fmt.Errorf("%w: tool %q cannot be both control and verifier_eligible", ErrRegistryInvalid, t.Name)
+		}
 		if seen[t.Name] {
 			return nil, fmt.Errorf("%w: duplicate tool %q", ErrRegistryInvalid, t.Name)
 		}

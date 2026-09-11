@@ -39,7 +39,7 @@ func ReconstructTask(root *state.Root, taskID string) ([]verification.Report, []
 		if ev.Class != state.EvVerification {
 			continue
 		}
-		rep := reconstructOne(root, ev)
+		rep := reconstructOne(root, ev, events)
 		reports = append(reports, rep)
 		if !rep.Consistent {
 			body, merr := json.Marshal(rep)
@@ -56,7 +56,7 @@ func ReconstructTask(root *state.Root, taskID string) ([]verification.Report, []
 	return reports, artifacts, nil
 }
 
-func reconstructOne(root *state.Root, ev state.Event) verification.Report {
+func reconstructOne(root *state.Root, ev state.Event, events []state.Event) verification.Report {
 	fail := func(missing string) verification.Report {
 		return verification.Report{
 			ViewVersion:   "reconstruct-v1",
@@ -65,25 +65,28 @@ func reconstructOne(root *state.Root, ev state.Event) verification.Report {
 		}
 	}
 
-	// The evaluation record object is identified by content: resolve
-	// each ref and take the one that parses as an Evaluation with a
-	// known outcome. (Refs are unlabeled by L6 design — the envelope
-	// is validated, never interpreted.)
-	var record *verification.Evaluation
-	for i := range ev.Refs {
-		b, err := root.Resolve(ev, i)
-		if err != nil {
-			continue
-		}
-		var cand verification.Evaluation
-		if json.Unmarshal(b, &cand) == nil && cand.Outcome != "" && cand.ContractSHA256 != "" {
-			record = &cand
-			break
-		}
+	// The evaluation record is named EXPLICITLY by the event body's
+	// "record" object id — never selected by content-sniffing the
+	// unlabeled refs, where a record-shaped hostile report (raw bytes
+	// are model-authored) could mask the genuine record (close
+	// architecture review H-1).
+	var body struct {
+		Contract string `json:"contract"`
+		Outcome  string `json:"outcome"`
+		Record   string `json:"record"`
 	}
-	if record == nil {
+	if err := json.Unmarshal(ev.Body, &body); err != nil || body.Record == "" {
 		return fail("evaluation_record")
 	}
+	rb, err := root.Store().GetObject(body.Record)
+	if err != nil {
+		return fail("evaluation_record")
+	}
+	var cand verification.Evaluation
+	if json.Unmarshal(rb, &cand) != nil || cand.Outcome == "" || cand.ContractSHA256 == "" {
+		return fail("evaluation_record")
+	}
+	record := &cand
 
 	// Durable bytes by content address. The record carries bare
 	// sha256 hex (L10 identity); the L6 store address is the same
@@ -104,7 +107,51 @@ func reconstructOne(root *state.Root, ev state.Event) verification.Report {
 	if c, ok := canonicalizers[record.Capability]; ok {
 		canon = verification.CanonicalizeFunc(c)
 	}
-	return verification.Reconstruct(*record, contractBytes, rawBytes, canonicalBytes, canon)
+	rep := verification.Reconstruct(*record, contractBytes, rawBytes, canonicalBytes, canon)
+
+	// Cross-checks the pure core cannot perform (close security
+	// review M-1): (a) the event body δ actually consumed must agree
+	// with the evaluation-record content — a record/event divergence
+	// is an inconsistency, not a nuance; (b) the execution reference
+	// must resolve to the committed L4 audit whose executed tool and
+	// authorizing registry agree with the record — the recorded-pin
+	// vs executed two-source leg (D-L10-10 #2).
+	addCheck := func(name, recorded, recomputed string) {
+		ok := recorded == recomputed && recorded != ""
+		rep.Checks = append(rep.Checks, verification.Check{Name: name, OK: ok, Recorded: recorded, Recomputed: recomputed})
+		if !ok {
+			rep.Consistent = false
+		}
+	}
+	addCheck("event_contract", body.Contract, fmt.Sprintf("%s@%d", record.ContractName, record.ContractVersion))
+	addCheck("event_outcome", body.Outcome, string(record.Outcome))
+
+	var auditSeq int64 = -1
+	if _, err := fmt.Sscanf(record.ExecutionRef, "l4:%d", &auditSeq); err == nil {
+		found := false
+		for _, ae := range events {
+			if ae.Seq != auditSeq || ae.Class != state.EvL4Audit {
+				continue
+			}
+			found = true
+			var audit struct {
+				Tool         string `json:"Tool"`
+				RegistryHash string `json:"RegistryHash"`
+			}
+			_ = json.Unmarshal(ae.Body, &audit)
+			addCheck("executed_capability", record.Capability, audit.Tool)
+			addCheck("authorizing_registry", record.RegistrySHA256, audit.RegistryHash)
+			break
+		}
+		if !found {
+			rep.MissingInputs = append(rep.MissingInputs, "execution_record")
+			rep.Consistent = false
+		}
+	} else {
+		rep.MissingInputs = append(rep.MissingInputs, "execution_record")
+		rep.Consistent = false
+	}
+	return rep
 }
 
 // TaskVerificationHistory derives the pure history view from a task's

@@ -122,6 +122,13 @@ func e2eFixture(t *testing.T, m model.Interface) (*orchestration.Orchestrator, s
 		t.Fatal(err)
 	}
 
+	// M-3 wall: the contract registry root must be disjoint from every
+	// task-writable root, checked before serving evaluations (after
+	// Open so the roots exist to be resolved).
+	if derr := ev.CheckDisjoint(stateDir, mirror, envDir); derr != nil {
+		t.Fatal(derr)
+	}
+
 	// The remediate-dependency lattice: REMEDIATE (write) → gate on
 	// report-valid@1 PASS at declare_done.
 	wj(t, envDir, "workflow.json", `{

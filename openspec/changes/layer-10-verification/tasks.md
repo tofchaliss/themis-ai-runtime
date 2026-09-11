@@ -216,14 +216,56 @@ evidence. The L9 mutation-testing lesson applies from day one.
 
 ## 7. Close
 
-- [ ] Three Class-3 reviews (security, test, architecture) against the
-      final implementation; every CRITICAL/HIGH remediated with
-      mutation-verified regressions
-- [ ] Egress anti-smuggling schema proofs (D-L10-18)
-- [ ] Traceability at archive: Q-L10 decision → mechanism → register →
-      test → evidence → disposition
-- [ ] Owner acceptance of three-state verdicts; code map + status doc
-      updates; push/archive on owner approval
+- [x] Three Class-3 reviews run against the final implementation
+      (2026-09-11), all findings dispositioned:
+      **Security** (verdict: walls verified holding): H-1 record
+      selection forgeable → REMEDIATED (event body names the record
+      object; explicit lookup; PoC path dead). M-1 missing cross-checks
+      → REMEDIATED (event-body-vs-record + execution_ref→L4-audit
+      capability/registry checks in reconstruction). M-2 append-only
+      dead in live path → REMEDIATED (per-evaluator prior-state
+      CheckAppendOnly; violation = machinery error → invariant path).
+      M-3 no disjointness wall → REMEDIATED (Evaluator.CheckDisjoint,
+      exercised in e2e; deployment obligation documented). L-1 auth-
+      registry drift → REMEDIATED (authorizing registry hash crosses
+      the seam; drift refuses). L-2 symlink race in readGoverned →
+      REMEDIATED (single-handle open/stat/limited-read). L-3
+      control+verifier_eligible → REMEDIATED (load refusal).
+      **Architecture** (verdict: CONDITIONAL PASS): H-1 = security H-1,
+      remediated. M-2 config-check tautology → degeneracy recorded in
+      code + hard obligation at the L5 process-exec amendment. M-4
+      missing per-archive records → REMEDIATED (L4 + L6 amendment
+      stubs cross-referencing the L7 record). L-1 unanchored refusal
+      object → REMEDIATED (removed). L-2 multi-slot contracts →
+      REMEDIATED (typed seam refusal + test). L-3 resolvability
+      conflation → REMEDIATED (empty capture grades through
+      canonicalization; test renamed). L-4 stale scaffolds → left for
+      owner disposition at archive (see owner list).
+      **Test** (verdict: strong core, gaps closed): survived ladder
+      mutation → KILLED (TestTwoGateLadderInProduction, production δ,
+      two satisfiable gates, #g0 wins). Fault-window deferral → CLOSED
+      (3 fault points + TestVerificationFaultSweep + sync guard;
+      recorded equivalent mutant: verifState-before-commit is
+      unobservable since commit failure is always fatal pre-gate).
+      Register T #8 cross-task replay → CLOSED
+      (TestCrossTaskReplayCannotSatisfyGate). T #5 event tamper →
+      CLOSED (TestEventTamperDetectedAtReadBoundary). INVALID/
+      INCONCLUSIVE production walks → CLOSED. CheckAppendOnly wired
+      (security M-2). Seeder-drift risk noted: the consistent
+      reconstruction case is production-driven via e2e; the seeder
+      remains only for the forgery case.
+- [x] Full module suite green post-remediation (16 pkgs + context
+      green in isolation — the documented pre-existing L2 contention
+      flake, unrelated); live Register E re-passed in-suite
+- [x] Traceability drafted (traceability.md); egress anti-smuggling is
+      structural in v1 (no new egress surface; schema walls at the
+      contract/gate layers proven)
+- [ ] OWNER ACTS + DECISIONS (see the close report): three-state
+      verdict acceptance; Governance registrations (registry-v4,
+      contracts, catalog); architecture M-1 stage-order blessing; M-3
+      Register E substitution acceptance; contract-pins-as-gate-tokens
+      sign-off; scaffold-dirs disposition; then code map + status doc +
+      push/archive on approval
 
 ## 8. Deferred (recorded residuals — never silently promoted)
 

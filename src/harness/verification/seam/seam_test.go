@@ -49,7 +49,7 @@ const goodReport = `{"finding": "CVE-2026-1 in parser", "remediation": "bumped d
 func TestProposedBundleIsConsistent(t *testing.T) {
 	e := proposedEvaluator(t)
 
-	vo, err := e.EvaluateCall("task-1", verifyCall("report-valid@1", "report.json"), []byte(goodReport), "l4:7")
+	vo, err := e.EvaluateCall("task-1", verifyCall("report-valid@1", "report.json"), []byte(goodReport), "l4:7", e.L4.Hash)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func TestOutcomesAcrossReportShapes(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			vo, err := e.EvaluateCall("t", verifyCall("report-valid@1", "r.json"), []byte(tc.report), "l4:1")
+			vo, err := e.EvaluateCall("t", verifyCall("report-valid@1", "r.json"), []byte(tc.report), "l4:1", e.L4.Hash)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -112,21 +112,21 @@ func TestPreInstanceRefusals(t *testing.T) {
 
 	t.Run("no contract named", func(t *testing.T) {
 		args, _ := json.Marshal(map[string]string{"path": "r.json"})
-		vo, err := e.EvaluateCall("t", model.ToolCall{Name: "verify_report", Arguments: args}, []byte(goodReport), "l4:1")
+		vo, err := e.EvaluateCall("t", model.ToolCall{Name: "verify_report", Arguments: args}, []byte(goodReport), "l4:1", e.L4.Hash)
 		if err != nil || !vo.Refused {
 			t.Fatalf("must refuse: %v %+v", err, vo)
 		}
 	})
 
 	t.Run("unregistered contract", func(t *testing.T) {
-		vo, err := e.EvaluateCall("t", verifyCall("other-contract@1", "r.json"), []byte(goodReport), "l4:1")
+		vo, err := e.EvaluateCall("t", verifyCall("other-contract@1", "r.json"), []byte(goodReport), "l4:1", e.L4.Hash)
 		if err != nil || !vo.Refused {
 			t.Fatalf("must refuse: %v %+v", err, vo)
 		}
 	})
 
 	t.Run("floating reference", func(t *testing.T) {
-		vo, err := e.EvaluateCall("t", verifyCall("report-valid", "r.json"), []byte(goodReport), "l4:1")
+		vo, err := e.EvaluateCall("t", verifyCall("report-valid", "r.json"), []byte(goodReport), "l4:1", e.L4.Hash)
 		if err != nil || !vo.Refused {
 			t.Fatalf("must refuse: %v %+v", err, vo)
 		}
@@ -135,7 +135,7 @@ func TestPreInstanceRefusals(t *testing.T) {
 	t.Run("capability mismatch", func(t *testing.T) {
 		call := verifyCall("report-valid@1", "r.json")
 		call.Name = "read_file"
-		vo, err := e.EvaluateCall("t", call, []byte(goodReport), "l4:1")
+		vo, err := e.EvaluateCall("t", call, []byte(goodReport), "l4:1", e.L4.Hash)
 		if err != nil || !vo.Refused {
 			t.Fatalf("contract bound to verify_report invoked as read_file must refuse: %v %+v", err, vo)
 		}
@@ -146,25 +146,77 @@ func TestPreInstanceRefusals(t *testing.T) {
 		// one in force must refuse (two-source protection).
 		e2 := proposedEvaluator(t)
 		e2.L4.Hash = strings.Repeat("00", 32)
-		vo, err := e2.EvaluateCall("t", verifyCall("report-valid@1", "r.json"), []byte(goodReport), "l4:1")
+		vo, err := e2.EvaluateCall("t", verifyCall("report-valid@1", "r.json"), []byte(goodReport), "l4:1", e2.L4.Hash)
 		if err != nil || !vo.Refused {
 			t.Fatalf("must refuse on registry drift: %v %+v", err, vo)
 		}
 	})
 }
 
-func TestEmptyEvidenceGradesUnavailable(t *testing.T) {
+func TestEmptyEvidenceGradesThroughCanonicalization(t *testing.T) {
+	// A successful read of an empty artifact is CONTENT, not absence
+	// (close architecture review L-3): it canonicalizes to
+	// report_invalid and grades FAIL — verified-negative, honestly.
 	e := proposedEvaluator(t)
-	vo, err := e.EvaluateCall("t", verifyCall("report-valid@1", "r.json"), nil, "l4:1")
+	vo, err := e.EvaluateCall("t", verifyCall("report-valid@1", "r.json"), nil, "l4:1", e.L4.Hash)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if vo.Refused {
 		t.Fatalf("empty evidence is an instance fact, not a refusal: %s", vo.RefusalReason)
 	}
-	if vo.Outcome != "UNAVAILABLE" {
-		t.Errorf("empty capture -> %s, want UNAVAILABLE", vo.Outcome)
+	if vo.Outcome != "FAIL" {
+		t.Errorf("empty capture -> %s, want FAIL via report_invalid", vo.Outcome)
 	}
+}
+
+func TestMultiSlotContractRefusedBySeam(t *testing.T) {
+	// L-2: a registrable multi-slot contract must refuse typed at this
+	// seam, never degrade to a misleading INVALID.
+	dir := t.TempDir()
+	root := repoRoot(t)
+	craw := readFileB(t, filepath.Join(root, "policies/verification/report-valid/contract.json"))
+	var cdoc map[string]any
+	if err := json.Unmarshal(craw, &cdoc); err != nil {
+		t.Fatal(err)
+	}
+	slots := cdoc["evidence"].([]any)
+	slots = append(slots, map[string]any{"name": "second", "kind": "artifact", "required": true, "task_bound": true})
+	cdoc["evidence"] = slots
+	mb, err := json.Marshal(cdoc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	multi := string(mb)
+	if err := os.MkdirAll(filepath.Join(dir, "report-valid"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "report-valid/contract.json"), []byte(multi), 0644); err != nil {
+		t.Fatal(err)
+	}
+	reg := fmt.Sprintf(`{"version": 1, "entries": [
+	  {"name": "report-valid", "version": 1, "contract_sha256": %q,
+	   "contract_path": "report-valid/contract.json", "state": "active"}]}`,
+		hashBytes([]byte(multi)))
+	regPath := filepath.Join(dir, "contracts.json")
+	if err := os.WriteFile(regPath, []byte(reg), 0644); err != nil {
+		t.Fatal(err)
+	}
+	e := proposedEvaluator(t)
+	e.RegistryPath = regPath
+	vo, err := e.EvaluateCall("t", verifyCall("report-valid@1", "r.json"), []byte(goodReport), "l4:1", e.L4.Hash)
+	if err != nil || !vo.Refused {
+		t.Fatalf("multi-slot contract must refuse typed: %v %+v", err, vo)
+	}
+}
+
+func readFileB(t *testing.T, path string) []byte {
+	t.Helper()
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
 }
 
 func TestCanonicalizationIsPure(t *testing.T) {
@@ -203,7 +255,7 @@ func TestWithdrawnContractRefuses(t *testing.T) {
 	}
 	e := proposedEvaluator(t)
 	e.RegistryPath = regPath
-	vo, err := e.EvaluateCall("t", verifyCall("report-valid@1", "r.json"), []byte(goodReport), "l4:1")
+	vo, err := e.EvaluateCall("t", verifyCall("report-valid@1", "r.json"), []byte(goodReport), "l4:1", e.L4.Hash)
 	if err != nil || !vo.Refused {
 		t.Fatalf("withdrawn contract must refuse: %v %+v", err, vo)
 	}

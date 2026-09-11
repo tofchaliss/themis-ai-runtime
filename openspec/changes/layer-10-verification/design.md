@@ -1027,6 +1027,55 @@ proofs, add focused proofs for the amendment, and perform a scoped
 architecture review. A full re-grill is required only if the amendment
 weakens, changes, or redistributes an existing architectural invariant.
 
+### D-L10-18 — Expected outputs subsumed; egress guarded (LOCKED 2026-09-11, Q-L10-21)
+
+**Expected outputs:** a verifiable output expectation is expressed through
+the L10 contract/evidence specification and its required verification gate
+— artifact existence/correctness → contract evidence requirement →
+registered verifier → PASS → workflow gate. No generic expected_outputs
+field (REJECTED), no new L9 field, no new L10 artifact class. This solves
+only the verifiable portion: downstream Themis ingestion needs (artifact
+manifest, schema version, required field set, machine-consumable typing)
+are an egress/inbox contract problem — the residual stays explicitly
+conditional/OPEN until a concrete Themis ingestion requirement exists, and
+it opens at the egress boundary, not in L9 or L10.
+
+**Egress:** the existing governed path (L10/L7/L6 facts → L5 artifact
+egress → governed review → Themis inbox) carries workflow status, L10
+verification outcome, exact contract identity, evaluation-record
+reference, evidence references, and reconstruction-discrepancy artifacts —
+as distinct propositions and artifacts per D-L10-15.
+
+**Anti-smuggling at egress (the D-L10-2 wall re-erected):**
+harness-authored verification fields carry only PASS/FAIL/INCONCLUSIVE/
+UNAVAILABLE/INVALID plus identities/references. NOT_AFFECTED, REMEDIATED,
+FINDING, ENTERPRISE_POSITION are unrepresentable as harness verification
+results, refused by schema. Governance determinations appear only in
+fields explicitly typed as Governance-provenance content.
+
+**Hand-off remains a hand-off:** a strongly evidenced PASS confers no
+additional authority — Themis receives evidence with Harness provenance,
+never a pre-approved conclusion; no PASS → auto-Finding → auto-Position
+path exists in the Harness.
+
+**Cross-boundary separation (owner precision, load-bearing for the proof
+gate):** Harness-enforceable invariant — Harness verification egress
+cannot encode Governance propositions as Harness verification results.
+Themis-side governance expectation — receipt of Harness verification
+evidence does not by itself constitute creation or acceptance of a Finding
+or Enterprise Position. The second is outside the Harness proof domain and
+must not be claimed as a proven invariant of the system under test; it is
+recorded as a cross-boundary obligation verified by Governance process
+review.
+
+**Evidence-egress eligibility (owner amendment):** an evidence reference
+may be egressed only if the referenced object is itself eligible for the
+governed egress boundary under the existing artifact-egress rules —
+L10 evaluation referencing an object never makes it automatically
+exportable; the sequence is evidence reference → egress eligibility check
+→ [reference / object / withheld]. Verification creates no new export
+authority.
+
 ## 3. Grill — question list (OPEN; owner's sequence 2026-09-11, implementer's 12 merged in)
 
 Owner's proposed starting boundary (working text, pending Q-L10-1 lock):
@@ -1060,10 +1109,10 @@ facts Governance subsequently uses.
 | Q-L10-15 | **RESIDUAL per D-L10-5** (owner, 2026-09-11): live operational telemetry deferred out of v1; future dedicated grill (evidentiary status, retention, privacy/secrets, clocks, correlation, availability, second-history risk). |
 | Q-L10-16 | **CLOSED → D-L10-14.** Two owned halves; inheritance w/o declassification; classification-enforcement without second detector; fail-closed on absent classification; no view→model path except via L2. |
 | Q-L10-17 | **CLOSED → D-L10-15.** Four propositions w/ owners and non-implication matrix; transition-time anchor; egress fields separate; vocabulary rule. |
-| Q-L10-18 | Proof gate: structural, adversarial, provenance, replay/reconstruction registers + live operational proof + independent architecture/security/test reviews; close as L7/L9 were closed. |
+| Q-L10-18 | **Proof plan PROPOSED (§4) — five registers (A/T/P/R/E), remediate-dependency live slice; awaiting Gate 0.** |
 | Q-L10-19 | **CLOSED → D-L10-16.** OPEN-2 dissolved: no generic run_command; closed per-verifier capabilities w/ pinned invocations; policy = registration itself; parameterization as escape valve. |
 | Q-L10-20 | **CLOSED → D-L10-17.** Reuse-by-registration; guardrails out of scope; gate machinery stays L11 raw material; L7 amendment protocol w/ formal amendment record; re-evidenced-not-re-grilled rule for archived layers. |
-| Q-L10-21 | (merged) Expected-outputs contract (L9 Gate-0 residual, owner unassigned) and verification-evidence egress to Themis: does L10 own either; what stops a verification summary from becoming an Enterprise Position? |
+| Q-L10-21 | **CLOSED → D-L10-18.** Verifiable outputs subsumed by contracts/gates; typing residual to egress seam; anti-smuggling at egress; hand-off unchanged; evidence egress eligibility-gated. |
 
 ## 4. Assets inventory (for the grill, factual)
 
@@ -1081,3 +1130,66 @@ facts Governance subsequently uses.
   `observability/{events,logging,metrics,tracing}` — empty (.gitkeep only).
 - L4 — registry with result-trust-fixed-at-registration; execution ceilings.
 - L5 — isolation contract, artifact egress, spec loading.
+
+## 4. Proof gate — five registers (Q-L10-18, PROPOSED for Gate 0)
+
+**Register A — structural ("can the invalid object even exist?"):**
+contract registry closed schema (unknown fields/trailing content refused),
+rebind refusal, append-only audit, withdrawn → typed refusal, floating
+references refused, no contract-by-value; result mapping targets only
+PASS/FAIL/INCONCLUSIVE (machinery statuses unmappable); Governance
+vocabulary unrepresentable as outcome names; no executable-logic fields;
+binding a non-eligible capability refused fail-closed; no harness/model
+registry-write capability (decoded scan + AST audit, the no-catalog-verb
+pattern); L7 loader amendment rules each pinned by a doctored definition
+(exact-pin gates, unknown outcomes refused, declaration-gated exposure,
+reachability-based totality); egress schema refuses Governance vocabulary
+in harness verification fields; L10 package API closure (no outcome-minting
+export; observability has no L6 write reachability).
+
+**Register T — adversarial (D-L10-11, verbatim):** the ten mutation
+obligations — verifier substitution, config tampering, evidence tampering,
+output forgery (incl. vocabulary-string outputs never becoming outcomes
+without mapping), outcome-record forgery (detection at the authoritative
+read boundary), reference redirection (matched-but-foreign swaps),
+registry tampering, cross-task replay (foreign-task and foreign-contract
+records never satisfy a gate), contract-author walls, evaluator compromise
+(mutating mapping logic must fail the reconstruction consistency test).
+Plus zero-trust-discount: L7 remains correct with a completely buggy L10 —
+nonexistent contract token = unsatisfiable gate, never an L7 error.
+
+**Register P — provenance/reconstruction (D-L10-10/12):** cold
+reconstruction of a real evaluation from the durable record alone — all
+two-source identity checks, canon(raw)==canonical via the governed
+mechanism, mapping recomputation == recorded outcome; every single-element
+swap fails; computed-vs-claimed substitution fails; missing input → typed
+reconstruction failure, never silent; omitting the contract-bytes store
+fails; a discrepancy artifact lands outside the task stream with the
+original record byte-identical (no-retroactive-mutation proven).
+
+**Register R — replay/multiplicity (D-L10-9 + L7 Register D extension):**
+the replayer re-derives latest-per-token state equal to walk state across:
+FAIL→PASS remediation walk, PASS→FAIL and PASS→UNAVAILABLE downgrades;
+gate satisfaction stateless-at-δ (satisfied at phase P, unsatisfied at Q
+after newer FAIL); taken transitions stand; **the archived L7 suite re-runs
+green post-amendment and the formal amendment record exists in the L7
+archive** (D-L10-17).
+
+**Register E — live proof (deliberately boring, unmodified production
+loop):** the remediate-dependency slice, now viable via D-L10-16.
+Governance registers (owner acts) one real verifier capability
+(run_go_build@v1 or run_go_tests@v1, pinned toolchain) + its contract;
+remediate-dependency@1 Skill authored (ANALYZE read-only → REMEDIATE
+write → VERIFY gated on contract PASS → COMPLETE); live walk vs the local
+model through the unmodified L7 loop: model proposes the verifier call, L5
+executes the real tool, L10 evaluates, the gate opens on PASS, COMPLETED
+with verified egress. Negative live: no proposal → exhaustion FAILED;
+genuine FAIL outcome → lattice's remediation re-entry; equivalence
+retained (hand-assembled envelope, identical executable fields, identical
+control behavior).
+
+Acceptance: three-state verdicts per milestone, independently challenged;
+Class-3 security/test/architecture reviews; traceability at archive maps
+Q-L10 decision → design mechanism → register → test → evidence →
+disposition. The mutation-testing lesson from L9 applies from day one:
+green tests begin the evidence question.

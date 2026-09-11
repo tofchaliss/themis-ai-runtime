@@ -160,6 +160,57 @@ A Verification Contract establishes the deterministic relationship between
 governed evidence, a registered verifier, configuration, and an L10 outcome.
 It does not establish the security meaning of that outcome.
 
+### D-L10-3 — Determinism boundary (LOCKED 2026-09-11, Q-L10-4)
+
+Determinism is a registration property of the verifier capability, verified
+by definition and enforced by refusal; it is never an observed property
+claimed after the fact.
+
+A capability is eligible for registration as a verifier only if, for the same
+contract, capability identity/version/hash, pinned configuration, and
+governed evidence objects, it produces the same **canonical** verification
+result, independent of time, host, and uncontrolled environment noise. Any
+declared residual nondeterminism must be bounded by a deterministic,
+registered, hashed **canonicalization mechanism that is part of the verifier
+capability** — never supplied or altered by the Verification Contract or the
+task. The registration claim is not "identical raw bytes" but "same canonical
+result for the same governed inputs and registered configuration." Ordering,
+whitespace/serialization, and equivalent-representation differences are
+potentially canonicalizable; uncontrolled randomness, time-dependence, or
+network/environment-dependence affecting the substantive result are not
+acceptable in v1; retry-until-the-desired-answer is never acceptable.
+
+A Verification Contract may bind only a capability registered as
+deterministic-verifier-eligible. Binding an ineligible capability is
+structurally refused and fails closed.
+
+Deterministic verification is the only producer of L10 contract outcomes.
+Model assessment is advisory content and may be recorded as evidence, but a
+model is not a verifier in v1 — the exclusion rests on the requirement for a
+registered, reviewable computation, not merely replayability or temperature.
+Model-relayed claims remain untrusted claims and never become verifier
+outcomes. Human verification remains outside the Harness in v1 and does not
+become an in-walk L10 outcome. Governance determination consumes L10
+outcomes and is never produced by L10.
+
+If a registered verifier produces a result outside the contract's declared
+result mapping, evaluation fails mechanically with the applicable L10
+invalid/failure outcome; no guessing, nearest-match, or semantic
+interpretation is permitted.
+
+Runtime detection of nondeterminism is evidence that the verifier's
+registration premise has failed — surfaced as a typed fact; never averaging,
+result selection, or retry-until-success. A rerun is a new evaluation
+instance with its own complete record; no evaluation overwrites, supersedes,
+or erases another.
+
+**Registration establishes eligibility; execution establishes the actual
+result.** Runtime evidence contradicting the registration premise is a
+governance/registration defect, never permission for L10 to dynamically
+redefine the verifier's trust level (the L4/L9 principle: trust properties
+are established at the registration boundary, not invented opportunistically
+during execution).
+
 ## 3. Grill — question list (OPEN; owner's sequence 2026-09-11, implementer's 12 merged in)
 
 Owner's proposed starting boundary (working text, pending Q-L10-1 lock):
@@ -178,7 +229,7 @@ facts Governance subsequently uses.
 | Q-L10-1 | **CLOSED → D-L10-1.** Boundary and authority: two mechanisms under one layer; trace-consistency stays single-homed with L6/L7; three-proposition model foundational. |
 | Q-L10-2 | **Closure PROPOSED → D-L10-1a (ladder, X vs X′ narrowing); awaiting explicit owner lock.** |
 | Q-L10-3 | **CLOSED → D-L10-2.** Contracts: L10-owned registry (fork (a)), governance-only registration, closed schema, exact pins, anti-smuggling invariant. |
-| Q-L10-4 | Deterministic vs probabilistic verification: explicit boundary between deterministic verification, model assessment, model-relayed claims, human verification, Governance determination — incl. the derived-evidence eligibility rule (D-L9-14). |
+| Q-L10-4 | **CLOSED → D-L10-3.** Determinism = registration property; canonical-result standard w/ registered canonicalization; model categorically not a verifier in v1. |
 | Q-L10-5 | Verification authority: what does a result (PASS/FAIL/INCONCLUSIVE/UNAVAILABLE/INVALID) actually mean — fact, claim, evidence classification, workflow gate signal — and who may interpret it? |
 | Q-L10-6 | Observability truth: what does L10 observe (transitions, tool calls, args, authz decisions, environment, files changed, artifacts, verification executions, model turns, errors, timeouts, termination) without creating a competing event/history system with L6? |
 | Q-L10-7 | L6 relationship: does L10 produce observations → L6 records them, or does L6 record → L10 derives views, or a combination? Never two authoritative histories. |

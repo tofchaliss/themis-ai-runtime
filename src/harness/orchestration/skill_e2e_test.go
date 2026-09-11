@@ -73,7 +73,7 @@ func instantiateP0(t *testing.T, f *fixture, taskID string, req skills.Request) 
 		req.WallDeadlineS = 90
 	}
 	path, err := skills.Instantiate(
-		mustAbs(t, filepath.Join(repoRoot, "policies/skills/catalog.proposed.json")),
+		mustAbs(t, filepath.Join(repoRoot, "policies/skills/catalog.json")),
 		"investigate-cve@1", req)
 	if err != nil {
 		t.Fatalf("instantiating the authored skill must succeed: %v", err)

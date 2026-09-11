@@ -28,7 +28,7 @@ Grill closed 2026-09-08 (all questions CLOSED; design.md §3 is the record, §2 
 ## 3. L9-M3 — investigate-cve@1 (Class 2/3)
 
 - [x] P0 skill composition authored (policies/skills/investigate-cve/): two-phase lattice (ANALYZE read-only, ASSESS adds write_file), ceiling, contract, grant template, spec template, closed input schema, advisory procedure artifact
-- [ ] Governance registration in the catalog (OWNER ACT — written as catalog.proposed.json; the machinery has no write API and never self-registers)
+- [x] Governance registration in the catalog (OWNER ACT, performed 2026-09-11: owner directed the promotion of catalog.proposed.json → policies/skills/catalog.json in-session; resolution verified — investigate-cve@1 ACTIVE, composition 148fd68d…, two-way manifest agreement; test fixtures repointed at the governed path)
 - [x] Security review (2026-09-08: P0 bundle pinned to the v1 capability set; ANALYZE proven read-only against the registry's mutating flag)
 
 ## 3b. L9-M5 — D-L9-11a: composition-bound artifact identity (Class 3, NEW — architecture decision 2026-09-08)
@@ -50,12 +50,12 @@ Grill closed 2026-09-08 (all questions CLOSED; design.md §3 is the record, §2 
 - [x] Register D cold reconstruction (orchestration/skill_reconstruct_test.go): record + catalog + pinned bytes recover the exact reviewed composition; declared-vs-recorded artifact identity drift is deterministically detectable after the fact
 - [x] Three Class-3 reviews run and remediated (security, test, architecture); every CRITICAL and HIGH closed with a mutation-verified regression
 - [x] Reviews re-run after L9-M5 and after R-L9-1/R-L9-2 (2026-09-08); the earlier verdicts were correctly discarded
-- [ ] Traceability; owner acceptance of the three-state verdicts
+- [x] Traceability (traceability.md, 2026-09-11); owner acceptance of the three-state verdicts (owner, 2026-09-11, in-session — architecture-conformant · test-evidenced · operationally-proven all accepted)
 - [x] **R-L9-1 CLOSED** for the four L7-materialized artifacts (six mutations fail; L6-derived object identity is the independent source)
 - [x] **R-L9-2 CLOSED**: grant + procedure bytes durably stored, cross-layer proven, four mutations fail. Original scoping:  Submitted vs effective grant must not be conflated; procedure must not gain a second identity mechanism outside L1 — verify the EIS path derives identity from actual bytes, not a recorded claim.
 - [x] (superseded by the closure above) **R-L9-1 original: cold-reconstruction provenance proof.** Mutation escapes: recorded artifact identities cannot be shown to originate from L7-materialized bytes rather than envelope-supplied claims. Requires a proof-design exercise for a structurally independent evidence source, then mutation testing. Stop at the Architecture Decision Gate if it needs an L6 schema change. No further assertion accepted as closure.
 - [x] Test-evidence gate lesson recorded (design.md R-L9-1/§ residuals): that the pre-review green tests did NOT establish the invariants they claimed, and that mutation testing — not passing tests — is what couples a test to its invariant (owner, 2026-09-08). This is part of the evidence, not a footnote to hide.
-- [ ] Code map + status doc + artifact updates; push/archive on owner approval
+- [x] Code map + status doc + artifact updates; archived 2026-09-11 (openspec/changes/archive/2026-09-11-layer-09-skills); push on owner approval
 
 ## 5. Deferred (recorded residuals — design.md §3; never silently promoted)
 

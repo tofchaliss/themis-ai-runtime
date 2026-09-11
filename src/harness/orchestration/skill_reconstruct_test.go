@@ -42,7 +42,7 @@ func TestColdReconstructionOfExecutedComposition(t *testing.T) {
 		t.Fatal("the record must name the skill and its composition")
 	}
 
-	catPath := mustAbs(t, filepath.Join(repoRoot, "policies/skills/catalog.proposed.json"))
+	catPath := mustAbs(t, filepath.Join(repoRoot, "policies/skills/catalog.json"))
 	cat, err := skills.LoadCatalog(catPath)
 	if err != nil {
 		t.Fatal(err)
@@ -283,7 +283,7 @@ func TestGovernanceIdentityIsNotEstablishedBySelfDeclaredAttribution(t *testing.
 	// Consistent by construction: commit to the identities of the
 	// artifacts this envelope actually names, while CLAIMING to be the
 	// governed investigate-cve@1 composition.
-	catPath := mustAbs(t, filepath.Join(repoRoot, "policies/skills/catalog.proposed.json"))
+	catPath := mustAbs(t, filepath.Join(repoRoot, "policies/skills/catalog.json"))
 	cat, err := skills.LoadCatalog(catPath)
 	if err != nil {
 		t.Fatal(err)
@@ -330,7 +330,7 @@ func TestAttributionInconsistencyIsDetectable(t *testing.T) {
 	base := f.envelope(t, "t-incons")
 	// Claim the real skill's identity on an envelope that executes the
 	// FIXTURE's workflow instead.
-	catPath := mustAbs(t, filepath.Join(repoRoot, "policies/skills/catalog.proposed.json"))
+	catPath := mustAbs(t, filepath.Join(repoRoot, "policies/skills/catalog.json"))
 	cat, err := skills.LoadCatalog(catPath)
 	if err != nil {
 		t.Fatal(err)
@@ -430,7 +430,7 @@ func TestInstantiationEmitsASealedCommitment(t *testing.T) {
 		t.Fatalf("the emitted commitment must be correctly sealed by the producer: %q", c.Seal)
 	}
 	// Every sealed member is a real identity, and they are the catalog's.
-	cat, err := skills.LoadCatalog(mustAbs(t, filepath.Join(repoRoot, "policies/skills/catalog.proposed.json")))
+	cat, err := skills.LoadCatalog(mustAbs(t, filepath.Join(repoRoot, "policies/skills/catalog.json")))
 	if err != nil {
 		t.Fatal(err)
 	}

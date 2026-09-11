@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	p0Catalog = "policies/skills/catalog.proposed.json"
+	p0Catalog = "policies/skills/catalog.json"
 	p0Ref     = "investigate-cve@1"
 )
 

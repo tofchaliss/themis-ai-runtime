@@ -211,7 +211,13 @@ var gateCmd = &cobra.Command{
 		"today) against --baseline. Exits non-zero when a benchmark " +
 		"disappeared or the average score dropped more than --max-drop " +
 		"points. Intended as a CI quality gate for model, prompt, or " +
-		"quantization changes.",
+		"quantization changes.\n\n" +
+		"Records the decision at gate/<date>/<model>/verdict.json. " +
+		"themis-serve routes only to runs with a passing verdict, so a " +
+		"run is invisible to routing until this command admits it. The " +
+		"baseline must itself be an admitted run. To bootstrap a " +
+		"model's first run (and only then), gate it against itself: " +
+		"--baseline <same date>.",
 	Args: cobra.ExactArgs(1),
 
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -221,6 +227,15 @@ var gateCmd = &cobra.Command{
 				"invalid --baseline %q: expected YYYY-MM-DD",
 				flagBaseline,
 			)
+		}
+
+		// The baseline must itself be an admitted run (or this is the
+		// model's first, self-baselined gate) — otherwise a failed run
+		// could baseline the next comparison and admit regression.
+		if err := gate.CheckBaseline(
+			flagRoot, args[0], flagBaseline, date(),
+		); err != nil {
+			return err
 		}
 
 		result, err := gate.Compare(
@@ -234,6 +249,14 @@ var gateCmd = &cobra.Command{
 		}
 
 		fmt.Print(gate.Report(result, flagMaxDrop))
+
+		// Record the decision either way: the router admits a run
+		// only when a Pass=true verdict exists for its date.
+		verdictPath, err := gate.WriteVerdict(flagRoot, result, flagMaxDrop)
+		if err != nil {
+			return fmt.Errorf("write verdict: %w", err)
+		}
+		fmt.Printf("verdict: %s\n", verdictPath)
 
 		if !result.Pass(flagMaxDrop) {
 			// The report already explains the failure.

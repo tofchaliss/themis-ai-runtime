@@ -34,6 +34,7 @@ func newTestServer(t *testing.T, modelAnswer string) (*httptest.Server, *httptes
 	writeDefinition(t, root, "B013", "Reasoning")
 	writeScore(t, root, "2026-08-21", "routed-model", "B012", 90)
 	writeScore(t, root, "2026-08-21", "routed-model", "B013", 80)
+	writeVerdict(t, root, "2026-08-21", "routed-model", true)
 
 	router, err := NewRouter(root)
 	if err != nil {
@@ -358,5 +359,41 @@ func TestHealthEndpoint(t *testing.T) {
 
 	if body["status"] != "ok" {
 		t.Errorf("body = %v", body)
+	}
+}
+
+// TestNoAdmittedRuns covers the service-level consequence of gate
+// enforcement: benchmark data exists but nothing has been admitted, so
+// the routing table is empty and, with no default model, requests are
+// refused rather than served by an ungated model.
+func TestNoAdmittedRuns(t *testing.T) {
+
+	root := t.TempDir()
+	writeDefinition(t, root, "B012", "Extraction")
+	writeScore(t, root, "2026-08-21", "routed-model", "B012", 90)
+	// No verdict: the run is not admitted.
+
+	router, err := NewRouter(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	srv := &Server{
+		Registry: &llm.Registry{},
+		Router:   router,
+		Timeout:  time.Second,
+	}
+
+	api := httptest.NewServer(srv.Handler())
+	t.Cleanup(api.Close)
+
+	status, body := postJSON(t, api.URL+"/v1/extract",
+		`{"evidence": "CVE-2024-1 affects x"}`)
+
+	if status != http.StatusBadGateway {
+		t.Errorf("status = %d, want 502", status)
+	}
+	if msg, _ := body["error"].(string); !strings.Contains(msg, "no model available") {
+		t.Errorf("error = %v, want no-model refusal", body)
 	}
 }

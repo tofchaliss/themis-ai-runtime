@@ -1,6 +1,8 @@
 package service
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -168,9 +170,81 @@ func loadCategories(root string) (map[string]string, error) {
 	return categories, nil
 }
 
+// gatePassed reports whether a passing gate verdict admits the model's
+// run on that date. The verdict is written by `themis-bench gate` at
+// gate/<date>/<model>/verdict.json; the field names and digest
+// algorithm mirror the gate package's Verdict and RunDigest, which are
+// internal to benchmarks and not importable here. The verdict must
+// name the same model and date as its location — a verdict copied
+// elsewhere admits nothing — and its scores digest must match the run
+// directory, so score files rewritten after gating are no longer
+// admitted. Missing, unreadable, mismatched, or failing verdicts do
+// not admit the run: the gate fails closed.
+func gatePassed(root, date, model string) bool {
+
+	path := filepath.Join(root, "gate", date, model, "verdict.json")
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return false
+	}
+
+	var v struct {
+		Model        string `json:"model"`
+		Current      string `json:"current"`
+		Pass         bool   `json:"pass"`
+		ScoresDigest string `json:"scores_digest"`
+	}
+
+	if err := json.Unmarshal(data, &v); err != nil {
+		return false
+	}
+
+	if !v.Pass || v.Model != model || v.Current != date {
+		return false
+	}
+
+	digest, err := runDigest(filepath.Join(root, "validation", date, model))
+	if err != nil || digest != v.ScoresDigest {
+		return false
+	}
+
+	return true
+}
+
+// runDigest fingerprints a run's validation score files: sha256 over
+// each *.json file's basename and contents, sorted by basename. The
+// algorithm is a contract with the gate package's RunDigest.
+func runDigest(dir string) (string, error) {
+
+	files, err := filepath.Glob(filepath.Join(dir, "*.json"))
+	if err != nil {
+		return "", err
+	}
+
+	sort.Strings(files)
+
+	h := sha256.New()
+
+	for _, file := range files {
+		data, err := os.ReadFile(file)
+		if err != nil {
+			return "", err
+		}
+		h.Write([]byte(filepath.Base(file)))
+		h.Write([]byte{'\n'})
+		h.Write(data)
+		h.Write([]byte{'\n'})
+	}
+
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
 // latestValidatedRuns maps each model to its most recent validation
-// directory. Model names may contain slashes; prompt-variant series
-// (model@variant) are skipped.
+// directory that a passing gate verdict has admitted. Runs without a
+// passing verdict are invisible: a newer ungated run never shadows an
+// older admitted one. Model names may contain slashes; prompt-variant
+// series (model@variant) are skipped.
 func latestValidatedRuns(root string) (map[string]string, error) {
 
 	validationDir := filepath.Join(root, "validation")
@@ -212,6 +286,10 @@ func latestValidatedRuns(root string) (map[string]string, error) {
 			model := strings.Join(parts[1:], "/")
 
 			if strings.Contains(model, "@") {
+				return nil
+			}
+
+			if !gatePassed(root, date, model) {
 				return nil
 			}
 

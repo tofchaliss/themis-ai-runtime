@@ -3,6 +3,8 @@
 package gate
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -55,6 +57,176 @@ func (r Result) AverageDrop() int {
 // average-score drop.
 func (r Result) Pass(maxDrop int) bool {
 	return len(r.Missing) == 0 && r.AverageDrop() <= maxDrop
+}
+
+// Verdict is the durable record of one gate decision, written under
+// gate/<current>/<model>/verdict.json. The router admits a validation
+// run only when a verdict with Pass=true exists for its date; the JSON
+// field names are a contract with service.latestValidatedRuns, which
+// cannot import this internal package.
+type Verdict struct {
+	Model    string `json:"model"`
+	Baseline string `json:"baseline"`
+	Current  string `json:"current"`
+	MaxDrop  int    `json:"max_drop"`
+	Pass     bool   `json:"pass"`
+
+	BaselineAverage int `json:"baseline_average"`
+	CurrentAverage  int `json:"current_average"`
+
+	// ScoresDigest fingerprints the validation score files the verdict
+	// judged (see RunDigest). The router recomputes it, so scores
+	// rewritten after gating no longer count as admitted.
+	ScoresDigest string `json:"scores_digest"`
+}
+
+// RunDigest fingerprints a run's validation score files: sha256 over
+// each *.json file's basename and contents, sorted by basename. The
+// router recomputes this over the run directory it admits; the
+// algorithm is a contract with service.gatePassed.
+func RunDigest(dir string) (string, error) {
+
+	files, err := filepath.Glob(filepath.Join(dir, "*.json"))
+	if err != nil {
+		return "", err
+	}
+
+	sort.Strings(files)
+
+	h := sha256.New()
+
+	for _, file := range files {
+		data, err := os.ReadFile(file)
+		if err != nil {
+			return "", err
+		}
+		h.Write([]byte(filepath.Base(file)))
+		h.Write([]byte{'\n'})
+		h.Write(data)
+		h.Write([]byte{'\n'})
+	}
+
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// checkModelName refuses model names that would escape the gate tree
+// when joined into a path.
+func checkModelName(model string) error {
+	if model == "" || filepath.IsAbs(model) || strings.Contains(model, "\\") {
+		return fmt.Errorf("invalid model name %q", model)
+	}
+	for _, seg := range strings.Split(model, "/") {
+		if seg == "" || seg == "." || seg == ".." {
+			return fmt.Errorf("invalid model name %q", model)
+		}
+	}
+	return nil
+}
+
+// ReadVerdict loads the recorded verdict for a model's run on a date.
+func ReadVerdict(root, date, model string) (Verdict, error) {
+
+	data, err := os.ReadFile(VerdictPath(root, date, model))
+	if err != nil {
+		return Verdict{}, err
+	}
+
+	var v Verdict
+	if err := json.Unmarshal(data, &v); err != nil {
+		return Verdict{}, err
+	}
+
+	return v, nil
+}
+
+// CheckBaseline enforces the ratchet's trust chain: the baseline date
+// must itself hold a passing verdict for the model. The one exception
+// is bootstrap — a model with no recorded verdict at all may gate its
+// first run against itself. Without this rule a failed run could serve
+// as the next comparison's baseline, admitting regression stepwise.
+func CheckBaseline(root, model, baselineDate, currentDate string) error {
+
+	prior, err := filepath.Glob(VerdictPath(root, "*", model))
+	if err != nil {
+		return err
+	}
+
+	if len(prior) == 0 {
+		if baselineDate == currentDate {
+			return nil
+		}
+		return fmt.Errorf(
+			"no verdict recorded for %s: bootstrap the first run by gating it against itself (--baseline %s)",
+			model, currentDate,
+		)
+	}
+
+	v, err := ReadVerdict(root, baselineDate, model)
+	if err != nil {
+		return fmt.Errorf(
+			"baseline %s has no verdict for %s: gate that run first (%w)",
+			baselineDate, model, err,
+		)
+	}
+
+	if !v.Pass {
+		return fmt.Errorf(
+			"baseline %s failed the gate for %s: pick the last admitted run as baseline",
+			baselineDate, model,
+		)
+	}
+
+	return nil
+}
+
+// VerdictPath returns where the verdict for a model's run on a date is
+// recorded, relative to the benchmark suite root.
+func VerdictPath(root, date, model string) string {
+	return filepath.Join(root, "gate", date, model, "verdict.json")
+}
+
+// WriteVerdict records the gate decision for the compared run. Failing
+// verdicts are recorded too: the decision is evidence either way, and
+// the router admits only Pass=true.
+func WriteVerdict(root string, r Result, maxDrop int) (string, error) {
+
+	if err := checkModelName(r.Model); err != nil {
+		return "", err
+	}
+
+	digest, err := RunDigest(filepath.Join(root, "validation", r.Current, r.Model))
+	if err != nil {
+		return "", err
+	}
+
+	v := Verdict{
+		Model:    r.Model,
+		Baseline: r.Baseline,
+		Current:  r.Current,
+		MaxDrop:  maxDrop,
+		Pass:     r.Pass(maxDrop),
+
+		BaselineAverage: r.BaselineAverage,
+		CurrentAverage:  r.CurrentAverage,
+
+		ScoresDigest: digest,
+	}
+
+	data, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return "", err
+	}
+
+	path := VerdictPath(root, r.Current, r.Model)
+
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(path, append(data, '\n'), 0644); err != nil {
+		return "", err
+	}
+
+	return path, nil
 }
 
 // Compare loads validation scores for the model on both dates.

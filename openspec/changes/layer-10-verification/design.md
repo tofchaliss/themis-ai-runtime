@@ -365,6 +365,61 @@ applies the registered mapping. Verifier output "PASS" is NOT automatically
 PASS; only the L10 evaluator creates PASS. The evaluator must remain safe
 against a completely hostile verifier (zero trust discount, L10 form).
 
+### D-L10-7 — Model ↔ L10 trust boundary (LOCKED 2026-09-11, Q-L10-9)
+
+The model interacts with verification through exactly two apertures:
+proposing verifier calls and reading recorded verification outcomes.
+Everything else is unreachable.
+
+The model may propose a verifier call. The proposal is advisory data and is
+authorized through the existing L4 path.
+
+The model may propose concrete evidence object references. L10 mechanically
+validates those references against the Verification Contract's closed input
+specification, including declared evidence kind, authority class, and
+task-binding constraints. Within those constraints, evidence selection
+remains model discretion. The selected and evaluated evidence is durably
+recorded, making selection observable to Governance — the model can
+cherry-pick within the permitted set, but never silently. If completeness is
+required, that requirement must be declared by the registered Verification
+Contract; L10 does not invent completeness requirements. (L10 constrains
+what evidence MAY be evaluated; it does not decide which permitted evidence
+the model must choose.)
+
+The model may propose a registered Verification Contract, but only an
+evaluation of the exact contract identity required by the reviewed workflow
+can satisfy that workflow's verification gate. Invoking another registered
+contract cannot substitute for the required contract.
+
+The model may read recorded L10 outcomes through L2 as fenced, classified
+data and may interpret them in prose. Such interpretation remains advisory
+and cannot modify, reclassify, upgrade, or annotate the recorded
+verification fact.
+
+Model claims that verification succeeded are inert prose. L7 control
+semantics consume only recorded typed verification events.
+
+Model output cannot substitute for an L10 result. L10 alone produces
+verification outcomes, and verification-typed L7 events originate only from
+committed evaluation records.
+
+The model may request another evaluation after a prior result. Each
+evaluation is a new instance with its own complete record; no evaluation
+overwrites, supersedes, or erases another. Repeated evaluation cannot be
+used to select a preferred result. Any divergence under identical registered
+inputs is surfaced as evidence of a violated determinism premise and does
+not become a new trusted outcome. (Gate-selection semantics over multiple
+evaluations are deliberately NOT decided here — carved out to Q-L10-10a;
+"most recent" must not silently become an assumption.)
+
+The model has no authority to waive, skip, defer, or substitute a
+verification required by the reviewed workflow. Failure to propose a
+required verification can only prevent progression and eventually follow
+the workflow's reviewed failure/exhaustion path.
+
+Model-authored contract-shaped artifacts remain untrusted data. They cannot
+become evaluable without the external Governance registration act.
+
 ## 3. Grill — question list (OPEN; owner's sequence 2026-09-11, implementer's 12 merged in)
 
 Owner's proposed starting boundary (working text, pending Q-L10-1 lock):
@@ -388,7 +443,8 @@ facts Governance subsequently uses.
 | Q-L10-6 | **CLOSED → D-L10-5.** Observability = read-only deterministic derivation; views are pure functions w/ provenance; absent dimensions reported, never side-channel collected. |
 | Q-L10-7 | **CLOSED → D-L10-5.** Direction locked: L6 records → L10 derives, never the reverse; second history structurally impossible. |
 | Q-L10-8 | **CLOSED → D-L10-6.** Five owned stages; L10 evaluation = bounded declarative mapping + validity checks; verifier never mints outcomes; record-before-event; trigger = model-proposed only in v1. |
-| Q-L10-9 | Model involvement: may the model request verification, select a verifier, interpret the result, declare success, override failure, manufacture evidence? Expected shape: model proposes → L4 authorizes → L5 executes → L10 verifies → typed result; the model cannot manufacture the result. |
+| Q-L10-9 | **CLOSED → D-L10-7.** Two apertures (propose, read); bounded recorded evidence discretion; contract-identity-bound gates; claims inert; substitution unrepresentable. |
+| Q-L10-10a | (carved out of D-L10-7, owner 2026-09-11) Evaluation multiplicity and gate identity: multiple C@v evaluations per task (yes, all durable) — can an older PASS satisfy a gate after a newer FAIL; what uniquely identifies an evaluation instance; what ordering defines recency (L6 event seq? creation? completion? commit?); gate binds to contract identity alone or contract + evidence scope; can two different-evidence evaluations both satisfy one gate; does the workflow consume "latest" or does L10 expose the evaluation set with workflow-defined selection? |
 | Q-L10-10 | **Substantively pre-closed by D-L10-4** (taxonomy mapped: verified-false=FAIL, not-verified=INCONCLUSIVE, unavailable/verifier-error=UNAVAILABLE, invalid/nondeterminism=INVALID, evidence-insufficient splits by resolvability); formal confirmation at its turn. |
 | Q-L10-11 | Evidence provenance: which fields are NECESSARY (verification_id, verifier identity/version/hash, input object hashes, config hash, environment identity, timestamp/sequence, raw output ref, derived result, result hash) — establish, don't assume. |
 | Q-L10-12 | Tamper resistance (adversarial register): modify verifier / config / input evidence / raw output / derived result / execution record — can an apparently valid verification survive? |

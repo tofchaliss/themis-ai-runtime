@@ -263,6 +263,67 @@ change; the existing door decides whether it may govern; the Ratchet
 establishes what comparative evidence exists; the existing consumption
 mechanism determines whether it is relied upon.*
 
+### D-L11-4 — Comparison criteria and comparative evidence (PROPOSED 2026-09-11, closing Q-L11-4; AWAITING OWNER LOCK)
+
+1. **The Comparison Criterion K** is a governed, registered, versioned,
+hash-pinned declarative artifact — the L11 sibling of the L10
+Verification Contract, for a different question. Closed schema: exact
+identity (name@version + SHA-256); evidence selectors for candidate
+and baseline sides (typed, declarative, closed vocabulary); a
+**registered comparator binding** — the deterministic Δ computation,
+registered per criterion family as in-harness code identity (the
+canonicalizer pattern from D-L10-12: pure, environment-free, reviewed
+harness code — never an expression language, never criterion-carried
+logic; D-L9-4 zero-interpreters a third time); pinned configuration;
+the Δ output shape; provenance requirements. Governance-registered;
+unregistered criterion-shaped artifacts are data; append-only, exact
+pins, the same walls.
+
+2. **Comparisons consume only established governed facts** — L10
+evaluation records, benchmark validation scores, L6 execution records,
+gate verdicts. A comparison never executes anything, never re-judges
+evidence, never mints semantic judgment: arithmetic and aggregation
+over facts whose meaning was fixed where they were made. Runs are
+ordinary governed tasks (D-L9-16 gate 2) or benchmark-plane runs,
+identified by their records. This is the mechanical content of "no
+second evaluation subsystem": L11 adds a comparator OVER evidence,
+never an evaluator OF executions.
+
+3. **Δ is typed comparative evidence, never vocabulary.** Output =
+content-addressed comparative-evidence package: K@v + hash; candidate
+identity + evidence record refs; admitted-baseline identity + an
+**admission attestation** (door state observed at comparison time —
+the ladder's baseline law made mechanical: no attestation, no position
+2); run identities; Δ in the declared shape; provenance sufficient to
+re-derive Δ cold (D-L10-10 discipline). Δ never enters any control
+vocabulary, L7 event, L10 outcome, or routing decision — it exists to
+be carried to a door by a human.
+
+4. **Reproducibility as registration bar:** same criterion + same
+referenced records ⇒ same Δ (D-L10-3 reapplied). Cold re-derivation
+disagreeing with a recorded Δ = discrepancy fact for Governance, never
+a rewrite (D-L10-12 inherited).
+
+5. **Variants generalize:** prompt A/B = "instruction-family candidate
+vs baseline under the benchmark-score criterion"; a variant is a
+candidate; no separate variant mechanism in L11 (physical moves settle
+in Q-L11-9).
+
+6. **A comparison is NOT:** a gate, a verification, a selection input
+(Q-L11-8 quarantine), or automatic (produced on request, no daemon
+watching history).
+
+Flagged edge: evidence selectors are the cherry-picking surface —
+declarative + reviewed at registration; the package records exactly
+which records were consumed; selection within the declared frame is
+visible, not prevented (adversarial hardening in Q-L11-11).
+
+Open decision for owner: comparator as registered in-harness code
+identity (proposed, the canonicalizer precedent) vs a declarative Δ
+language inside the criterion (rejected by implementer as an
+interpreter by another name; the benchmark gate's Compare/AverageDrop
+shows the proposed shape).
+
 ## 3. Grill — question list (OPEN, implementer draft — owner may restructure)
 
 | Q | Question |
@@ -270,7 +331,7 @@ mechanism determines whether it is relied upon.*
 | Q-L11-1 | **CLOSED → D-L11-1.** Evidence-not-authority boundary; provides-not-enforces at existing doors; ownership split; L10/L11 question separation; hard prohibitions + positive authority. |
 | Q-L11-2 | **CLOSED → D-L11-2.** Four positions w/ owning mechanisms; baseline rule as ladder law; evidence-absence explicit at promotion; downward moves are acts; criterion-relative vocabulary. |
 | Q-L11-3 | **CLOSED → D-L11-3.** Candidate = content-addressed proposal data; no lifecycle state; single-home promotion truth; 1→3→2 for executable families (epistemic ladder proven); no trial admission; *.proposed.* as representation only. |
-| Q-L11-4 | Comparative evaluation semantics: baseline-vs-candidate comparison as a governed, registered computation — relation to L10 verification contracts (is a comparison a contract? a distinct registered artifact?); who defines the metric; how variants (A/B) generalize beyond prompts. |
+| Q-L11-4 | **Closure PROPOSED → D-L11-4 (criteria + comparator bindings + evidence packages); AWAITING OWNER LOCK** — one open decision: comparator as registered code identity vs declarative Δ language. |
 | Q-L11-5 | Promotion mechanics: enumerate each promotion act as an EXISTING governance door; what evidence package accompanies a promotion request; is there any new registry at all (candidate registry?) and its write-wall discipline. |
 | Q-L11-6 | Regression prevention: failures → regression tests (who authors, who registers, where they run); the ratchet-up rule generalized from the benchmark gate (baseline must itself be admitted — the stepwise-bypass lesson); admission-at-consumption beyond the router. |
 | Q-L11-7 | Purpose attribution (assigned residual): how evaluation-vs-operational purpose is recorded — existing Class-4 deployment context, a task-attribution field, or an L6 gap needing a narrow amendment; never Skill identity or execution semantics (D-L9-16). |

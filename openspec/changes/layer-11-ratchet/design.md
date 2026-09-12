@@ -953,7 +953,7 @@ is admitted. Evidence may deterministically order the admitted set
 under fixed registered policy; it may never extend that set, and no
 selection outcome is ever a governance state.*
 
-### D-L11-9 — Regression resistance: the bounded enumerative claim (PROPOSED 2026-09-12, closing Q-L11-9; AWAITING OWNER LOCK)
+### D-L11-9 — Regression resistance: the bounded enumerative claim (LOCKED 2026-09-12, Q-L11-9; owner amendments: (1) bounded resistance derivation, (2) exact set resolution — L11 never selects the applicable set)
 
 **1. Regression evidence introduces NO new fact type.** A
 regression-evidence package is aggregation-by-enumeration (D-L11-4
@@ -980,7 +980,9 @@ particular door — is the door's declaration, never L11's (the
 D-L11-5 ownership pattern applied to sets). The CONTENT of the
 underlying cases — reference inputs, golden outputs, acceptance
 thresholds inside criteria — is Q-L11-13's question, untouched
-here.
+here. (Owner formulation at lock: L11 never says "this is the
+regression set that protects this artifact"; it can only say "I
+evaluated registered set S@v".)
 
 **3. Completeness under S is mechanical — no partial regression
 packages.** A regression-evidence package under S@v REQUIRES one
@@ -991,16 +993,37 @@ This closes the "passed 9 of 10, silently omit the 10th" laundering
 shape structurally: partial coverage is representable only in a
 form that visibly lacks set identity. A refused constituent
 (D-L11-5 §3: baseline unadmitted, evidence unresolvable) means the
-set-level package does not exist.
+set-level package does not exist. (Owner: constitutional — safer
+than a `coverage = 3/4` field misread downstream as a regression
+result. The three cases, explicit: **A** — a constituent could not
+be compared → no S-level package exists; **B** — all constituents
+exist, one outside its region → complete regression evidence exists
+and DEMONSTRATES an observed regression under that K; **C** — all
+exist and all satisfy → complete evidence from which
+resistant-under-S may be derived.)
 
 **4. Completeness ≠ favorability — "resistant" is a derivation.**
 A complete-under-S package whose constituents include out-of-region
 Δs is equally producible and durable (direction symmetry, D-L11-4
 §6 — a regression FOUND is first-class evidence, arguably the
-Ratchet's most valuable output). "regression-resistant-under-S@v" =
-∀K∈S: Δ_K within its declared region — a stateless derived boolean,
-the better-under-K pattern exactly: derived, never stored, never
-free-standing. There is no stored "resistant" flag anywhere.
+Ratchet's most valuable output). **Amendment 1 (owner) — the
+bounded derivation:** *resistant-under-S@v is a deterministic
+derivation that every EXPLICITLY ENUMERATED constituent comparison
+in the registered finite set S@v satisfies its declared
+non-regression region. It never establishes unrestricted absence of
+regression.* "All members of this declared finite set satisfied
+their declared regions" — never "no regression exists." A stateless
+derived boolean, the better-under-K pattern exactly: derived, never
+stored, never free-standing. There is no stored "resistant" flag
+anywhere.
+
+**Incomparability rule (owner, explicit implication of D-L11-7):**
+an incomparable-under-K constituent does NOT satisfy a
+non-regression region unless K itself explicitly defines
+incomparability as inside that region. K → incomparable means
+neither "regression" nor "no regression" automatically; the
+registered K decides what its region means — declared semantics,
+never L11 improvisation.
 
 **5. The universal claim is structurally unmakeable.** "Introduces
 no regression" quantifies over an undefined universe; L11's
@@ -1020,10 +1043,16 @@ no veto path, no "regression check failed → refuse promotion" code
 anywhere.
 
 **7. Set evolution and the stepwise lesson.** New S versions are
-new registrations (append-only). Whether a door requires the LATEST
-S it has declared is the door's currency rule — L11 observes and
-mechanically applies declared constraints, exactly the D-L11-5
-currency pattern. Every constituent comparison obeys D-L11-5
+new registrations (append-only). **Amendment 2 (owner) — exact set
+resolution:** *L11 evaluates an exact registered S@v supplied by the
+governed consuming mechanism. Any latest/current/currency
+requirement is resolved by the owning door or an already-governed
+policy; L11 does not select the applicable set.* Given S@1/S@2/S@3,
+L11 never internally resolves "the latest active S is S@3" — even
+that tiny version-selection authority is refused; the door supplies
+`required_regression_set = S@2` (or a pre-registered policy resolves
+it deterministically), and L11 mechanically verifies and applies the
+resolved requirement — exactly the D-L11-5 pattern. Every constituent comparison obeys D-L11-5
 unchanged: admitted baseline, observed admission, no drift — the
 CheckBaseline chain lesson applies per-constituent with no
 set-level exception.
@@ -1032,6 +1061,93 @@ set-level exception.
 property of a candidate; it is a complete, enumerated comparative
 record under a registered set — and the door, not the Ratchet,
 decides what that record permits.*
+
+**Carried invariant (owner, → Q-L11-10):** *a complete regression
+record can contain evidence of regression; completeness is
+coverage, not favorability.*
+
+### D-L11-10 — Evaluation execution: describe and consume, never run (PROPOSED 2026-09-12, closing Q-L11-10; AWAITING OWNER LOCK)
+
+Answering the owner's dichotomy: L11 is an **evidence consumer plus
+a describer of needed evaluations** — an "orchestrator" only in the
+inert sense of emitting plans and checking conformance, never an
+initiator or executor.
+
+**1. No L11 execution plane.** L11 has no executor, no runtime, no
+model access, no tool access, no verifier invocation, no task
+machinery. Everything that RUNS runs as an ordinary governed L7
+task (D-L9-16 gate 2) or a benchmark-plane run, under existing
+initiation and execution authority. L11's machinery in full:
+read-only registries, pure comparators over committed records,
+package assembly, stateless derivations. A comparison executes
+nothing (D-L11-4 §2).
+
+**2. The eight verbs, disposed:**
+
+- **Create evaluation tasks — describe yes, instantiate no.** L11
+  may construct an EVALUATION PLAN (§4): data naming what needs to
+  run. Task instantiation happens only through the existing task
+  initiation door, same as any task. L11 possesses no task-creation
+  API the ordinary plane lacks.
+- **Choose the Skill — no.** The plan NAMES registered identities
+  (an executable candidate is already registered through its door —
+  D-L11-3, 1→3→2); ordinary L7 resolution applies unchanged. L11
+  performs no runtime skill selection.
+- **Choose the model — no.** Model selection is deployment policy
+  (D-L11-8). A plan may require that model identity be RECORDED as
+  run provenance (K selectors may condition on it); it never
+  selects.
+- **Choose evidence — no.** K's registered selectors choose
+  declaratively (D-L11-6); L11 machinery applies them; no ad-hoc
+  evidence picking exists.
+- **Select the verifier — no.** Verification remains model-proposed
+  within walks under registered contracts (D-L10-6); L11 consumes
+  L10 outcomes as established facts and never touches the
+  verification path.
+- **Repeat evaluations — describe yes, run no.** Repetition = more
+  ordinary tasks through the same initiation door. L11 may record
+  that evidence is insufficient for a package (evidence absence,
+  explicit); it cannot loop-run anything (no optimization engine,
+  D-L11-7 §8).
+- **A/B comparisons — compare yes, cause no.** Comparing the two
+  arms' evidence is L11's core function; causing both arms to run
+  is two ordinary governed runs through existing channels.
+- **Schedule — no.** Scheduling is initiation authority, owned by
+  existing operational mechanisms; whether ANY automation may act
+  on plans is Q-L11-14's question, not granted here.
+
+**3. The three-layer seam.** L7 owns how a task executes; L10 owns
+what verification establishes within it; L11 owns how the committed
+records of two admitted artifacts compare. L11 sits strictly
+DOWNSTREAM of L6 records; its only upstream expression is a plan —
+data addressed to doors and humans.
+
+**4. The Evaluation Plan (new artifact, inert).** Content-addressed
+data: candidate identity, baseline identity, criterion/set pins
+(exact — D-L11-9 Amendment 2), required runs (registered skill@v,
+input commitments), required provenance. Nothing imperative, no
+continuation language (the D-L11-6 discipline). A plan is a REQUEST
+representation with the same standing as a Candidate: existence
+confers nothing, executes nothing. Post-hoc, L11 may mechanically
+check that runs CONFORM to a plan (identity comparison against
+recorded provenance) and record the observation in the package —
+enumerated fact, not judgment.
+
+**5. Purpose attribution (assigned residual, minimal form).**
+Evaluation tasks are ORDINARY tasks — no execution mode, no special
+authority, no semantic flag consulted by any control path. Purpose
+attribution is initiation-time recorded data: a run initiated from
+a plan records the plan reference; K selectors may then select runs
+by plan reference. Whether that reference lives in the existing
+task envelope or needs a narrow L6 amendment is an implementation
+decision for the milestones — constitutionally it is attribution
+data, never execution semantics (D-L9-16 preserved).
+
+**Constitutional sentence:** *L11 may describe the evaluation it
+needs and consume the records that result; everything that
+executes, executes as an ordinary governed task through existing
+initiation and execution authority — L11 runs nothing, selects
+nothing at runtime, and schedules nothing.*
 
 ### [Reallocated] Implementer material on criteria/comparator/packages (2026-09-11; formerly proposed as D-L11-4, superseded by owner restructure 2026-09-12)
 
@@ -1124,8 +1240,8 @@ residual → Q-L11-10.
 | Q-L11-6 | **CLOSED → D-L11-6.** Governance-owned criterion registry, L11 format+loader; three homes for semantics; closed schema; comparator = registered code identity (option A LOCKED); applicability ≠ selection; ordering is criterion-relative derivation. |
 | Q-L11-7 | **CLOSED → D-L11-7.** Ordering taxonomy (none/per-metric/dominance/scalarization); precommitment test; ties/incomparability first-class; v1 no meta-comparison; scalarization = projection; no optimization objective. |
 | Q-L11-8 | **CLOSED → D-L11-8.** Selection ≠ promotion; five conditions; selection = one form of 3→4 consumption; predeclared fallbacks; no side-effect on admissible set; Δ never a selection input (v1). |
-| Q-L11-9 | **Closure PROPOSED → D-L11-9; AWAITING OWNER LOCK.** Regression evidence = enumeration under registered set S@v; doors own set significance; no partial packages; "resistant" = stateless derivation; universal claim unmakeable; never a gate. |
-| Q-L11-10 | Evaluation execution: can L11 create tasks, choose Skill/model/evidence/verifier, repeat, A/B, schedule — or is it evidence-consumer only? (L7/L10/L11 seam.) |
+| Q-L11-9 | **CLOSED → D-L11-9.** Enumeration under registered S@v; doors own set significance and exact resolution; no partial packages; bounded resistant-under-S derivation; incomparability per K; never a gate; completeness = coverage. |
+| Q-L11-10 | **Closure PROPOSED → D-L11-10; AWAITING OWNER LOCK.** Describe-and-consume, never run; eight verbs disposed; inert Evaluation Plan artifact; three-layer seam; purpose attribution as initiation-time data. |
 | Q-L11-11 | Candidate/evidence lifecycle: durable machinery for identity, evidence refs, comparison identity, lineage, reproducibility, supersession — what L6 stores vs what L11 derives. |
 | Q-L11-12 | Feedback: is ratchet/feedback evidence, observation, candidate input, governance commentary, evaluation result — or a dangerous catch-all to eliminate? |
 | Q-L11-13 | Regression corpus / reference set: who owns regression cases, reference inputs, expected outputs, golden examples, acceptance thresholds; L11 artifacts or existing Governance/Themis knowledge? |

@@ -1998,7 +1998,7 @@ or "obvious" interpretations. Also confirmed: L11 cannot promote
 an arbitrary model assertion into a metric merely by putting a
 number around it — condition (a) stands.)
 
-### D-L11-19 — Recursion without an L12 (PROPOSED 2026-09-12, closing Q-L11-19; AWAITING OWNER LOCK)
+### D-L11-19 — Recursion without an L12 (LOCKED 2026-09-12, Q-L11-19; no architectural amendment)
 
 **1. The answer: the recursion was never open.** L11 was never
 self-governing, so self-improvement was never self-authorized.
@@ -2039,7 +2039,11 @@ UNREGISTRABLE. A new comparator or L11 version is therefore
 admitted on ordinary engineering evidence — tests, reviews,
 registers, the same machinery that proved L7–L10 without L11's
 help. The Ratchet does not measure itself; the pipeline that built
-it measures it.
+it measures it. (Owner at lock: no "Ratchet benchmark proving the
+Ratchet is better" — not a missing capability, an INTENTIONAL
+architectural exclusion; it prevents the Ratchet from
+manufacturing the evidence needed to validate its own
+modifications.)
 
 **4. Anti-circularity: a criterion cannot define its own
 success.** Only a REGISTERED K measures anything (unregistered =
@@ -2060,11 +2064,121 @@ never obligates — D-L11-2). And the attention asymmetry applies at
 its maximum here: a Candidate targeting L11's own machinery is the
 peak self-serving-evidence risk, so provenance raises registration
 review attention — never lowers the bar and never fast-tracks.
+(Owner formulation at lock: *self-targeting provenance increases
+scrutiny; it never increases authority* — more review attention,
+no altered gate, no bypass, no privileged treatment. The legal
+chain: L11 evidence → human attention → Candidate → ordinary
+review → Governance decision → new governed artifact. Never: L11
+evidence → automatic acceptance → new L11 behavior — that would be
+L12 authority without the name.)
 
 **Constitutional sentence:** *The Ratchet can be improved, but
 never by its own authority: every artifact that governs L11 is
 admitted at a door L11 does not own, on evidence L11 did not mint
 about itself — the recursion terminates in humans, not in an L12.*
+
+### D-L11-20 — Constitutional closure (PROPOSED 2026-09-12, closing Q-L11-20; AWAITING OWNER LOCK)
+
+A closure audit, not a design. The owner's 18 points and the final
+question, answered against the locked record.
+
+**1. The constitution index (points 1–14 → locked decisions):**
+boundary/purpose → D-L11-1; authority ownership → D-L11-1 split +
+D-L11-5/6/9/13; seams (L6/L7/L9/L10/router) → D-L11-8/10/11;
+artifact inventory → §2 below; registered-vs-instance identity →
+D-L11-11 §2; registries → D-L11-6/9; Candidate + Evaluation Plan →
+D-L11-3/10; package semantics → D-L11-4/9; persistence +
+reconstruction → D-L11-11/17; failure/refusal/discrepancy →
+D-L11-16; security prohibition → D-L11-18; consumption classes →
+D-L11-15; automation/autonomy → D-L11-14; recursion → D-L11-19.
+Every point has exactly one home; no point is homeless; no two
+decisions contend for the same point.
+
+**2. The complete, closed artifact inventory:**
+- REGISTERED (name@version + hash, Governance-admitted): Criterion
+  K; Regression set S; comparator version bindings.
+- INSTANCE (content hash only, L6-stored): Candidate; Evaluation
+  Plan; comparative-evidence package; regression-evidence package;
+  refusal fact; discrepancy fact; missing-inputs (reconstruction)
+  fact.
+- DERIVED (stateless, never stored): better-under-K;
+  resistant-under-S; latest-per-(C,B,K); enumerations; lineage
+  views; conformance displays.
+Nothing else exists. Anything not on this list fails the D-L11-12
+architectural test.
+
+**3. Implementation obligations (point 15) — every one an
+instantiation of a proven pattern:** criterion + set registry
+loaders (verification/registry.go pattern); criterion schema
+loader (contract.go pattern: closed schema, duplicate-key,
+readGoverned, two-way identity); comparator interface + v1
+comparator(s) (canonReport / gate-Compare precedent; pure,
+deterministic, canonical serialization); selector resolution over
+L2/L6/L10/benchmark records; package assembly; Reconstruct (L10
+pattern); derivations (views.go pattern); Candidate/Plan schemas +
+L6 StoreObject persistence; a synchronous invocation surface;
+attribution representation; AST walls (no registry write APIs, no
+timers/tickers/watchers, terminal-output enforcement); API-closure
+guards; registers + live proof slice (candidate → governed
+evaluation → package → human promotion via existing door →
+regression admission — the Q-L11-12-old proof gate, now point 15).
+
+**4. The final question — what must implementation still invent?
+NOTHING architecturally.** Four enumerated implementation CHOICES
+remain, each inside locked constraints, each through ordinary
+review, none an invention: (a) attribution representation —
+existing task-envelope field vs narrow additive L6 amendment
+(D-L11-10 §5); (b) fixture/golden physical housing —
+registry-plane files vs L6 objects by size (D-L11-13 §5); (c) the
+v1 comparator set — at least one concrete family for the proof
+slice (e.g. numeric-score-delta over benchmark/L10 facts); (d) the
+invocation surface — CLI subcommand vs service endpoint (Class-3
+review either way). Anything else discovered mid-implementation
+that does not fit the locked inventory is Class-4 stop-and-ask —
+never a helper subsystem, never developer convenience.
+
+**5. Residuals (point 16), recorded:** pre-L11 standing residuals
+unchanged (L5 process-exec amendment; live telemetry grill; L6
+GC-anchoring ADG; L9 loader hardening; C3 attestation; L8
+delegation; equivalent-mutant record). L11-minted residuals:
+higher-order/meta-comparison (fresh architecture decision if ever
+wanted — D-L11-7 Am. 1); Δ-consuming runtime selection (fresh
+decision — D-L11-8/15); multi-baseline criteria (D-L11-5 §5);
+physical unification of benchmark-plane compare/variants with L11
+comparators NOT performed in v1 — the benchmark plane stays
+bench-owned, single-home holds because L11 consumes its facts
+without forking its semantics; knowledge-family live proof may
+lag the in-repo families (egress package specified in D-L11-3;
+owner decides at Gate 0 whether the v1 proof slice includes it).
+
+**6. Forbidden components (point 17), consolidated:** feedback
+subsystem; candidate registry/status store; champion registry; L11
+event stream; authoritative cache; scheduler/timer/watcher/queue;
+L11 executor; baseline manager; version-selection authority;
+coverage quantification; outcome enum; security predicates;
+meta-comparison; self-evaluation; optimization objective.
+**Scaffold disposition:** DELETE ALL pre-grill scaffold dirs
+(src/harness/ratchet/{candidates,evaluations,feedback,promotion,
+regression}) — feedback/ and promotion/ name subsystems the grill
+forbade (D-L11-12; promotion is door-owned); the rest are
+pre-grill guesses. Implementation creates justified structure from
+the locked design (the L10 lesson: structure follows decisions,
+never precedes them).
+
+**7. Genuine-future-gap conditions (point 18) — a NEW architecture
+decision is required iff someone wants:** a seventh consumption
+class; L11 output as evidence input; Δ in runtime selection;
+multi-baseline Δ semantics; non-human initiation authority; a
+third durable plane; corpus curation authority; an L11 outcome
+vocabulary; an L11-about-L11 criterion. Anything on this list
+appearing as an implementation "convenience" is an architecture
+violation, not a feature.
+
+**Constitutional sentence:** *L11 is architecturally frozen: every
+component the implementation will build instantiates a locked
+decision through an already-proven pattern; anything that cannot
+is a recorded residual or a new architecture decision — never a
+convenience.*
 
 ### [Reallocated] Implementer material on criteria/comparator/packages (2026-09-11; formerly proposed as D-L11-4, superseded by owner restructure 2026-09-12)
 
@@ -2167,8 +2281,8 @@ residual → Q-L11-10.
 | Q-L11-16 | **CLOSED → D-L11-16.** No outcome enum: package or refusal fact, discrepancy subsequent; closed reason classes; refusals terminal/neutral/non-retriable; incompleteness representational; L10 tokens foreign to L11. |
 | Q-L11-17 | **CLOSED → D-L11-17.** Same inputs → same PROPOSITION; sufficient tuple; comparator semantics immutable per version; determinism; three reconstruction results; never repairs; defects never normalized. |
 | Q-L11-18 | **CLOSED → D-L11-18.** Metric never meaning; four legitimacy conditions; three walls; sensitivity inheritance; double-negative prohibited; semantic proximity confers no authority. |
-| Q-L11-19 | **Closure PROPOSED → D-L11-19; AWAITING OWNER LOCK.** Recursion was never open: L11 targets admitted at doors L11 doesn't own; L11-about-L11 criteria unregistrable; proposed K measures nothing; no evidence chain modifies L11. |
-| Q-L11-20 | Constitutional closure: freeze ownership, seams, artifact types, registries, schemas, persistence, failure semantics, automation limits, residuals, proof obligations; scaffold disposition. |
+| Q-L11-19 | **CLOSED → D-L11-19.** Recursion was never open: L11 targets admitted at doors L11 doesn't own; L11-about-L11 criteria unregistrable; proposed K measures nothing; no evidence chain modifies L11; scrutiny never authority. |
+| Q-L11-20 | **Closure PROPOSED → D-L11-20; AWAITING OWNER LOCK.** Closure audit: constitution index; closed artifact inventory; obligations all pattern-instantiations; nothing to invent (4 flagged choices); residuals; forbidden components; delete all scaffold; gap conditions. |
 
 ## 4. Assets inventory (for the grill, factual)
 

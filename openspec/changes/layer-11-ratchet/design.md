@@ -700,7 +700,7 @@ registered criterion without becoming hidden Governance judgment —
 increase" — is exactly Q-L11-7's question, and L11 must not
 improvise the answer.
 
-### D-L11-7 — What "better" means: orderings and the tradeoff boundary (PROPOSED 2026-09-12, closing Q-L11-7; AWAITING OWNER LOCK)
+### D-L11-7 — What "better" means: orderings and the tradeoff boundary (LOCKED 2026-09-12, Q-L11-7; owner amendments: (1) composite wall as v1-vocabulary exclusion not permanent law, (2) scalarization is projection never replacement; plus no-optimization-objective invariant)
 
 Frame (already locked): "better" has no L11 meaning outside K
 (D-L11-4 claim 2); the ordering region is criterion-relative
@@ -729,6 +729,11 @@ one of four structures, weakest to strongest:
   pinned parameters to a reviewed comparator with fixed semantics
   (D-L11-6: parameters yes, programs never).
 
+(Owner at lock: higher expressiveness is NOT higher authority — a
+scalarized criterion is not "more authoritative" than a dominance
+criterion; it simply contains more precommitted comparative
+semantics.)
+
 **2. The tradeoff boundary — the actual answer to Q-L11-7.**
 Declaring scalarization weights IS a tradeoff judgment. It is
 legitimate exactly because it is made AT REGISTRATION by Governance
@@ -748,7 +753,10 @@ data, applied by fixed code.
 semantics: exact equality, or a registered tolerance as a pinned
 parameter. equal-under-K is a first-class, direction-symmetric
 result. No tie-breaking by ANYTHING outside Δ — not recency, not
-authorship, not provenance; a tie is an answer, not a problem.
+model preference, not authorship, not execution time, not candidate
+origin; none may silently turn equal-under-K into "C wins". If
+Governance wants a tie-break rule, it must be part of K before
+comparison. A tie is an answer, not a problem.
 
 **4. Incomparability is a result, not a failure.**
 incomparable-under-K (dominance criteria where neither side
@@ -772,10 +780,35 @@ raises enumeration, never strength — D-L11-4 Amendment 3). A
 composite judgment across criteria is Governance's at the door. If
 Governance wants a registered composite, the composite is itself a
 criterion computed from the UNDERLYING established facts.
-**Proposed wall:** the v1 evidence-selector vocabulary excludes L11
-comparative-evidence packages as inputs — criteria consume L2/L6/L10/
-benchmark facts, never other comparisons — so no meta-comparison
-chains can launder semantic strength through stacked derivations.
+**Amendment 1 (owner) — the wall, precisely bounded:** *a v1
+criterion cannot consume an L11 comparative proposition as an input
+to create a stronger comparative proposition. L11 comparative
+evidence is excluded from the v1 criterion input vocabulary; any
+future higher-order comparison (statistical/meta-analysis) requires
+a separate architecture decision.* The prohibited laundering shape:
+C vs B under K1 → better-K1 → K2 consumes better-K1 → C "better"
+under K2. The v1 exclusion closes it without constitutionalizing a
+permanent ban on higher-order mechanisms that would face their own
+fresh Class-4 decision.
+
+**7. Scalarization provenance (owner Amendment 2):**
+*scalarization is a projection of the complete declared Δ and never
+replaces or obscures the underlying Δ fields required for
+reconstruction.* A package under a scalarized K retains the full
+multi-metric Δ (accuracy +10%, latency −50%), not merely the scalar
+— otherwise reconstruction loses the evidence the scalar was
+produced from, and scalarization becomes a compression/laundering
+surface. (D-L11-4's conditioning rule made explicit at its easiest
+escape point.)
+
+**8. The criterion is not an optimization engine (owner
+invariant).** K may say maximize X / minimize Y / weights = w. It
+may never say "find the candidate maximizing K" or "keep generating
+candidates until the score improves" — that would turn L11 into an
+autonomous improvement optimizer. The Ratchet compares a candidate
+that EXISTS; it does not own the search strategy for producing the
+next candidate (search/generation belongs to the automation grill,
+Q-L11-14).
 
 **Constitutional sentence:** *"Better" is always a deterministic
 projection of Δ under a registered ordering; a tradeoff may be
@@ -783,9 +816,112 @@ encoded only as parameters Governance committed to at registration;
 any tradeoff requiring case-by-case judgment remains unresolved
 inside L11 and is delivered to the door as multi-metric Δ.*
 
+**Carried principle (owner):** *a criterion may precommit
+comparative semantics; it may never perform case-specific tradeoff
+judgment.* The precommitment test is constitutional: it prevents
+"candidate C exists → choose weights that favor C → C wins"; asking
+"what weighting should we use for THIS candidate?" is no longer
+criterion semantics but case-specific Governance judgment, outside
+L11.
+
 Flagged: adversarial weight-tuning of scalarizations (choosing
 weights that flatter a known candidate) is a registration-review
 obligation, carried to Q-L11-14/Q-L11-20's adversarial register.
+The incomparable/NO-COMPARISON distinction carries directly into
+Q-L11-16.
+
+### D-L11-8 — Selection is not promotion: the router boundary (PROPOSED 2026-09-12, closing Q-L11-8; AWAITING OWNER LOCK)
+
+Resolving the quarantined tension: validated benchmark evidence →
+router → model selected for runtime — is that evaluation→behavior
+(prohibited shape) or legitimate consumption?
+
+**1. The two acts, constitutionally distinguished.** PROMOTION
+changes what is governed — it alters the set of admissible
+alternatives (registration, activation, withdrawal: acts at doors).
+SELECTION deterministically chooses AMONG the already-admitted set —
+which admitted alternative governs work now, under fixed deployment
+policy. In ladder terms: the router performs 3→4 (consumption
+machinery causing an admitted artifact to govern — exactly what
+D-L11-2 position 4 describes as legitimate). The prohibited shape is
+machinery performing 2→3. The owner's two scenarios split precisely
+here: admitted-A(82) vs admitted-B(91) → select B is 3→4 reliance;
+unadmitted-B(91) → select B is 2→(skip 3)→4, already structurally
+refused by the admission walls (gatePassed). And 4⇏2 holds: being
+selected confers no epistemic upgrade — reliance is not endorsement.
+
+**2. The five conditions for legitimate evidence-driven selection
+(each mechanically checkable; violating any one makes it promotion
+by another name):**
+
+- **(a) Closed candidate set.** Selection operates only over
+  alternatives each independently admitted through its own door.
+  Evidence may ORDER the admitted set; it may never EXTEND it — an
+  unadmitted alternative with an excellent score is invisible to
+  selection.
+- **(b) Admitted evidence.** The evidence consumed is itself
+  governed and admission-checked at the point of consumption (the
+  existing gatePassed discipline: verdict pass + model identity +
+  currency + digest + baseline chain). Ungoverned scores select
+  nothing; this is the verdict/digest precedent generalized.
+- **(c) Fixed registered policy.** The selection rule is
+  deterministic deployment policy — code/config through the
+  ordinary review pipeline — evaluated at declared decision points
+  (e.g. startup), reproducible from its inputs. Not model judgment,
+  not L11 judgment, not tunable at runtime.
+- **(d) No governance state is written.** Selection promotes,
+  demotes, registers, and withdraws NOTHING. Deselection is not
+  demotion; no "current champion" registry may exist (the
+  second-home prohibition again — which artifact was relied upon is
+  an L6 historical fact, never a governance state). The next policy
+  evaluation may choose differently.
+- **(e) Fail closed to admission, never to evidence.** Missing,
+  invalid, or stale evidence → refusal or the policy's declared
+  admitted fallback — never "select the best unverified."
+
+**3. Why this does not breach D-L9-16.** The no-auto-promotion
+prohibition targets evaluation results changing WHAT IS GOVERNED.
+Selection under (a)–(e) changes only which admitted artifact is
+consumed — the same act-class as an L7 gate consuming a recorded
+verification outcome to choose among declared edges (L10 precedent:
+recorded evidence deterministically steering within a
+Governance-declared space). The admissible SPACE is always
+human-governed; evidence steers within it, never redraws it.
+
+**4. The tests for "promotion by another name" (any one crossing
+the line):** selection enlarges the admissible set; selection output
+becomes durable governance state; the policy consults unadmitted
+evidence; the policy itself is chosen or tuned at runtime by
+evaluation results (meta-selection — the policy is fixed by
+deployment governance, its revision is an ordinary reviewed change);
+evidence-consumption bypasses the admission check at the consumption
+point. Note recorded: a policy that leaves some admitted artifact
+permanently unselected is legitimate preference, not de facto
+withdrawal — admissibility is unchanged, and the pattern is visible
+in L6 records for Governance to notice.
+
+**5. L11's role at runtime: none.** The router consumes the
+BENCHMARK plane's admitted verdict artifacts under that plane's own
+gate discipline — machinery that predates L11 and remains
+deployment/bench-owned. **Standing wall (resolving the D-L11-4 §6
+quarantine): L11 comparative-evidence packages are not selection
+inputs.** Δ is addressed to doors — humans — and enters no routing
+decision. If Governance ever wants runtime selection to consume an
+L11-class artifact, that is a fresh architecture decision (the
+D-L11-7 Amendment-1 pattern: excluded from the vocabulary now, not
+banned by permanent law without a concrete requirement).
+
+**6. Generalization handoff.** D-L11-8 defines the boundary;
+Q-L11-15 formalizes it as the consumption-of-evidence rule
+(evidence → Governance promotion vs validated evidence →
+deterministic deployment selection), with the router as its existing
+proven instance.
+
+**Constitutional sentence:** *Selection consumes evidence to choose
+among what Governance has already admitted; promotion changes what
+is admitted. Evidence may deterministically order the admitted set
+under fixed registered policy; it may never extend that set, and no
+selection outcome is ever a governance state.*
 
 ### [Reallocated] Implementer material on criteria/comparator/packages (2026-09-11; formerly proposed as D-L11-4, superseded by owner restructure 2026-09-12)
 
@@ -876,8 +1012,8 @@ residual → Q-L11-10.
 | Q-L11-4 | **CLOSED → D-L11-4.** Conditioned comparative fact as the L11 atom; six claims disposed; X→X′ artifact ladder; admission as observation; enumeration-not-strength aggregation; direction symmetry; eligibility prohibition. |
 | Q-L11-5 | **CLOSED → D-L11-5.** Doors own baselines, L11 observes and mechanically applies registered constraints; admission = production precondition (refusal, never INCONCLUSIVE); no silent baseline substitution; pairwise only; claims never choose. |
 | Q-L11-6 | **CLOSED → D-L11-6.** Governance-owned criterion registry, L11 format+loader; three homes for semantics; closed schema; comparator = registered code identity (option A LOCKED); applicability ≠ selection; ordering is criterion-relative derivation. |
-| Q-L11-7 | **Closure PROPOSED → D-L11-7; AWAITING OWNER LOCK.** Closed ordering taxonomy (none/per-metric/dominance/registered scalarization); registrability test for tradeoffs; ties/incomparability first-class; no meta-comparison chains. |
-| Q-L11-8 | Model-router/evaluation tension: evaluation result → runtime model selection — prohibited automatic promotion/reliance, or deployment policy consuming evidence? |
+| Q-L11-7 | **CLOSED → D-L11-7.** Ordering taxonomy (none/per-metric/dominance/scalarization); precommitment test; ties/incomparability first-class; v1 no meta-comparison; scalarization = projection; no optimization objective. |
+| Q-L11-8 | **Closure PROPOSED → D-L11-8; AWAITING OWNER LOCK.** Selection ≠ promotion; five conditions (closed set, admitted evidence, fixed policy, no governance state, fail-closed); router = 3→4 reliance; Δ never a selection input. |
 | Q-L11-9 | Regression resistance: what "provides regression-resistance evidence" establishes — enumerative report vs "no observed regression"; what constitutes the regression set; keeping L11 from becoming a quality gate. |
 | Q-L11-10 | Evaluation execution: can L11 create tasks, choose Skill/model/evidence/verifier, repeat, A/B, schedule — or is it evidence-consumer only? (L7/L10/L11 seam.) |
 | Q-L11-11 | Candidate/evidence lifecycle: durable machinery for identity, evidence refs, comparison identity, lineage, reproducibility, supersession — what L6 stores vs what L11 derives. |

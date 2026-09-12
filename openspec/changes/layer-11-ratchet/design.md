@@ -1066,7 +1066,7 @@ decides what that record permits.*
 record can contain evidence of regression; completeness is
 coverage, not favorability.*
 
-### D-L11-10 — Evaluation execution: describe and consume, never run (PROPOSED 2026-09-12, closing Q-L11-10; AWAITING OWNER LOCK)
+### D-L11-10 — Evaluation execution: describe and consume, never run (LOCKED 2026-09-12, Q-L11-10; owner amendment: plan conformance is record-to-plan matching, never a new evaluation subsystem)
 
 Answering the owner's dichotomy: L11 is an **evidence consumer plus
 a describer of needed evaluations** — an "orchestrator" only in the
@@ -1133,6 +1133,39 @@ check that runs CONFORM to a plan (identity comparison against
 recorded provenance) and record the observation in the package —
 enumerated fact, not judgment.
 
+**Owner amendment — conformance ≠ evaluation:** the post-hoc
+conformance check is NOT itself a verification/evaluation
+execution; the drift "L11 evaluates whether the run satisfies the
+plan, therefore L11 is an evaluator" is foreclosed. The five-role
+division: L7 executes the governed workflow; L10 evaluates
+registered verification contracts and produces L10 outcomes; L11
+mechanically determines whether already-committed records
+correspond to the identities/requirements enumerated in the plan
+and whether those records can participate in a comparison; the L11
+comparator compares admitted evidence under the registered
+criterion; Governance determines what any resulting evidence means
+for promotion/admission.
+
+**Plan is never authority (owner invariant):** *an Evaluation Plan
+is never an authority-bearing prerequisite for execution.* A task
+initiated pursuant to a plan is valid because the ordinary
+initiation/execution mechanisms authorize it — never because the
+plan does. Directionality: Evaluation Plan → ordinary task
+initiation → L7 → L10 → L6 → L11; never Evaluation Plan → L11
+executor → L7.
+
+**Plan language stays declarative (owner):** allowed — candidate
+identity, baseline identity, Skill identity/version, criterion/set
+identity/version, required input commitments, required provenance,
+required number/type of runs, expected artifact/evidence
+identities. Not allowed — "try Skill A, then B"; "if result fails,
+rerun"; "choose the best model"; "select the verifier"; "increase
+sample size until confidence is sufficient"; "retry until PASS";
+"pick whichever candidate performs better". Those are
+orchestration/optimization semantics and live outside L11; because
+L11 cannot select Skill/model/verifier/evidence at runtime, a plan
+cannot become a disguised imperative program.
+
 **5. Purpose attribution (assigned residual, minimal form).**
 Evaluation tasks are ORDINARY tasks — no execution mode, no special
 authority, no semantic flag consulted by any control path. Purpose
@@ -1142,12 +1175,116 @@ by plan reference. Whether that reference lives in the existing
 task envelope or needs a narrow L6 amendment is an implementation
 decision for the milestones — constitutionally it is attribution
 data, never execution semantics (D-L9-16 preserved).
+(Owner form: durable provenance `run R17 → evaluation_plan P42`,
+never an execution-mode flag `task.execution_mode = evaluation` —
+the latter would create an implicit special execution plane.
+Constitutional requirement: *evaluation-plan attribution is
+provenance about why/under what declared evaluation context a run
+was initiated; it must not alter L7, L10, L4, or L5 behavior.*)
 
 **Constitutional sentence:** *L11 may describe the evaluation it
 needs and consume the records that result; everything that
 executes, executes as an ordinary governed task through existing
 initiation and execution authority — L11 runs nothing, selects
 nothing at runtime, and schedules nothing.*
+
+**Recorded invariants (owner, at lock):** no L11 execution plane;
+no L11 task-creation/instantiation authority; no
+Skill/model/evidence/verifier runtime selection; no L11 repetition
+loop or optimizer; no L11 scheduling authority; evaluation runs are
+ordinary governed tasks; L7 owns execution; L10 owns verification
+semantics; L6 owns the authoritative execution/evaluation history;
+L11 consumes committed records and performs comparison/package
+assembly; Evaluation Plans are inert declarative data; plan
+conformance is mechanical record-to-plan matching, not a new
+verification subsystem; plan attribution is provenance only and
+cannot affect execution semantics; an L11 insufficiency result can
+describe missing evidence but cannot cause its production; no L11
+schedule, retry, or execution backdoor.
+
+The chain: *describe → governed initiation → L7 execution → L10
+verification → L6 durable record → L11 comparison/evidence.* And
+the boundary that matters most (owner): *L11 can tell Governance
+what evidence exists and what additional evidence is needed; it
+cannot manufacture the evidence needed to prove its own
+conclusion.* The innocent-looking loop "compare → insufficient →
+run again → compare → optimize" is structurally unbuildable.
+
+### D-L11-11 — Lifecycle and durable ownership: two planes, hash identity, derived everything else (PROPOSED 2026-09-12, closing Q-L11-11; AWAITING OWNER LOCK)
+
+**1. Exactly two durable planes, both existing — L11 introduces no
+third.** (a) The GOVERNED REGISTRATION plane: criterion registry
+and regression-set registry under policies/ — Governance-owned
+acts, append-only, already decided (D-L11-6/9). (b) The L6 RECORD
+plane: every L11-produced instance artifact. There is no L11
+database, no L11 state directory, no L11-owned mutable store of any
+kind.
+
+**2. Identity rule — registered names vs instance hashes.**
+Registered artifacts (criteria K, sets S) carry name@version +
+SHA-256 with two-way identity. INSTANCE artifacts — Candidates,
+Evaluation Plans, comparative-evidence packages, regression-level
+packages, refusal records, discrepancy facts — carry CONTENT-HASH
+IDENTITY ONLY. No name@version for instances: naming is the
+registration plane's privilege, and hash-only identity structurally
+prevents a "candidate registry by name" (a proto-catalog with
+status columns) from ever emerging.
+
+**3. What L6 stores (authoritative, append-only, content-addressed
+objects — the StoreObject/discrepancy-artifact precedent):**
+candidate bytes; evaluation-plan bytes; comparative-evidence
+package bytes (constituent references by ObjectID); regression
+set-level package bytes; refusal records (D-L11-5 §3); discrepancy
+facts (D-L11-4 §4-inherited cold-rederivation disagreements) — on
+top of the evidence records L6 already holds (execution records,
+L10 records). "No identity without bytes" (D-L10-10): a reference
+is valid only if the addressed bytes exist and hash-verify at read
+(D-L10-11 read-boundary detection covers L11 artifacts for free;
+missing/mismatched constituents fail closed and mint discrepancy
+facts, never repaired packages). The *.proposed.* handoff files at
+doors are REPRESENTATIONS derived from the authoritative
+content-addressed bytes, never a second authority (D-L11-3).
+
+**4. What L11 derives, statelessly, on demand — never stores:**
+better-under-K; resistant-under-S; latest-per-(C,B,K) views;
+lineage graphs (walking supersedes references); "evidence available
+for candidate C" summaries; plan-conformance displays; candidate
+enumerations. All recomputed from L6 bytes + registered artifacts
+(the views.go/D-L10-9 pattern). v1 has NO derived-state cache at
+all — if a future cache is ever justified, it is disposable by
+definition and its loss may change no answer.
+
+**5. Supersession is a claim, never a state change.** Instances are
+immutable; nothing can be marked superseded. A newer candidate
+CLAIMS to supersede an older one by hash reference (D-L11-3:
+lineage answers "where did this come from", never "is this
+governed"). "What claims to supersede X" is a derived view;
+"X is superseded" is not an establishable L11 fact — the receiving
+mechanism owns any disposition it cares to record, in its own
+plane.
+
+**6. The negative list — what must never become L11-owned
+authoritative state (consolidating every prior lock):** candidate
+lifecycle/disposition (D-L11-3); promotion truth (doors); selection
+or champion state (D-L11-8); resistant/better flags (D-L11-9/4);
+baseline identity or currency pointers (D-L11-5); applicable-set or
+applicable-criterion choices (D-L11-9 Am. 2, D-L11-6 Am. 1);
+comparison queues, schedules, or work lists (D-L11-10); any status
+column on any enumeration of instances. An index that acquires a
+status column has become a registry; refused structurally.
+
+**7. Production recording.** Package/candidate/plan production is
+an act of writing content-addressed objects; v1 needs no new event
+machinery — artifacts are self-describing and provenance-complete,
+discovery is derivable enumeration. Whether production additionally
+appends an L6 event outside task streams is a milestone
+implementation decision, constrained: if added, it is a record of
+the act, never a lifecycle state.
+
+**Constitutional sentence:** *L11's durable truth lives entirely in
+the Governance registries and the L6 record plane; everything else
+L11 knows is recomputed on demand — if deleting every L11-side
+cache changed any answer, the architecture is broken.*
 
 ### [Reallocated] Implementer material on criteria/comparator/packages (2026-09-11; formerly proposed as D-L11-4, superseded by owner restructure 2026-09-12)
 
@@ -1241,8 +1378,8 @@ residual → Q-L11-10.
 | Q-L11-7 | **CLOSED → D-L11-7.** Ordering taxonomy (none/per-metric/dominance/scalarization); precommitment test; ties/incomparability first-class; v1 no meta-comparison; scalarization = projection; no optimization objective. |
 | Q-L11-8 | **CLOSED → D-L11-8.** Selection ≠ promotion; five conditions; selection = one form of 3→4 consumption; predeclared fallbacks; no side-effect on admissible set; Δ never a selection input (v1). |
 | Q-L11-9 | **CLOSED → D-L11-9.** Enumeration under registered S@v; doors own set significance and exact resolution; no partial packages; bounded resistant-under-S derivation; incomparability per K; never a gate; completeness = coverage. |
-| Q-L11-10 | **Closure PROPOSED → D-L11-10; AWAITING OWNER LOCK.** Describe-and-consume, never run; eight verbs disposed; inert Evaluation Plan artifact; three-layer seam; purpose attribution as initiation-time data. |
-| Q-L11-11 | Candidate/evidence lifecycle: durable machinery for identity, evidence refs, comparison identity, lineage, reproducibility, supersession — what L6 stores vs what L11 derives. |
+| Q-L11-10 | **CLOSED → D-L11-10.** Describe-and-consume, never run; eight verbs disposed; inert declarative Evaluation Plan (never authority); conformance = record-to-plan matching; attribution = provenance only; 15 recorded invariants. |
+| Q-L11-11 | **Closure PROPOSED → D-L11-11; AWAITING OWNER LOCK.** Two durable planes only; registered names vs instance hashes; L6 stores instances, L11 derives everything statelessly; supersession = claim; negative list of forbidden L11 state. |
 | Q-L11-12 | Feedback: is ratchet/feedback evidence, observation, candidate input, governance commentary, evaluation result — or a dangerous catch-all to eliminate? |
 | Q-L11-13 | Regression corpus / reference set: who owns regression cases, reference inputs, expected outputs, golden examples, acceptance thresholds; L11 artifacts or existing Governance/Themis knowledge? |
 | Q-L11-14 | Automation boundary: may the Ratchet automatically generate candidates, run evaluations, compare, open proposals, request review — where automation stops, mechanically enforceable. |

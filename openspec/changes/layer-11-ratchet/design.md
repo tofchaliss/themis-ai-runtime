@@ -560,7 +560,7 @@ Carried to Q-L11-6: the closed vocabulary of criterion-declared
 baseline constraints (§4), with the rest of what a criterion can
 say.
 
-### D-L11-6 — Criterion ownership and registration (PROPOSED 2026-09-12, closing Q-L11-6; AWAITING OWNER LOCK)
+### D-L11-6 — Criterion ownership and registration (LOCKED 2026-09-12, Q-L11-6; owner amendments: (1) applicability ≠ selection, (2) ordering region is criterion-relative derivation, never Governance meaning. Comparator option A LOCKED.)
 
 The owner's sharpened question: who is allowed to define the
 comparison semantics that L11 is subsequently permitted to execute?
@@ -597,7 +597,12 @@ lowers the bar (D-L9-16). Only Governance registration makes it
 executable semantics. Registration review is the semantic gate: the
 reviewer answers "should this comparison frame exist?" — the
 cherry-picking-by-selector surface (D-L11-4 flag) is examined HERE,
-once, at the only point where semantics enter.
+once, at the only point where semantics enter. (Owner rationale at
+lock: a criterion controls how improvement evidence is INTERPRETED —
+if the model could register its own criterion it could define its
+own success measure, a serious Ratchet escape. The model may propose
+the frame of evaluation; Governance decides whether that frame
+becomes a governed comparison semantic.)
 
 **4. What a criterion can say (closed schema, nothing defaulted):**
 identity (name@version + SHA-256, two-way); applicable candidate
@@ -616,15 +621,36 @@ the closed vocabulary — v1 proposes exactly one token,
 `requires-current-active` (D-L11-5 §4); extension is a schema
 revision, not free text; PROVENANCE REQUIREMENTS.
 
+(Owner confirmation on selectors at lock: selectors over established
+governed facts, never arbitrary queries — criterion → arbitrary
+query → arbitrary evidence would create a second context/evidence
+authority. The selector identifies what evidence the criterion
+requires; L2/L10/L6 remain owners of the underlying evidence.)
+
+**Amendment 1 (owner) — applicability ≠ selection:** *A criterion
+may declare where it is applicable and what evidence/constraints it
+requires, but it cannot cause itself to be selected or require its
+own execution. Selection remains governed by the existing evaluation
+workflow/consumption mechanism.* "K applies to skill revisions" is
+criterion metadata; "therefore K must be selected for this
+candidate" is selection policy, owned elsewhere (Q-L11-14). Without
+this wall the criterion becomes partly self-authorizing — a hidden
+L11 policy engine.
+
 **5. What a criterion can NEVER say:** no proposition beyond Δ and
 its declared region (no "improvement"/"safe"/"recommended"/
 "eligible" — D-L11-4); no security meaning; no promotion
 consequence, no door obligation ("if Δ ≥ x then …" has no legal
-continuation); no executable logic, expressions, or templates
-(D-L9-4 zero-interpreters); no evidence source outside the
-established-facts vocabulary; no redefinition or reinterpretation of
-L10 outcomes (PASS is an input fact, never re-judged); no reference
-to unregistered artifacts.
+continuation — the criterion has NO continuation language: no
+then/should/must/promote/accept/activate/eligible/deploy, the
+anti-smuggling principle that protected L9 and L10); no executable
+logic, expressions, or templates (D-L9-4 zero-interpreters); no
+evidence source outside the established-facts vocabulary; no
+redefinition or reinterpretation of L10 outcomes (owner
+confirmation: a criterion may incorporate PASS as an established
+input fact into its comparison; it cannot redefine PASS → good or
+PASS → improvement — L10 owns the meaning of its result, L11
+consumes it as evidence); no reference to unregistered artifacts.
 
 **6. The comparator binding — the carried open decision, proposed
 as (A) registered in-harness code identity.** The comparator set is
@@ -637,7 +663,12 @@ evaluator would become an unreviewed semantic engine, and criterion
 review would silently become program review. The narrow declarative
 remnant that IS allowed — ordering regions, §4 — is data with closed
 fixed semantics, not composable logic; the line is "parameters yes,
-programs never."
+programs never." **(Owner: LOCKED as option A.** `threshold = 0.90,
+direction = maximize` is legal because the interpreter already has
+fixed semantics; `if metric_a > metric_b: ... else: ...` is not,
+because the criterion language would become an executable semantic
+language requiring another interpreter and another security review
+surface.)
 
 **7. Recursion flag.** A criterion is itself a governed artifact;
 criterion-revision as a candidate FAMILY (the Ratchet proposing
@@ -649,6 +680,112 @@ D-L11-3 fixed them.
 through Governance registration of a declarative criterion bound to
 a reviewed comparator; L11 executes what is registered, and nothing
 that is registered can say more than Δ.*
+
+**Amendment 2 (owner) — precision on "nothing more than Δ":** *the
+criterion may define the deterministic interpretation of Δ within
+its declared shape, including an ordering/improvement region, but
+that interpretation remains criterion-relative and cannot acquire
+Governance meaning.* better-under-K does not violate "nothing more
+than Δ" — it is a deterministic projection of Δ under K. The
+escalation hierarchy: Δ → K-defined ordering → better-under-K → NO
+FURTHER SEMANTIC ESCALATION (improvement, recommendation, safety,
+promotion eligibility, acceptance all remain outside L11).
+
+**Carried to Q-L11-7 (owner):** the ordering vocabulary is NOT
+expanded here. A criterion can define a fixed, closed partial/total
+ordering if its semantics are explicitly registered; whether any
+multi-metric TRADEOFF resolution can legitimately reside in a
+registered criterion without becoming hidden Governance judgment —
+"decide whether the accuracy improvement is worth the cost
+increase" — is exactly Q-L11-7's question, and L11 must not
+improvise the answer.
+
+### D-L11-7 — What "better" means: orderings and the tradeoff boundary (PROPOSED 2026-09-12, closing Q-L11-7; AWAITING OWNER LOCK)
+
+Frame (already locked): "better" has no L11 meaning outside K
+(D-L11-4 claim 2); the ordering region is criterion-relative
+derivation, never Governance meaning (D-L11-6 Amendment 2). What
+remains: which ordering STRUCTURES may K legitimately declare, and
+where registrable ordering ends and human judgment begins.
+
+**1. The closed ordering taxonomy** — a criterion declares exactly
+one of four structures, weakest to strongest:
+
+- **(i) No ordering.** Δ is descriptive; no better-claim is
+  derivable, ever. Always legal; the default.
+- **(ii) Per-metric orderings.** Each Δ field declares direction
+  (maximize|minimize) and optional thresholds → per-metric
+  derivations only ("improved-under-K on latency", "regressed-under-K
+  on cost"), enumerated, never aggregated across metrics. The
+  multi-metric tradeoff remains visibly unresolved.
+- **(iii) Dominance (partial order).** better-under-K iff
+  better-or-equal on every declared metric and strictly better on at
+  least one; symmetrically worse-under-K; else equal or
+  INCOMPARABLE. Nothing is traded off — dominance is the strongest
+  claim derivable without any tradeoff commitment.
+- **(iv) Registered scalarization (total order).** A fixed
+  deterministic reduction of Δ to an ordered scalar — weights,
+  lexicographic priority, or another closed form — supplied ONLY as
+  pinned parameters to a reviewed comparator with fixed semantics
+  (D-L11-6: parameters yes, programs never).
+
+**2. The tradeoff boundary — the actual answer to Q-L11-7.**
+Declaring scalarization weights IS a tradeoff judgment. It is
+legitimate exactly because it is made AT REGISTRATION by Governance
+— reviewed, versioned, hash-pinned, visible — not improvised at
+comparison time by L11 or the model. Registrability test
+(constitutional): *a tradeoff may be encoded in K only if Governance
+is willing to commit to it in advance for every future comparison
+under that K; anything Governance would want to weigh case-by-case
+must remain outside K.* "Is +5% accuracy worth +30% cost for this
+use?" fails the test — context-dependent judgment; the criterion
+must then stay at (ii)/(iii) and the multi-metric Δ goes to the door
+unresolved. L11 never improvises the resolution; there is no
+resolution machinery to improvise WITH — orderings are declared
+data, applied by fixed code.
+
+**3. Ties and equality.** K's ordering declares its equality
+semantics: exact equality, or a registered tolerance as a pinned
+parameter. equal-under-K is a first-class, direction-symmetric
+result. No tie-breaking by ANYTHING outside Δ — not recency, not
+authorship, not provenance; a tie is an answer, not a problem.
+
+**4. Incomparability is a result, not a failure.**
+incomparable-under-K (dominance criteria where neither side
+dominates) is a first-class package outcome — never coerced toward
+worse or equal, never an error. Distinct from Q-L11-16 machinery
+failure: incomparable = the comparison SUCCEEDED and the ordering is
+undefined at that point of Δ-space; NO COMPARISON = no package
+exists. (Direction symmetry, D-L11-4 §6, extended to the full
+four-value derivation: better | worse | equal | incomparable, each
+under-K.)
+
+**5. Thresholds define regions, never consequences.** A threshold
+places Δ inside or outside a declared region (improvement region,
+non-regression region); region membership is one more derived,
+direction-symmetric boolean. Any continuation is illegal (D-L11-6
+§5: no continuation language).
+
+**6. No cross-criterion "better", and no derivation chains.**
+better-under-K1 ∧ better-under-K2 composes into nothing (aggregation
+raises enumeration, never strength — D-L11-4 Amendment 3). A
+composite judgment across criteria is Governance's at the door. If
+Governance wants a registered composite, the composite is itself a
+criterion computed from the UNDERLYING established facts.
+**Proposed wall:** the v1 evidence-selector vocabulary excludes L11
+comparative-evidence packages as inputs — criteria consume L2/L6/L10/
+benchmark facts, never other comparisons — so no meta-comparison
+chains can launder semantic strength through stacked derivations.
+
+**Constitutional sentence:** *"Better" is always a deterministic
+projection of Δ under a registered ordering; a tradeoff may be
+encoded only as parameters Governance committed to at registration;
+any tradeoff requiring case-by-case judgment remains unresolved
+inside L11 and is delivered to the door as multi-metric Δ.*
+
+Flagged: adversarial weight-tuning of scalarizations (choosing
+weights that flatter a known candidate) is a registration-review
+obligation, carried to Q-L11-14/Q-L11-20's adversarial register.
 
 ### [Reallocated] Implementer material on criteria/comparator/packages (2026-09-11; formerly proposed as D-L11-4, superseded by owner restructure 2026-09-12)
 
@@ -738,8 +875,8 @@ residual → Q-L11-10.
 | Q-L11-3 | **CLOSED → D-L11-3.** Candidate = content-addressed proposal data; no lifecycle state; single-home promotion truth; 1→3→2 epistemic; no trial admission. |
 | Q-L11-4 | **CLOSED → D-L11-4.** Conditioned comparative fact as the L11 atom; six claims disposed; X→X′ artifact ladder; admission as observation; enumeration-not-strength aggregation; direction symmetry; eligibility prohibition. |
 | Q-L11-5 | **CLOSED → D-L11-5.** Doors own baselines, L11 observes and mechanically applies registered constraints; admission = production precondition (refusal, never INCONCLUSIVE); no silent baseline substitution; pairwise only; claims never choose. |
-| Q-L11-6 | **Closure PROPOSED → D-L11-6; AWAITING OWNER LOCK.** Governance-owned criterion registry in L11 format; three homes for semantics (declaration/comparator/binding); closed schema; comparator as registered code identity (option A). |
-| Q-L11-7 | What "better" actually means: who resolves multi-metric tradeoffs when K yields metrics without an ordering; keeping tradeoff resolution out of L11. |
+| Q-L11-6 | **CLOSED → D-L11-6.** Governance-owned criterion registry, L11 format+loader; three homes for semantics; closed schema; comparator = registered code identity (option A LOCKED); applicability ≠ selection; ordering is criterion-relative derivation. |
+| Q-L11-7 | **Closure PROPOSED → D-L11-7; AWAITING OWNER LOCK.** Closed ordering taxonomy (none/per-metric/dominance/registered scalarization); registrability test for tradeoffs; ties/incomparability first-class; no meta-comparison chains. |
 | Q-L11-8 | Model-router/evaluation tension: evaluation result → runtime model selection — prohibited automatic promotion/reliance, or deployment policy consuming evidence? |
 | Q-L11-9 | Regression resistance: what "provides regression-resistance evidence" establishes — enumerative report vs "no observed regression"; what constitutes the regression set; keeping L11 from becoming a quality gate. |
 | Q-L11-10 | Evaluation execution: can L11 create tasks, choose Skill/model/evidence/verifier, repeat, A/B, schedule — or is it evidence-consumer only? (L7/L10/L11 seam.) |

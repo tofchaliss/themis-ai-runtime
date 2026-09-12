@@ -1486,7 +1486,7 @@ threshold, each fixed by Governance at registration or derived
 from admitted-baseline records. L11 verifies hashes and computes
 Δ; it owns no case, no fixture, no golden, and no threshold.*
 
-### D-L11-14 — The automation boundary: complete, never initiate (PROPOSED 2026-09-12, closing Q-L11-14; AWAITING OWNER LOCK)
+### D-L11-14 — The automation boundary: complete, never initiate (LOCKED 2026-09-12, Q-L11-14; owner amendment: no-discard applies from ACCEPTED INVOCATION; plus the no-self-continuation invariant)
 
 The governing principle, then the four powers separately:
 **automation in L11 may deterministically COMPLETE what a governed
@@ -1529,6 +1529,14 @@ or refusal record — regardless of direction.** "Run it quietly,
 discard if unfavorable" is structurally impossible: initiation
 commits to a durable result (the no-success-only-path rule of
 D-L11-4 §6, extended from representation to production).
+**Owner amendment — "initiated" defined:** *an L11
+comparison/package operation is initiated when it has been ACCEPTED
+FOR EXECUTION by the existing L11 invocation boundary — not merely
+when an external user considered or drafted a request.* Accepted
+invocation → comparison attempt → package OR refusal → durable L6
+record. Legitimate pre-invocation selection is untouched: someone
+may decide not to request a comparison, and L11 makes no epistemic
+claim about what an unrequested comparison would have shown.
 Cherry-picking then survives only at the request level — choosing
 not to ask — which no proposition claims to prevent (D-L11-4:
 "selective production is visible, not prevented") and which
@@ -1567,6 +1575,108 @@ watches, schedules, generates, or selects — every comparison,
 plan, and candidate begins with an attributable act outside the
 machinery, and once begun, its outcome is recorded whatever it
 shows.*
+
+**Additional invariant (owner, at lock — stronger and more
+implementation-testable than "no automation"):** *no L11 operation
+may create another L11 operation as a consequence of its result.*
+Enumerated: comparison cannot trigger comparison; refusal cannot
+trigger retry; regression cannot trigger Candidate creation;
+Candidate observation cannot trigger Evaluation Plan creation;
+package production cannot trigger registration; evidence cannot
+trigger scheduling. This closes the possibility of building an
+autonomous loop out of individually synchronous calls. The
+termination boundary: *L11 can consume evidence and produce
+evidence, but it cannot consume its own output as an instruction
+to continue.* (Owner distinction retained: this is the line
+between AUTOMATION — completing an explicitly governed request —
+and AUTONOMY — creating the condition that causes the request to
+exist. "L11 consumes a baseline; it does not discover one":
+policy → resolve B → L11(B), never L11 → find current B →
+compare.)
+
+### D-L11-15 — The consumption-of-evidence rule (PROPOSED 2026-09-12, closing Q-L11-15; AWAITING OWNER LOCK)
+
+**The general rule, formalizing D-L11-8's deeper principle:**
+*consumption never confers authority. Who may consume which
+evidence, for what purpose, under what fixed policy is determined
+BEFORE the evidence exists; evidence informs the exercise of
+authority a consumer already holds and never expands it.* The
+consumption classes below are CLOSED: a consumption not in the
+table is refused by default, and a new class is a fresh
+architecture decision (the ratchet pattern, third application).
+
+**The six consumption classes:**
+
+**Class 1 — Governance promotion (humans at doors).** Consumes:
+comparative/regression packages, advisory content (kept visibly
+separate). Policy: the door's own requirements. Authority ceiling:
+full discretion — evidence informs, never obligates (D-L11-2/3);
+the only record constraint is D-L11-2 Amendment A: evidence
+presence/absence explicit in the promotion record.
+
+**Class 2 — Deterministic deployment selection (3→4 consumption
+mechanisms).** The D-L11-8 five conditions, now stated as the
+GENERAL rule for any runtime consumer, present or future — closed
+admitted set, admitted evidence checked at consumption, fixed
+registered policy, no governance state written, fail closed to
+admission. The router is the instance; the rule is the law. A new
+consumption mechanism inherits all five conditions or it is not a
+legitimate Class-2 consumer.
+
+**Class 3 — L11 comparative/regression establishment.** Consumes:
+established governed facts per K's registered selectors (v1
+vocabulary: L2/L6/L10/benchmark facts), under exact externally
+supplied K/S (D-L11-14). Produces packages; no continuation
+(no-self-continuation invariant). Fully bounded by
+D-L11-4/5/6/7/9/10/14.
+
+**Class 4 — L11 reading its own output: TERMINAL, with exactly two
+licensed re-reads.** The dangerous class, given its precise
+boundary. (a) UNDERLYING facts consumed by many comparisons — fine
+and intended: the same L10 record may feed any number of K's;
+facts are reusable. (b) L11 OUTPUT as comparator input — refused
+(D-L11-7 Amendment 1, now completed into the general form):
+**L11 output is terminal within L11.** Packages exit toward doors
+and views; they never re-enter the comparator. Exactly two
+licensed re-reads of own output exist: (i) re-derivation/
+verification of an existing package — confirming or minting a
+DISCREPANCY fact, never a new comparative fact (Q-L11-17); (ii)
+stateless rewritings already licensed by D-L11-4 (better-under-K,
+resistant-under-S, enumerations, lineage views). Nothing else.
+This is the data-plane complement of D-L11-14's control-plane
+invariant: no operation triggers an operation, and no output feeds
+a comparison — the loop is closed on both planes.
+
+**Class 5 — L11 packages as runtime selection evidence: EXCLUDED.**
+Standing wall from D-L11-8 §5 restated as consumption law: Δ is
+addressed to doors; it enters no routing or runtime selection
+decision. Reversal requires a fresh architecture decision, not an
+input field.
+
+**Class 6 — the model reading evidence as data.** In ordinary
+governed tasks the model may read packages/views as UNTRUSTED
+CONTEXT DATA — informing candidates it authors (D-L11-14 §4),
+establishing nothing, triggering nothing. Data-not-instructions
+discipline applies: a package is never an instruction to the
+model, and a model "acting on evidence" is just authorship with
+provenance, subject to every existing wall.
+
+**The matrix, compressed:**
+
+| Class | Consumer | May do | May never do |
+|---|---|---|---|
+| 1 | Door humans | decide with discretion | be obligated by evidence |
+| 2 | Fixed deployment policy | order the admitted set | extend it / write governance state |
+| 3 | L11 comparator | produce packages from facts | continue, select, initiate |
+| 4 | L11 itself | verify + rewrite own output | re-compare it |
+| 5 | Runtime selection | — (excluded) | consume Δ at all |
+| 6 | Model in tasks | read as data, author | treat as instruction, establish |
+
+**Constitutional sentence:** *Consumption never confers authority:
+who consumes which evidence under what policy is fixed before the
+evidence exists. L11's own outputs are terminal — read again only
+to be verified or rewritten, never to compare, select, or
+continue.*
 
 ### [Reallocated] Implementer material on criteria/comparator/packages (2026-09-11; formerly proposed as D-L11-4, superseded by owner restructure 2026-09-12)
 
@@ -1664,8 +1774,8 @@ residual → Q-L11-10.
 | Q-L11-11 | **CLOSED → D-L11-11.** Two durable planes only; registered names vs instance hashes; L6 stores, L11 derives statelessly; supersession = claim; negative list; production via existing L6 mechanisms; refusal = fact about attempt. |
 | Q-L11-12 | **CLOSED → D-L11-12.** "Feedback" is not an architectural concept in L11; dissolution table; no type/store/channel; loop is human-governed; reservoir surface removed; feedback/ scaffold forbidden; the architectural test. |
 | Q-L11-13 | **CLOSED → D-L11-13.** Corpus = registered criteria + hash-pinned parameters (case represented through K, not a third concept); enterprise wall; goldens record-derived or declared; thresholds two-stage; results never modify their own test population. |
-| Q-L11-14 | **Closure PROPOSED → D-L11-14; AWAITING OWNER LOCK.** Complete-never-initiate; exact pins for K and B selection; no discard after initiation; candidate generation refused as machinery; no timers/watchers/queues — checkable code shape. |
-| Q-L11-15 | Router and deployment policy: formally distinguish evidence→Governance-promotion from validated-evidence→deterministic-deployment-selection, if the latter is legitimate (consumption-of-evidence rule). |
+| Q-L11-14 | **CLOSED → D-L11-14.** Complete-never-initiate; exact pins; no-discard from accepted invocation; candidate generation refused as machinery; no timers/watchers/queues; no L11 operation creates another L11 operation. |
+| Q-L11-15 | **Closure PROPOSED → D-L11-15; AWAITING OWNER LOCK.** Consumption never confers authority; six closed consumption classes; L11 output terminal (two licensed re-reads); Class-2 five conditions as general law. |
 | Q-L11-16 | Failure and incompleteness: failed/differing/incomplete/incomparable/unavailable inputs — NO COMPARISON vs INCONCLUSIVE vs new vocabulary; resist a second copy of L10's outcomes. |
 | Q-L11-17 | Reproducibility: reconstruct "why did Ratchet say C compared favorably with B" — L10-strength provenance; must comparison itself be deterministic? |
 | Q-L11-18 | Security meaning boundary: can Ratchet ever conclude "safer"/"reduces risk"/"acceptable"? (Preliminary: no — Governance propositions.) |

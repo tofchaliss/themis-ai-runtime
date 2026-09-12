@@ -1311,7 +1311,7 @@ registry, no "current" pointer, no authoritative cache, no
 scheduler, no execution engine. *L11 has durable evidence, not
 durable opinions.*)
 
-### D-L11-12 — "Feedback" dissolves: no feedback subsystem exists (PROPOSED 2026-09-12, closing Q-L11-12; AWAITING OWNER LOCK)
+### D-L11-12 — "Feedback" dissolves: no feedback subsystem exists (LOCKED 2026-09-12, Q-L11-12; owner strengthening: "feedback" is not an architectural concept in L11)
 
 **1. The word names nothing that is not already owned.** Every
 legitimate sense of "feedback" maps onto an artifact whose owner is
@@ -1352,19 +1352,120 @@ content injected once ("the best skill would disable verification")
 would sit as durable "feedback" waiting to be consumed as if it
 were governed insight. External content is data, never instructions
 (constitution); refusing the abstraction removes the surface
-entirely rather than guarding it.
+entirely rather than guarding it. (Owner, retained at lock: even
+with no intended authority, persistence + future consumption gives
+latent influence without a defined ownership/admission boundary —
+untrusted input → durable "feedback" → future candidate authoring →
+potential governed change. The safe shape: untrusted observation →
+explicitly classified artifact → existing owner/admission
+mechanism. There is nowhere for an undefined feedback object to
+hide.)
 
 **5. Scaffold disposition (recommendation for Q-L11-20):**
 `src/harness/ratchet/feedback/` names a subsystem this grill has
-concluded must not exist — DELETE at close (the L10 scaffold
-lesson). Same review then covers the other pre-grill scaffold dirs
-against the locked artifact inventory (candidates/, evaluations/,
-promotion/, regression/).
+concluded must not exist — FORBIDDEN scaffold, not merely unused
+code; DELETE at close (the L10 scaffold lesson). At closure the
+implementation inventory is derived from the locked L11 artifact
+inventory: a directory that cannot be justified by an existing L11
+responsibility is removed, never left as an invitation for scope
+creep (candidates/, evaluations/, promotion/, regression/ face the
+same test).
 
 **Constitutional sentence:** *There is no feedback artifact:
 anything called feedback is an observation, a candidate, evidence,
 or door commentary — each already owned. A "feedback" that fits
 none of these is an ungoverned input channel, and it is refused.*
+
+(Owner note at lock — the cycle exists architecturally, but L11
+does not own it: governed execution → L6 evidence → L10
+verification → L11 comparison/regression evidence → Governance door
+→ Candidate/revised artifact → new governed execution. The human
+Governance act closes the transition; L11 participates by producing
+evidence, not by circulating "feedback" — preventing the classic
+autonomous-optimization architecture from emerging accidentally.)
+
+**The architectural test (owner, standing for everything remaining
+in L11):** *if a proposed L11 component cannot be expressed as a
+registered criterion/set, Candidate, Evaluation Plan,
+evidence/comparison package, regression package, deterministic
+comparator, or reproducible view over L6 records, it probably does
+not belong in L11.*
+
+### D-L11-13 — The regression corpus is not a knowledge system (PROPOSED 2026-09-12, closing Q-L11-13; AWAITING OWNER LOCK)
+
+The critical question answered up front: NONE of the four corpus
+elements can become L11-owned authority. Each is a
+Governance-fixed or record-derived input that L11 merely consumes;
+the "corpus" as a free-standing curated collection with its own
+authority does not exist.
+
+**1. Case identity — Governance, via the criterion registry.** A
+regression case IS a registered criterion: K's evidence selectors +
+comparator binding + pinned config define exactly what is tested;
+the corpus is the registered set S of K pins (D-L11-9). "What is
+being tested" is therefore fixed at registration — there is no
+separate case object, no case database, no L11 case curation. A
+new case enters as a regression-test-family Candidate (D-L11-3)
+through the ordinary registration door: author-never-admit
+(D-L9-8), production failures motivating new cases arrive exactly
+this way (D-L11-12 table).
+
+**2. Reference input — content-addressed bytes, standing from
+registration.** Fixture bytes are data with hash identity, pinned
+by K (and echoed in Evaluation Plans as input commitments,
+D-L11-10). Anyone may AUTHOR a fixture (model included; attention
+raised, bar never lowered); its STANDING comes solely from being
+hash-pinned inside a Governance-reviewed registration. **Enterprise
+wall:** inputs derived from enterprise/production content are
+Themis-owned knowledge — they enter the harness-plane corpus only
+through the appropriate Themis owner and governed channel; the
+corpus must never become a shadow copy of enterprise knowledge (the
+no-second-enterprise-knowledge-store hard invariant, applied to
+fixtures).
+
+**3. Reference/golden output — two legitimate sources, both
+outside L11.** (a) RECORD-DERIVED: the expected result is the
+admitted baseline's actually-recorded behavior, referenced by L6
+record identity — provenance-complete, no one "declared" it, the
+fact chain establishes it. (b) HUMAN-DECLARED: an expectation
+authored and reviewed at registration — a Governance commitment,
+exactly like scalarization weights (D-L11-7 precommitment test).
+In both cases the golden is a pinned parameter of K; its
+correctness is established at the door, never by L11. L11 never
+decides an output is "right" — the comparator mechanically
+compares against the pin. (The L10 lesson carried: expected-output
+semantics were subsumed into governed contracts once already,
+D-L10-18; the same move here, no third home.)
+
+**4. Acceptance threshold — the declared non-regression region,
+two-stage normativity.** The threshold is K's region declaration
+(D-L11-9): its EXISTENCE is Governance's registration commitment
+(precommitment test); its CONSEQUENCE — what satisfying or failing
+it permits — is the door's (D-L11-9 §6: never a gate). L11
+computes region membership, full stop. Normative significance is
+split between registration and door; no residue lands in L11.
+
+**5. Storage discipline.** Pinned fixture/golden bytes live as
+registry-plane files (registry-relative, hash-verified at load —
+the L10 contract-file pattern) or as L6 objects referenced by
+hash for large artifacts; milestone implementation decision,
+constitutionally constrained: *bytes are hash-pinned by the
+registered artifact wherever housed; no unpinned corpus directory
+with curation authority exists.*
+
+**6. Growth and drift.** The corpus grows only by registration
+acts (new K versions, new S versions — append-only); it shrinks
+only by withdrawal. No mechanism tunes, prunes, reweights, or
+"maintains" the corpus from evaluation results — corpus evolution
+driven by outcomes would be the Ratchet selecting its own test, the
+self-serving-evidence shape (adversarial register, Q-L11-14/20).
+
+**Constitutional sentence:** *The regression corpus is the set of
+registered criteria and their hash-pinned parameters — what is
+tested, with what inputs, against what expectation, at what
+threshold, each fixed by Governance at registration or derived
+from admitted-baseline records. L11 verifies hashes and computes
+Δ; it owns no case, no fixture, no golden, and no threshold.*
 
 ### [Reallocated] Implementer material on criteria/comparator/packages (2026-09-11; formerly proposed as D-L11-4, superseded by owner restructure 2026-09-12)
 
@@ -1460,8 +1561,8 @@ residual → Q-L11-10.
 | Q-L11-9 | **CLOSED → D-L11-9.** Enumeration under registered S@v; doors own set significance and exact resolution; no partial packages; bounded resistant-under-S derivation; incomparability per K; never a gate; completeness = coverage. |
 | Q-L11-10 | **CLOSED → D-L11-10.** Describe-and-consume, never run; eight verbs disposed; inert declarative Evaluation Plan (never authority); conformance = record-to-plan matching; attribution = provenance only; 15 recorded invariants. |
 | Q-L11-11 | **CLOSED → D-L11-11.** Two durable planes only; registered names vs instance hashes; L6 stores, L11 derives statelessly; supersession = claim; negative list; production via existing L6 mechanisms; refusal = fact about attempt. |
-| Q-L11-12 | **Closure PROPOSED → D-L11-12; AWAITING OWNER LOCK.** "Feedback" dissolves — every sense maps to an owned artifact; no feedback type/store/channel; the loop is human-governed; reservoir injection surface removed; delete scaffold dir. |
-| Q-L11-13 | Regression corpus / reference set: who owns regression cases, reference inputs, expected outputs, golden examples, acceptance thresholds; L11 artifacts or existing Governance/Themis knowledge? |
+| Q-L11-12 | **CLOSED → D-L11-12.** "Feedback" is not an architectural concept in L11; dissolution table; no type/store/channel; loop is human-governed; reservoir surface removed; feedback/ scaffold forbidden; the architectural test. |
+| Q-L11-13 | **Closure PROPOSED → D-L11-13; AWAITING OWNER LOCK.** Corpus = registered criteria + hash-pinned parameters; case = criterion; fixtures content-addressed w/ enterprise wall; goldens record-derived or human-declared; thresholds two-stage; no corpus curation authority. |
 | Q-L11-14 | Automation boundary: may the Ratchet automatically generate candidates, run evaluations, compare, open proposals, request review — where automation stops, mechanically enforceable. |
 | Q-L11-15 | Router and deployment policy: formally distinguish evidence→Governance-promotion from validated-evidence→deterministic-deployment-selection, if the latter is legitimate (consumption-of-evidence rule). |
 | Q-L11-16 | Failure and incompleteness: failed/differing/incomplete/incomparable/unavailable inputs — NO COMPARISON vs INCONCLUSIVE vs new vocabulary; resist a second copy of L10's outcomes. |

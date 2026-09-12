@@ -6,13 +6,27 @@ constitution → stop at the boundary; classify as implementation
 detail / residual / genuine gap; reopen the grill only for the last.
 The D-L11-20 §2 artifact inventory is the architectural whitelist.
 
-## Gate 0 (owner) — PENDING
+## Gate 0 (owner) — **PASS 2026-09-12**
 
-- [ ] Owner Gate 0 judgment on this plan.
-- Knowledge rule already DECIDED at D-L11-20 lock: the v1 proof
-  slice includes one knowledge-family egress path IF the existing
-  Themis ingestion door is available; otherwise explicitly
-  unproved/residual — no substitute L11 knowledge authority.
+- [x] Owner Gate 0 judgment: PASS. Implementation authorized from
+      M0; no further architectural grill before M0. All four
+      flagged choices accepted as implementation choices within the
+      constitution. No push implied — local-only/push-after-approval
+      boundary unchanged.
+- Knowledge rule confirmed at Gate 0: include the knowledge egress
+  path when the existing Themis door is available; if unavailable,
+  record the proof limitation explicitly — never a substitute
+  Harness-side knowledge authority to make M6 pass.
+- **Gate 0 execution constraint (carried into M0–M7):** no
+  milestone may introduce a component whose architectural role is
+  absent from the locked L11 artifact inventory or the
+  already-proven underlying mechanisms. If such a component appears
+  necessary, implementation STOPS and the item is classified
+  (implementation detail / residual / genuine gap) before
+  proceeding.
+- Owner framing: the question is no longer "what should L11 be?"
+  but "does the implementation actually conform to what we have
+  already decided L11 is?"
 
 ## The four flagged implementation choices (D-L11-20 §4)
 

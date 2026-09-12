@@ -433,7 +433,7 @@ proposition semantics.
 bounded, enumerated regression evidence; it cannot establish that "no
 regression exists.")
 
-### D-L11-5 — Baseline authority (PROPOSED 2026-09-12, closing Q-L11-5; AWAITING OWNER LOCK)
+### D-L11-5 — Baseline authority (LOCKED 2026-09-12, Q-L11-5; owner precision amendment on the constitutional formulation)
 
 **Core: L11 owns no baseline authority.** "Baseline" is not an
 L11-determined fact. For every candidate family the baseline
@@ -451,7 +451,13 @@ governed at its home (Q-L11-13); knowledge → the Themis-side owner
 (harness observes only through governed reference). L11 maintains no
 baseline registry, no baseline list, no "current pointer" of its own
 — a second home for "what governs now" would demand exactly the
-reconciliation semantics D-L11-3 forbids.
+reconciliation semantics D-L11-3 forbids. (Owner enumeration at
+lock: no baseline registry, no "current baseline" pointer, no
+canonical baseline list, no baseline SELECTION authority, no
+baseline-CORRECTION mechanism. Key invariant: L11 observes what the
+owning authority says; it does not decide what the owning authority
+should say — preventing a future "smart baseline manager" from
+quietly becoming Governance.)
 
 **2. The baseline observation proposition.** At comparison time L11
 resolves the owning door's record and establishes only: "at
@@ -469,8 +475,16 @@ door → NO comparative-evidence package is minted at all. The
 failure is a recorded refusal (the D-L10-8 pattern: refusal
 evidence, never a weaker package) — otherwise unadmitted-baseline
 packages would circulate and be misread as position-2 evidence.
+(Owner sharpening at lock: NOT "baseline unavailable → INCONCLUSIVE
+comparison" — that would leave something superficially resembling
+position-2 evidence in circulation. The distinction: cannot
+establish baseline admission → the comparison DOES NOT EXIST;
+baseline admitted → the comparison executes and may have an
+unfavorable/incomplete result. Refusal boundary, D-L10-8 style.)
 Withdrawn = not admitted for NEW comparisons; historical packages
-remain interpretable (L10 withdrawal semantics reapplied).
+against a subsequently withdrawn baseline remain historical
+evidence — withdrawal does not rewrite history (L10 semantics
+reapplied).
 
 **4. Currency is observed by default, constrained by registration.**
 A comparison against an admitted-but-superseded baseline is
@@ -486,12 +500,23 @@ time. Consumption doors additionally enforce their own currency/
 chain requirements at consumption (the gate/router precedent —
 admission enforced at consumption). Drift prevention is thus
 Governance-declared and door-enforced, fed by honest L11
-observation; L11 itself never owns the policy.
+observation; L11 itself never owns the policy. (Owner precision at
+lock — not a "currency judgment": L11 does not decide whether a
+baseline is sufficiently current; it EVALUATES whether the observed
+baseline satisfies constraints already declared by the registered
+criterion. The door asserts "B is currently active" → L11 observes;
+K declares requires-current-active → L11 checks the observed fact.
+Semantic authority stays with the door and the criterion
+registration; L11 only executes the declared condition. This
+distinction is load-bearing for Q-L11-6.)
 
 **5. One baseline per package.** The comparative atom is pairwise:
 exactly one candidate, one baseline, one criterion. Multiple
 baselines = multiple packages; combining them is aggregation by
-enumeration (D-L11-4 Amendment 3). No multi-baseline Δ semantics.
+enumeration (D-L11-4 Amendment 3). No multi-baseline Δ semantics —
+C vs {B1,B2,B3} → Δ does not exist unless a multi-baseline criterion
+is deliberately introduced later through registration; reconstruction
+stays clean.
 
 **6. The candidate claims; it never chooses authoritatively.** The
 candidate's baseline reference (D-L11-3) is a CLAIM — proposer data
@@ -504,14 +529,126 @@ flatteringly WITHIN the admitted set is the baseline face of the
 cherry-picking surface — visible in the package, hardened at
 Q-L11-14, never solved by proposition schema.
 
-**Constitutional sentence:** *A baseline is whatever the owning
-door's authoritative record says it is; L11 may observe that record,
-condition comparisons on the observation, and refuse without it — it
-may never determine, correct, or currency-judge a baseline itself.*
+**Mismatch rule (owner, fourth case):** candidate claims B, door
+resolves B′ — this must NOT silently resolve to B′. The comparison
+either explicitly compares against the observed B′ (mismatch
+recorded) or refuses; it never silently substitutes the door's
+baseline and leaves the candidate's claim looking satisfied.
 
-Open item for owner: the closed vocabulary of criterion-declared
-baseline constraints (§4) is defined at Q-L11-6 with the rest of
-what a criterion can say.
+**Admission vs selection (owner refinement):** two distinct
+questions. (A) "Is B an admitted governed artifact?" — the door
+answers. (B) "Is B the APPROPRIATE comparison baseline for this
+candidate?" — a door may hold ten admitted historical versions and
+does not know which one a criterion requires; appropriateness comes
+from a registered criterion or existing family-specific comparison
+policy, never from L11. D-L11-5 establishes only that the baseline
+used is visible and provenance-bound; which baseline a candidate may
+REQUEST is selection policy → Q-L11-14.
+
+**Constitutional formulation (owner amendment, replacing the
+implementer sentence):** *L11 owns no baseline authority. Baseline
+identity and admission are authoritative only according to the
+affected domain's existing owning mechanism; any additional
+baseline-selection or currency constraint must come from an already
+governed mechanism, such as the registered comparison criterion.
+L11 may observe and mechanically apply those declarations, but may
+not create, correct, or interpret them.* Retained core invariant:
+*a candidate claims a baseline; it never chooses an authoritative
+baseline.*
+
+Carried to Q-L11-6: the closed vocabulary of criterion-declared
+baseline constraints (§4), with the rest of what a criterion can
+say.
+
+### D-L11-6 — Criterion ownership and registration (PROPOSED 2026-09-12, closing Q-L11-6; AWAITING OWNER LOCK)
+
+The owner's sharpened question: who is allowed to define the
+comparison semantics that L11 is subsequently permitted to execute?
+
+**1. Comparison semantics have exactly three homes, each already
+governed.** (a) The CRITERION DECLARATION — what to compare, over
+which evidence, under which constraints, with which Δ shape and
+optional ordering: a Governance-registered declarative artifact.
+(b) The COMPARATOR IMPLEMENTATION — the deterministic Δ computation:
+reviewed in-harness code shipped through the ordinary Class-2/3
+pipeline. (c) The REGISTRATION BINDING them — a Governance act in
+the criterion registry. L11 machinery EXECUTES registered semantics
+and defines none: an unregistered criterion-shaped artifact is data
+(the L9/L10 wall, third application).
+
+**2. Registry ownership: Governance, in a NEW L11-format criterion
+registry.** Not the L10 contract registry — criteria answer a
+different question (comparison, not verification); housing them
+together would let comparison semantics masquerade as verification
+semantics, exactly the blur D-L11-1 prohibits. Not a Themis-side
+mechanism — criteria are harness-plane comparative semantics with no
+security meaning; Themis remains the security system of record and
+gains no new obligation. Division as with L9/L10: **L11 owns the
+registry FORMAT and the fail-closed read-only loader; Governance
+owns every registration act and the semantic review at
+registration.** Same walls, verbatim: append-only, immutable
+name@version→hash bindings, active→withdrawn only, two-way identity
+(registration ↔ self-declaration), no write API anywhere in harness
+code (AST-audit wall), *.proposed.* → owner act → ACTIVE.
+
+**3. Authorship vs registration.** Anyone — the model included — may
+AUTHOR a proposed criterion; authorship raises attention, never
+lowers the bar (D-L9-16). Only Governance registration makes it
+executable semantics. Registration review is the semantic gate: the
+reviewer answers "should this comparison frame exist?" — the
+cherry-picking-by-selector surface (D-L11-4 flag) is examined HERE,
+once, at the only point where semantics enter.
+
+**4. What a criterion can say (closed schema, nothing defaulted):**
+identity (name@version + SHA-256, two-way); applicable candidate
+family/families; candidate-side and baseline-side EVIDENCE SELECTORS
+— typed, declarative, closed vocabulary, selecting only established
+governed facts (L10 evaluation records by contract token + outcome,
+validated benchmark scores, L6 execution records, gate verdicts;
+D-L11-4 §2 carried); the COMPARATOR BINDING (registered code
+identity, §6); pinned comparator CONFIGURATION by value, hashed (the
+L10 config pattern); the declared Δ OUTPUT SHAPE (closed type
+vocabulary); optionally an ORDERING/IMPROVEMENT REGION over that
+shape — declarative data with closed semantics (per-field direction
+and thresholds), interpreted only by the registered derivation code,
+enabling better-under-K (D-L11-4 claim 2); BASELINE CONSTRAINTS from
+the closed vocabulary — v1 proposes exactly one token,
+`requires-current-active` (D-L11-5 §4); extension is a schema
+revision, not free text; PROVENANCE REQUIREMENTS.
+
+**5. What a criterion can NEVER say:** no proposition beyond Δ and
+its declared region (no "improvement"/"safe"/"recommended"/
+"eligible" — D-L11-4); no security meaning; no promotion
+consequence, no door obligation ("if Δ ≥ x then …" has no legal
+continuation); no executable logic, expressions, or templates
+(D-L9-4 zero-interpreters); no evidence source outside the
+established-facts vocabulary; no redefinition or reinterpretation of
+L10 outcomes (PASS is an input fact, never re-judged); no reference
+to unregistered artifacts.
+
+**6. The comparator binding — the carried open decision, proposed
+as (A) registered in-harness code identity.** The comparator set is
+closed, reviewed Go (the canonicalizer precedent, D-L10-12:
+canonReport shape); a criterion binds comparator name@version; a new
+comparator is a code change through the full pipeline with review,
+never data. Option (B), a declarative Δ language inside the
+criterion, is rejected as an interpreter by another name: its
+evaluator would become an unreviewed semantic engine, and criterion
+review would silently become program review. The narrow declarative
+remnant that IS allowed — ordering regions, §4 — is data with closed
+fixed semantics, not composable logic; the line is "parameters yes,
+programs never."
+
+**7. Recursion flag.** A criterion is itself a governed artifact;
+criterion-revision as a candidate FAMILY (the Ratchet proposing
+improvements to its own criteria) is deliberately NOT decided here —
+that is Q-L11-19's recursion question. v1 families remain as
+D-L11-3 fixed them.
+
+**Constitutional sentence:** *Comparison semantics enter L11 only
+through Governance registration of a declarative criterion bound to
+a reviewed comparator; L11 executes what is registered, and nothing
+that is registered can say more than Δ.*
 
 ### [Reallocated] Implementer material on criteria/comparator/packages (2026-09-11; formerly proposed as D-L11-4, superseded by owner restructure 2026-09-12)
 
@@ -600,8 +737,8 @@ residual → Q-L11-10.
 | Q-L11-2 | **CLOSED → D-L11-2.** Improvement ladder; baseline rule as ladder law; evidence-absence explicit; downward moves are acts; criterion-relative vocabulary. |
 | Q-L11-3 | **CLOSED → D-L11-3.** Candidate = content-addressed proposal data; no lifecycle state; single-home promotion truth; 1→3→2 epistemic; no trial admission. |
 | Q-L11-4 | **CLOSED → D-L11-4.** Conditioned comparative fact as the L11 atom; six claims disposed; X→X′ artifact ladder; admission as observation; enumeration-not-strength aggregation; direction symmetry; eligibility prohibition. |
-| Q-L11-5 | **Closure PROPOSED → D-L11-5; AWAITING OWNER LOCK.** Baseline authority: doors own baselines, L11 observes; admission as production precondition; currency observed + criterion-constrained; one baseline per package; candidate claims never choose. |
-| Q-L11-6 | Comparison criterion ownership: who owns the criterion registry (L11 / Governance / L10 / existing Themis mechanism); what exactly a criterion can say. Carries the comparator-binding open decision (registered code identity vs declarative Δ language). |
+| Q-L11-5 | **CLOSED → D-L11-5.** Doors own baselines, L11 observes and mechanically applies registered constraints; admission = production precondition (refusal, never INCONCLUSIVE); no silent baseline substitution; pairwise only; claims never choose. |
+| Q-L11-6 | **Closure PROPOSED → D-L11-6; AWAITING OWNER LOCK.** Governance-owned criterion registry in L11 format; three homes for semantics (declaration/comparator/binding); closed schema; comparator as registered code identity (option A). |
 | Q-L11-7 | What "better" actually means: who resolves multi-metric tradeoffs when K yields metrics without an ordering; keeping tradeoff resolution out of L11. |
 | Q-L11-8 | Model-router/evaluation tension: evaluation result → runtime model selection — prohibited automatic promotion/reliance, or deployment policy consuming evidence? |
 | Q-L11-9 | Regression resistance: what "provides regression-resistance evidence" establishes — enumerative report vs "no observed regression"; what constitutes the regression set; keeping L11 from becoming a quality gate. |

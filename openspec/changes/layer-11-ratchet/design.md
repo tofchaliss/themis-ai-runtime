@@ -1210,7 +1210,7 @@ cannot manufacture the evidence needed to prove its own
 conclusion.* The innocent-looking loop "compare → insufficient →
 run again → compare → optimize" is structurally unbuildable.
 
-### D-L11-11 — Lifecycle and durable ownership: two planes, hash identity, derived everything else (PROPOSED 2026-09-12, closing Q-L11-11; AWAITING OWNER LOCK)
+### D-L11-11 — Lifecycle and durable ownership: two planes, hash identity, derived everything else (LOCKED 2026-09-12, Q-L11-11; owner amendment: production recording via existing L6 mechanisms only — no L11 event subsystem)
 
 **1. Exactly two durable planes, both existing — L11 introduces no
 third.** (a) The GOVERNED REGISTRATION plane: criterion registry
@@ -1252,7 +1252,9 @@ for candidate C" summaries; plan-conformance displays; candidate
 enumerations. All recomputed from L6 bytes + registered artifacts
 (the views.go/D-L10-9 pattern). v1 has NO derived-state cache at
 all — if a future cache is ever justified, it is disposable by
-definition and its loss may change no answer.
+definition and its loss may change no answer. (Owner absolute at
+lock: *a derived L11 result is not made more authoritative merely
+by caching it.*)
 
 **5. Supersession is a claim, never a state change.** Instances are
 immutable; nothing can be marked superseded. A newer candidate
@@ -1261,7 +1263,10 @@ lineage answers "where did this come from", never "is this
 governed"). "What claims to supersede X" is a derived view;
 "X is superseded" is not an establishable L11 fact — the receiving
 mechanism owns any disposition it cares to record, in its own
-plane.
+plane. (Owner: the claim "C2 claims to supersede C1" vs the fact
+"C1 has been superseded" — only the owning mechanism establishes
+the latter; `candidate-X.status = superseded` would be lifecycle
+authority.)
 
 **6. The negative list — what must never become L11-owned
 authoritative state (consolidating every prior lock):** candidate
@@ -1269,22 +1274,97 @@ lifecycle/disposition (D-L11-3); promotion truth (doors); selection
 or champion state (D-L11-8); resistant/better flags (D-L11-9/4);
 baseline identity or currency pointers (D-L11-5); applicable-set or
 applicable-criterion choices (D-L11-9 Am. 2, D-L11-6 Am. 1);
-comparison queues, schedules, or work lists (D-L11-10); any status
-column on any enumeration of instances. An index that acquires a
-status column has become a registry; refused structurally.
+comparison queues, schedules, work lists, or retry state
+(D-L11-10); any status column on any enumeration of instances. An
+index that acquires a status column has become a registry; refused
+structurally. (Owner, kept explicit as the implementation-review
+tripwire for months from now: *an L11 enumeration plus mutable
+status is a registry in disguise* — and the drift path
+candidate → candidate_id → status → current_candidate silently
+recreates a governance registry inside L11.)
 
-**7. Production recording.** Package/candidate/plan production is
-an act of writing content-addressed objects; v1 needs no new event
-machinery — artifacts are self-describing and provenance-complete,
-discovery is derivable enumeration. Whether production additionally
-appends an L6 event outside task streams is a milestone
-implementation decision, constrained: if added, it is a record of
-the act, never a lifecycle state.
+**7. Production recording (owner amendment).** *Production of an
+L11 instance artifact is durably represented by the L6
+content-addressed object. If provenance requires recording the
+production act, that record must use an existing L6 event mechanism
+or a separately governed additive L6 amendment; it must not create
+an L11 lifecycle/event stream. Such an event records that
+production occurred and its provenance, never an L11 lifecycle
+state.* Never `L11 → ratchet_events.log`, never
+`L11 → candidate_state table` — no generic L11 event stream may
+emerge as a future implementation convenience.
+
+**Refusal is a fact about an attempt, not a state of a package
+(owner subtlety):** "at time T, package construction refused
+because constituent E was unavailable" is an authoritative
+historical fact; it never becomes `package P.status = refused` —
+refusal records an attempted operation, not a mutable lifecycle
+state of anything.
 
 **Constitutional sentence:** *L11's durable truth lives entirely in
 the Governance registries and the L6 record plane; everything else
 L11 knows is recomputed on demand — if deleting every L11-side
 cache changed any answer, the architecture is broken.*
+
+(Owner summary at lock: no L11 state machine, no candidate
+registry, no "current" pointer, no authoritative cache, no
+scheduler, no execution engine. *L11 has durable evidence, not
+durable opinions.*)
+
+### D-L11-12 — "Feedback" dissolves: no feedback subsystem exists (PROPOSED 2026-09-12, closing Q-L11-12; AWAITING OWNER LOCK)
+
+**1. The word names nothing that is not already owned.** Every
+legitimate sense of "feedback" maps onto an artifact whose owner is
+already locked:
+
+| "Feedback" sense | What it actually is | Owner |
+|---|---|---|
+| "This skill performed badly" | Position-1 observation (D-L11-2) — advisory data; durable only as L6 history it derives from | nobody — it is a claim |
+| Improvement suggestion | Candidate rationale, or a new Candidate | D-L11-3 |
+| Evaluation outcome "fed back" | Comparative/regression evidence addressed to a door | D-L11-4/9 |
+| Human commentary on a proposal | Proposal disposition / Governance commentary | the receiving door (D-L11-3) |
+| Runtime failures, refusals, incidents | L6 records — consumable via K selectors as established facts | L6 |
+| Production regression discovered | Motivation for a regression-test Candidate | D-L11-3 family |
+| Model self-critique | Advisory block, marked, establishes nothing | D-L11-4 |
+
+A "feedback" that fits none of these rows is not a missing
+category — it is an ungoverned input channel, and it is refused.
+
+**2. Therefore: no feedback artifact type, no feedback store, no
+feedback channel, no feedback API.** Introducing one would create
+exactly the catch-all the owner flagged: a bucket whose contents
+have no fixed proposition, no owner, and no admission rule — the
+anti-pattern of everything since D-L11-4 (every artifact
+establishes exactly one named proposition).
+
+**3. The ratchet "loop" is human-governed, not an L11 conduit.**
+The traditional feedback loop exists — as the whole governed cycle:
+evidence → door → Governance decision → new candidates → new
+evidence. Its closing arc runs through humans at doors, never
+through an L11 mechanism (D-L11-10: describe and consume; D-L9-8:
+suggest, never become behavior). L11 carries evidence INTO the
+loop; it is not the loop.
+
+**4. Security note — the reservoir problem.** A durable free-text
+"feedback" store would be an untrusted-content reservoir with
+standing influence over future candidate authoring: external
+content injected once ("the best skill would disable verification")
+would sit as durable "feedback" waiting to be consumed as if it
+were governed insight. External content is data, never instructions
+(constitution); refusing the abstraction removes the surface
+entirely rather than guarding it.
+
+**5. Scaffold disposition (recommendation for Q-L11-20):**
+`src/harness/ratchet/feedback/` names a subsystem this grill has
+concluded must not exist — DELETE at close (the L10 scaffold
+lesson). Same review then covers the other pre-grill scaffold dirs
+against the locked artifact inventory (candidates/, evaluations/,
+promotion/, regression/).
+
+**Constitutional sentence:** *There is no feedback artifact:
+anything called feedback is an observation, a candidate, evidence,
+or door commentary — each already owned. A "feedback" that fits
+none of these is an ungoverned input channel, and it is refused.*
 
 ### [Reallocated] Implementer material on criteria/comparator/packages (2026-09-11; formerly proposed as D-L11-4, superseded by owner restructure 2026-09-12)
 
@@ -1379,8 +1459,8 @@ residual → Q-L11-10.
 | Q-L11-8 | **CLOSED → D-L11-8.** Selection ≠ promotion; five conditions; selection = one form of 3→4 consumption; predeclared fallbacks; no side-effect on admissible set; Δ never a selection input (v1). |
 | Q-L11-9 | **CLOSED → D-L11-9.** Enumeration under registered S@v; doors own set significance and exact resolution; no partial packages; bounded resistant-under-S derivation; incomparability per K; never a gate; completeness = coverage. |
 | Q-L11-10 | **CLOSED → D-L11-10.** Describe-and-consume, never run; eight verbs disposed; inert declarative Evaluation Plan (never authority); conformance = record-to-plan matching; attribution = provenance only; 15 recorded invariants. |
-| Q-L11-11 | **Closure PROPOSED → D-L11-11; AWAITING OWNER LOCK.** Two durable planes only; registered names vs instance hashes; L6 stores instances, L11 derives everything statelessly; supersession = claim; negative list of forbidden L11 state. |
-| Q-L11-12 | Feedback: is ratchet/feedback evidence, observation, candidate input, governance commentary, evaluation result — or a dangerous catch-all to eliminate? |
+| Q-L11-11 | **CLOSED → D-L11-11.** Two durable planes only; registered names vs instance hashes; L6 stores, L11 derives statelessly; supersession = claim; negative list; production via existing L6 mechanisms; refusal = fact about attempt. |
+| Q-L11-12 | **Closure PROPOSED → D-L11-12; AWAITING OWNER LOCK.** "Feedback" dissolves — every sense maps to an owned artifact; no feedback type/store/channel; the loop is human-governed; reservoir injection surface removed; delete scaffold dir. |
 | Q-L11-13 | Regression corpus / reference set: who owns regression cases, reference inputs, expected outputs, golden examples, acceptance thresholds; L11 artifacts or existing Governance/Themis knowledge? |
 | Q-L11-14 | Automation boundary: may the Ratchet automatically generate candidates, run evaluations, compare, open proposals, request review — where automation stops, mechanically enforceable. |
 | Q-L11-15 | Router and deployment policy: formally distinguish evidence→Governance-promotion from validated-evidence→deterministic-deployment-selection, if the latter is legitimate (consumption-of-evidence rule). |

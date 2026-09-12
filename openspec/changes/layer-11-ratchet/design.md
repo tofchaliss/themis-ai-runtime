@@ -1,7 +1,8 @@
 # Design: Layer 11 — Ratchet
 
-Grill OPEN 2026-09-11. §2 collects folded decisions as questions close;
-§3 is the question list.
+Grill OPEN 2026-09-11 → **CLOSED 2026-09-12: D-L11-1..20 all LOCKED
+(20/20)**. §2 holds the locked constitution; §3 the closed question
+table. Next: Gate 0 → implementation per tasks.md.
 
 ## 0. Position in the flow
 
@@ -2077,7 +2078,7 @@ never by its own authority: every artifact that governs L11 is
 admitted at a door L11 does not own, on evidence L11 did not mint
 about itself — the recursion terminates in humans, not in an L12.*
 
-### D-L11-20 — Constitutional closure (PROPOSED 2026-09-12, closing Q-L11-20; AWAITING OWNER LOCK)
+### D-L11-20 — Constitutional closure (LOCKED 2026-09-12, Q-L11-20; closure audit PASSED; Gate 0 knowledge rule recorded)
 
 A closure audit, not a design. The owner's 18 points and the final
 question, answered against the locked record.
@@ -2151,6 +2152,21 @@ without forking its semantics; knowledge-family live proof may
 lag the in-repo families (egress package specified in D-L11-3;
 owner decides at Gate 0 whether the v1 proof slice includes it).
 
+**Gate 0 rule (owner, DECIDED at lock):** *the v1 proof slice
+includes one knowledge-family egress path where the existing
+Themis ingestion door is available; otherwise the family remains
+explicitly unproved/residual and no substitute L11 knowledge
+authority is introduced.* The knowledge proof demonstrates ONLY
+that the existing walls hold: L11 can construct the
+knowledge-family Candidate/egress representation; its content is
+hash/provenance bound; L11 does not ingest or mutate Themis
+knowledge; the receiving Themis mechanism remains the sole
+admission authority; L11 evidence does not obligate ingestion; the
+handoff does not become a second knowledge store in L11. No new
+knowledge ingestion mechanism inside the Harness; no fake local
+substitute — the constitution is never weakened to make a proof
+green.
+
 **6. Forbidden components (point 17), consolidated:** feedback
 subsystem; candidate registry/status store; champion registry; L11
 event stream; authoritative cache; scheduler/timer/watcher/queue;
@@ -2179,6 +2195,31 @@ component the implementation will build instantiates a locked
 decision through an already-proven pattern; anything that cannot
 is a recorded residual or a new architecture decision — never a
 convenience.*
+
+**Owner closure audit result (at lock):** constitutional coverage,
+artifact inventory, authority ownership, seams, persistence,
+failure semantics, security-meaning boundary, consumption model,
+automation boundary, recursion boundary, implementation
+architecture, forbidden subsystems, future-gap criteria — ALL
+CLOSED. The artifact inventory is the implementation's
+architectural WHITELIST: anything else needs explicit
+architectural justification. Scaffold deletion confirmed
+(retaining feedback/ or promotion/ merely because directories
+exist would be architectural inertia — the opposite of this
+grill's outcome).
+
+**The implementation rule (owner, strict):** *if implementation
+discovers something that appears necessary but is absent from the
+locked constitution, do not solve it locally. Stop at the
+boundary, classify it as implementation detail, residual, or
+genuine architecture gap, and reopen the grill only for the last
+category.* That is what makes the 20/20 closure meaningful rather
+than merely documenting agreement.
+
+**GRILL STATUS: D-L11-1 through D-L11-20 — 20/20 LOCKED
+(2026-09-11..12). Architectural grilling STOPPED by owner
+direction. Next phase: proposal.md, tasks.md, traceability
+skeleton, then Gate 0, then implementation.**
 
 ### [Reallocated] Implementer material on criteria/comparator/packages (2026-09-11; formerly proposed as D-L11-4, superseded by owner restructure 2026-09-12)
 
@@ -2282,7 +2323,7 @@ residual → Q-L11-10.
 | Q-L11-17 | **CLOSED → D-L11-17.** Same inputs → same PROPOSITION; sufficient tuple; comparator semantics immutable per version; determinism; three reconstruction results; never repairs; defects never normalized. |
 | Q-L11-18 | **CLOSED → D-L11-18.** Metric never meaning; four legitimacy conditions; three walls; sensitivity inheritance; double-negative prohibited; semantic proximity confers no authority. |
 | Q-L11-19 | **CLOSED → D-L11-19.** Recursion was never open: L11 targets admitted at doors L11 doesn't own; L11-about-L11 criteria unregistrable; proposed K measures nothing; no evidence chain modifies L11; scrutiny never authority. |
-| Q-L11-20 | **Closure PROPOSED → D-L11-20; AWAITING OWNER LOCK.** Closure audit: constitution index; closed artifact inventory; obligations all pattern-instantiations; nothing to invent (4 flagged choices); residuals; forbidden components; delete all scaffold; gap conditions. |
+| Q-L11-20 | **CLOSED → D-L11-20.** Closure audit PASSED; artifact inventory = implementation whitelist; nothing to invent (4 flagged choices); scaffold deletion; Gate 0 knowledge rule; strict implementation rule. **GRILL 20/20 LOCKED.** |
 
 ## 4. Assets inventory (for the grill, factual)
 

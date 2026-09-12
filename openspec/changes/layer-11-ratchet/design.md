@@ -830,7 +830,7 @@ obligation, carried to Q-L11-14/Q-L11-20's adversarial register.
 The incomparable/NO-COMPARISON distinction carries directly into
 Q-L11-16.
 
-### D-L11-8 — Selection is not promotion: the router boundary (PROPOSED 2026-09-12, closing Q-L11-8; AWAITING OWNER LOCK)
+### D-L11-8 — Selection is not promotion: the router boundary (LOCKED 2026-09-12, Q-L11-8; owner amendments: (A) position-4 wording, (B) fallback must be predeclared in registered policy; plus no-side-effect invariant)
 
 Resolving the quarantined tension: validated benchmark evidence →
 router → model selected for runtime — is that evaluation→behavior
@@ -841,9 +841,11 @@ changes what is governed — it alters the set of admissible
 alternatives (registration, activation, withdrawal: acts at doors).
 SELECTION deterministically chooses AMONG the already-admitted set —
 which admitted alternative governs work now, under fixed deployment
-policy. In ladder terms: the router performs 3→4 (consumption
-machinery causing an admitted artifact to govern — exactly what
-D-L11-2 position 4 describes as legitimate). The prohibited shape is
+policy. In ladder terms (Amendment A wording): **selection is one
+form of the existing 3→4 consumption mechanism; the router is an
+instance of that mechanism, not the definition of position 4** —
+future consumption mechanisms may establish reliance without being
+a router; D-L11-2's generality is preserved. The prohibited shape is
 machinery performing 2→3. The owner's two scenarios split precisely
 here: admitted-A(82) vs admitted-B(91) → select B is 3→4 reliance;
 unadmitted-B(91) → select B is 2→(skip 3)→4, already structurally
@@ -874,10 +876,22 @@ by another name):**
   demotion; no "current champion" registry may exist (the
   second-home prohibition again — which artifact was relied upon is
   an L6 historical fact, never a governance state). The next policy
-  evaluation may choose differently.
+  evaluation may choose differently. (Owner emphasis at lock — the
+  future implementation temptation: `selected_model_for_task = B` is
+  execution state and fine; a persisted `current_champion = B` is a
+  governance fact and forbidden — otherwise benchmark → router →
+  champion registry → future router, and the router has quietly
+  become an authority mechanism. Historical selection belongs in L6
+  execution history; governed admissibility belongs at the owning
+  door. deselected ≠ withdrawn; selected ≠ promoted.)
 - **(e) Fail closed to admission, never to evidence.** Missing,
-  invalid, or stale evidence → refusal or the policy's declared
-  admitted fallback — never "select the best unverified."
+  invalid, or stale evidence → refusal or fallback — never "select
+  the best unverified." **Amendment B (owner):** *any fallback
+  selected when required evidence is unavailable must itself be
+  explicitly defined by the fixed registered selection policy and
+  must select only from the already-admitted set.* An undeclared
+  "pick default" on missing evidence would silently become an
+  unreviewed policy.
 
 **3. Why this does not breach D-L9-16.** The no-auto-promotion
 prohibition targets evaluation results changing WHAT IS GOVERNED.
@@ -898,7 +912,12 @@ evidence-consumption bypasses the admission check at the consumption
 point. Note recorded: a policy that leaves some admitted artifact
 permanently unselected is legitimate preference, not de facto
 withdrawal — admissibility is unchanged, and the pattern is visible
-in L6 records for Governance to notice.
+in L6 records for Governance to notice. **Completing invariant
+(owner): a selection mechanism must not change the future
+admissible set as a side effect of selection** — "select B → persist
+B as preferred → future admissions automatically exclude A" starts
+as selection and becomes governance at the second step; not
+permitted.
 
 **5. L11's role at runtime: none.** The router consumes the
 BENCHMARK plane's admitted verdict artifacts under that plane's own
@@ -917,11 +936,102 @@ Q-L11-15 formalizes it as the consumption-of-evidence rule
 deterministic deployment selection), with the router as its existing
 proven instance.
 
+**The deeper principle (owner, at lock):** *evaluation evidence may
+be consumed by runtime policy without becoming promotion, provided
+the consuming mechanism operates strictly within an already-governed
+choice set and cannot mutate that set.* This is the architectural
+escape valve that keeps L11 from accidentally forbidding ordinary
+deterministic systems that legitimately use evidence to choose
+between already-approved alternatives. (And the quarantine
+resolution is how an architecture ratchet should work: L11
+comparison → runtime router cannot be achieved by adding an input
+field; it requires a fresh architecture decision.)
+
 **Constitutional sentence:** *Selection consumes evidence to choose
 among what Governance has already admitted; promotion changes what
 is admitted. Evidence may deterministically order the admitted set
 under fixed registered policy; it may never extend that set, and no
 selection outcome is ever a governance state.*
+
+### D-L11-9 — Regression resistance: the bounded enumerative claim (PROPOSED 2026-09-12, closing Q-L11-9; AWAITING OWNER LOCK)
+
+**1. Regression evidence introduces NO new fact type.** A
+regression-evidence package is aggregation-by-enumeration (D-L11-4
+Amendment 3) of ordinary comparative facts, specialized by exactly
+two things: the criterion set carries its own registered identity,
+and each member's declared region is designated a NON-REGRESSION
+region. The proposition: *"for candidate C against admitted
+baseline B, every criterion in registered regression set S@v
+produced a comparative package, with each Δ's position relative to
+its declared non-regression region recorded."* No new vocabulary,
+no new outcome class, no second evaluation semantics.
+
+**2. The regression set S is a registered artifact.** S@v =
+versioned, hash-pinned, append-only enumeration of exact criterion
+pins (K@v — no floating members, or set identity means nothing).
+Registered through the same Governance-act mechanism as criteria
+(L11 owns format + fail-closed loader; Governance owns
+registration). WHO OWNS "THE" REGRESSION SET: the door. A door (or
+Governance policy for that family) declares which S it requires —
+"promotion requests at this door carry regression evidence under
+S@v" is the door's requirement. L11 can evaluate any registered S
+on request; the SIGNIFICANCE of a particular S — that it guards a
+particular door — is the door's declaration, never L11's (the
+D-L11-5 ownership pattern applied to sets). The CONTENT of the
+underlying cases — reference inputs, golden outputs, acceptance
+thresholds inside criteria — is Q-L11-13's question, untouched
+here.
+
+**3. Completeness under S is mechanical — no partial regression
+packages.** A regression-evidence package under S@v REQUIRES one
+constituent comparative package per member of S. Anything less is
+not a regression-evidence package under S — it is merely N
+individual comparison packages that cannot claim the set identity.
+This closes the "passed 9 of 10, silently omit the 10th" laundering
+shape structurally: partial coverage is representable only in a
+form that visibly lacks set identity. A refused constituent
+(D-L11-5 §3: baseline unadmitted, evidence unresolvable) means the
+set-level package does not exist.
+
+**4. Completeness ≠ favorability — "resistant" is a derivation.**
+A complete-under-S package whose constituents include out-of-region
+Δs is equally producible and durable (direction symmetry, D-L11-4
+§6 — a regression FOUND is first-class evidence, arguably the
+Ratchet's most valuable output). "regression-resistant-under-S@v" =
+∀K∈S: Δ_K within its declared region — a stateless derived boolean,
+the better-under-K pattern exactly: derived, never stored, never
+free-standing. There is no stored "resistant" flag anywhere.
+
+**5. The universal claim is structurally unmakeable.** "Introduces
+no regression" quantifies over an undefined universe; L11's
+strongest emission is complete-under-S enumeration. Dimensions not
+in S are simply not spoken about — absence of evidence stays
+explicit (D-L11-2 Amendment A lineage). If Governance wants more
+covered, it registers a larger S version; the claim grows by
+enumeration, never by quantifier.
+
+**6. Never a gate.** L11 produces the package; doors decide what it
+permits (D-L11-1: provides, never enforces). A door requiring
+regression evidence under S@v as an admission input is the door's
+own rule, enforced by the door at consumption (the benchmark-gate
+precedent: the gate enforces, the evidence plane establishes) — and
+evidence never obligates approval. L11 has no blocking authority,
+no veto path, no "regression check failed → refuse promotion" code
+anywhere.
+
+**7. Set evolution and the stepwise lesson.** New S versions are
+new registrations (append-only). Whether a door requires the LATEST
+S it has declared is the door's currency rule — L11 observes and
+mechanically applies declared constraints, exactly the D-L11-5
+currency pattern. Every constituent comparison obeys D-L11-5
+unchanged: admitted baseline, observed admission, no drift — the
+CheckBaseline chain lesson applies per-constituent with no
+set-level exception.
+
+**Constitutional sentence:** *Regression resistance is never a
+property of a candidate; it is a complete, enumerated comparative
+record under a registered set — and the door, not the Ratchet,
+decides what that record permits.*
 
 ### [Reallocated] Implementer material on criteria/comparator/packages (2026-09-11; formerly proposed as D-L11-4, superseded by owner restructure 2026-09-12)
 
@@ -1013,8 +1123,8 @@ residual → Q-L11-10.
 | Q-L11-5 | **CLOSED → D-L11-5.** Doors own baselines, L11 observes and mechanically applies registered constraints; admission = production precondition (refusal, never INCONCLUSIVE); no silent baseline substitution; pairwise only; claims never choose. |
 | Q-L11-6 | **CLOSED → D-L11-6.** Governance-owned criterion registry, L11 format+loader; three homes for semantics; closed schema; comparator = registered code identity (option A LOCKED); applicability ≠ selection; ordering is criterion-relative derivation. |
 | Q-L11-7 | **CLOSED → D-L11-7.** Ordering taxonomy (none/per-metric/dominance/scalarization); precommitment test; ties/incomparability first-class; v1 no meta-comparison; scalarization = projection; no optimization objective. |
-| Q-L11-8 | **Closure PROPOSED → D-L11-8; AWAITING OWNER LOCK.** Selection ≠ promotion; five conditions (closed set, admitted evidence, fixed policy, no governance state, fail-closed); router = 3→4 reliance; Δ never a selection input. |
-| Q-L11-9 | Regression resistance: what "provides regression-resistance evidence" establishes — enumerative report vs "no observed regression"; what constitutes the regression set; keeping L11 from becoming a quality gate. |
+| Q-L11-8 | **CLOSED → D-L11-8.** Selection ≠ promotion; five conditions; selection = one form of 3→4 consumption; predeclared fallbacks; no side-effect on admissible set; Δ never a selection input (v1). |
+| Q-L11-9 | **Closure PROPOSED → D-L11-9; AWAITING OWNER LOCK.** Regression evidence = enumeration under registered set S@v; doors own set significance; no partial packages; "resistant" = stateless derivation; universal claim unmakeable; never a gate. |
 | Q-L11-10 | Evaluation execution: can L11 create tasks, choose Skill/model/evidence/verifier, repeat, A/B, schedule — or is it evidence-consumer only? (L7/L10/L11 seam.) |
 | Q-L11-11 | Candidate/evidence lifecycle: durable machinery for identity, evidence refs, comparison identity, lineage, reproducibility, supersession — what L6 stores vs what L11 derives. |
 | Q-L11-12 | Feedback: is ratchet/feedback evidence, observation, candidate input, governance commentary, evaluation result — or a dangerous catch-all to eliminate? |

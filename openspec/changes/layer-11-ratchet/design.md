@@ -1908,7 +1908,7 @@ reconstruct its own epistemic provenance, but it is never
 authoritative about anything beyond the proposition its
 conditioning tuple establishes.*)
 
-### D-L11-18 — The security meaning boundary: metric, never meaning (PROPOSED 2026-09-12, closing Q-L11-18; AWAITING OWNER LOCK)
+### D-L11-18 — The security meaning boundary: metric, never meaning (LOCKED 2026-09-12, Q-L11-18; owner addition: semantic proximity does not confer semantic authority)
 
 **1. The categorical answer, formalized.** L11 can never conclude
 "this candidate is secure/safer", "this reduces security risk",
@@ -1984,6 +1984,87 @@ number, and leaves as Δ; at no point does the criterion, the
 comparator, or any derivation say what that Δ means for security —
 Themis and Governance alone turn comparative evidence into
 security meaning.*
+
+**Recorded invariant (owner, at lock — the reviewer's test for
+future additions):** *semantic proximity does not confer semantic
+authority.* A metric named "vulnerability count" inside an L11
+package does not make L11 responsible for the meaning of
+vulnerability; a threshold beside it does not make L11 responsible
+for the meaning of acceptable risk; delivering the package to a
+security workflow does not make L11 part of the security decision.
+(Owner note: this closes the loophole where L11 acquires security
+authority through vocabulary, thresholds, metric names, summaries,
+or "obvious" interpretations. Also confirmed: L11 cannot promote
+an arbitrary model assertion into a metric merely by putting a
+number around it — condition (a) stands.)
+
+### D-L11-19 — Recursion without an L12 (PROPOSED 2026-09-12, closing Q-L11-19; AWAITING OWNER LOCK)
+
+**1. The answer: the recursion was never open.** L11 was never
+self-governing, so self-improvement was never self-authorized.
+Every artifact that governs L11's behavior already lives at a door
+L11 does not own: criteria and sets at the Governance registries
+(L11 owns format/loader, never admission — D-L11-6 §2);
+comparators and L11's own implementation in the ordinary code
+pipeline (Class-2/3/4, human review). The owner's formulation is
+the whole decision: *L11 can be the TARGET of a Candidate; L11
+cannot be the authority that admits or activates that Candidate.*
+There is no L12 because the fixed point of every layer's authority
+is already Governance — humans — and recursion terminates there,
+not in another layer.
+
+**2. The nine cases, mapped to existing doors:**
+
+| Change | Route | Door |
+|---|---|---|
+| Change a K | criterion-revision Candidate → new K version | Governance, criterion registry |
+| Change an S | regression-set-revision Candidate → new S version | Governance, set registry |
+| Comparator implementation | ordinary code change + registration of comparator@v+1 (semantic change = new version, D-L11-17) | code pipeline + Governance registration |
+| Comparator configuration | pinned inside K → K revision | criterion registry |
+| Pinned fixtures/goldens | parameters of K (D-L11-13) → K revision | criterion registry |
+| L11 implementation itself | ordinary Class-2/3/4 change; never a Ratchet subject | code pipeline (+ Class-4 stop-and-ask where architectural) |
+
+Family extension: criterion-revision and regression-set-revision
+join the Candidate family list — exactly the D-L11-3 rule
+"introduced only as the existing doors actually need it"; the
+doors exist (the L11-format Governance registries), the walls are
+identical.
+
+**3. Evaluating a new L11 version against the old — NOT with L11
+evidence.** The already-locked walls make L11-about-L11 comparison
+structurally impossible in v1: the evidence-selector vocabulary
+excludes L11 output (D-L11-7 Am. 1, D-L11-15 Class 4), so a
+criterion whose subject matter is L11's own packages/behavior is
+UNREGISTRABLE. A new comparator or L11 version is therefore
+admitted on ordinary engineering evidence — tests, reviews,
+registers, the same machinery that proved L7–L10 without L11's
+help. The Ratchet does not measure itself; the pipeline that built
+it measures it.
+
+**4. Anti-circularity: a criterion cannot define its own
+success.** Only a REGISTERED K measures anything (unregistered =
+data); a proposed K measures nothing pre-admission — so "evaluate
+K-candidate under K-candidate" is structurally void. Post-
+admission, comparing artifacts under K@2 vs K@1 yields two
+separate enumerated packages (never a merged "K@2 is better"
+claim — cross-criterion composition is banned, D-L11-7 §6). The
+gate against a self-flattering criterion is where it always was:
+Governance registration review plus the precommitment test.
+
+**5. The closing invariant:** *no chain exists in which
+L11-produced evidence is a sufficient condition for modifying
+L11.* Evidence may inform the humans at the doors; it never gates,
+authorizes, or triggers the change (consumption never confers
+authority — D-L11-15; no self-continuation — D-L11-14; evidence
+never obligates — D-L11-2). And the attention asymmetry applies at
+its maximum here: a Candidate targeting L11's own machinery is the
+peak self-serving-evidence risk, so provenance raises registration
+review attention — never lowers the bar and never fast-tracks.
+
+**Constitutional sentence:** *The Ratchet can be improved, but
+never by its own authority: every artifact that governs L11 is
+admitted at a door L11 does not own, on evidence L11 did not mint
+about itself — the recursion terminates in humans, not in an L12.*
 
 ### [Reallocated] Implementer material on criteria/comparator/packages (2026-09-11; formerly proposed as D-L11-4, superseded by owner restructure 2026-09-12)
 
@@ -2085,8 +2166,8 @@ residual → Q-L11-10.
 | Q-L11-15 | **CLOSED → D-L11-15.** Consumption never confers authority; six closed classes; L11 output terminal (two licensed re-reads, never a constituent); Class-2 five conditions as constitutional test; L11/L10 vocabulary separation. |
 | Q-L11-16 | **CLOSED → D-L11-16.** No outcome enum: package or refusal fact, discrepancy subsequent; closed reason classes; refusals terminal/neutral/non-retriable; incompleteness representational; L10 tokens foreign to L11. |
 | Q-L11-17 | **CLOSED → D-L11-17.** Same inputs → same PROPOSITION; sufficient tuple; comparator semantics immutable per version; determinism; three reconstruction results; never repairs; defects never normalized. |
-| Q-L11-18 | **Closure PROPOSED → D-L11-18; AWAITING OWNER LOCK.** Metric never meaning; four legitimacy conditions; three mechanical walls (schema/region-name/derivation); sensitivity inheritance; double-negative prohibited. |
-| Q-L11-19 | Ratchet's own improvement: candidates targeting L11's own machinery/criteria/corpus — the recursion, answered without creating an L12. |
+| Q-L11-18 | **CLOSED → D-L11-18.** Metric never meaning; four legitimacy conditions; three walls; sensitivity inheritance; double-negative prohibited; semantic proximity confers no authority. |
+| Q-L11-19 | **Closure PROPOSED → D-L11-19; AWAITING OWNER LOCK.** Recursion was never open: L11 targets admitted at doors L11 doesn't own; L11-about-L11 criteria unregistrable; proposed K measures nothing; no evidence chain modifies L11. |
 | Q-L11-20 | Constitutional closure: freeze ownership, seams, artifact types, registries, schemas, persistence, failure semantics, automation limits, residuals, proof obligations; scaffold disposition. |
 
 ## 4. Assets inventory (for the grill, factual)

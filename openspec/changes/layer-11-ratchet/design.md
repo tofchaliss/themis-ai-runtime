@@ -1391,7 +1391,7 @@ evidence/comparison package, regression package, deterministic
 comparator, or reproducible view over L6 records, it probably does
 not belong in L11.*
 
-### D-L11-13 — The regression corpus is not a knowledge system (PROPOSED 2026-09-12, closing Q-L11-13; AWAITING OWNER LOCK)
+### D-L11-13 — The regression corpus is not a knowledge system (LOCKED 2026-09-12, Q-L11-13; owner amendment: case represented through K, never "case = criterion" as constitutional identity)
 
 The critical question answered up front: NONE of the four corpus
 elements can become L11-owned authority. Each is a
@@ -1399,12 +1399,17 @@ Governance-fixed or record-derived input that L11 merely consumes;
 the "corpus" as a free-standing curated collection with its own
 authority does not exist.
 
-**1. Case identity — Governance, via the criterion registry.** A
-regression case IS a registered criterion: K's evidence selectors +
-comparator binding + pinned config define exactly what is tested;
-the corpus is the registered set S of K pins (D-L11-9). "What is
-being tested" is therefore fixed at registration — there is no
-separate case object, no case database, no L11 case curation. A
+**1. Case identity — Governance, via the criterion registry.
+Amendment 1 (owner):** *in v1, no independent regression-case
+authority exists. A test case is REPRESENTED THROUGH the applicable
+registered criterion and its pinned parameters/evidence selectors;
+any grouping into S is a Governance-registered set of K
+identities.* Not "case = criterion" as constitutional identity —
+K stays comparison semantics, S stays a registered grouping
+(D-L11-6 separation preserved); the case is representable without
+becoming a third concept. "What is being tested" is fixed at
+registration — no separate case object, no case database, no L11
+case curation. A
 new case enters as a regression-test-family Candidate (D-L11-3)
 through the ordinary registration door: author-never-admit
 (D-L9-8), production failures motivating new cases arrive exactly
@@ -1421,7 +1426,14 @@ Themis-owned knowledge — they enter the harness-plane corpus only
 through the appropriate Themis owner and governed channel; the
 corpus must never become a shadow copy of enterprise knowledge (the
 no-second-enterprise-knowledge-store hard invariant, applied to
-fixtures).
+fixtures). (Owner at lock: the drift shape to watch — production
+fixtures accumulating under a `ratchet/corpus/` with its own
+curation/versioning/retention/selection would quietly BE a second
+enterprise-knowledge store. *L11 may reference Themis-owned
+knowledge; it may not establish a parallel authoritative knowledge
+collection merely because that knowledge is useful for regression
+evaluation.* And physical storage through L6 does not transfer
+ownership of semantic meaning to L11.)
 
 **3. Reference/golden output — two legitimate sources, both
 outside L11.** (a) RECORD-DERIVED: the expected result is the
@@ -1453,12 +1465,19 @@ constitutionally constrained: *bytes are hash-pinned by the
 registered artifact wherever housed; no unpinned corpus directory
 with curation authority exists.*
 
-**6. Growth and drift.** The corpus grows only by registration
-acts (new K versions, new S versions — append-only); it shrinks
-only by withdrawal. No mechanism tunes, prunes, reweights, or
-"maintains" the corpus from evaluation results — corpus evolution
-driven by outcomes would be the Ratchet selecting its own test, the
-self-serving-evidence shape (adversarial register, Q-L11-14/20).
+**6. Growth and drift (owner strong lock):** *evaluation results
+must never autonomously modify the population against which those
+same results are evaluated.* Prohibited, enumerated: bad result →
+remove difficult case; bad result → loosen threshold; bad result →
+reweight metric; bad result → replace golden; bad result → retire
+regression case. Each would create the Ratchet's most dangerous
+failure mode — the system improving its measured score by changing
+what counts as evidence. The corpus grows only by registration
+acts (append-only), shrinks only by withdrawal; corpus evolution
+remains an explicit Governance act. (Owner distinction retained:
+L11 can determine whether an observed result lies inside K's
+declared region; it cannot decide that the region is appropriate
+or what satisfying it authorizes.)
 
 **Constitutional sentence:** *The regression corpus is the set of
 registered criteria and their hash-pinned parameters — what is
@@ -1466,6 +1485,88 @@ tested, with what inputs, against what expectation, at what
 threshold, each fixed by Governance at registration or derived
 from admitted-baseline records. L11 verifies hashes and computes
 Δ; it owns no case, no fixture, no golden, and no threshold.*
+
+### D-L11-14 — The automation boundary: complete, never initiate (PROPOSED 2026-09-12, closing Q-L11-14; AWAITING OWNER LOCK)
+
+The governing principle, then the four powers separately:
+**automation in L11 may deterministically COMPLETE what a governed
+request began; it may never BEGIN.** Nothing in L11 watches,
+schedules, polls, or triggers. This is where the deferred
+cherry-picking questions (D-L11-4 §6, D-L11-5 §6, D-L11-7 flag)
+come due.
+
+**1. Criterion selection — the requester, with exact pins.** A
+comparison request names exact K@v (a set request names exact S@v —
+D-L11-9 Amendment 2, now generalized to all criterion references).
+L11 refuses "compare C and B" without exact criterion identity;
+there is no applicable-criteria discovery that auto-runs anything
+(D-L11-6 Amendment 1: criteria never self-select). The model may
+SUGGEST criteria — advisory. Who legitimately selects: the human
+requester, or a pre-registered door policy resolving
+deterministically BEFORE L11 is invoked. Selecting flatteringly
+within the registered set remains possible — and visible: the
+package names its K, and doors defend themselves by requiring
+complete-under-S (D-L11-9 §3), where member choice was Governance's
+at S registration, not the requester's.
+
+**2. Baseline selection — the requester names B exactly; L11
+never defaults.** No "compare against whatever is current" resolved
+inside L11 — any currency resolution happens at the door or in
+pre-registered policy before invocation (D-L11-5 machinery
+unchanged: claim recorded, observation conditions, K constraints
+checked, mismatch visible, no silent substitution). Flattering
+baseline choice within the admitted set: visible in the package
+(observed non-currency recorded), constrained by K's declared
+baseline constraints, and defeated at doors requiring
+current-active evidence.
+
+**3. Package production — request-driven, and NO DISCARD AFTER
+INITIATION.** No daemon watches history producing comparisons
+(D-L11-4 §6 confirmed: produced on request). But the request-driven
+model needs one hard rule to kill silent suppression: **once a
+comparison is initiated, its outcome is durably recorded — package
+or refusal record — regardless of direction.** "Run it quietly,
+discard if unfavorable" is structurally impossible: initiation
+commits to a durable result (the no-success-only-path rule of
+D-L11-4 §6, extended from representation to production).
+Cherry-picking then survives only at the request level — choosing
+not to ask — which no proposition claims to prevent (D-L11-4:
+"selective production is visible, not prevented") and which
+complete-under-S requirements expose wherever a door cares.
+
+**4. Candidate generation — REFUSED as machinery; authorship is
+always an attributable act.** The owner's distinction is real: "AI
+suggested a candidate" is position-1 authorship by an author (the
+model, in an ordinary governed task, with provenance naming it —
+informed by reading packages as data). "Ratchet automatically
+generated a Candidate" would make the MACHINERY an author —
+blurring the attention-raising provenance rule (D-L9-16: whose
+authorship raises attention?) and assembling the autonomous
+optimizer from innocent parts: results → auto-candidates → plans →
+evaluations → results (each step separately harmless, the loop
+prohibited by D-L11-7 §8). v1: L11 machinery constructs no
+Candidates; every Candidate has an author acting through ordinary
+governed means. Same disposition for the remaining verbs: L11 does
+not auto-open registration proposals (handoff is an act by
+someone), and does not "request human review" as a workflow act —
+it makes evidence discoverable (derived views); existing mechanisms
+carry requests.
+
+**5. Mechanical enforcement (not "the AI shouldn't").** v1 L11 has
+NO entry point that is not a synchronous response to an explicit
+invocation from an existing governed surface. No timers, no
+watchers, no pollers, no queues or work lists (D-L11-11 negative
+list), no goroutines outliving an invocation. Reviewable
+structurally (the AST-wall discipline: no time.Ticker/cron
+machinery in the package) — the boundary is checkable code shape,
+not intent.
+
+**Constitutional sentence:** *Automation in L11 completes governed
+requests deterministically; it never initiates. Nothing in L11
+watches, schedules, generates, or selects — every comparison,
+plan, and candidate begins with an attributable act outside the
+machinery, and once begun, its outcome is recorded whatever it
+shows.*
 
 ### [Reallocated] Implementer material on criteria/comparator/packages (2026-09-11; formerly proposed as D-L11-4, superseded by owner restructure 2026-09-12)
 
@@ -1562,8 +1663,8 @@ residual → Q-L11-10.
 | Q-L11-10 | **CLOSED → D-L11-10.** Describe-and-consume, never run; eight verbs disposed; inert declarative Evaluation Plan (never authority); conformance = record-to-plan matching; attribution = provenance only; 15 recorded invariants. |
 | Q-L11-11 | **CLOSED → D-L11-11.** Two durable planes only; registered names vs instance hashes; L6 stores, L11 derives statelessly; supersession = claim; negative list; production via existing L6 mechanisms; refusal = fact about attempt. |
 | Q-L11-12 | **CLOSED → D-L11-12.** "Feedback" is not an architectural concept in L11; dissolution table; no type/store/channel; loop is human-governed; reservoir surface removed; feedback/ scaffold forbidden; the architectural test. |
-| Q-L11-13 | **Closure PROPOSED → D-L11-13; AWAITING OWNER LOCK.** Corpus = registered criteria + hash-pinned parameters; case = criterion; fixtures content-addressed w/ enterprise wall; goldens record-derived or human-declared; thresholds two-stage; no corpus curation authority. |
-| Q-L11-14 | Automation boundary: may the Ratchet automatically generate candidates, run evaluations, compare, open proposals, request review — where automation stops, mechanically enforceable. |
+| Q-L11-13 | **CLOSED → D-L11-13.** Corpus = registered criteria + hash-pinned parameters (case represented through K, not a third concept); enterprise wall; goldens record-derived or declared; thresholds two-stage; results never modify their own test population. |
+| Q-L11-14 | **Closure PROPOSED → D-L11-14; AWAITING OWNER LOCK.** Complete-never-initiate; exact pins for K and B selection; no discard after initiation; candidate generation refused as machinery; no timers/watchers/queues — checkable code shape. |
 | Q-L11-15 | Router and deployment policy: formally distinguish evidence→Governance-promotion from validated-evidence→deterministic-deployment-selection, if the latter is legitimate (consumption-of-evidence rule). |
 | Q-L11-16 | Failure and incompleteness: failed/differing/incomplete/incomparable/unavailable inputs — NO COMPARISON vs INCONCLUSIVE vs new vocabulary; resist a second copy of L10's outcomes. |
 | Q-L11-17 | Reproducibility: reconstruct "why did Ratchet say C compared favorably with B" — L10-strength provenance; must comparison itself be deterministic? |

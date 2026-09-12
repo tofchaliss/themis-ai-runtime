@@ -1716,7 +1716,7 @@ new comparative evidence.* (Class 6 phrasing kept: *readable does
 not mean authoritative, and evidence does not become instruction
 merely because the model sees it.*)
 
-### D-L11-16 — Failure and incompleteness: no outcome vocabulary at all (PROPOSED 2026-09-12, closing Q-L11-16; AWAITING OWNER LOCK)
+### D-L11-16 — Failure and incompleteness: no outcome vocabulary at all (LOCKED 2026-09-12, Q-L11-16; owner refinement: discrepancy is a SUBSEQUENT fact about a produced package, never a third state of the comparison)
 
 **1. The answer to "NO COMPARISON vs INCONCLUSIVE vs new
 vocabulary" is: NEITHER — L11 has no outcome enum.** L10's five
@@ -1745,7 +1745,10 @@ Candidate/baseline inputs differ → K's declared comparability
 requirements violated → refusal (comparability-violation) — NOTE:
 this is NOT "incomparable"; incomparability is an ORDERING concept
 after a successful comparison (D-L11-7 §4), input mismatch
-PREVENTS the comparison. Evidence incomplete → refusal per missing
+PREVENTS the comparison. (Owner, preserved verbatim in the
+architecture: *input incompatibility prevents comparison; metric
+incomparability occurs after a successful comparison.* Fundamentally
+different propositions.) Evidence incomplete → refusal per missing
 constituent; set-level, no S-package (D-L11-9 case A). Metrics
 incomparable → a PACKAGE with incomparable/descriptive Δ — not a
 failure. One run unavailable → refusal (evidence-unavailable).
@@ -1777,7 +1780,14 @@ about candidate or baseline quality — it establishes only that a
 named precondition failed; a pile of refusals is not a quality
 signal about C, and no derivation may aggregate refusal counts
 into anything evaluative (the aggregation rule applies: refusals
-enumerate, never strengthen). Non-retriable by machinery: a human
+enumerate, never strengthen). (Owner, prohibited derivations
+enumerated at lock: "many refusals for C → C is bad"; "many
+refusals for B → B is unreliable"; "high refusal rate → candidate
+regression". A refusal is epistemically neutral about the compared
+artifacts. Also confirmed: L10 FAIL does not become an L11
+"regression" automatically — whether a particular L10 fact
+participates in K's comparison semantics is determined by K's
+registered evidence requirements.) Non-retriable by machinery: a human
 may re-invoke after fixing the precondition; the new invocation is
 a new attributable act.
 
@@ -1787,12 +1797,97 @@ D-L11-11 no-status-column tripwire). Incompleteness is visible as
 the ABSENCE of a set-level package plus the presence of whatever
 constituents exist.
 
-**Constitutional sentence:** *L11 has no outcome vocabulary: a
-comparison either produced a package, was refused for a named
-precondition, or its record disagrees on re-derivation. Everything
-else — favorable, unfavorable, incomparable, inconclusive — is
-content owned by K's declared semantics or by the plane that
-minted the consumed fact.*
+**Constitutional sentence (owner refinement folded — the three
+situations are not mutually exclusive states of one comparison;
+the discrepancy is subsequent and never replaces the original,
+per D-L11-11 immutability):** *L11 has no outcome vocabulary: an
+accepted comparison invocation either produces a package or
+produces a refusal fact for a named precondition; a later licensed
+re-derivation may produce a discrepancy fact. Everything else —
+favorable, unfavorable, incomparable, inconclusive — is content
+owned by K's declared semantics or by the plane that minted the
+consumed fact.*
+
+The closed model (owner): accepted invocation → precondition
+failure → refusal fact; OR comparison succeeds → package → later
+re-derivation → agrees (confirmation) or disagrees (discrepancy
+fact). The resulting boundary: *L10 has outcome semantics; L11 has
+package existence and comparison semantics* — L10 establishes
+verification facts; L11 establishes comparison facts or refuses to
+establish one.
+
+### D-L11-17 — Reproducibility: same committed inputs, same proposition (PROPOSED 2026-09-12, closing Q-L11-17; AWAITING OWNER LOCK)
+
+**The centerpiece (owner):** *reproducibility means reconstruction
+of the same PROPOSITION from the same committed inputs — not
+merely obtaining the same numerical Δ.* Re-derivation re-verifies
+the full conditioned relation: selector application, admission
+observations against recorded door-registry hashes (D-L11-5 §2),
+comparator computation, region derivations. A matching Δ atop a
+broken conditioning chain is NOT a reproduction.
+
+**1. The sufficient conditioning tuple (carried by every
+package):** candidate content hash; baseline content hash; K
+name@version + SHA-256 (two-way, D-L11-6); comparator registered
+name@version; comparator configuration bytes hash (pinned by K);
+enumerated evidence ObjectIDs; run identities; admission
+observation references including the observed door-registry hash;
+Δ in K's declared shape. Sufficiency test, mechanical: a cold
+process holding ONLY the package bytes, read access to the L6
+record plane, and the governed registries re-derives the
+proposition with no other context — possible precisely because
+L11 has no mutable state to depend on (D-L11-11).
+
+**2. The nine grill points, answered:** (i) tuple as above; (ii)
+every constituent referenced by immutable ObjectID — no identity
+without bytes (D-L11-11 §3); (iii) K by exact name@version + hash;
+(iv) comparator captured as registered name@version, whose
+semantics are immutable per version — **constitutional rule: any
+semantic change to a comparator is a NEW version; same version,
+same semantics, forever** (the code identity behind a version is
+governed by the ordinary review pipeline and repo history, the
+registration binds the name); (v) config bytes pinned by K,
+hash-checked; (vi) cold reconstruction requires no L11 state —
+package + L6 + registries only; (vii)–(ix) below.
+
+**3. Determinism requirement (D-L10-3 reapplied).** The comparator
+is pure and environment-free: same tuple → bit-identical canonical
+Δ serialization. No wall-clock, no randomness, no
+platform-dependent arithmetic; canonical serialization is part of
+the registered comparator semantics. Stateless derivations
+(better-under-K, resistant-under-S) are reproducible for free —
+they are functions of package + K.
+
+**4. The three reconstruction results (answering vii/ix — the
+discrepancy/unavailable distinction, precise):**
+
+- **CONFIRMED** — all constituents resolve, hash-verify, and the
+  re-derived proposition matches.
+- **UNREPRODUCIBLE-FOR-MISSING-INPUTS** — a constituent's bytes
+  are absent. An AVAILABILITY fact, epistemically neutral (the
+  refusal-neutrality discipline): nothing disagrees; re-derivation
+  simply cannot proceed. Recorded as a fact naming the missing
+  ObjectIDs.
+- **DISCREPANCY** — either (a) all inputs present and re-derivation
+  yields a differing proposition/Δ, or (b) bytes present but
+  hash-mismatched (an integrity/tamper fact at the read boundary,
+  D-L10-11). Recorded as a discrepancy fact for Governance —
+  which computation is right is Governance's question (D-L11-4).
+
+**5. Reconstruction never repairs (answering viii).** No
+reconstruction path writes, amends, or replaces the original
+package (D-L11-11 immutability; D-L11-16: the discrepancy is
+subsequent, the original stands). Reconstruction is licensed
+re-read (i) of D-L11-15 Class 4 — a pure function, the L10
+Reconstruct pattern — and it is NOT a new mechanism: no
+reconstruction daemon, invoked like everything else (D-L11-14).
+
+**Constitutional sentence:** *Every package carries its complete
+conditioning tuple; a cold process with the package, the record
+plane, and the registries re-derives the same proposition — or
+records a missing-inputs fact or a discrepancy fact, and never a
+repaired package. Same committed inputs, same proposition;
+anything less is a defect in registration, not a tolerance.*
 
 ### [Reallocated] Implementer material on criteria/comparator/packages (2026-09-11; formerly proposed as D-L11-4, superseded by owner restructure 2026-09-12)
 
@@ -1892,8 +1987,8 @@ residual → Q-L11-10.
 | Q-L11-13 | **CLOSED → D-L11-13.** Corpus = registered criteria + hash-pinned parameters (case represented through K, not a third concept); enterprise wall; goldens record-derived or declared; thresholds two-stage; results never modify their own test population. |
 | Q-L11-14 | **CLOSED → D-L11-14.** Complete-never-initiate; exact pins; no-discard from accepted invocation; candidate generation refused as machinery; no timers/watchers/queues; no L11 operation creates another L11 operation. |
 | Q-L11-15 | **CLOSED → D-L11-15.** Consumption never confers authority; six closed classes; L11 output terminal (two licensed re-reads, never a constituent); Class-2 five conditions as constitutional test; L11/L10 vocabulary separation. |
-| Q-L11-16 | **Closure PROPOSED → D-L11-16; AWAITING OWNER LOCK.** No outcome enum: package / refusal fact / discrepancy fact only; closed reason classes; refusals terminal-neutral-non-retriable; incompleteness representational. |
-| Q-L11-17 | Reproducibility: reconstruct "why did Ratchet say C compared favorably with B" — L10-strength provenance; must comparison itself be deterministic? |
+| Q-L11-16 | **CLOSED → D-L11-16.** No outcome enum: package or refusal fact, discrepancy subsequent; closed reason classes; refusals terminal/neutral/non-retriable; incompleteness representational; L10 tokens foreign to L11. |
+| Q-L11-17 | **Closure PROPOSED → D-L11-17; AWAITING OWNER LOCK.** Same inputs → same PROPOSITION; sufficient conditioning tuple; comparator semantics immutable per version; determinism required; three reconstruction results; never repairs. |
 | Q-L11-18 | Security meaning boundary: can Ratchet ever conclude "safer"/"reduces risk"/"acceptable"? (Preliminary: no — Governance propositions.) |
 | Q-L11-19 | Ratchet's own improvement: candidates targeting L11's own machinery/criteria/corpus — the recursion, answered without creating an L12. |
 | Q-L11-20 | Constitutional closure: freeze ownership, seams, artifact types, registries, schemas, persistence, failure semantics, automation limits, residuals, proof obligations; scaffold disposition. |

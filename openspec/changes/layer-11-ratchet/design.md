@@ -1594,7 +1594,7 @@ exist. "L11 consumes a baseline; it does not discover one":
 policy → resolve B → L11(B), never L11 → find current B →
 compare.)
 
-### D-L11-15 — The consumption-of-evidence rule (PROPOSED 2026-09-12, closing Q-L11-15; AWAITING OWNER LOCK)
+### D-L11-15 — The consumption-of-evidence rule (LOCKED 2026-09-12, Q-L11-15; owner amendment: L11 structural incompleteness/refusal vocabulary kept explicitly separate from L10's outcome vocabulary)
 
 **The general rule, formalizing D-L11-8's deeper principle:**
 *consumption never confers authority. Who may consume which
@@ -1621,7 +1621,10 @@ admitted set, admitted evidence checked at consumption, fixed
 registered policy, no governance state written, fail closed to
 admission. The router is the instance; the rule is the law. A new
 consumption mechanism inherits all five conditions or it is not a
-legitimate Class-2 consumer.
+legitimate Class-2 consumer. (Owner: this is the constitutional
+test precisely so nobody can later argue a new "benchmark
+selector" is not a router and therefore does not inherit D-L11-8.
+It does.)
 
 **Class 3 — L11 comparative/regression establishment.** Consumes:
 established governed facts per K's registered selectors (v1
@@ -1629,6 +1632,25 @@ vocabulary: L2/L6/L10/benchmark facts), under exact externally
 supplied K/S (D-L11-14). Produces packages; no continuation
 (no-self-continuation invariant). Fully bounded by
 D-L11-4/5/6/7/9/10/14.
+
+**Owner amendment — Class 3 gets NO generic failure vocabulary
+analogous to L10's PASS/FAIL/INCONCLUSIVE/UNAVAILABLE/INVALID
+(those remain L10-owned).** L11's vocabulary is structural —
+whether a proposition/package EXISTS, never whether an evaluation
+"passed." The clean model (owner, at lock):
+required input/criterion/baseline/admission unavailable before
+comparison → no package, refusal/absence fact recorded; required
+constituent exists and is unfavorable → complete package with
+observed regression; all constituents satisfy their regions →
+complete package, clean; comparison succeeds but K has no
+ordering → package exists, Δ incomparable/descriptive;
+evidence/reference integrity failure → no valid package,
+discrepancy/refusal as appropriate; L10 verifier returned
+INCONCLUSIVE → that is an L10 fact consumed by K — L11 does not
+rename it. Preserved boundaries: no comparison = no package;
+incomparable ≠ no comparison (an incomparable result is a
+legitimate package if K permits the Δ shape). Full assembly at
+Q-L11-16.
 
 **Class 4 — L11 reading its own output: TERMINAL, with exactly two
 licensed re-reads.** The dangerous class, given its precise
@@ -1645,7 +1667,14 @@ stateless rewritings already licensed by D-L11-4 (better-under-K,
 resistant-under-S, enumerations, lineage views). Nothing else.
 This is the data-plane complement of D-L11-14's control-plane
 invariant: no operation triggers an operation, and no output feeds
-a comparison — the loop is closed on both planes.
+a comparison — the loop is closed on both planes. (Owner explicit
+rule at lock: *an L11-produced package may be represented,
+verified, or rewritten, but cannot serve as an evidence
+constituent of another L11 comparison in v1.* The two licensed
+re-reads are identity-preserving/representational, never
+epistemically additive; the prohibited transition P1 → K2 → P2
+would let L11 recursively manufacture evidence from its own
+conclusions.)
 
 **Class 5 — L11 packages as runtime selection evidence: EXCLUDED.**
 Standing wall from D-L11-8 §5 restated as consumption law: Δ is
@@ -1677,6 +1706,93 @@ who consumes which evidence under what policy is fixed before the
 evidence exists. L11's own outputs are terminal — read again only
 to be verified or rewritten, never to compare, select, or
 continue.*
+
+**Recorded invariants (owner, at lock):** *every L11 consumer has
+a pre-existing authority boundary; evidence can narrow, inform, or
+satisfy that boundary, but can never enlarge it.* And for L11
+itself: *L11 output is terminal with respect to epistemic
+production — it may be verified or rewritten, but it cannot become
+new comparative evidence.* (Class 6 phrasing kept: *readable does
+not mean authoritative, and evidence does not become instruction
+merely because the model sees it.*)
+
+### D-L11-16 — Failure and incompleteness: no outcome vocabulary at all (PROPOSED 2026-09-12, closing Q-L11-16; AWAITING OWNER LOCK)
+
+**1. The answer to "NO COMPARISON vs INCONCLUSIVE vs new
+vocabulary" is: NEITHER — L11 has no outcome enum.** L10's five
+outcomes are propositions about what a verification established;
+L11's states are structural facts about EXISTENCE. The owner's
+D-L11-15 boundary sentence is the law here: *L10 says what a
+verification contract established; L11 says whether the evidence
+required for a comparison exists and what the registered comparator
+derived from it.* Exactly three artifact-level situations exist —
+already individually locked, assembled here:
+
+- **Refusal fact** — an accepted invocation could not produce a
+  package (precondition failure). Carries a closed REASON CLASS
+  (§3). No package exists (D-L11-5 §3).
+- **Package** — the comparison executed; Δ recorded whatever it
+  shows. Favorable / unfavorable / equal / incomparable are
+  CONTENT of Δ under K (D-L11-7), never distinct states.
+- **Discrepancy fact** — a re-derivation disagrees with a recorded
+  package (D-L10-12 inherited; D-L11-15 Class 4).
+
+**2. The owner's eight scenarios, mapped:** candidate evaluation
+fails → the task failure is an L6/L10 fact; at comparison time K's
+selectors find no usable evidence → refusal
+(evidence-unavailable). Baseline evaluation fails → same.
+Candidate/baseline inputs differ → K's declared comparability
+requirements violated → refusal (comparability-violation) — NOTE:
+this is NOT "incomparable"; incomparability is an ORDERING concept
+after a successful comparison (D-L11-7 §4), input mismatch
+PREVENTS the comparison. Evidence incomplete → refusal per missing
+constituent; set-level, no S-package (D-L11-9 case A). Metrics
+incomparable → a PACKAGE with incomparable/descriptive Δ — not a
+failure. One run unavailable → refusal (evidence-unavailable).
+Regression corpus incomplete → no S-package; constituent packages
+stand alone without set identity. Evaluator/registry versions
+differ from K's provenance requirements → refusal
+(provenance-violation); the comparator version cannot differ — it
+is pinned by K.
+
+**3. Closed refusal reason classes (the L10 CheckReasonClass
+pattern):** unregistered-artifact; withdrawn-artifact;
+unadmitted-baseline; evidence-unavailable; comparability-violation;
+provenance-violation; integrity-failure. Reasons name the FAILED
+PRECONDITION, never quality; the class list is closed and extended
+only by schema revision.
+
+**4. L10's tokens never appear as L11 states.**
+PASS/FAIL/INCONCLUSIVE/UNAVAILABLE/INVALID occur in L11 artifacts
+only INSIDE consumed evidence references, quoted as the L10 facts
+they are. An L10 INCONCLUSIVE consumed by K stays an L10 fact — K's
+selectors declare whether such evidence satisfies the criterion's
+requirements; L11 performs no renaming, no mapping, no L11-side
+"inconclusive."
+
+**5. Refusals are terminal, neutral, and non-retriable by
+machinery.** Terminal: refusal triggers nothing (D-L11-14
+no-self-continuation — no retry). Neutral: a refusal says NOTHING
+about candidate or baseline quality — it establishes only that a
+named precondition failed; a pile of refusals is not a quality
+signal about C, and no derivation may aggregate refusal counts
+into anything evaluative (the aggregation rule applies: refusals
+enumerate, never strengthen). Non-retriable by machinery: a human
+may re-invoke after fixing the precondition; the new invocation is
+a new attributable act.
+
+**6. Incompleteness is representational, never quantified.** No
+coverage fields, no percentages, no "partial" status (D-L11-9 §3;
+D-L11-11 no-status-column tripwire). Incompleteness is visible as
+the ABSENCE of a set-level package plus the presence of whatever
+constituents exist.
+
+**Constitutional sentence:** *L11 has no outcome vocabulary: a
+comparison either produced a package, was refused for a named
+precondition, or its record disagrees on re-derivation. Everything
+else — favorable, unfavorable, incomparable, inconclusive — is
+content owned by K's declared semantics or by the plane that
+minted the consumed fact.*
 
 ### [Reallocated] Implementer material on criteria/comparator/packages (2026-09-11; formerly proposed as D-L11-4, superseded by owner restructure 2026-09-12)
 
@@ -1775,8 +1891,8 @@ residual → Q-L11-10.
 | Q-L11-12 | **CLOSED → D-L11-12.** "Feedback" is not an architectural concept in L11; dissolution table; no type/store/channel; loop is human-governed; reservoir surface removed; feedback/ scaffold forbidden; the architectural test. |
 | Q-L11-13 | **CLOSED → D-L11-13.** Corpus = registered criteria + hash-pinned parameters (case represented through K, not a third concept); enterprise wall; goldens record-derived or declared; thresholds two-stage; results never modify their own test population. |
 | Q-L11-14 | **CLOSED → D-L11-14.** Complete-never-initiate; exact pins; no-discard from accepted invocation; candidate generation refused as machinery; no timers/watchers/queues; no L11 operation creates another L11 operation. |
-| Q-L11-15 | **Closure PROPOSED → D-L11-15; AWAITING OWNER LOCK.** Consumption never confers authority; six closed consumption classes; L11 output terminal (two licensed re-reads); Class-2 five conditions as general law. |
-| Q-L11-16 | Failure and incompleteness: failed/differing/incomplete/incomparable/unavailable inputs — NO COMPARISON vs INCONCLUSIVE vs new vocabulary; resist a second copy of L10's outcomes. |
+| Q-L11-15 | **CLOSED → D-L11-15.** Consumption never confers authority; six closed classes; L11 output terminal (two licensed re-reads, never a constituent); Class-2 five conditions as constitutional test; L11/L10 vocabulary separation. |
+| Q-L11-16 | **Closure PROPOSED → D-L11-16; AWAITING OWNER LOCK.** No outcome enum: package / refusal fact / discrepancy fact only; closed reason classes; refusals terminal-neutral-non-retriable; incompleteness representational. |
 | Q-L11-17 | Reproducibility: reconstruct "why did Ratchet say C compared favorably with B" — L10-strength provenance; must comparison itself be deterministic? |
 | Q-L11-18 | Security meaning boundary: can Ratchet ever conclude "safer"/"reduces risk"/"acceptable"? (Preliminary: no — Governance propositions.) |
 | Q-L11-19 | Ratchet's own improvement: candidates targeting L11's own machinery/criteria/corpus — the recursion, answered without creating an L12. |

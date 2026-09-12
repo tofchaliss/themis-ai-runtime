@@ -1816,7 +1816,7 @@ package existence and comparison semantics* — L10 establishes
 verification facts; L11 establishes comparison facts or refuses to
 establish one.
 
-### D-L11-17 — Reproducibility: same committed inputs, same proposition (PROPOSED 2026-09-12, closing Q-L11-17; AWAITING OWNER LOCK)
+### D-L11-17 — Reproducibility: same committed inputs, same proposition (LOCKED 2026-09-12, Q-L11-17; owner wording refinement: discrepancy sources are broader than registration — "architectural defect, never normalized")
 
 **The centerpiece (owner):** *reproducibility means reconstruction
 of the same PROPOSITION from the same committed inputs — not
@@ -1836,7 +1836,16 @@ observation references including the observed door-registry hash;
 process holding ONLY the package bytes, read access to the L6
 record plane, and the governed registries re-derives the
 proposition with no other context — possible precisely because
-L11 has no mutable state to depend on (D-L11-11).
+L11 has no mutable state to depend on (D-L11-11). (Owner at lock:
+*a Δ without its conditioning chain is not the L11 proposition* —
+"same Δ" does not establish "same comparison" unless the entire
+conditioning relation reconstructs. And cold reconstruction is the
+ARCHITECTURAL PROOF: delete every L11-side cache and mutable
+state, retain only package + L6 + registries, reconstruct — if the
+proposition changes, something necessary was outside the tuple or
+an authority boundary was violated. D-L11-11's cache rule and this
+rule reinforce each other; no separate reproducibility subsystem
+exists.)
 
 **2. The nine grill points, answered:** (i) tuple as above; (ii)
 every constituent referenced by immutable ObjectID — no identity
@@ -1882,12 +1891,99 @@ re-read (i) of D-L11-15 Class 4 — a pure function, the L10
 Reconstruct pattern — and it is NOT a new mechanism: no
 reconstruction daemon, invoked like everything else (D-L11-14).
 
-**Constitutional sentence:** *Every package carries its complete
-conditioning tuple; a cold process with the package, the record
-plane, and the registries re-derives the same proposition — or
-records a missing-inputs fact or a discrepancy fact, and never a
-repaired package. Same committed inputs, same proposition;
-anything less is a defect in registration, not a tolerance.*
+**Constitutional sentence (owner refinement folded — a
+discrepancy can arise from corruption, implementation defect,
+registry integrity failure, or another mechanism failure, not
+necessarily the original registration; the response is identical
+either way — record, never tolerate or repair):** *Every package
+carries its complete conditioning tuple; a cold process with the
+package, the record plane, and the registries re-derives the same
+proposition — or records a missing-inputs fact or a discrepancy
+fact, and never a repaired package. Same committed inputs, same
+proposition; anything less is an architectural defect and is never
+normalized as an acceptable reproducibility condition.*
+
+(Owner property at lock: *the package is self-describing enough to
+reconstruct its own epistemic provenance, but it is never
+authoritative about anything beyond the proposition its
+conditioning tuple establishes.*)
+
+### D-L11-18 — The security meaning boundary: metric, never meaning (PROPOSED 2026-09-12, closing Q-L11-18; AWAITING OWNER LOCK)
+
+**1. The categorical answer, formalized.** L11 can never conclude
+"this candidate is secure/safer", "this reduces security risk",
+"this eliminates the vulnerability", "this is acceptable", "this
+satisfies the security requirement", "this should be promoted".
+Those are Governance/Themis propositions — Themis is the security
+system of record, and the Harness owns no security truth
+(constitution). L11's ceiling with security-relevant inputs is
+exactly its ceiling everywhere: the conditioned comparative fact —
+Δ over metric M under K — where M's meaning was fixed by the plane
+that minted it.
+
+**2. What makes a security-relevant metric LEGITIMATE input to K —
+four conditions, all required:**
+
+- **(a) Established fact.** M comes from a governed plane — an L10
+  outcome count, L6 record content, validated benchmark score,
+  gate verdict — minted with its meaning fixed there (D-L11-6 §5).
+  A quantity nobody governed is not a metric; it is a claim.
+- **(b) Provenance-descriptive naming, never normative renaming.**
+  The selector references M by its FACT identity: "count of L10
+  FAIL outcomes under contract sast-scan@2" — never "number of
+  security failures" as a fresh L11 name. Selector vocabulary
+  describes provenance; it must not embed a judgment the
+  referenced plane did not make. `vuln_finding_count_delta`
+  describes a provenance-derived quantity; `security_improved`
+  asserts meaning — refused at registration.
+- **(c) Arithmetic only.** The comparator computes over M; it
+  never interprets M's security significance. No threshold in K
+  acquires the meaning "acceptable risk" — a region is a declared
+  region; its consequence belongs to the door (D-L11-13 two-stage
+  normativity).
+- **(d) Sensitivity inheritance.** Security-relevant evidence may
+  be sensitive; packages carrying it inherit the classification of
+  their constituents, and existing redaction/egress rules apply
+  unchanged (D-L10-14/D-L10-18 lineage). Comparison confers no
+  declassification.
+
+**3. The three mechanical walls against the normative slide (the
+"interesting case" — metrics that SOUND normative):**
+
+- **Schema wall.** No field in K, packages, or derivations can
+  carry a security predicate. Registration review explicitly asks:
+  does any metric name, region name, or description assert a
+  security proposition? Assertion → refused; description of
+  provenance → admissible.
+- **Region-name wall.** Regions are named STRUCTURALLY
+  (improvement region, non-regression region) — never semantically
+  ("safe region", "acceptable-risk region": refused at
+  registration).
+- **Derivation wall.** better-under-K over a security-relevant
+  metric derives exactly "better-under-K@v" and nothing warmer —
+  no view, aggregation, or summary may rename it toward "safer".
+  Criterion rationale/documentation is advisory text and cannot be
+  quoted as established meaning.
+
+**4. Who turns Δ into security meaning: the door, in its own
+plane.** Governance reads "exploitable-finding count 3→1 under K
+against admitted B" and concludes what it concludes; any recorded
+security conclusion lives in Themis-owned/Governance artifacts,
+never in an L11 package. L11 delivering evidence TO a security
+decision is not L11 participating IN the security decision.
+
+**5. The double-negative subtlety.** Even "this candidate is NOT
+worse security-wise" is prohibited as an L11 proposition —
+direction symmetry does not rescue it. The maximum is the bounded
+enumerative form: "no observed regression under registered S@v"
+(D-L11-9), whose security interpretation is the door's.
+
+**Constitutional sentence:** *A security-relevant quantity enters
+L11 as the fact some governed plane established, is compared as a
+number, and leaves as Δ; at no point does the criterion, the
+comparator, or any derivation say what that Δ means for security —
+Themis and Governance alone turn comparative evidence into
+security meaning.*
 
 ### [Reallocated] Implementer material on criteria/comparator/packages (2026-09-11; formerly proposed as D-L11-4, superseded by owner restructure 2026-09-12)
 
@@ -1988,8 +2084,8 @@ residual → Q-L11-10.
 | Q-L11-14 | **CLOSED → D-L11-14.** Complete-never-initiate; exact pins; no-discard from accepted invocation; candidate generation refused as machinery; no timers/watchers/queues; no L11 operation creates another L11 operation. |
 | Q-L11-15 | **CLOSED → D-L11-15.** Consumption never confers authority; six closed classes; L11 output terminal (two licensed re-reads, never a constituent); Class-2 five conditions as constitutional test; L11/L10 vocabulary separation. |
 | Q-L11-16 | **CLOSED → D-L11-16.** No outcome enum: package or refusal fact, discrepancy subsequent; closed reason classes; refusals terminal/neutral/non-retriable; incompleteness representational; L10 tokens foreign to L11. |
-| Q-L11-17 | **Closure PROPOSED → D-L11-17; AWAITING OWNER LOCK.** Same inputs → same PROPOSITION; sufficient conditioning tuple; comparator semantics immutable per version; determinism required; three reconstruction results; never repairs. |
-| Q-L11-18 | Security meaning boundary: can Ratchet ever conclude "safer"/"reduces risk"/"acceptable"? (Preliminary: no — Governance propositions.) |
+| Q-L11-17 | **CLOSED → D-L11-17.** Same inputs → same PROPOSITION; sufficient tuple; comparator semantics immutable per version; determinism; three reconstruction results; never repairs; defects never normalized. |
+| Q-L11-18 | **Closure PROPOSED → D-L11-18; AWAITING OWNER LOCK.** Metric never meaning; four legitimacy conditions; three mechanical walls (schema/region-name/derivation); sensitivity inheritance; double-negative prohibited. |
 | Q-L11-19 | Ratchet's own improvement: candidates targeting L11's own machinery/criteria/corpus — the recursion, answered without creating an L12. |
 | Q-L11-20 | Constitutional closure: freeze ownership, seams, artifact types, registries, schemas, persistence, failure semantics, automation limits, residuals, proof obligations; scaffold disposition. |
 

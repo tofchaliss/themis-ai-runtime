@@ -2344,3 +2344,57 @@ residual → Q-L11-10.
 - Scaffold: src/harness/ratchet/{candidates,evaluations,feedback,
   promotion,regression} — .gitkeep only, pre-grill guesses; reconcile
   or remove at close (the L10 scaffold lesson).
+
+## 5. Closure record (owner judgment, 2026-09-13)
+
+**L11 implementation is CLOSED.** M0–M7 judged
+architecture-conformant, test-evidenced, and operationally-proven on
+a machine-local basis. The owner's state table:
+
+| Dimension | Judgment |
+|---|---|
+| Architecture | FROZEN — no new L11 decision required |
+| Implementation | CLOSED — M0–M7 evidence sufficient |
+| Architecture-conformant | PASS (review findings were implementation/integration violations of existing decisions, now remediated) |
+| Test-evidenced | PASS (mutants, refusal coverage, walls, parity, CLI contract) |
+| Operationally-proven | PASS, machine-local (compiled CLI, cross-process cold reconstruction, live model proof re-confirmed) |
+| Governance artifacts | ACTIVE only after the Governance registration act (recorded separately) |
+| Residuals | EXPLICITLY RECORDED (traceability.md) |
+| Push / Archive | AUTHORIZED (no history rewrite — the review/remediation lineage is evidence) |
+
+The close reviews' findings (admission-observation resolution,
+evidence grounding, refusal reachability, registry binding,
+durability, reconstruction parity, walls) were IMPLEMENTATION
+CORRECTIONS to the frozen constitution, not new architecture:
+D-L11-5/11/17/20 were instantiated incorrectly at the invocation
+seam and are now instantiated correctly. None reopened.
+
+**Three classifications RATIFIED without architectural amendment:**
+1. No-discard scope — once accepted, no L11-controlled discard path
+   exists; operator-level suppression is request-level
+   cherry-picking, defended by Governance's complete-under-S at
+   doors. No L11 persistence mechanism may be added to chase it
+   (D-L11-11).
+2. Append-only wall shape — the consumption-pin
+   (`--registry-sha256`) is the correct mechanism; persisted
+   prior-registry state inside L11 is prohibited. The current
+   invocation proves WHICH registry it consumed; full append-only
+   continuity belongs to a resident consumer/owning mechanism.
+3. Sensitivity residual — explicit v1 residual as an ADMISSION
+   RESTRICTION (registration review bars sensitive-plane selectors),
+   never an L11-local classification system. The correct evolution:
+   Themis sensitivity authority → future governed inheritance
+   machinery → L11 consumes inherited classification.
+
+**Governance activation:** APPROVED FOR GOVERNANCE ACTION —
+bench-score-delta@1 and core-regression@1 activated by the owning
+Governance authority as a separately recorded act (owner-directed
+execution; the record reads "Governance activated", never "AI
+activated" — the D-L11-1..20 authority boundary applied to L11's
+own artifacts).
+
+**The closing sentence (owner):** *there is no remaining L11
+architecture work to design. From here, a failure in L11 defaults
+to implementation defect or explicitly recorded residual;
+architecture reopens only if a genuine D-L11-20 §7 gap condition
+occurs. Layer 11 is architecturally complete.*

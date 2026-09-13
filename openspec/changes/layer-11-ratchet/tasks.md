@@ -168,10 +168,15 @@ Settle each at its milestone, ordinary review, no new architecture:
       sensitivity residual (see traceability.md).
 - [x] Traceability completed (traceability.md, incl. remediation
       record).
-- [ ] Owner closure judgment; Governance activation of
-      policies/ratchet/{criteria,regression-sets}.proposed.json
-      (bench-score-delta@1, core-regression@1); push
-      (owner-approved, THEMIS_PUSH_APPROVED=1); archive.
+- [x] Owner closure judgment 2026-09-13: CLOSED, all three states
+      PASS (operationally-proven machine-local); three
+      classifications RATIFIED; findings = implementation
+      corrections, no decision reopened (design.md §5).
+- [x] Governance activation: approved for Governance action,
+      executed as the owner-directed act (separate commit);
+      bench-score-delta@1 + core-regression@1 ACTIVE.
+- [x] Push approved (no history rewrite); archive approved with
+      activation recorded separately.
 
 ## Residuals (recorded, never silently promoted)
 

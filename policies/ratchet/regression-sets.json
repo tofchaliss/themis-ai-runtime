@@ -1,0 +1,14 @@
+{
+ "version": 1,
+ "kind": "regression-sets",
+ "entries": [
+  {
+   "name": "core-regression",
+   "version": 1,
+   "artifact_sha256": "3ff2c4d2a5eb03b9d0ff971126d38ff4ef33873abaa23c0db44fcea508acb6d1",
+   "artifact_path": "core-regression.json",
+   "state": "active",
+   "steward": "security-engineering"
+  }
+ ]
+}

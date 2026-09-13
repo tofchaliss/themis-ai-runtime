@@ -110,7 +110,8 @@ func e2eFixture(t *testing.T, m model.Interface) (*orchestration.Orchestrator, s
 	}
 
 	o, _, err := orchestration.Open(orchestration.Config{
-		StateRoot: stateDir, ArtifactDir: filepath.Join(t.TempDir(), "artifacts"),
+		Unanchored: true,
+		StateRoot:  stateDir, ArtifactDir: filepath.Join(t.TempDir(), "artifacts"),
 		GitPath: gitBin(t), ProviderDir: t.TempDir(),
 		SafetyRoot: filepath.Join(root, "instructions/global/safety"),
 		SystemRoot: filepath.Join(root, "instructions/global/system"),

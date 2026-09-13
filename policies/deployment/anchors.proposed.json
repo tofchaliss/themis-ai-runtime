@@ -1,13 +1,13 @@
 {
+ "version": 1,
+ "kind": "deployment-anchors",
  "entries": [
   {
-   "artifact_sha256": "88bdc772da01c288573e50bce8e96faa6258e8bde92ee312fac26998649618c5",
    "name": "local-dev",
+   "version": 1,
+   "artifact_sha256": "c34a7de9242a1c62d33548307e5fd0f14216494c69efa0fb94173b263373ab3e",
    "state": "active",
-   "steward": "security-engineering",
-   "version": 1
+   "steward": "security-engineering"
   }
- ],
- "kind": "deployment-anchors",
- "version": 1
+ ]
 }

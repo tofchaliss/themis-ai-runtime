@@ -231,7 +231,8 @@ func TestStartupSweepHermetic(t *testing.T) {
 	}
 
 	_, rep, err := Open(Config{
-		StateRoot: stateDir, ArtifactDir: filepath.Join(t.TempDir(), "a"),
+		Unanchored: true,
+		StateRoot:  stateDir, ArtifactDir: filepath.Join(t.TempDir(), "a"),
 		GitPath: gitBin(t), ProviderDir: t.TempDir(),
 		SafetyRoot: filepath.Join(repoRoot, "instructions/global/safety"),
 		SystemRoot: filepath.Join(repoRoot, "instructions/global/system"),

@@ -151,6 +151,78 @@ root drift refusal, themis root required; TestAnchoredSubmit
 RefusesUnanchoredBundle: bundle-artifact and model-allowlist
 refusals).
 
+### Class-3 close review + remediation (2026-09-13)
+
+Two parallel Class-3 reviews (security; architecture + test
+evidence) against the first implementation. **D-G1-1A's core held
+in both**: the two-step is not collapsed, a forged anchor alone is
+genuinely refused, admission requires registry resolution, the
+freeze is sound, and the package is read-only with no cycle. The
+findings were all about what the admitted anchor BINDS. Remediated:
+
+- **CRITICAL (symlink bypass)** — HashDir skipped non-regular
+  entries while the instruction loader follows symlinks: hashing and
+  reading disagreed about the file set, so a symlink dropped into a
+  pinned root left the pin unchanged while unpinned out-of-tree text
+  reached the model. HashDir now REFUSES non-regular entries
+  (skipping and reading must never disagree). Proof:
+  TestHashDirRefusesNonRegularEntries.
+- **CRITICAL (consume-before-admit)** — Open resolved and rendered
+  the instruction set BEFORE admission, and verified afterwards
+  through an independent second read (the R-L9-2 shape). Admission
+  and pin verification now run BEFORE `instructions.Resolve`.
+- **HIGH (per-task drift)** — resolveTaskEIS re-walks the roots
+  every task; the anchor's instruction claim was a one-shot startup
+  assertion. verifyAnchoredInstructionPlane now runs per task too.
+- **HIGH (model plane)** — the allowlist governed a NAME while
+  name→endpoint resolution lived in an unpinned models.json. The
+  anchor gains `model_registry` (a pin, or the explicit declaration
+  `"absent"`); Open verifies it. Q-G1-2's endpoint clause is now
+  implemented, not merely stated. Proof: TestAnchoredModelRegistryPin.
+- **HIGH (dead allowlist test)** — the model-allowlist "proof"
+  refused at the exec ceiling and never reached the check (verified
+  survivor: deleting the whole allowlist loop left the package
+  green). Fixtures now satisfy every bundle pin first; the
+  workflow-set and instruction-policy survivors got dedicated tests
+  too; and a POSITIVE anchored path (assembly → completed walk) now
+  exists at both the L7 and Phase C levels.
+- **MEDIUM (silent unanchored bypass)** — an anchorless Open now
+  REFUSES unless `Config.Unanchored` explicitly declares the
+  recorded test-harness caller role; declaring both is a refusal;
+  unanchored records carry `deployment_anchor: "unanchored"` so
+  absence is never ambiguous. Phase C, the flagship end-to-end
+  register, now runs ANCHORED.
+- **MEDIUM (Q-G1-7 evidence)** — the anchor BYTES are now durable
+  in the task record, not only the identifier.
+- **MEDIUM (framing collision)** — HashDir is length-prefixed;
+  `{a:"", b:"c"}` and `{a:"\0b\0c"}` no longer collide, and
+  sibling deletion changes the pin. Proof:
+  TestHashDirFramingIsInjective.
+- **LOW** — duplicate artifact hashes across registrations refused
+  (order-dependent admission); pinned-file reads bounded; loader
+  negative space covered (oversize, directory-as-anchor, missing
+  registry, version-zero, malformed entry).
+
+**Findings NOT fixed by inference — recorded for owner decision:**
+1. Four enumerated pins (`skill_catalog`, `contract_registry`,
+   `criteria_registry`, `regression_set_registry`) are parsed but
+   have no consumer; the package comment's "verified where those
+   planes are consumed" is aspirational. In particular the skill
+   procedure is still verified against a SUBMITTER-supplied hash
+   (Q-G1-5's "skill refs via the anchored catalog" unimplemented).
+2. No append-only check on the anchors registry; the design's
+   implementation note claiming it is corrected here.
+3. `governed["deployment_anchor"]` is write-only provenance —
+   nothing on the read path re-establishes admission, and a record
+   lacking the key is refused by nobody (Q-G1-7 half-met).
+4. Door table and constitution hashes absent from the enumeration
+   (Q-G1-2 arity); per-workflow vs per-deployment arity for
+   contract/ceilings makes multi-workflow anchors unexpressible.
+5. The shipped `local-dev@1` pins a spec TEMPLATE where an exec
+   ceiling belongs (no exec-ceiling artifact exists under
+   policies/execution/) — the ACTIVE anchor is un-runnable as
+   written and nothing references it from code.
+
 Governed registration: `policies/deployment/local-dev.json` (anchor,
 sha256 88bdc772da01c288…) proposed via
 `anchors.proposed.json` → owner act → `anchors.json` ACTIVE

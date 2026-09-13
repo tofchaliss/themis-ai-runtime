@@ -17,7 +17,8 @@ func validAnchorMap() map[string]any {
 		"tool_registry": h("registry"), "workflow_ceiling": h("wceiling"),
 		"exec_ceiling": h("eceiling"), "context_contract": h("contract"),
 		"workflows": []any{h("wf1")}, "models": []any{"scripted"},
-		"skill_catalog": h("catalog"), "contract_registry": h("l10reg"),
+		"model_registry": "absent",
+		"skill_catalog":  h("catalog"), "contract_registry": h("l10reg"),
 		"criteria_registry": h("l11reg"), "regression_set_registry": h("setreg"),
 	}
 }
@@ -134,6 +135,7 @@ func TestParseAnchorRefusals(t *testing.T) {
 		}},
 		{"empty models", func(m map[string]any) { m["models"] = []any{} }},
 		{"empty model entry", func(m map[string]any) { m["models"] = []any{""} }},
+		{"model registry neither hash nor absent", func(m map[string]any) { m["model_registry"] = "local" }},
 		{"bad name", func(m map[string]any) { m["name"] = "Local Dev" }},
 		{"version zero", func(m map[string]any) { m["deployment_version"] = 0 }},
 		{"unknown field", func(m map[string]any) { m["auto_approve"] = true }},
@@ -175,4 +177,146 @@ func TestHashDirDeterministic(t *testing.T) {
 	if h3 == h1 {
 		t.Fatal("content change invisible to dir hash")
 	}
+}
+
+// The CRITICAL-1 wall: a symlink inside a pinned tree must REFUSE,
+// never be silently skipped — consumers (the instruction loader)
+// follow symlinks, so skipping would leave unpinned content inside a
+// pinned tree.
+func TestHashDirRefusesNonRegularEntries(t *testing.T) {
+	outside := filepath.Join(t.TempDir(), "evil.md")
+	if err := os.WriteFile(outside, []byte("unpinned directive\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "a.md"), []byte("alpha\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	before, err := HashDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(dir, "evil.md")); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	after, err := HashDir(dir)
+	if err == nil {
+		t.Fatalf("symlink accepted into a pinned tree (hash %s vs %s)", after, before)
+	}
+	if !strings.Contains(err.Error(), "non-regular entry") {
+		t.Fatalf("wrong refusal: %v", err)
+	}
+}
+
+// Duplicate artifact hashes across registrations make admission
+// order-dependent (close-review LOW-1).
+func TestAdmitAnchorRefusesDuplicateArtifact(t *testing.T) {
+	m := validAnchorMap()
+	ab, _ := json.Marshal(m)
+	dir := t.TempDir()
+	p := filepath.Join(dir, "anchor.json")
+	os.WriteFile(p, ab, 0o644)
+	rb, _ := json.Marshal(map[string]any{
+		"version": 1, "kind": "deployment-anchors",
+		"entries": []any{
+			map[string]any{"name": "local-dev", "version": 1, "artifact_sha256": hashBytes(ab), "state": "withdrawn"},
+			map[string]any{"name": "local-dev", "version": 2, "artifact_sha256": hashBytes(ab), "state": "active"},
+		},
+	})
+	reg := filepath.Join(dir, "anchors.json")
+	os.WriteFile(reg, rb, 0o644)
+	if _, err := AdmitAnchor(p, hashBytes(ab), reg); err == nil || !strings.Contains(err.Error(), "more than once") {
+		t.Fatalf("order-dependent admission accepted: %v", err)
+	}
+}
+
+// M-4: the tree encoding must be injective — a file set cannot be
+// impersonated by writing one file and deleting a sibling.
+func TestHashDirFramingIsInjective(t *testing.T) {
+	mk := func(files map[string]string) string {
+		t.Helper()
+		dir := t.TempDir()
+		for name, body := range files {
+			p := filepath.Join(dir, name)
+			if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		h, err := HashDir(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return h
+	}
+	// The classic separator-collision pair: two files vs one file
+	// whose content replays the separators.
+	two := mk(map[string]string{"a": "", "b": "c"})
+	one := mk(map[string]string{"a": "\x00b\x00c"})
+	if two == one {
+		t.Fatal("distinct trees share a pin — the framing is not injective")
+	}
+	// Sibling deletion must change the pin.
+	full := mk(map[string]string{"x": "1", "y": "2"})
+	partial := mk(map[string]string{"x": "1"})
+	if full == partial {
+		t.Fatal("deleting a sibling left the pin unchanged")
+	}
+}
+
+// Negative space the close review found untested (M-8 tail): the
+// loader's own bounds and shapes.
+func TestAnchorLoaderBounds(t *testing.T) {
+	dir := t.TempDir()
+	t.Run("oversize anchor refused", func(t *testing.T) {
+		p := filepath.Join(dir, "big.json")
+		pad := strings.Repeat("x", maxAnchorBytes+1)
+		os.WriteFile(p, []byte(`{"version":1,"pad":"`+pad+`"}`), 0o644)
+		if _, err := AdmitAnchor(p, strings.Repeat("ab", 32), filepath.Join(dir, "nope.json")); err == nil {
+			t.Fatal("oversize anchor read")
+		}
+	})
+	t.Run("directory as anchor refused", func(t *testing.T) {
+		sub := filepath.Join(dir, "adir")
+		os.MkdirAll(sub, 0o755)
+		if _, err := AdmitAnchor(sub, strings.Repeat("ab", 32), filepath.Join(dir, "nope.json")); err == nil {
+			t.Fatal("directory accepted as anchor")
+		}
+	})
+	t.Run("missing registry refuses closed", func(t *testing.T) {
+		m := validAnchorMap()
+		ab, _ := json.Marshal(m)
+		p := filepath.Join(dir, "a.json")
+		os.WriteFile(p, ab, 0o644)
+		if _, err := AdmitAnchor(p, hashBytes(ab), filepath.Join(dir, "absent-registry.json")); err == nil {
+			t.Fatal("missing anchors registry admitted")
+		}
+	})
+	t.Run("registry version zero refused", func(t *testing.T) {
+		m := validAnchorMap()
+		ab, _ := json.Marshal(m)
+		p := filepath.Join(dir, "a2.json")
+		os.WriteFile(p, ab, 0o644)
+		rb, _ := json.Marshal(map[string]any{"version": 0, "kind": "deployment-anchors", "entries": []any{}})
+		reg := filepath.Join(dir, "reg0.json")
+		os.WriteFile(reg, rb, 0o644)
+		if _, err := AdmitAnchor(p, hashBytes(ab), reg); err == nil {
+			t.Fatal("version-zero registry accepted")
+		}
+	})
+	t.Run("malformed registry entry refused", func(t *testing.T) {
+		m := validAnchorMap()
+		ab, _ := json.Marshal(m)
+		p := filepath.Join(dir, "a3.json")
+		os.WriteFile(p, ab, 0o644)
+		rb, _ := json.Marshal(map[string]any{"version": 1, "kind": "deployment-anchors",
+			"entries": []any{map[string]any{"name": "local-dev", "version": 0, "artifact_sha256": hashBytes(ab), "state": "active"}}})
+		reg := filepath.Join(dir, "reg1.json")
+		os.WriteFile(reg, rb, 0o644)
+		if _, err := AdmitAnchor(p, hashBytes(ab), reg); err == nil {
+			t.Fatal("malformed entry accepted")
+		}
+	})
 }

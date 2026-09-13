@@ -18,6 +18,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tofchaliss/themis/deployment"
 	"github.com/tofchaliss/themis/orchestration"
 	"github.com/tofchaliss/themis/ratchet"
 	"github.com/tofchaliss/themis/runtime/model"
@@ -104,39 +105,10 @@ func wj(t *testing.T, dir, name, body string) string {
 	return p
 }
 
-// chainFixture opens ONE orchestrator (with the themis root wired —
-// audit D7) able to run multiple remediate walks in one state root.
-func chainFixture(t *testing.T, m model.Interface) (*orchestration.Orchestrator, *state.Root, string, func(taskID string) string) {
+// writeFixtureArtifacts materializes the governed bundle artifacts
+// BEFORE Open, so the deployment anchor can pin them (G1).
+func writeFixtureArtifacts(t *testing.T, envDir, mirror string) {
 	t.Helper()
-	envDir := t.TempDir()
-	stateDir := filepath.Join(t.TempDir(), "state")
-	mirror, sha := mkMirror(t)
-
-	l4, err := tools.LoadRegistry(filepath.Join(repoRoot, "policies/tools/registry-v4.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	ev := &seam.Evaluator{
-		RegistryPath: filepath.Join(repoRoot, "policies/verification/contracts.json"),
-		L4:           l4,
-	}
-	o, _, err := orchestration.Open(orchestration.Config{
-		StateRoot: stateDir, ArtifactDir: filepath.Join(t.TempDir(), "artifacts"),
-		GitPath: gitBin(t), ProviderDir: t.TempDir(),
-		SafetyRoot: filepath.Join(repoRoot, "instructions/global/safety"),
-		SystemRoot: filepath.Join(repoRoot, "instructions/global/system"),
-		ThemisRoot: filepath.Join(repoRoot, "instructions/themis"),
-		PolicyPath: filepath.Join(repoRoot, "policies/security/instruction-directive-patterns.json"),
-		Model:      m,
-		Verifier:   ev,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if derr := ev.CheckDisjoint(stateDir, mirror, envDir); derr != nil {
-		t.Fatal(derr)
-	}
-
 	wj(t, envDir, "workflow.json", `{
  "version":1,"name":"remediate-dependency","initial":"REMEDIATE",
  "declared_events":["turn-no-action","turn-provider-error","turns-exhausted","tool-error",
@@ -165,6 +137,111 @@ func chainFixture(t *testing.T, m model.Interface) (*orchestration.Orchestrator,
 		`{"version":1,"workflow":"remediate-dependency","slots":[
 		  {"name":"task-payload","kind":"task-brief","requirement":"required","classes":["external-untrusted"]}],
 		  "sensitivity_ceiling":"public"}`)
+
+}
+
+// buildAnchor pins the fixture's artifacts and registers the anchor
+// as a Governance act would — proposed bytes become the governed
+// registry; admission is then established from it, never asserted.
+func buildAnchor(t *testing.T, envDir string) (anchorPath, anchorSHA, anchorsReg string) {
+	t.Helper()
+	hd := func(p string) string {
+		h, err := deployment.HashDir(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return h
+	}
+	hf := func(p string) string {
+		h, err := deployment.HashFile(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return h
+	}
+	env := func(n string) string { return hf(filepath.Join(envDir, n)) }
+	anchor := map[string]any{
+		"version": 1, "name": "phase-c", "deployment_version": 1,
+		"instruction_root_safety": hd(filepath.Join(repoRoot, "instructions/global/safety")),
+		"instruction_root_system": hd(filepath.Join(repoRoot, "instructions/global/system")),
+		"instruction_root_themis": hd(filepath.Join(repoRoot, "instructions/themis")),
+		"instruction_policy":      hf(filepath.Join(repoRoot, "policies/security/instruction-directive-patterns.json")),
+		"tool_registry":           hf(filepath.Join(repoRoot, "policies/tools/registry-v4.json")),
+		"workflow_ceiling":        env("wceiling.json"),
+		"exec_ceiling":            env("eceiling.json"),
+		"context_contract":        env("context-contract.json"),
+		"workflows":               []any{env("workflow.json")},
+		"models":                  []any{"scripted"},
+		"model_registry":          "absent",
+		"skill_catalog":           hf(filepath.Join(repoRoot, "policies/skills/catalog.json")),
+		"contract_registry":       hf(filepath.Join(repoRoot, "policies/verification/contracts.json")),
+		"criteria_registry":       hf(filepath.Join(repoRoot, "policies/ratchet/criteria.json")),
+		"regression_set_registry": hf(filepath.Join(repoRoot, "policies/ratchet/regression-sets.json")),
+	}
+	ab, _ := json.Marshal(anchor)
+	dir := t.TempDir()
+	anchorPath = filepath.Join(dir, "anchor.json")
+	if err := os.WriteFile(anchorPath, ab, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	parsed, err := deployment.ParseAnchor(ab, "phase-c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	anchorSHA = parsed.SHA256
+	rb, _ := json.Marshal(map[string]any{
+		"version": 1, "kind": "deployment-anchors",
+		"entries": []any{map[string]any{
+			"name": "phase-c", "version": 1,
+			"artifact_sha256": anchorSHA, "state": "active", "steward": "owner"}},
+	})
+	anchorsReg = filepath.Join(dir, "anchors.json")
+	if err := os.WriteFile(anchorsReg, rb, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return anchorPath, anchorSHA, anchorsReg
+}
+
+// chainFixture opens ONE orchestrator (with the themis root wired —
+// audit D7) able to run multiple remediate walks in one state root.
+func chainFixture(t *testing.T, m model.Interface) (*orchestration.Orchestrator, *state.Root, string, func(taskID string) string) {
+	t.Helper()
+	envDir := t.TempDir()
+	stateDir := filepath.Join(t.TempDir(), "state")
+	mirror, sha := mkMirror(t)
+
+	l4, err := tools.LoadRegistry(filepath.Join(repoRoot, "policies/tools/registry-v4.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ev := &seam.Evaluator{
+		RegistryPath: filepath.Join(repoRoot, "policies/verification/contracts.json"),
+		L4:           l4,
+	}
+	// Phase C runs ANCHORED — the chain's closest-to-production form
+	// (G1 close-review M-1: the flagship walk must not be the one
+	// place the deployment anchor is absent). The anchor is built
+	// over the fixture's own artifacts and registered as a Governance
+	// act would register it.
+	writeFixtureArtifacts(t, envDir, mirror)
+	anchorPath, anchorSHA, anchorsReg := buildAnchor(t, envDir)
+	o, _, err := orchestration.Open(orchestration.Config{
+		StateRoot: stateDir, ArtifactDir: filepath.Join(t.TempDir(), "artifacts"),
+		GitPath: gitBin(t), ProviderDir: t.TempDir(),
+		SafetyRoot: filepath.Join(repoRoot, "instructions/global/safety"),
+		SystemRoot: filepath.Join(repoRoot, "instructions/global/system"),
+		ThemisRoot: filepath.Join(repoRoot, "instructions/themis"),
+		PolicyPath: filepath.Join(repoRoot, "policies/security/instruction-directive-patterns.json"),
+		Model:      m,
+		Verifier:   ev,
+		AnchorPath: anchorPath, AnchorSHA256: anchorSHA, AnchorsRegistryPath: anchorsReg,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if derr := ev.CheckDisjoint(stateDir, mirror, envDir); derr != nil {
+		t.Fatal(derr)
+	}
 
 	js := func(s string) string { b, _ := json.Marshal(s); return string(b) }
 	mkEnvelope := func(taskID string) string {

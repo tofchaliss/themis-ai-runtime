@@ -287,7 +287,8 @@ func TestPreAmendmentWorkflowUnchanged(t *testing.T) {
 func TestThemisRootWiring(t *testing.T) {
 	base := t.TempDir()
 	_, _, err := Open(Config{
-		StateRoot: filepath.Join(base, "state"), ArtifactDir: filepath.Join(base, "artifacts"),
+		Unanchored: true,
+		StateRoot:  filepath.Join(base, "state"), ArtifactDir: filepath.Join(base, "artifacts"),
 		GitPath: gitBin(t), ProviderDir: filepath.Join(base, "provider"),
 		SafetyRoot: filepath.Join(repoRoot, "instructions/global/safety"),
 		SystemRoot: filepath.Join(repoRoot, "instructions/global/system"),
@@ -335,6 +336,7 @@ func anchorWorld(t *testing.T, mutate func(m map[string]any)) (anchorPath, ancho
 		"context_contract":        strings.Repeat("33", 32),
 		"workflows":               []any{strings.Repeat("44", 32)},
 		"models":                  []any{"scripted"},
+		"model_registry":          "absent",
 		"skill_catalog":           hashFile(filepath.Join(repoRoot, "policies/skills/catalog.json")),
 		"contract_registry":       hashFile(filepath.Join(repoRoot, "policies/verification/contracts.json")),
 		"criteria_registry":       hashFile(filepath.Join(repoRoot, "policies/ratchet/criteria.json")),
@@ -413,6 +415,102 @@ func TestAnchoredOpen(t *testing.T) {
 	})
 }
 
+// The close review verified three surviving mutants: deleting the
+// allowlist loop, the workflow-set check, or the instruction-policy
+// check left the whole package green. Each now has a test that fails
+// without it.
+func TestAnchoredWorkflowSetEnforced(t *testing.T) {
+	f := setupVerif(t, happyScript(), &scriptedEvaluator{})
+	fileHash := func(p string) string {
+		h, herr := deployment.HashFile(p)
+		if herr != nil {
+			t.Fatal(herr)
+		}
+		return h
+	}
+	envHash := func(n string) string { return fileHash(filepath.Join(f.envDir, n)) }
+	ap, sha, reg := anchorWorld(t, func(m map[string]any) {
+		m["tool_registry"] = fileHash(filepath.Join(repoRoot, "policies/tools/registry-v4.json"))
+		m["workflow_ceiling"] = envHash("wceiling.json")
+		m["exec_ceiling"] = envHash("eceiling.json")
+		m["context_contract"] = envHash("context-contract.json")
+		// every bundle pin satisfied EXCEPT the workflow set
+		m["workflows"] = []any{strings.Repeat("ee", 32)}
+	})
+	o, _, err := Open(anchoredConfig(t, t.TempDir(), ap, sha, reg))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = o.SubmitTask(f.verifEnvelope(t, "wf-set"))
+	if err == nil || !strings.Contains(err.Error(), "anchored workflow set") {
+		t.Fatalf("workflow-set check not reached: %v", err)
+	}
+}
+
+func TestAnchoredInstructionPolicyEnforced(t *testing.T) {
+	ap, sha, reg := anchorWorld(t, func(m map[string]any) {
+		m["instruction_policy"] = strings.Repeat("ee", 32)
+	})
+	_, _, err := Open(anchoredConfig(t, t.TempDir(), ap, sha, reg))
+	if err == nil || !strings.Contains(err.Error(), "instruction policy is not the anchored artifact") {
+		t.Fatalf("instruction-policy pin not enforced: %v", err)
+	}
+}
+
+// MEDIUM-1: an anchorless Open is a refusal unless the caller role is
+// declared, and unanchored records are marked, never ambiguous.
+func TestUnanchoredRequiresExplicitOptIn(t *testing.T) {
+	base := t.TempDir()
+	cfg := Config{
+		StateRoot: filepath.Join(base, "state"), ArtifactDir: filepath.Join(base, "artifacts"),
+		GitPath: gitBin(t), ProviderDir: filepath.Join(base, "provider"),
+		SafetyRoot: filepath.Join(repoRoot, "instructions/global/safety"),
+		SystemRoot: filepath.Join(repoRoot, "instructions/global/system"),
+		PolicyPath: filepath.Join(repoRoot, "policies/security/instruction-directive-patterns.json"),
+		Model:      happyScript(),
+	}
+	if _, _, err := Open(cfg); err == nil || !strings.Contains(err.Error(), "Unanchored not explicitly set") {
+		t.Fatalf("silent unanchored bypass: %v", err)
+	}
+	cfg.Unanchored = true
+	if _, _, err := Open(cfg); err != nil {
+		t.Fatalf("declared unanchored role refused: %v", err)
+	}
+}
+
+// HIGH-3: the model registry the anchor pins governs what names
+// resolve to; a configured-but-unpinned registry refuses.
+func TestAnchoredModelRegistryPin(t *testing.T) {
+	ap, sha, reg := anchorWorld(t, nil) // declares model_registry "absent"
+	cfg := anchoredConfig(t, t.TempDir(), ap, sha, reg)
+	cfg.ModelRegistryPath = filepath.Join(t.TempDir(), "models.json")
+	os.WriteFile(cfg.ModelRegistryPath, []byte(`{"models":[]}`), 0o644)
+	if _, _, err := Open(cfg); err == nil || !strings.Contains(err.Error(), "declares no model registry") {
+		t.Fatalf("unpinned model registry accepted: %v", err)
+	}
+
+	// And a pinned registry must match its bytes.
+	mrDir := t.TempDir()
+	mrPath := filepath.Join(mrDir, "models.json")
+	os.WriteFile(mrPath, []byte(`{"models":[{"name":"scripted"}]}`), 0o644)
+	mrHash, err := deployment.HashFile(mrPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ap2, sha2, reg2 := anchorWorld(t, func(m map[string]any) { m["model_registry"] = mrHash })
+	cfg2 := anchoredConfig(t, t.TempDir(), ap2, sha2, reg2)
+	cfg2.ModelRegistryPath = mrPath
+	if _, _, err := Open(cfg2); err != nil {
+		t.Fatalf("matching model registry refused: %v", err)
+	}
+	os.WriteFile(mrPath, []byte(`{"models":[{"name":"scripted","endpoint":"https://elsewhere"}]}`), 0o644)
+	cfg3 := anchoredConfig(t, t.TempDir(), ap2, sha2, reg2)
+	cfg3.ModelRegistryPath = mrPath
+	if _, _, err := Open(cfg3); err == nil || !strings.Contains(err.Error(), "only by Governance act") {
+		t.Fatalf("rewritten model registry accepted: %v", err)
+	}
+}
+
 func TestAnchoredSubmitRefusesUnanchoredBundle(t *testing.T) {
 	// The anchor pins placeholder hashes for the bundle artifacts, so
 	// the walk fixture's genuine artifacts cannot match: submission is
@@ -429,26 +527,50 @@ func TestAnchoredSubmitRefusesUnanchoredBundle(t *testing.T) {
 		t.Fatalf("unanchored bundle accepted: %v", err)
 	}
 
-	// And the model allowlist: an anchor whose bundle pins DO match
-	// but whose allowlist omits the envelope's model refuses too — a
-	// model enters a deployment only by Governance act.
-	regHash := func(p string) string {
+	// The model allowlist, with the bundle pins ALL satisfied so the
+	// allowlist branch is genuinely reached (close-review HIGH-4: the
+	// previous fixture refused at the exec ceiling and never
+	// exercised the check it claimed to prove).
+	fileHash := func(p string) string {
 		h, herr := deployment.HashFile(p)
 		if herr != nil {
 			t.Fatal(herr)
 		}
 		return h
 	}
+	envHash := func(name string) string { return fileHash(filepath.Join(f.envDir, name)) }
+	pinBundle := func(m map[string]any) {
+		m["tool_registry"] = fileHash(filepath.Join(repoRoot, "policies/tools/registry-v4.json"))
+		m["workflow_ceiling"] = envHash("wceiling.json")
+		m["exec_ceiling"] = envHash("eceiling.json")
+		m["context_contract"] = envHash("context-contract.json")
+		m["workflows"] = []any{envHash("workflow.json")}
+	}
+
+	// Control: with every pin satisfied AND the model allowlisted,
+	// the anchored submission passes assembly and the walk runs — the
+	// positive anchored path, not only refusals.
+	apOK, shaOK, regOK := anchorWorld(t, pinBundle)
+	okOrch, _, err := Open(anchoredConfig(t, t.TempDir(), apOK, shaOK, regOK))
+	if err != nil {
+		t.Fatal(err)
+	}
+	okOrch.cfg.Verifier = &scriptedEvaluator{}
+	if _, err := okOrch.SubmitTask(f.verifEnvelope(t, "anchored-ok")); err != nil {
+		t.Fatalf("fully anchored submission refused: %v", err)
+	}
+
+	// Now the same world with ONLY the allowlist changed.
 	ap2, sha2, reg2 := anchorWorld(t, func(m map[string]any) {
-		m["tool_registry"] = regHash(filepath.Join(repoRoot, "policies/tools/registry-v4.json"))
-		m["workflow_ceiling"] = hashBytes([]byte(verifWalkCeiling))
+		pinBundle(m)
 		m["models"] = []any{"some-other-model"}
 	})
 	anchored2, _, err := Open(anchoredConfig(t, t.TempDir(), ap2, sha2, reg2))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := anchored2.SubmitTask(f.verifEnvelope(t, "anchored-2")); err == nil {
-		t.Fatal("bundle accepted under a non-matching anchor")
+	_, err = anchored2.SubmitTask(f.verifEnvelope(t, "anchored-2"))
+	if err == nil || !strings.Contains(err.Error(), "anchored allowlist") {
+		t.Fatalf("model allowlist branch not reached: %v", err)
 	}
 }

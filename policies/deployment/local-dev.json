@@ -19,5 +19,6 @@
  "workflow_ceiling": "06bf8c0a9f2c06f7297dcdab90f7b12618ad72224ad288e712c391012cbf0f0f",
  "workflows": [
   "c10826f24c2612bb7c3135bec152f40a1b7941ffe09d5f735ebbaac536c731a9"
- ]
+ ],
+ "model_registry": "absent"
 }

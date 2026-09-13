@@ -125,7 +125,8 @@ func TestRealKillNoContinuation(t *testing.T) {
 		sha, _ := os.ReadFile(filepath.Join(baseDir, "sha"))
 		envDir := filepath.Join(baseDir, "env")
 		o, _, err := Open(Config{
-			StateRoot: filepath.Join(baseDir, "state"), ArtifactDir: filepath.Join(baseDir, "artifacts"),
+			Unanchored: true,
+			StateRoot:  filepath.Join(baseDir, "state"), ArtifactDir: filepath.Join(baseDir, "artifacts"),
 			GitPath: "/usr/bin/git", ProviderDir: filepath.Join(baseDir, "provider"),
 			SafetyRoot: filepath.Join(baseDir, "repo", "instructions/global/safety"),
 			SystemRoot: filepath.Join(baseDir, "repo", "instructions/global/system"),
@@ -233,7 +234,8 @@ func TestRealKillNoContinuation(t *testing.T) {
 
 	// Cold restart: the past closes before the future opens.
 	o2, rep, err := Open(Config{
-		StateRoot: filepath.Join(base, "state"), ArtifactDir: filepath.Join(base, "artifacts"),
+		Unanchored: true,
+		StateRoot:  filepath.Join(base, "state"), ArtifactDir: filepath.Join(base, "artifacts"),
 		GitPath: gitBin(t), ProviderDir: filepath.Join(base, "provider"),
 		SafetyRoot: filepath.Join(repoRoot, "instructions/global/safety"),
 		SystemRoot: filepath.Join(repoRoot, "instructions/global/system"),

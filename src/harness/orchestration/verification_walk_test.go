@@ -72,7 +72,8 @@ func setupVerif(t *testing.T, m model.Interface, ev VerificationEvaluator) *fixt
 	f := &fixture{envDir: t.TempDir(), stateDir: filepath.Join(t.TempDir(), "state")}
 	f.mirror, f.sha = mkMirror(t)
 	o, rep, err := Open(Config{
-		StateRoot: f.stateDir, ArtifactDir: filepath.Join(t.TempDir(), "artifacts"),
+		Unanchored: true,
+		StateRoot:  f.stateDir, ArtifactDir: filepath.Join(t.TempDir(), "artifacts"),
 		GitPath: gitBin(t), ProviderDir: t.TempDir(),
 		SafetyRoot: filepath.Join(repoRoot, "instructions/global/safety"),
 		SystemRoot: filepath.Join(repoRoot, "instructions/global/system"),

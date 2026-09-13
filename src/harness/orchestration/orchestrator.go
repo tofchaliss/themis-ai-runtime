@@ -53,6 +53,17 @@ type Config struct {
 	AnchorPath          string
 	AnchorSHA256        string
 	AnchorsRegistryPath string
+	// ModelRegistryPath is the model registry (models.json) the
+	// anchor pins — what allowlisted NAMES resolve to (runtime,
+	// endpoint, credentials). Anchored deployments must configure it
+	// unless the anchor declares "absent" (close-review HIGH-3).
+	ModelRegistryPath string
+	// Unanchored is the EXPLICIT opt-in to running without a
+	// deployment anchor — the recorded test-harness caller role
+	// (close-review MEDIUM-1). Without it an anchorless Open refuses,
+	// so a production deployment cannot fall into the bypass
+	// silently; unanchored records carry an explicit sentinel.
+	Unanchored bool
 	// Model is the model.Interface provider (injected so the loop is
 	// provider-agnostic and Register-testable with a scripted model).
 	Model model.Interface
@@ -139,6 +150,30 @@ func Open(cfg Config) (*Orchestrator, *StartupReport, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	if cfg.AnchorPath != "" && cfg.Unanchored {
+		return nil, nil, fmt.Errorf("%w: Unanchored declared alongside a deployment anchor — the caller role is ambiguous", ErrAssembly)
+	}
+	if cfg.AnchorPath == "" && !cfg.Unanchored {
+		return nil, nil, fmt.Errorf("%w: no deployment anchor configured and Unanchored not explicitly set — a deployment governs by anchor or refuses to open (G1)", ErrAssembly)
+	}
+	// G1 admission runs BEFORE the instruction plane is consumed: the
+	// bytes that become the EIS must already be the anchored bytes
+	// (close-review CRITICAL-2 — verify-then-use, never
+	// verify-after-use).
+	var admitted *deployment.Anchor
+	if cfg.AnchorPath != "" {
+		a, aerr := deployment.AdmitAnchor(cfg.AnchorPath, cfg.AnchorSHA256, cfg.AnchorsRegistryPath)
+		if aerr != nil {
+			return nil, nil, fmt.Errorf("%w: %v", ErrAssembly, aerr)
+		}
+		if cfg.ThemisRoot == "" {
+			return nil, nil, fmt.Errorf("%w: anchored deployments pin the themis instruction root — it must be configured", ErrAssembly)
+		}
+		if verr := verifyAnchoredInstructionPlane(cfg, a); verr != nil {
+			return nil, nil, verr
+		}
+		admitted = a
+	}
 	openSources := []instructions.Source{
 		{Kind: instructions.ScopeHarnessSafety, Root: cfg.SafetyRoot},
 		{Kind: instructions.ScopeHarnessSystem, Root: cfg.SystemRoot},
@@ -156,37 +191,7 @@ func Open(cfg Config) (*Orchestrator, *StartupReport, error) {
 	if _, _, err := eis.Render(policy); err != nil {
 		return nil, nil, err
 	}
-	o := &Orchestrator{cfg: cfg, root: root, store: store, prov: prov, eis: eis, policy: policy}
-	if cfg.AnchorPath != "" {
-		// D-G1-1A: admission first — the operator's path/hash
-		// identifies the requested deployment; the anchors registry
-		// establishes its governed status. Then the roots Open itself
-		// consumes are verified against the ADMITTED anchor's pins.
-		anchor, aerr := deployment.AdmitAnchor(cfg.AnchorPath, cfg.AnchorSHA256, cfg.AnchorsRegistryPath)
-		if aerr != nil {
-			return nil, nil, fmt.Errorf("%w: %v", ErrAssembly, aerr)
-		}
-		if cfg.ThemisRoot == "" {
-			return nil, nil, fmt.Errorf("%w: anchored deployments pin the themis instruction root — it must be configured", ErrAssembly)
-		}
-		for _, check := range []struct{ label, root, want string }{
-			{"safety instruction root", cfg.SafetyRoot, anchor.InstructionSafetyRoot},
-			{"system instruction root", cfg.SystemRoot, anchor.InstructionSystemRoot},
-			{"themis instruction root", cfg.ThemisRoot, anchor.InstructionThemisRoot},
-		} {
-			got, herr := deployment.HashDir(check.root)
-			if herr != nil {
-				return nil, nil, fmt.Errorf("%w: %s unreadable for anchor verification: %v", ErrAssembly, check.label, herr)
-			}
-			if got != check.want {
-				return nil, nil, fmt.Errorf("%w: %s is not the anchored artifact (deployment %s@%d)", ErrAssembly, check.label, anchor.Name, anchor.Deployment)
-			}
-		}
-		if got, herr := deployment.HashFile(cfg.PolicyPath); herr != nil || got != anchor.InstructionPolicy {
-			return nil, nil, fmt.Errorf("%w: instruction policy is not the anchored artifact (deployment %s@%d)", ErrAssembly, anchor.Name, anchor.Deployment)
-		}
-		o.anchor = anchor // frozen for the orchestrator lifetime (Q-G1-8: adoption by restart only)
-	}
+	o := &Orchestrator{cfg: cfg, root: root, store: store, prov: prov, eis: eis, policy: policy, anchor: admitted}
 
 	// Startup sweep: close the past before opening the future.
 	rep := &StartupReport{}
@@ -234,6 +239,50 @@ func Open(cfg Config) (*Orchestrator, *StartupReport, error) {
 		}
 	}
 	return o, rep, nil
+}
+
+// verifyAnchoredInstructionPlane checks the instruction roots, the
+// policy, and the model registry against the ADMITTED anchor's pins.
+// Called at Open BEFORE resolution and again per task before
+// re-resolution: resolveTaskEIS re-walks the roots on every
+// SubmitTask, so a one-shot startup assertion would leave the
+// anchor's instruction claim unbacked for every later task
+// (close-review HIGH-1/CRITICAL-2).
+func verifyAnchoredInstructionPlane(cfg Config, a *deployment.Anchor) error {
+	for _, check := range []struct{ label, root, want string }{
+		{"safety instruction root", cfg.SafetyRoot, a.InstructionSafetyRoot},
+		{"system instruction root", cfg.SystemRoot, a.InstructionSystemRoot},
+		{"themis instruction root", cfg.ThemisRoot, a.InstructionThemisRoot},
+	} {
+		got, herr := deployment.HashDir(check.root)
+		if herr != nil {
+			return fmt.Errorf("%w: %s unreadable for anchor verification: %v", ErrAssembly, check.label, herr)
+		}
+		if got != check.want {
+			return fmt.Errorf("%w: %s is not the anchored artifact (deployment %s@%d)", ErrAssembly, check.label, a.Name, a.Deployment)
+		}
+	}
+	if got, herr := deployment.HashFile(cfg.PolicyPath); herr != nil || got != a.InstructionPolicy {
+		return fmt.Errorf("%w: instruction policy is not the anchored artifact (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
+	}
+	// The model registry governs what allowlisted NAMES resolve to —
+	// runtime, endpoint, credential env (close-review HIGH-3; Q-G1-2's
+	// endpoint clause). "absent" is the anchor's explicit declaration
+	// that the deployment ships no registry, never a default.
+	if a.ModelRegistry == "absent" {
+		if cfg.ModelRegistryPath != "" {
+			return fmt.Errorf("%w: the anchor declares no model registry but one is configured (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
+		}
+	} else {
+		if cfg.ModelRegistryPath == "" {
+			return fmt.Errorf("%w: the anchor pins a model registry but none is configured (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
+		}
+		got, herr := deployment.HashFile(cfg.ModelRegistryPath)
+		if herr != nil || got != a.ModelRegistry {
+			return fmt.Errorf("%w: model registry is not the anchored artifact (deployment %s@%d) — an endpoint enters a deployment only by Governance act", ErrAssembly, a.Name, a.Deployment)
+		}
+	}
+	return nil
 }
 
 // ReadStatus serves the structurally content-free view (Q-L6-10).
@@ -294,6 +343,12 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	// deployment, never the deployment (Q-G1-5). Fail closed, no
 	// closest match, no partial bundle (Q-G1-9).
 	if a := o.anchor; a != nil {
+		// Re-verify the instruction plane per task: resolveTaskEIS
+		// re-walks the roots, so the anchor's claim must be re-checked
+		// against the bytes THIS task will consume (HIGH-1).
+		if verr := verifyAnchoredInstructionPlane(o.cfg, a); verr != nil {
+			return res, verr
+		}
 		for _, check := range []struct{ label, got, want string }{
 			{"tool registry", reg.Hash, a.ToolRegistry},
 			{"workflow ceiling", wfCeiling.Hash, a.WorkflowCeiling},
@@ -352,6 +407,12 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 			return res, fmt.Errorf("%w: %s changed between loading and durable capture", ErrInvariant, m.label)
 		}
 		materialized[m.label] = body
+	}
+	if o.anchor != nil {
+		// Q-G1-7 evidence, not merely the identifier: the anchor
+		// BYTES are durable, so cold reconstruction can interpret
+		// what the deployment pinned (close-review MEDIUM-2).
+		materialized["deployment_anchor"] = o.anchor.Raw
 	}
 
 	// C2 (D-L9-11a/b): the commitment's seal was verified at load, so
@@ -539,6 +600,10 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 		// Q-G1-7: the assembly record proves "executed under this
 		// ADMITTED deployment anchor", re-verifiable at replay.
 		governed["deployment_anchor"] = o.anchor.SHA256
+	} else {
+		// An unanchored record must be distinguishable from an
+		// anchored one with a dropped key (close-review MEDIUM-1).
+		governed["deployment_anchor"] = "unanchored"
 	}
 	task, err := o.root.CreateTask(env.TaskID, state.TaskOptions{
 		RetryOf:        env.RetryOf,

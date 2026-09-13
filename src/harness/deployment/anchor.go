@@ -65,6 +65,13 @@ type Anchor struct {
 	ContextContract string   `json:"context_contract"`
 	Workflows       []string `json:"workflows"` // the anchored workflow set
 	Models          []string `json:"models"`    // the model allowlist (names)
+	// ModelRegistry pins the model-registry bytes (models.json): the
+	// allowlist governs NAMES, and this pin governs what those names
+	// RESOLVE TO — runtime, endpoint, credential env (close-review
+	// HIGH-3; Q-G1-2's endpoint clause). "absent" is the explicit
+	// declaration that the deployment ships no model registry, i.e.
+	// local-only resolution; it is a declaration, never a default.
+	ModelRegistry string `json:"model_registry"`
 
 	// Consumption pins for the other governed planes (verified where
 	// those planes are consumed):
@@ -119,6 +126,9 @@ func ParseAnchor(raw []byte, origin string) (*Anchor, error) {
 		if !shaSyntax.MatchString(v) {
 			return nil, fmt.Errorf("%w: %s: %s must be a sha256 hex digest — nothing is defaulted", ErrAnchor, origin, field)
 		}
+	}
+	if a.ModelRegistry != "absent" && !shaSyntax.MatchString(a.ModelRegistry) {
+		return nil, fmt.Errorf("%w: %s: model_registry must be a sha256 hex digest or the explicit declaration \"absent\"", ErrAnchor, origin)
 	}
 	if len(a.Workflows) == 0 {
 		return nil, fmt.Errorf("%w: %s: the anchored workflow set must not be empty", ErrAnchor, origin)
@@ -204,6 +214,7 @@ func AdmitAnchor(anchorPath, expectedSHA, anchorsRegistryPath string) (*Anchor, 
 		return nil, fmt.Errorf("%w: not a deployment-anchors registry", ErrAdmission)
 	}
 	seen := map[string]bool{}
+	seenArtifact := map[string]bool{}
 	var admitted *registryEntry
 	for i := range reg.Entries {
 		e := &reg.Entries[i]
@@ -218,6 +229,14 @@ func AdmitAnchor(anchorPath, expectedSHA, anchorsRegistryPath string) (*Anchor, 
 			return nil, fmt.Errorf("%w: anchors registry: duplicate registration %s", ErrAdmission, key)
 		}
 		seen[key] = true
+		// Close-review LOW-1: one artifact hash may bind to exactly
+		// one registration, or admission would be order-dependent
+		// (a withdrawn entry followed by an active one for the same
+		// bytes).
+		if seenArtifact[e.Artifact] {
+			return nil, fmt.Errorf("%w: anchors registry: artifact %s registered more than once — admission must not depend on entry order", ErrAdmission, e.Artifact[:12])
+		}
+		seenArtifact[e.Artifact] = true
 		if e.Artifact == a.SHA256 {
 			admitted = e
 		}
@@ -243,18 +262,34 @@ func HashFile(path string) (string, error) {
 	return hashBytes(b), nil
 }
 
+// maxPinnedFileBytes bounds any single file entering a pin
+// computation (close-review LOW-2: an unbounded read at Open is a
+// memory-exhaustion surface).
+const maxPinnedFileBytes = 8 << 20
+
 // HashDir fingerprints a directory tree deterministically: sha256
 // over each regular file's slash-relative path and contents, sorted
 // by path — the instruction-root content identity the anchor pins.
+//
+// A non-regular entry (symlink, device, socket, fifo) is a REFUSAL,
+// never a skip (close-review CRITICAL-1): consumers walk these trees
+// with different selection rules — the instruction loader follows
+// symlinks and reads them — so an entry this function skipped but a
+// consumer reads would be unpinned content inside a pinned tree.
+// Hashing and reading must never disagree about the file set.
 func HashDir(root string) (string, error) {
 	var files []string
 	err := filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if d.Type().IsRegular() {
-			files = append(files, p)
+		if d.IsDir() {
+			return nil
 		}
+		if !d.Type().IsRegular() {
+			return fmt.Errorf("%w: %s: non-regular entry in a pinned tree — content pins admit regular files only", ErrAnchor, p)
+		}
+		files = append(files, p)
 		return nil
 	})
 	if err != nil {
@@ -262,19 +297,37 @@ func HashDir(root string) (string, error) {
 	}
 	sort.Strings(files)
 	h := sha256.New()
+	// LENGTH-PREFIXED framing (close-review M-4): NUL separators alone
+	// admit collisions — {a:"", b:"c"} and {a:"\0b\0c"} produce the
+	// same stream, so an attacker able to write one file and delete a
+	// sibling could impersonate the original tree. Lengths make the
+	// encoding injective.
+	writeField := func(b []byte) {
+		var n [8]byte
+		l := uint64(len(b))
+		for i := 0; i < 8; i++ {
+			n[7-i] = byte(l >> (8 * i))
+		}
+		h.Write(n[:])
+		h.Write(b)
+	}
+	var count [8]byte
+	c := uint64(len(files))
+	for i := 0; i < 8; i++ {
+		count[7-i] = byte(c >> (8 * i))
+	}
+	h.Write(count[:])
 	for _, f := range files {
 		rel, err := filepath.Rel(root, f)
 		if err != nil {
 			return "", err
 		}
-		b, err := os.ReadFile(f)
+		b, err := readGoverned(f, maxPinnedFileBytes)
 		if err != nil {
 			return "", err
 		}
-		h.Write([]byte(filepath.ToSlash(rel)))
-		h.Write([]byte{0})
-		h.Write(b)
-		h.Write([]byte{0})
+		writeField([]byte(filepath.ToSlash(rel)))
+		writeField(b)
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
 }

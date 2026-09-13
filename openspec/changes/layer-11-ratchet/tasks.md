@@ -150,13 +150,25 @@ Settle each at its milestone, ordinary review, no new architecture:
 
 ## M7 — Close reviews + archive
 
-- [ ] Three Class-3 reviews (architecture, security,
-      test/verification) against the locked constitution;
-      remediation; re-runs.
-- [ ] Traceability completed (traceability.md).
-- [ ] Owner closure judgment; Governance activation of any
-      *.proposed.* registrations; push (owner-approved,
-      THEMIS_PUSH_APPROVED=1); archive.
+- [x] Three Class-3 reviews run 2026-09-13 (architecture, security,
+      test/verification) against b16fc87..fca10e0. Convergent core
+      finding: invocation boundary trusted its caller (sec C-1 =
+      arch H-1; sec H-1 = arch H-2). ALL CRITICAL/HIGH remediated:
+      door resolution (ObserveAdmission/ReverifyAdmission), evidence
+      grounding (GroundFacts + params application), durable
+      unregistered/withdrawn refusals, registry binding + pin,
+      missing-inputs durability, set hash binding, strict CLI
+      inputs, reconstruction parity, ~19 mutants killed, wall
+      upgrades, CLI contract suite, *.proposed.* handoff arc.
+      Recorded classifications awaiting owner ratification:
+      no-discard scope, consumption-pin-instead-of-persisted-prior,
+      sensitivity residual (see traceability.md).
+- [x] Traceability completed (traceability.md, incl. remediation
+      record).
+- [ ] Owner closure judgment; Governance activation of
+      policies/ratchet/{criteria,regression-sets}.proposed.json
+      (bench-score-delta@1, core-regression@1); push
+      (owner-approved, THEMIS_PUSH_APPROVED=1); archive.
 
 ## Residuals (recorded, never silently promoted)
 

@@ -217,3 +217,10 @@ sensitivity inheritance (local-endpoint scope); the four
 consumption-pinned registries whose consumers live outside L7; plus
 the pre-existing layer residuals. TestLivePressureProof remains a
 documented full-suite-contention flake (passes in isolation).
+
+## Where to look
+
+- As-built chain diagram: `docs/architecture/harness/execution-chain.md`
+- Deployment test plan incl. the real-VM scenario:
+  `docs/development/deployment-test-plan.md`
+- Deployment anchoring contract: `policies/deployment/README.md`

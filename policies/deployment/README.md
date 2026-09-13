@@ -81,3 +81,10 @@ Scope note: the execution ceiling is deployment-scoped, not
 workflow-scoped — it describes where and under what limits THIS
 deployment executes. Workflow bundles pin workflow + workflow
 ceiling + context contract.
+
+## Testing a deployment
+
+`docs/development/deployment-test-plan.md` carries the full plan —
+static gate, artifact creation, the negative-space substitution
+attempts that must refuse, the anchored positive path, the governed
+chain end to end, and a step-by-step real-VM scenario.

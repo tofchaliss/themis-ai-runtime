@@ -1,3 +1,8 @@
+> **Historical sketch (pre-L9/L10/L11, pre-G1/G2).** Retained as
+> history. The current as-built chain — including deployment
+> anchoring (G1) and the established-fact boundary (G2) — is
+> `docs/architecture/harness/execution-chain.md`.
+
                     THEMIS
         Security Application / Authority
 ┌───────────────────────────────────────────────┐

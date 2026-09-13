@@ -21,6 +21,13 @@ The AI Harness is an execution capability of Themis—architecturally owned and 
 
 These are capability/ownership boundaries, not a requirement for eleven source-code directories.
 
+Two cross-layer authority boundaries sit beside the layer stack (they are decisions, not layers):
+
+- **G1 — Deployment Authority Anchoring.** A Governance-admitted Deployment Anchor declares the exact artifact set under which a deployment may execute. A caller-supplied anchor identity may identify a requested deployment; only admission against the Governance-active anchors registry establishes it.
+- **G2 — Established-Fact Boundary.** Storage proves bytes; committed events prove establishment. An object is a fact of a given kind only when the mechanism that mints that kind witnessed it in the event plane.
+
+The as-built chain is diagrammed in `docs/architecture/harness/execution-chain.md`.
+
 ## Ownership
 ### Themis owns
 Security truth, Findings, Enterprise Positions, Security Governance, Enterprise Knowledge through the Knowledge Builder, and authorized security workflows.

@@ -224,3 +224,5 @@ documented full-suite-contention flake (passes in isolation).
 - Deployment test plan incl. the real-VM scenario:
   `docs/development/deployment-test-plan.md`
 - Deployment anchoring contract: `policies/deployment/README.md`
+- Deployment runbook (step-by-step procedure):
+  `docs/operations/deployment-runbook.md`

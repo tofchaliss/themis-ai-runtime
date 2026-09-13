@@ -88,3 +88,10 @@ ceiling + context contract.
 static gate, artifact creation, the negative-space substitution
 attempts that must refuse, the anchored positive path, the governed
 chain end to end, and a step-by-step real-VM scenario.
+
+## Deploying
+
+`docs/operations/deployment-runbook.md` carries the step-by-step
+procedure: provision, pin, propose, prove inert, Governance act,
+verify Open, validate, record evidence — plus change/withdrawal
+procedures and a troubleshooting table.

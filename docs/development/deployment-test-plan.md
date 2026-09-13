@@ -314,3 +314,8 @@ the deployment actually did.
 | Live tests skip | no model endpoint reachable — skip-gated by design |
 | `Open` refuses with "no deployment anchor configured and Unanchored not explicitly set" | correct: production has no silent unanchored path |
 | Admission refuses a hand-written anchor | correct: identity is not admission |
+
+---
+
+**Building a deployment (as opposed to validating one):**
+`docs/operations/deployment-runbook.md`.

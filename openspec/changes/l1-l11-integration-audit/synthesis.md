@@ -244,3 +244,40 @@ against witnessed packages, full ratchet+CLI+state+verification
 suites green, live proof re-run PASS.
 
 Remaining: D6–D13 (next), full negative-space sweep, then Phase C.
+
+
+## D6–D13 remediation record (2026-09-13)
+
+- **D6** — tool results framed as L2-disciplined items
+  (frameToolResult: content-derived fence, kind/authority/hash
+  header); error results stay unframed (harness-authored). L4
+  amendment recorded. Live walk re-run PASS with framed results.
+- **D7** — Config.ThemisRoot wired through Open and resolveTaskEIS
+  (ScopeThemisDomain); optional until the G1 deployment anchor pins
+  it. Proof: TestThemisRootWiring against instructions/themis. L7
+  amendment recorded.
+- **D8** — L9 loader duplicate-key wall executed (skills/strict.go
+  into LoadCatalog/LoadManifest) — the recorded follow-up done, not
+  widened. L9 amendment recorded.
+- **D9** — Q-L5-5.2 mechanized: TestNoAmbientEnvironmentInExecutors
+  (AST wall over tools/ + execution/: no os.Getenv/Environ/
+  LookupEnv/Setenv/ExpandEnv references, dot-import defended).
+- **D10** — effective grant staged under the state root, not shared
+  host tmp. L7 amendment recorded.
+- **D11** — seam refusal details sanitized (absolute paths →
+  basenames) before reaching the model. L10 amendment recorded.
+- **D12** — ReconstructTask returns a torn marker from the task
+  verdict. L10 amendment recorded.
+- **D13** — docs/development/workflow-authoring-notes.md: gate
+  ladders are as strong as the weakest cited canonicalizer;
+  well-formedness PASS must not gate completion as if substantive.
+
+Full sweep green across tools/skills/instructions/state/
+verification(+seam)/orchestration/ratchet/CLI; both live proofs
+re-run PASS (L10 remediate walk with framed results; L11 authored
+candidate).
+
+Remaining in sequence: full negative-space sweep → Phase C
+end-to-end walk. Deferred by owner decision: R1 disposition
+execution (decommission/rebase themis-serve) — owner chose the
+action class; the removal/rebase itself is scheduled work.

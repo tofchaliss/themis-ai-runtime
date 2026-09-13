@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -33,11 +35,47 @@ func fact(selector, source string, value any) EvidenceRef {
 }
 
 // scoreFact satisfies the fixture criterion's registered params
-// ({"benchmark":"themis-bench-core"}) — params are mechanically
-// applied at Compare and reconstruction.
+// ({"benchmark":"themis-bench-core"}) and carries a canonical
+// benchmark-plane ref — params and (when a bench root is supplied)
+// the verdict/digest witness are mechanically applied.
 func scoreFact(selector string, score float64) EvidenceRef {
-	return fact(selector, "benchmark_validated_score",
+	f := fact(selector, "benchmark_validated_score",
 		map[string]any{"score": score, "benchmark": "themis-bench-core"})
+	f.Ref = "validation/2026-09-12/qwen2.5:7b/" + selector + ".json"
+	return f
+}
+
+// benchFixture materializes a benchmark plane that witnesses the
+// given facts: score files with the facts' exact bytes, plus a
+// passing verdict whose digest admits them (the gate contract).
+func benchFixture(t *testing.T, facts ...EvidenceRef) string {
+	t.Helper()
+	root := t.TempDir()
+	runDir := filepath.Join(root, "validation", "2026-09-12", "qwen2.5:7b")
+	if err := os.MkdirAll(runDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range facts {
+		if err := os.WriteFile(filepath.Join(runDir, f.Selector+".json"), f.Value, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	digest, err := BenchRunDigest(runDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	vDir := filepath.Join(root, "gate", "2026-09-12", "qwen2.5:7b")
+	if err := os.MkdirAll(vDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	vb, _ := json.Marshal(map[string]any{
+		"model": "qwen2.5:7b", "current": "2026-09-12", "pass": true,
+		"scores_digest": digest,
+	})
+	if err := os.WriteFile(filepath.Join(vDir, "verdict.json"), vb, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return root
 }
 
 // doorFixture builds real door-registry bytes and the observation
@@ -77,7 +115,6 @@ func validInput(t *testing.T, candScore, baseScore float64) CompareInput {
 		Admission:       admittedObs(t),
 		CandidateFacts:  []EvidenceRef{scoreFact("candidate_score", candScore)},
 		BaselineFacts:   []EvidenceRef{scoreFact("baseline_score", baseScore)},
-		RunIdentities:   []string{"l4:17", "l4:18"},
 	}
 }
 
@@ -153,7 +190,6 @@ func TestCompareRefusals(t *testing.T) {
 			in.CandidateFacts[0].Source = "l6_execution_record"
 		}, ReasonComparabilityViolation},
 		{"no record identity", func(in *CompareInput) { in.CandidateFacts[0].Ref = "" }, ReasonProvenanceViolation},
-		{"no run identities", func(in *CompareInput) { in.RunIdentities = nil }, ReasonProvenanceViolation},
 		{"malformed candidate hash", func(in *CompareInput) { in.CandidateHash = "xyz" }, ReasonComparabilityViolation},
 	}
 	for _, tc := range cases {
@@ -336,14 +372,12 @@ func TestScalarizationRetainsDelta(t *testing.T) {
 		t.Fatal(err)
 	}
 	in.Criterion = full
-	in.CandidateFacts = []EvidenceRef{
-		fact("candidate_score", "benchmark_validated_score", 0.9),
-		fact("candidate_latency", "l6_execution_record", 120.0),
-	}
-	in.BaselineFacts = []EvidenceRef{
-		fact("baseline_score", "benchmark_validated_score", 0.8),
-		fact("baseline_latency", "l6_execution_record", 100.0),
-	}
+	candLat := fact("candidate_latency", "l6_execution_record", 120.0)
+	candLat.TaskID, candLat.EventSeq = "t-lat", 3
+	baseLat := fact("baseline_latency", "l6_execution_record", 100.0)
+	baseLat.TaskID, baseLat.EventSeq = "t-lat", 4
+	in.CandidateFacts = []EvidenceRef{scoreFact("candidate_score", 0.9), candLat}
+	in.BaselineFacts = []EvidenceRef{scoreFact("baseline_score", 0.8), baseLat}
 	pkg, ref, err := Compare(in)
 	if err != nil || ref != nil {
 		t.Fatalf("scalarized comparison failed: %v %v", ref, err)

@@ -431,13 +431,13 @@ func TestCanonicalDeltaGoldenBytes(t *testing.T) {
 // --- Reconstruction clause coverage (test review mutants 10-13).
 
 func TestReconstructClauseCoverage(t *testing.T) {
-	pkg, c, door := producedPackage(t)
+	pkg, _, inputs := producedPackage(t)
 
 	t.Run("comparator identity drift", func(t *testing.T) {
 		doctored := *pkg
 		doctored.ComparatorVer = 2
 		pb, _ := CanonicalBytes(&doctored)
-		rec, _ := Reconstruct(pb, c.Raw, door)
+		rec, _ := Reconstruct(pb, inputs)
 		if rec.Result != ReconDiscrepancy {
 			t.Fatalf("comparator drift not a discrepancy: %+v", rec)
 		}
@@ -446,13 +446,13 @@ func TestReconstructClauseCoverage(t *testing.T) {
 		doctored := *pkg
 		doctored.ConfigSHA256 = strings.Repeat("77", 32)
 		pb, _ := CanonicalBytes(&doctored)
-		rec, _ := Reconstruct(pb, c.Raw, door)
+		rec, _ := Reconstruct(pb, inputs)
 		if rec.Result != ReconDiscrepancy {
 			t.Fatalf("config drift not a discrepancy: %+v", rec)
 		}
 	})
 	t.Run("wrong artifact bytes", func(t *testing.T) {
-		rec, _ := Reconstruct([]byte(`{"artifact":"l11-candidate","schema":1}`), c.Raw, door)
+		rec, _ := Reconstruct([]byte(`{"artifact":"l11-candidate","schema":1}`), inputs)
 		if rec.Result != ReconDiscrepancy {
 			t.Fatalf("wrong artifact not a discrepancy: %+v", rec)
 		}
@@ -463,7 +463,7 @@ func TestReconstructClauseCoverage(t *testing.T) {
 		forged := scoreFact("candidate_score", 0.999)
 		doctored.CandidateEvidence = append(ev, forged)
 		pb, _ := CanonicalBytes(&doctored)
-		rec, _ := Reconstruct(pb, c.Raw, door)
+		rec, _ := Reconstruct(pb, inputs)
 		if rec.Result != ReconDiscrepancy {
 			t.Fatalf("duplicate-selector package not a discrepancy: %+v", rec)
 		}
@@ -472,14 +472,16 @@ func TestReconstructClauseCoverage(t *testing.T) {
 		doctored := *pkg
 		doctored.RunIdentities = nil
 		pb, _ := CanonicalBytes(&doctored)
-		rec, _ := Reconstruct(pb, c.Raw, door)
+		rec, _ := Reconstruct(pb, inputs)
 		if rec.Result != ReconDiscrepancy {
 			t.Fatalf("runless package not a discrepancy: %+v", rec)
 		}
 	})
 	t.Run("door registry hash mismatch is missing input", func(t *testing.T) {
 		pb, _ := CanonicalBytes(pkg)
-		rec, _ := Reconstruct(pb, c.Raw, []byte(`{"version":1,"entries":[]}`))
+		wrong := inputs
+		wrong.DoorRegistryBytes = []byte(`{"version":1,"entries":[]}`)
+		rec, _ := Reconstruct(pb, wrong)
 		if rec.Result != ReconMissingInputs {
 			t.Fatalf("wrong door bytes should be missing input: %+v", rec)
 		}
@@ -491,7 +493,7 @@ func TestReconstructClauseCoverage(t *testing.T) {
 		adm.State = "active"
 		doctored.Admission = adm
 		pb, _ := CanonicalBytes(&doctored)
-		rec, _ := Reconstruct(pb, c.Raw, door)
+		rec, _ := Reconstruct(pb, inputs)
 		if rec.Result != ReconDiscrepancy {
 			t.Fatalf("doctored observation not a discrepancy: %+v", rec)
 		}
@@ -596,63 +598,192 @@ func TestPlanConformanceClauses(t *testing.T) {
 	})
 }
 
-// --- Grounding (H-1 remediation evidence).
+// --- Grounding (D-G2-1 enforcement evidence: witness-grounding).
 
 func TestGroundFacts(t *testing.T) {
 	root, err := state.OpenRoot(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	store := root.Store()
+	task, err := root.CreateTask("t-ground", state.TaskOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	recordBytes := []byte(`{"score":0.91,"benchmark":"themis-bench-core"}`)
-	objID, err := store.StoreObject(state.ObjEvidencePayload, recordBytes)
+	objID, err := task.StoreObject(state.ObjEvidencePayload, recordBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The witnessing event: the executor's committed L4 audit naming
+	// the evidence object (the minting mechanism's signature).
+	auditBody, _ := json.Marshal(map[string]string{"Tool": "run_tests", "RegistryHash": strings.Repeat("11", 32)})
+	aev, err := task.AppendEvent(state.EvL4Audit, "l4", auditBody, state.Ref{ID: objID, Class: state.ObjEvidencePayload})
 	if err != nil {
 		t.Fatal(err)
 	}
 	sel := []Selector{{Name: "candidate_score", Source: "l6_execution_record",
-		Params: json.RawMessage(`{"benchmark":"themis-bench-core"}`)}}
+		Params: json.RawMessage(`{"benchmark":"themis-bench-core","witness_tool":"run_tests"}`)}}
 	good := EvidenceRef{Selector: "candidate_score", Source: "l6_execution_record",
-		Ref: objID, SHA256: hashBytes(recordBytes), Value: recordBytes}
+		Ref: objID, SHA256: hashBytes(recordBytes), Value: recordBytes,
+		TaskID: "t-ground", EventSeq: aev.Seq}
 
-	t.Run("grounded L6 fact passes", func(t *testing.T) {
-		if r := GroundFacts(store, nil, sel, []EvidenceRef{good}, "candidate"); r != nil {
-			t.Fatalf("grounded fact refused: %+v", r)
+	t.Run("witnessed L6 fact grounds", func(t *testing.T) {
+		runs, r := GroundFacts(root, "", sel, []EvidenceRef{good}, "candidate")
+		if r != nil {
+			t.Fatalf("witnessed fact refused: %+v", r)
+		}
+		if runs["candidate_score"] != "t-ground" {
+			t.Fatalf("run identity not derived from witness: %v", runs)
 		}
 	})
-	t.Run("nonexistent ref refused", func(t *testing.T) {
+	t.Run("no witness refused", func(t *testing.T) {
 		bad := good
-		bad.Ref = "sha256:" + strings.Repeat("ee", 32)
-		if r := GroundFacts(store, nil, sel, []EvidenceRef{bad}, "candidate"); r == nil || r.Reason != ReasonEvidenceUnavailable {
-			t.Fatalf("nonexistent ref grounded: %+v", r)
+		bad.TaskID, bad.EventSeq = "", 0
+		_, r := GroundFacts(root, "", sel, []EvidenceRef{bad}, "candidate")
+		if r == nil || r.Reason != ReasonProvenanceViolation {
+			t.Fatalf("unwitnessed fact grounded: %+v", r)
+		}
+	})
+	t.Run("nonexistent witness refused", func(t *testing.T) {
+		bad := good
+		bad.EventSeq = aev.Seq + 99
+		_, r := GroundFacts(root, "", sel, []EvidenceRef{bad}, "candidate")
+		if r == nil || r.Reason != ReasonProvenanceViolation {
+			t.Fatalf("phantom witness grounded: %+v", r)
+		}
+	})
+	t.Run("event not naming the object refused", func(t *testing.T) {
+		other, err := task.StoreObject(state.ObjEvidencePayload, []byte(`{"score":0.5,"benchmark":"themis-bench-core"}`))
+		if err != nil {
+			t.Fatal(err)
+		}
+		bad := EvidenceRef{Selector: "candidate_score", Source: "l6_execution_record",
+			Ref: other, SHA256: hashBytes([]byte(`{"score":0.5,"benchmark":"themis-bench-core"}`)),
+			Value:  []byte(`{"score":0.5,"benchmark":"themis-bench-core"}`),
+			TaskID: "t-ground", EventSeq: aev.Seq} // witness names objID, not other
+		_, r := GroundFacts(root, "", sel, []EvidenceRef{bad}, "candidate")
+		if r == nil || r.Reason != ReasonProvenanceViolation {
+			t.Fatalf("un-named object grounded: %+v", r)
+		}
+	})
+	t.Run("wrong witness class refused", func(t *testing.T) {
+		// A verification-class event does not witness execution
+		// records — and vice versa (the class IS the mechanism).
+		vBody, _ := json.Marshal(map[string]string{"contract": "x@1", "outcome": "PASS", "record": objID})
+		vev, err := task.AppendEvent(state.EvVerification, "l7", vBody)
+		if err != nil {
+			t.Fatal(err)
+		}
+		bad := good
+		bad.EventSeq = vev.Seq
+		_, r := GroundFacts(root, "", sel, []EvidenceRef{bad}, "candidate")
+		if r == nil || r.Reason != ReasonProvenanceViolation {
+			t.Fatalf("wrong-class witness grounded: %+v", r)
+		}
+		// But the SAME event witnesses the object as an
+		// l10_evaluation_record — the kind follows the mechanism.
+		l10sel := []Selector{{Name: "candidate_score", Source: "l10_evaluation_record", Params: json.RawMessage(`{}`)}}
+		l10fact := EvidenceRef{Selector: "candidate_score", Source: "l10_evaluation_record",
+			Ref: objID, SHA256: hashBytes(recordBytes), Value: recordBytes,
+			TaskID: "t-ground", EventSeq: vev.Seq}
+		if _, r := GroundFacts(root, "", l10sel, []EvidenceRef{l10fact}, "candidate"); r != nil {
+			t.Fatalf("record-named verification witness refused: %+v", r)
+		}
+	})
+	t.Run("wrong minting tool refused", func(t *testing.T) {
+		pinned := []Selector{{Name: "candidate_score", Source: "l6_execution_record",
+			Params: json.RawMessage(`{"witness_tool":"write_file"}`)}}
+		_, r := GroundFacts(root, "", pinned, []EvidenceRef{good}, "candidate")
+		if r == nil || r.Reason != ReasonProvenanceViolation {
+			t.Fatalf("wrong-tool witness grounded: %+v", r)
+		}
+	})
+	t.Run("l11 artifact bytes refused as fact", func(t *testing.T) {
+		l11Bytes := []byte(`{"artifact":"l11-comparison","schema":1}`)
+		l11ID, err := task.StoreObject(state.ObjEvidencePayload, l11Bytes)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ev2, err := task.AppendEvent(state.EvL4Audit, "l4", auditBody, state.Ref{ID: l11ID, Class: state.ObjEvidencePayload})
+		if err != nil {
+			t.Fatal(err)
+		}
+		plain := []Selector{{Name: "candidate_score", Source: "l6_execution_record", Params: json.RawMessage(`{}`)}}
+		bad := EvidenceRef{Selector: "candidate_score", Source: "l6_execution_record",
+			Ref: l11ID, SHA256: hashBytes(l11Bytes), Value: l11Bytes,
+			TaskID: "t-ground", EventSeq: ev2.Seq}
+		_, r := GroundFacts(root, "", plain, []EvidenceRef{bad}, "candidate")
+		if r == nil || r.Reason != ReasonComparabilityViolation {
+			t.Fatalf("L11 artifact grounded as fact: %+v", r)
 		}
 	})
 	t.Run("value drift refused", func(t *testing.T) {
 		bad := good
 		bad.Value = []byte(`{"score":0.99,"benchmark":"themis-bench-core"}`)
 		bad.SHA256 = hashBytes(bad.Value)
-		if r := GroundFacts(store, nil, sel, []EvidenceRef{bad}, "candidate"); r == nil || r.Reason != ReasonIntegrityFailure {
+		_, r := GroundFacts(root, "", sel, []EvidenceRef{bad}, "candidate")
+		if r == nil || r.Reason != ReasonIntegrityFailure {
 			t.Fatalf("drifted value grounded: %+v", r)
 		}
 	})
-	t.Run("malformed L6 ref refused", func(t *testing.T) {
-		bad := good
-		bad.Ref = "l4:999"
-		if r := GroundFacts(store, nil, sel, []EvidenceRef{bad}, "candidate"); r == nil || r.Reason != ReasonProvenanceViolation {
-			t.Fatalf("malformed ref grounded: %+v", r)
+}
+
+func TestGroundFactsBenchWitness(t *testing.T) {
+	cand := scoreFact("candidate_score", 0.91)
+	bench := benchFixture(t, cand)
+	sel := []Selector{{Name: "candidate_score", Source: "benchmark_validated_score",
+		Params: json.RawMessage(`{"benchmark":"themis-bench-core"}`)}}
+
+	t.Run("admitted run grounds and yields run id", func(t *testing.T) {
+		runs, r := GroundFacts(nil, bench, sel, []EvidenceRef{cand}, "candidate")
+		if r != nil {
+			t.Fatalf("admitted bench fact refused: %+v", r)
+		}
+		if runs["candidate_score"] != "bench:2026-09-12/qwen2.5:7b" {
+			t.Fatalf("bench run identity wrong: %v", runs)
 		}
 	})
-	t.Run("external plane via resolver", func(t *testing.T) {
-		extSel := []Selector{{Name: "candidate_score", Source: "benchmark_validated_score",
-			Params: json.RawMessage(`{}`)}}
-		ext := func(ref string) ([]byte, error) { return recordBytes, nil }
-		f := good
-		f.Source = "benchmark_validated_score"
-		f.Ref = "scores/run-17.json"
-		if r := GroundFacts(store, ext, extSel, []EvidenceRef{f}, "candidate"); r != nil {
-			t.Fatalf("external fact refused: %+v", r)
+	t.Run("no bench root refused", func(t *testing.T) {
+		_, r := GroundFacts(nil, "", sel, []EvidenceRef{cand}, "candidate")
+		if r == nil || r.Reason != ReasonEvidenceUnavailable {
+			t.Fatalf("rootless bench fact grounded: %+v", r)
 		}
-		if r := GroundFacts(store, nil, extSel, []EvidenceRef{f}, "candidate"); r == nil || r.Reason != ReasonEvidenceUnavailable {
-			t.Fatalf("resolverless external fact grounded: %+v", r)
+	})
+	t.Run("failing verdict refused", func(t *testing.T) {
+		vPath := filepath.Join(bench, "gate", "2026-09-12", "qwen2.5:7b", "verdict.json")
+		vb, _ := os.ReadFile(vPath)
+		failing := strings.Replace(string(vb), `"pass":true`, `"pass":false`, 1)
+		if err := os.WriteFile(vPath, []byte(failing), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		defer os.WriteFile(vPath, vb, 0o644)
+		_, r := GroundFacts(nil, bench, sel, []EvidenceRef{cand}, "candidate")
+		if r == nil || !strings.Contains(r.Detail, "did not admit") {
+			t.Fatalf("failing-verdict run grounded: %+v", r)
+		}
+	})
+	t.Run("scores rewritten after gating refused", func(t *testing.T) {
+		runFile := filepath.Join(bench, "validation", "2026-09-12", "qwen2.5:7b", "candidate_score.json")
+		orig, _ := os.ReadFile(runFile)
+		doctoredValue := []byte(`{"score":0.99,"benchmark":"themis-bench-core"}`)
+		if err := os.WriteFile(runFile, doctoredValue, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		defer os.WriteFile(runFile, orig, 0o644)
+		doctored := cand
+		doctored.Value = doctoredValue
+		doctored.SHA256 = hashBytes(doctoredValue)
+		_, r := GroundFacts(nil, bench, sel, []EvidenceRef{doctored}, "candidate")
+		if r == nil || !strings.Contains(r.Detail, "rewritten after gating") {
+			t.Fatalf("digest-broken run grounded: %+v", r)
+		}
+	})
+	t.Run("ref outside canonical layout refused", func(t *testing.T) {
+		bad := cand
+		bad.Ref = "somewhere/else.json"
+		_, r := GroundFacts(nil, bench, sel, []EvidenceRef{bad}, "candidate")
+		if r == nil || !strings.Contains(r.Detail, "canonical") {
+			t.Fatalf("off-layout ref grounded: %+v", r)
 		}
 	})
 }
@@ -726,7 +857,7 @@ func TestObserveAdmission(t *testing.T) {
 		// The C-1 attack, now closed at re-verification: a package
 		// whose observation claims active/current against door bytes
 		// that never said so is a discrepancy.
-		pkg, c, _ := producedPackage(t)
+		pkg, _, inputs := producedPackage(t)
 		withdrawnDoor, _ := json.Marshal(map[string]any{"version": 1,
 			"entries": []any{map[string]any{"name": "investigate-cve", "version": 1,
 				"composition_sha256": strings.Repeat("22", 32), "state": "withdrawn"}}})
@@ -735,7 +866,9 @@ func TestObserveAdmission(t *testing.T) {
 		adm.DoorRegistryHash = hashBytes(withdrawnDoor) // claims grounding in these bytes
 		doctored.Admission = adm
 		pb, _ := CanonicalBytes(&doctored)
-		rec, _ := Reconstruct(pb, c.Raw, withdrawnDoor)
+		forged := inputs
+		forged.DoorRegistryBytes = withdrawnDoor
+		rec, _ := Reconstruct(pb, forged)
 		if rec.Result != ReconDiscrepancy {
 			t.Fatalf("forged observation not exposed at re-verification: %+v", rec)
 		}

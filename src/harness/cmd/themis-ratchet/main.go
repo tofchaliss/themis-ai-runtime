@@ -31,14 +31,12 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/tofchaliss/themis/confine"
 	"github.com/tofchaliss/themis/ratchet"
 	"github.com/tofchaliss/themis/state"
 )
 
 var (
 	shaHex   = regexp.MustCompile(`^[0-9a-f]{64}$`)
-	runIdent = regexp.MustCompile(`^[a-zA-Z0-9:_\-./]{1,256}$`)
 	objectID = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 )
 
@@ -78,11 +76,15 @@ func emit(v any) {
 	fmt.Println(string(b))
 }
 
-func openStore(root string) (*state.ObjectStore, error) {
+func openRoot(root string) (*state.Root, error) {
 	if root == "" {
 		return nil, fmt.Errorf("--state-root is required")
 	}
-	r, err := state.OpenRoot(root)
+	return state.OpenRoot(root)
+}
+
+func openStore(root string) (*state.ObjectStore, error) {
+	r, err := openRoot(root)
 	if err != nil {
 		return nil, err
 	}
@@ -114,12 +116,12 @@ func cmdCompare(args []string) error {
 	claimed := fs.String("claimed-baseline", "", "candidate-claimed baseline sha256 (optional)")
 	door := fs.String("door", "", "owning door of the baseline (closed table: l9-catalog, l10-contract-registry, l11-criteria, l11-regression-sets)")
 	doorRegistry := fs.String("door-registry", "", "path to the door's registry file — L11 resolves the observation from its bytes")
+	doorPin := fs.String("door-registry-sha256", "", "expected door-registry hash (consumption pin; optional)")
 	baseline := fs.String("baseline", "", "baseline identity at the door, exact name@version")
 	observedAt := fs.String("observed-at", "", "observation instant recorded in the package")
 	candFactsPath := fs.String("candidate-facts", "", "path to candidate evidence refs JSON")
 	baseFactsPath := fs.String("baseline-facts", "", "path to baseline evidence refs JSON")
-	evidenceRoot := fs.String("evidence-root", "", "root for external-plane evidence refs (benchmark/gate files), confined")
-	runs := fs.String("runs", "", "comma-separated run identities")
+	benchRoot := fs.String("bench-root", "", "benchmark suite root for external-plane witnesses (verdict/digest/location)")
 	planRef := fs.String("plan", "", "evaluation-plan object id (optional provenance)")
 	stateRoot := fs.String("state-root", "", "L6 state root")
 	if err := fs.Parse(args); err != nil {
@@ -149,17 +151,8 @@ func cmdCompare(args []string) error {
 	if *planRef != "" && !objectID.MatchString(*planRef) {
 		return fmt.Errorf("--plan must be an object id (sha256:<hex>)")
 	}
-	var runIDs []string
-	for _, r := range strings.Split(*runs, ",") {
-		if r = strings.TrimSpace(r); r != "" {
-			if !runIdent.MatchString(r) {
-				return fmt.Errorf("run identity %q is malformed", r)
-			}
-			runIDs = append(runIDs, r)
-		}
-	}
-	if len(runIDs) == 0 {
-		return fmt.Errorf("--runs must name at least one run identity")
+	if *doorPin != "" && !shaHex.MatchString(*doorPin) {
+		return fmt.Errorf("--door-registry-sha256 must be a sha256 hex digest")
 	}
 	candRaw, err := readBounded(*candFactsPath)
 	if err != nil {
@@ -178,11 +171,12 @@ func cmdCompare(args []string) error {
 		return err
 	}
 
-	// --- Acceptance: store open. From here, outcomes are durable.
-	store, err := openStore(*stateRoot)
+	// --- Acceptance: record plane open. From here, outcomes are durable.
+	root, err := openRoot(*stateRoot)
 	if err != nil {
 		return err
 	}
+	store := root.Store()
 	recordRefusal := func(r *ratchet.RefusalFact) error {
 		r.CriterionRef = *criterionRef
 		r.Candidate = *candidate
@@ -224,22 +218,22 @@ func cmdCompare(args []string) error {
 		return err // machinery: door registry unreadable/unparseable
 	}
 	// admission == nil → Compare refuses with unadmitted-baseline.
-
-	// --- Ground the supplied facts against their claimed planes.
-	external := func(ref string) ([]byte, error) {
-		if *evidenceRoot == "" {
-			return nil, fmt.Errorf("no --evidence-root supplied for external-plane refs")
-		}
-		p, err := confine.ResolvePath(*evidenceRoot, ref)
-		if err != nil {
-			return nil, err
-		}
-		return readBounded(p)
+	if admission != nil && *doorPin != "" && admission.DoorRegistryHash != *doorPin {
+		// Door-registry consumption pin (audit D3, the ratified
+		// gatePassed pattern): the observed door state is not the
+		// pinned state — refuse durably.
+		return recordRefusal(&ratchet.RefusalFact{Artifact: "l11-refusal", Schema: 1,
+			Reason: ratchet.ReasonIntegrityFailure,
+			Detail: "door registry bytes do not match the supplied pin"})
 	}
-	if r := ratchet.GroundFacts(store, external, criterion.CandidateSelectors, candFacts, "candidate"); r != nil {
+
+	// --- Witness the supplied facts against their establishing
+	// mechanisms (D-G2-1): the event plane for L6-plane facts, the
+	// verdict/digest/location predicate for benchmark-plane facts.
+	if _, r := ratchet.GroundFacts(root, *benchRoot, criterion.CandidateSelectors, candFacts, "candidate"); r != nil {
 		return recordRefusal(r)
 	}
-	if r := ratchet.GroundFacts(store, external, criterion.BaselineSelectors, baseFacts, "baseline"); r != nil {
+	if _, r := ratchet.GroundFacts(root, *benchRoot, criterion.BaselineSelectors, baseFacts, "baseline"); r != nil {
 		return recordRefusal(r)
 	}
 
@@ -252,7 +246,6 @@ func cmdCompare(args []string) error {
 		Admission:       admission,
 		CandidateFacts:  candFacts,
 		BaselineFacts:   baseFacts,
-		RunIdentities:   runIDs,
 		PlanRef:         *planRef,
 	})
 	if err != nil {
@@ -359,29 +352,31 @@ func cmdReconstruct(args []string) error {
 	pkgID := fs.String("package", "", "comparison package object id")
 	criterionFile := fs.String("criterion-file", "", "path to the conditioning criterion bytes (optional; absent = missing input)")
 	doorRegistry := fs.String("door-registry", "", "path to the observed door registry bytes (optional; absent = missing input)")
+	benchRoot := fs.String("bench-root", "", "benchmark suite root for external-plane witnesses (optional; absent = missing input)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	store, err := openStore(*stateRoot)
+	root, err := openRoot(*stateRoot)
 	if err != nil {
 		return err
 	}
+	store := root.Store()
 	pkgBytes, err := store.GetObject(*pkgID)
 	if err != nil {
 		return err
 	}
-	var criterionBytes, doorBytes []byte
+	inputs := ratchet.ReconstructInputs{Root: root, BenchRoot: *benchRoot}
 	if *criterionFile != "" {
-		if criterionBytes, err = readBounded(*criterionFile); err != nil {
+		if inputs.CriterionBytes, err = readBounded(*criterionFile); err != nil {
 			return err
 		}
 	}
 	if *doorRegistry != "" {
-		if doorBytes, err = readBounded(*doorRegistry); err != nil {
+		if inputs.DoorRegistryBytes, err = readBounded(*doorRegistry); err != nil {
 			return err
 		}
 	}
-	rec, err := ratchet.Reconstruct(pkgBytes, criterionBytes, doorBytes)
+	rec, err := ratchet.Reconstruct(pkgBytes, inputs)
 	if err != nil {
 		return err
 	}

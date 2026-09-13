@@ -11,6 +11,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"sort"
+	"strings"
 )
 
 // ReasonClass is the closed refusal vocabulary (D-L11-16 §3): each
@@ -54,9 +56,18 @@ func CheckReasonClass(r ReasonClass) error {
 type EvidenceRef struct {
 	Selector string          `json:"selector"`
 	Source   string          `json:"source"`
-	Ref      string          `json:"ref"` // ObjectID / record identity
+	Ref      string          `json:"ref"` // ObjectID / plane-canonical path
 	SHA256   string          `json:"sha256"`
 	Value    json.RawMessage `json:"value"`
+
+	// The witness (D-G2-1): for L6-plane facts, the committed event
+	// that ESTABLISHED this object as a fact of this kind — task
+	// identity plus event sequence. Storage proves bytes; events
+	// prove establishment. Benchmark-plane facts carry their witness
+	// in the plane itself (verdict/digest/location) and leave these
+	// empty.
+	TaskID   string `json:"task_id,omitempty"`
+	EventSeq int64  `json:"event_seq,omitempty"`
 }
 
 // AdmissionObservation records what L11 OBSERVED at the owning door
@@ -97,8 +108,10 @@ type CompareInput struct {
 	CandidateFacts []EvidenceRef
 	BaselineFacts  []EvidenceRef
 
-	RunIdentities []string
-	PlanRef       string // optional evaluation-plan reference (provenance only)
+	// Run identities are NOT an input: they are DERIVED from the
+	// facts' witnesses (D-G2-1 / audit D4 — the "from governed runs
+	// R1..Rm" clause of the proposition is never caller text).
+	PlanRef string // optional evaluation-plan reference (provenance only)
 }
 
 // RefusalFact records that an accepted invocation could not produce a
@@ -222,8 +235,9 @@ func Compare(in CompareInput) (*ComparisonPackage, *RefusalFact, error) {
 		}
 		return nil, nil, err
 	}
-	if len(in.RunIdentities) == 0 {
-		return refuse(ReasonProvenanceViolation, "criterion requires run_identities and none were supplied")
+	runIDs, badRun := deriveRunIdentities(append(append([]EvidenceRef{}, in.CandidateFacts...), in.BaselineFacts...))
+	if badRun != "" {
+		return refuse(ReasonProvenanceViolation, badRun)
 	}
 
 	comp, err := LookupComparator(c.Comparator)
@@ -254,7 +268,7 @@ func Compare(in CompareInput) (*ComparisonPackage, *RefusalFact, error) {
 		Admission:         adm,
 		CandidateEvidence: in.CandidateFacts,
 		BaselineEvidence:  in.BaselineFacts,
-		RunIdentities:     in.RunIdentities,
+		RunIdentities:     runIDs,
 		PlanRef:           in.PlanRef,
 		Delta:             delta,
 	}, nil, nil
@@ -287,6 +301,11 @@ func checkEvidence(selectors []Selector, facts []EvidenceRef, side string) (map[
 		if !shaSyntax.MatchString(f.SHA256) || hashBytes(f.Value) != f.SHA256 {
 			return nil, &RefusalFact{Reason: ReasonIntegrityFailure, Detail: fmt.Sprintf("%s selector %q: value bytes do not match their declared hash", side, f.Selector)}, nil
 		}
+		if l6Sources[f.Source] && (f.TaskID == "" || f.EventSeq < 1) {
+			// D-G2-1 Q-G2-4: an L6-plane fact without its witness is
+			// unestablished by construction — no package may carry it.
+			return nil, &RefusalFact{Reason: ReasonProvenanceViolation, Detail: fmt.Sprintf("%s selector %q: L6-plane fact carries no witness (task_id + event_seq)", side, f.Selector)}, nil
+		}
 		// Registered selector params applied here too (not only at
 		// grounding), so no package can exist whose facts violate
 		// them — reconstruction parity by construction.
@@ -301,6 +320,41 @@ func checkEvidence(selectors []Selector, facts []EvidenceRef, side string) (map[
 		}
 	}
 	return bySel, nil, nil
+}
+
+// deriveRunIdentities computes the proposition's run enumeration
+// from the facts' witnesses: L6-plane facts contribute their witness
+// task; benchmark-plane facts contribute bench:<date>/<model> parsed
+// from their canonical ref. Sorted, unique. Returns a refusal detail
+// when a fact's run identity is underivable.
+func deriveRunIdentities(facts []EvidenceRef) ([]string, string) {
+	seen := map[string]bool{}
+	var out []string
+	add := func(id string) {
+		if !seen[id] {
+			seen[id] = true
+			out = append(out, id)
+		}
+	}
+	for _, f := range facts {
+		switch {
+		case l6Sources[f.Source]:
+			if f.TaskID == "" {
+				return nil, fmt.Sprintf("selector %q: no witness task to derive a run identity from", f.Selector)
+			}
+			add("task:" + f.TaskID)
+		case benchSources[f.Source]:
+			parts := strings.Split(f.Ref, "/")
+			if len(parts) < 4 {
+				return nil, fmt.Sprintf("selector %q: benchmark ref %q yields no run identity", f.Selector, f.Ref)
+			}
+			add("bench:" + parts[1] + "/" + strings.Join(parts[2:len(parts)-1], "/"))
+		default:
+			return nil, fmt.Sprintf("selector %q: source %q yields no run identity", f.Selector, f.Source)
+		}
+	}
+	sort.Strings(out)
+	return out, ""
 }
 
 // checkDeltaShape enforces the declared Δ shape exactly: every

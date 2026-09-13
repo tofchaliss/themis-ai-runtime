@@ -45,6 +45,13 @@ func deriveObservation(door string, raw []byte, name string, version int) (*Admi
 	}
 	var found *AdmissionObservation
 	maxActiveVersion := 0
+	// Strict file-wide validation (audit D5): the observation is
+	// derived from the SAME registry state the owning loader would
+	// accept — duplicate identities, malformed entries, or unknown
+	// states refuse the whole file; leniency is limited to unknown
+	// FIELDS (each door owns its own extra schema).
+	doorStates := map[string]bool{"active": true, "withdrawn": true}
+	seen := map[string]bool{}
 	for _, e := range reg.Entries {
 		var entry struct {
 			Name    string `json:"name"`
@@ -54,6 +61,17 @@ func deriveObservation(door string, raw []byte, name string, version int) (*Admi
 		if err := json.Unmarshal(e, &entry); err != nil {
 			return nil, fmt.Errorf("%w: door registry: bad entry: %v", ErrResolve, err)
 		}
+		if entry.Name == "" || entry.Version < 1 {
+			return nil, fmt.Errorf("%w: door registry: entry lacks name/version — file refused whole", ErrResolve)
+		}
+		if !doorStates[entry.State] {
+			return nil, fmt.Errorf("%w: door registry: entry %s@%d has unknown state %q — file refused whole", ErrResolve, entry.Name, entry.Version, entry.State)
+		}
+		key := fmt.Sprintf("%s@%d", entry.Name, entry.Version)
+		if seen[key] {
+			return nil, fmt.Errorf("%w: door registry: duplicate identity %s — file refused whole", ErrResolve, key)
+		}
+		seen[key] = true
 		if entry.Name == name && entry.State == "active" && entry.Version > maxActiveVersion {
 			maxActiveVersion = entry.Version
 		}
@@ -76,6 +94,10 @@ func deriveObservation(door string, raw []byte, name string, version int) (*Admi
 	if found == nil {
 		return nil, nil
 	}
+	// CurrentActive is an L11 DERIVATION over the observed entries
+	// (max active version for the name) — the doors keep no currency
+	// pointer; this is derived observation content, never a door
+	// assertion and never L11 currency authority (audit D5 wording).
 	found.CurrentActive = found.State == "active" && found.Version == maxActiveVersion
 	return found, nil
 }

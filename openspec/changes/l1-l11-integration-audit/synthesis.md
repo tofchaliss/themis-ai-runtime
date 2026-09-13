@@ -203,3 +203,44 @@ verify eligibility.
 L1–L11. It demonstrated that the completed layers need two
 additional cross-layer authority boundaries before the chain can be
 considered production-wired.
+
+
+## D1–D5 remediation record (2026-09-13, enforcement of D-G2-1)
+
+Implemented strictly as G2 enforcement (owner order — the boundary
+was defined first; no design work occurred in the defect pass):
+
+- **D1** — witness grounding: EvidenceRef carries {task_id,
+  event_seq}; GroundFacts resolves the witness in the event plane
+  (exists → class per witnessClasses → names the object → bytes
+  match), refuses model-turn-witnessed and l11-* bytes; Compare
+  refuses L6-plane facts without witness fields; reconstruction
+  re-walks every witness (ReconstructInputs gains Root/BenchRoot;
+  absent planes = missing-inputs, refused witnesses =
+  discrepancies). witnessClasses: l10_evaluation_record →
+  l10-verification (record named in body — the anti-shadowing rule
+  generalized); l6_execution_record → l4-audit (object in event
+  refs; witness_tool selector param pins the minting capability).
+- **D2** — benchmark witness: verifyBenchWitness applies the
+  verdict + digest + location predicate (BenchRunDigest = the gate
+  contract); unadmitted/failing/digest-broken/off-layout runs
+  refuse; no L6 event invented for benchmark facts (owner
+  instruction).
+- **D3** — --door-registry-sha256 consumption pin at the CLI
+  (mismatch = durable integrity-failure refusal).
+- **D4** — run identities are DERIVED from witnesses (task:<id> /
+  bench:<date>/<model>), never caller text; the --runs flag is
+  gone; reconstruction re-derives and compares.
+- **D5** — door.go strict file-wide validation (duplicate identity,
+  malformed entry, unknown state → whole-file refusal; leniency
+  only for unknown fields); CurrentActive documented as an L11
+  derivation over observed entries.
+
+Proofs: TestGroundFacts (7 witness cases incl. wrong-class,
+un-named object, wrong tool, l11-bytes), TestGroundFactsBenchWitness
+(admitted/failing/rewritten-after-gating/off-layout), CLI contract
+re-run with bench fixtures, cross-process reconstruction CONFIRMED
+against witnessed packages, full ratchet+CLI+state+verification
+suites green, live proof re-run PASS.
+
+Remaining: D6–D13 (next), full negative-space sweep, then Phase C.

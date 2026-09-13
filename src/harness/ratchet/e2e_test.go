@@ -156,7 +156,6 @@ func TestRatchetEndToEndSlice(t *testing.T) {
 		Admission:       admission,
 		CandidateFacts:  []EvidenceRef{scoreFact("candidate_score", 0.91)},
 		BaselineFacts:   []EvidenceRef{scoreFact("baseline_score", 0.82)},
-		RunIdentities:   []string{"l4:101", "l4:102"},
 		PlanRef:         planID,
 	}
 	pkg, refusal, err := Compare(in)
@@ -226,7 +225,8 @@ func TestRatchetEndToEndSlice(t *testing.T) {
 	if !bytes.Equal(stored, pkgBytes) {
 		t.Fatal("stored bytes differ from canonical bytes")
 	}
-	rec, err := Reconstruct(stored, criterionRaw, doorRegistryRaw)
+	bench := benchFixture(t, append(append([]EvidenceRef{}, in.CandidateFacts...), in.BaselineFacts...)...)
+	rec, err := Reconstruct(stored, ReconstructInputs{CriterionBytes: criterionRaw, DoorRegistryBytes: doorRegistryRaw, Root: root, BenchRoot: bench})
 	if err != nil || rec.Result != ReconConfirmed {
 		t.Fatalf("cold reconstruction: %+v %v", rec, err)
 	}

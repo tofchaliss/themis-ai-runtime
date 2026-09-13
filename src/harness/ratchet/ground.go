@@ -1,79 +1,151 @@
 package ratchet
 
-// Evidence grounding — the H-1 remediation. "Grounding is checked,
-// not trusted" becomes true: before Compare, every supplied fact is
-// resolved against its claimed plane — L6-plane refs are fetched
-// from the store and byte-compared; file-plane refs are read through
-// the caller's confined resolver and byte-compared; and the
-// criterion's registered selector params are mechanically applied to
-// the fact bytes (K's selectors choose evidence — the requester does
-// not, D-L11-10 §2). A fact that cannot be grounded refuses; L11
-// still establishes no meaning about the grounded bytes.
+// Evidence grounding — D-G2-1 enforcement (H-1/D1 remediation,
+// upgraded from byte-grounding to WITNESS-grounding). Before
+// Compare, every supplied fact is verified against the mechanism
+// that established it: L6-plane facts by resolving their claimed
+// witness event (existence → class → naming → bytes); benchmark-
+// plane facts by the verdict/digest/location predicate. The
+// registered selector params are mechanically applied. A fact that
+// cannot be witnessed refuses; L11 still establishes no meaning
+// about the witnessed bytes.
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/tofchaliss/themis/state"
 )
 
-// l6Sources: sources whose Ref is an L6 ObjectID.
+// l6Sources: fact kinds whose refs are L6 ObjectIDs and whose
+// establishment is a committed witnessing event (witnessClasses).
 var l6Sources = map[string]bool{
 	"l6_execution_record":   true,
 	"l10_evaluation_record": true,
 }
 
-// ExternalResolver reads external-plane evidence bytes (benchmark
-// reports, gate verdicts) by ref. Implementations confine paths;
-// this package never opens files for evidence itself.
-type ExternalResolver func(ref string) ([]byte, error)
-
-// GroundFacts verifies every supplied fact against its claimed
-// plane and applies the matching selector's registered params.
-// Returns a refusal (never a weaker package) on the first ungrounded
-// fact; nil means all facts grounded. Facts for undeclared selectors
-// are left to checkEvidence's comparability refusal.
-func GroundFacts(store *state.ObjectStore, external ExternalResolver, selectors []Selector, facts []EvidenceRef, side string) *RefusalFact {
+// GroundFacts verifies every supplied fact against its establishing
+// mechanism and applies the matching selector's registered params.
+// Returns a refusal (never a weaker package) on the first
+// unwitnessed fact plus, on success, the derived run identity per
+// grounded fact keyed by selector name (D4: run enumeration is
+// DERIVED from witnesses, never caller text). Facts for undeclared
+// selectors are left to checkEvidence's comparability refusal.
+func GroundFacts(root *state.Root, benchRoot string, selectors []Selector, facts []EvidenceRef, side string) (map[string]string, *RefusalFact) {
 	declared := map[string]Selector{}
 	for _, s := range selectors {
 		declared[s.Name] = s
 	}
+	runs := map[string]string{}
 	for _, f := range facts {
 		sel, ok := declared[f.Selector]
 		if !ok {
 			continue // checkEvidence refuses undeclared selectors
 		}
-		var stored []byte
-		var err error
+		refuse := func(reason ReasonClass, detail string) (map[string]string, *RefusalFact) {
+			return nil, &RefusalFact{Artifact: "l11-refusal", Schema: 1, Reason: reason,
+				Detail: fmt.Sprintf("%s selector %q: %s", side, f.Selector, detail)}
+		}
 		switch {
 		case l6Sources[f.Source]:
 			if !strings2ObjectID(f.Ref) {
-				return &RefusalFact{Artifact: "l11-refusal", Schema: 1, Reason: ReasonProvenanceViolation,
-					Detail: fmt.Sprintf("%s selector %q: L6-plane ref %q is not an object identity", side, f.Selector, f.Ref)}
+				return refuse(ReasonProvenanceViolation, fmt.Sprintf("L6-plane ref %q is not an object identity", f.Ref))
 			}
-			if store == nil {
-				return &RefusalFact{Artifact: "l11-refusal", Schema: 1, Reason: ReasonEvidenceUnavailable,
-					Detail: fmt.Sprintf("%s selector %q: no record store available to ground the fact", side, f.Selector)}
+			if f.TaskID == "" || f.EventSeq < 1 {
+				return refuse(ReasonProvenanceViolation, "L6-plane fact carries no witness (task_id + event_seq) — storage proves bytes, events prove establishment")
 			}
-			stored, err = store.GetObject(f.Ref)
+			if root == nil {
+				return refuse(ReasonEvidenceUnavailable, "no record plane available to resolve the witness")
+			}
+			stored, err := root.Store().GetObject(f.Ref)
+			if err != nil {
+				return refuse(ReasonEvidenceUnavailable, fmt.Sprintf("ref %q did not resolve in the record plane", f.Ref))
+			}
+			if !bytes.Equal(stored, f.Value) {
+				return refuse(ReasonIntegrityFailure, fmt.Sprintf("supplied value bytes differ from the bytes at %q", f.Ref))
+			}
+			// L11 output is terminal: even a (mis)witnessed l11-*
+			// artifact never serves as a fact (belt to the witness
+			// braces — no event class witnesses these anyway).
+			if isL11Artifact(f.Value) {
+				return refuse(ReasonComparabilityViolation, "referenced bytes are an L11 artifact — L11 output is terminal and never a fact (D-L11-15)")
+			}
+			toolPin, params, perr := splitToolPin(sel)
+			if perr != nil {
+				return refuse(ReasonComparabilityViolation, perr.Error())
+			}
+			if detail := verifyL6Witness(root, f.Source, f.Ref, f.TaskID, f.EventSeq, toolPin); detail != "" {
+				return refuse(ReasonProvenanceViolation, detail)
+			}
+			if r := applyParamsMap(params, sel.Name, f, side); r != nil {
+				return nil, r
+			}
+			runs[f.Selector] = f.TaskID
+		case benchSources[f.Source]:
+			runID, detail := verifyBenchWitness(benchRoot, f.Source, f.Ref, f.Value)
+			if detail != "" {
+				return refuse(ReasonEvidenceUnavailable, detail)
+			}
+			if r := applyParams(sel, f, side); r != nil {
+				return nil, r
+			}
+			runs[f.Selector] = runID
 		default:
-			if external == nil {
-				return &RefusalFact{Artifact: "l11-refusal", Schema: 1, Reason: ReasonEvidenceUnavailable,
-					Detail: fmt.Sprintf("%s selector %q: no resolver for source %q", side, f.Selector, f.Source)}
-			}
-			stored, err = external(f.Ref)
+			return refuse(ReasonComparabilityViolation, fmt.Sprintf("source %q has no establishing mechanism", f.Source))
 		}
-		if err != nil {
-			return &RefusalFact{Artifact: "l11-refusal", Schema: 1, Reason: ReasonEvidenceUnavailable,
-				Detail: fmt.Sprintf("%s selector %q: ref %q did not resolve in its claimed plane", side, f.Selector, f.Ref)}
+	}
+	return runs, nil
+}
+
+// isL11Artifact reports whether bytes self-describe as an L11
+// instance artifact.
+func isL11Artifact(b []byte) bool {
+	var probe struct {
+		Artifact string `json:"artifact"`
+	}
+	if err := json.Unmarshal(b, &probe); err != nil {
+		return false
+	}
+	return strings.HasPrefix(probe.Artifact, "l11-")
+}
+
+// splitToolPin extracts the reserved "witness_tool" param (matched
+// against the witnessing event's minting capability, D-G2-1) from
+// the selector's params; the remainder subset-match the fact bytes.
+func splitToolPin(sel Selector) (string, map[string]any, error) {
+	var params map[string]any
+	if err := json.Unmarshal(sel.Params, &params); err != nil {
+		return "", nil, fmt.Errorf("registered params unreadable")
+	}
+	pin := ""
+	if v, ok := params["witness_tool"]; ok {
+		s, ok := v.(string)
+		if !ok {
+			return "", nil, fmt.Errorf("witness_tool param must be a string")
 		}
-		if !bytes.Equal(stored, f.Value) {
-			return &RefusalFact{Artifact: "l11-refusal", Schema: 1, Reason: ReasonIntegrityFailure,
-				Detail: fmt.Sprintf("%s selector %q: supplied value bytes differ from the bytes at %q", side, f.Selector, f.Ref)}
-		}
-		if r := applyParams(sel, f, side); r != nil {
-			return r
+		pin = s
+		delete(params, "witness_tool")
+	}
+	return pin, params, nil
+}
+
+// applyParamsMap is applyParams over an already-split param map.
+func applyParamsMap(params map[string]any, selName string, f EvidenceRef, side string) *RefusalFact {
+	if len(params) == 0 {
+		return nil
+	}
+	var doc map[string]any
+	if err := json.Unmarshal(f.Value, &doc); err != nil {
+		return &RefusalFact{Artifact: "l11-refusal", Schema: 1, Reason: ReasonComparabilityViolation,
+			Detail: fmt.Sprintf("%s selector %q declares params but the fact is not a JSON object", side, selName)}
+	}
+	for k, want := range params {
+		got, ok := doc[k]
+		if !ok || got != want {
+			return &RefusalFact{Artifact: "l11-refusal", Schema: 1, Reason: ReasonComparabilityViolation,
+				Detail: fmt.Sprintf("%s selector %q: fact does not satisfy registered param %q", side, selName, k)}
 		}
 	}
 	return nil
@@ -89,26 +161,10 @@ func applyParams(sel Selector, f EvidenceRef, side string) *RefusalFact {
 		return &RefusalFact{Artifact: "l11-refusal", Schema: 1, Reason: ReasonComparabilityViolation,
 			Detail: fmt.Sprintf("%s selector %q: registered params unreadable", side, sel.Name)}
 	}
-	if len(params) == 0 {
-		return nil
-	}
-	var doc map[string]any
-	if err := json.Unmarshal(f.Value, &doc); err != nil {
-		return &RefusalFact{Artifact: "l11-refusal", Schema: 1, Reason: ReasonComparabilityViolation,
-			Detail: fmt.Sprintf("%s selector %q declares params but the fact is not a JSON object", side, sel.Name)}
-	}
-	for k, want := range params {
-		got, ok := doc[k]
-		if !ok || got != want {
-			return &RefusalFact{Artifact: "l11-refusal", Schema: 1, Reason: ReasonComparabilityViolation,
-				Detail: fmt.Sprintf("%s selector %q: fact does not satisfy registered param %q", side, sel.Name, k)}
-		}
-	}
-	return nil
+	return applyParamsMap(params, sel.Name, f, side)
 }
 
-// maxInputBytes bounds invocation-surface JSON inputs (admission
-// files no longer exist; evidence files and authored artifacts do).
+// maxInputBytes bounds invocation-surface JSON inputs.
 const maxInputBytes = 4 << 20 // 4 MiB
 
 // ParseEvidenceRefs parses an evidence-refs JSON array with the same

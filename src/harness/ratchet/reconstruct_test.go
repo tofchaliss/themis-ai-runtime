@@ -9,7 +9,7 @@ import (
 	"github.com/tofchaliss/themis/state"
 )
 
-func producedPackage(t *testing.T) (*ComparisonPackage, *Criterion, []byte) {
+func producedPackage(t *testing.T) (*ComparisonPackage, *Criterion, ReconstructInputs) {
 	t.Helper()
 	in := validInput(t, 0.91, 0.82)
 	pkg, ref, err := Compare(in)
@@ -17,16 +17,17 @@ func producedPackage(t *testing.T) (*ComparisonPackage, *Criterion, []byte) {
 		t.Fatalf("compare failed: %v %v", ref, err)
 	}
 	doorBytes, _ := doorFixture(t)
-	return pkg, in.Criterion, doorBytes
+	bench := benchFixture(t, append(append([]EvidenceRef{}, in.CandidateFacts...), in.BaselineFacts...)...)
+	return pkg, in.Criterion, ReconstructInputs{CriterionBytes: in.Criterion.Raw, DoorRegistryBytes: doorBytes, BenchRoot: bench}
 }
 
 func TestReconstructConfirmed(t *testing.T) {
-	pkg, c, door := producedPackage(t)
+	pkg, _, inputs := producedPackage(t)
 	pb, err := CanonicalBytes(pkg)
 	if err != nil {
 		t.Fatal(err)
 	}
-	rec, err := Reconstruct(pb, c.Raw, door)
+	rec, err := Reconstruct(pb, inputs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,21 +40,21 @@ func TestReconstructConfirmed(t *testing.T) {
 // (this test never touches the original Compare inputs) — the
 // delete-every-cache architectural proof (D-L11-17).
 func TestReconstructIsCold(t *testing.T) {
-	pkg, c, door := producedPackage(t)
+	pkg, c, inputs := producedPackage(t)
 	pb, _ := CanonicalBytes(pkg)
 	cb := append([]byte(nil), c.Raw...)
 	// Round-trip through serialization to sever any in-memory link.
-	rec, err := Reconstruct(append([]byte(nil), pb...), cb, append([]byte(nil), door...))
+	rec, err := Reconstruct(append([]byte(nil), pb...), ReconstructInputs{CriterionBytes: cb, DoorRegistryBytes: inputs.DoorRegistryBytes, BenchRoot: inputs.BenchRoot})
 	if err != nil || rec.Result != ReconConfirmed {
 		t.Fatalf("cold reconstruction failed: %+v %v", rec, err)
 	}
 }
 
 func TestReconstructMissingInputs(t *testing.T) {
-	pkg, _, door := producedPackage(t)
+	pkg, _, inputs := producedPackage(t)
 	pb, _ := CanonicalBytes(pkg)
 
-	rec, err := Reconstruct(pb, nil, door)
+	rec, err := Reconstruct(pb, ReconstructInputs{DoorRegistryBytes: inputs.DoorRegistryBytes, BenchRoot: inputs.BenchRoot})
 	if err != nil || rec.Result != ReconMissingInputs {
 		t.Fatalf("nil criterion: want missing-inputs, got %+v %v", rec, err)
 	}
@@ -62,20 +63,20 @@ func TestReconstructMissingInputs(t *testing.T) {
 	}
 
 	// Wrong criterion bytes = the true input is still missing.
-	rec, err = Reconstruct(pb, []byte(`{"other":"criterion"}`), door)
+	rec, err = Reconstruct(pb, ReconstructInputs{CriterionBytes: []byte(`{"other":"criterion"}`), DoorRegistryBytes: inputs.DoorRegistryBytes, BenchRoot: inputs.BenchRoot})
 	if err != nil || rec.Result != ReconMissingInputs {
 		t.Fatalf("wrong criterion bytes: want missing-inputs, got %+v %v", rec, err)
 	}
 }
 
 func TestReconstructDiscrepancy(t *testing.T) {
-	pkg, c, door := producedPackage(t)
+	pkg, _, inputs := producedPackage(t)
 
 	t.Run("tampered delta", func(t *testing.T) {
 		doctored := *pkg
 		doctored.Delta = map[string]float64{"score_delta": 0.5}
 		pb, _ := CanonicalBytes(&doctored)
-		rec, err := Reconstruct(pb, c.Raw, door)
+		rec, err := Reconstruct(pb, inputs)
 		if err != nil || rec.Result != ReconDiscrepancy {
 			t.Fatalf("tampered delta not a discrepancy: %+v %v", rec, err)
 		}
@@ -87,7 +88,7 @@ func TestReconstructDiscrepancy(t *testing.T) {
 		ev[0].Value = json.RawMessage(`0.999`)
 		doctored.CandidateEvidence = ev
 		pb, _ := CanonicalBytes(&doctored)
-		rec, _ := Reconstruct(pb, c.Raw, door)
+		rec, _ := Reconstruct(pb, inputs)
 		if rec.Result != ReconDiscrepancy {
 			t.Fatalf("tampered evidence not a discrepancy: %+v", rec)
 		}
@@ -96,7 +97,7 @@ func TestReconstructDiscrepancy(t *testing.T) {
 		doctored := *pkg
 		doctored.BaselineHash = strings.Repeat("55", 32)
 		pb, _ := CanonicalBytes(&doctored)
-		rec, _ := Reconstruct(pb, c.Raw, door)
+		rec, _ := Reconstruct(pb, inputs)
 		if rec.Result != ReconDiscrepancy {
 			t.Fatalf("baseline drift not a discrepancy: %+v", rec)
 		}
@@ -106,12 +107,12 @@ func TestReconstructDiscrepancy(t *testing.T) {
 // Reconstruction never repairs: the input bytes are untouched and no
 // new package is produced under any result.
 func TestReconstructNeverRepairs(t *testing.T) {
-	pkg, c, door := producedPackage(t)
+	pkg, _, inputs := producedPackage(t)
 	doctored := *pkg
 	doctored.Delta = map[string]float64{"score_delta": 0.5}
 	pb, _ := CanonicalBytes(&doctored)
 	before := append([]byte(nil), pb...)
-	rec, err := Reconstruct(pb, c.Raw, door)
+	rec, err := Reconstruct(pb, inputs)
 	if err != nil {
 		t.Fatal(err)
 	}

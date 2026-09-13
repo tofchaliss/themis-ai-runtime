@@ -15,6 +15,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
+
+	"github.com/tofchaliss/themis/state"
 )
 
 // ReconstructionResult is a structural fact class about a
@@ -39,16 +42,27 @@ type Reconstruction struct {
 	Discrepancies []string `json:"discrepancies,omitempty"`
 }
 
+// ReconstructInputs are the cold inputs beyond the package bytes:
+// the registered criterion bytes, the observed door-registry bytes,
+// and — for witness re-verification (D-G2-1 Q-G2-5) — the record
+// plane and benchmark root. Any absent input degrades to
+// missing-inputs for the clauses needing it, never a discrepancy.
+type ReconstructInputs struct {
+	CriterionBytes    []byte
+	DoorRegistryBytes []byte
+	Root              *state.Root // event plane for L6-plane witnesses
+	BenchRoot         string      // benchmark plane for external witnesses
+}
+
 // Reconstruct re-derives a comparison package cold: package bytes +
-// the registered criterion bytes + the observed door-registry bytes
-// are the ONLY inputs (plus this binary's registered comparator
-// table). criterionBytes / doorRegistryBytes may be nil when they
-// could not be obtained — missing-inputs facts, not discrepancies.
-// A machinery error mints nothing. Reconstruction re-applies the
-// SAME checks Compare applied (minus plane availability), so
-// "confirmed" means "reproducible as Compare's proposition" — not
-// merely internally consistent (close-review M-3).
-func Reconstruct(packageBytes, criterionBytes, doorRegistryBytes []byte) (*Reconstruction, error) {
+// the ReconstructInputs are the ONLY inputs (plus this binary's
+// registered comparator table). A machinery error mints nothing.
+// Reconstruction re-applies the SAME checks Compare applied — now
+// including each fact's establishment witness — so "confirmed"
+// means "reproducible as Compare's proposition", not merely
+// internally consistent (close-review M-3; D-G2-1 Q-G2-5).
+func Reconstruct(packageBytes []byte, in ReconstructInputs) (*Reconstruction, error) {
+	criterionBytes, doorRegistryBytes := in.CriterionBytes, in.DoorRegistryBytes
 	rec := &Reconstruction{Artifact: "l11-reconstruction", PackageID: "sha256:" + hashBytes(packageBytes)}
 
 	dec := jsonDecoder(packageBytes)
@@ -99,8 +113,36 @@ func Reconstruct(packageBytes, criterionBytes, doorRegistryBytes []byte) (*Recon
 	if !shaSyntax.MatchString(p.RegistrySHA256) {
 		rec.Discrepancies = append(rec.Discrepancies, "package lacks a well-formed criteria-registry binding")
 	}
-	if len(p.RunIdentities) == 0 {
-		rec.Discrepancies = append(rec.Discrepancies, "package carries no run identities — Compare could not have produced it")
+	// The run enumeration is derived, never asserted: re-derive from
+	// the embedded facts and compare (D-G2-1 / audit D4).
+	reRuns, badRun := deriveRunIdentities(append(append([]EvidenceRef{}, p.CandidateEvidence...), p.BaselineEvidence...))
+	if badRun != "" {
+		rec.Discrepancies = append(rec.Discrepancies, "run identities are not derivable from the embedded facts — Compare could not have produced this package")
+	} else if strings.Join(reRuns, ",") != strings.Join(p.RunIdentities, ",") {
+		rec.Discrepancies = append(rec.Discrepancies, "recorded run identities disagree with the facts' witnesses")
+	}
+	// Establishment witnesses, re-walked per fact (D-G2-1 Q-G2-5):
+	// absent planes are missing inputs; present planes that refuse
+	// the witness are discrepancies.
+	for _, f := range append(append([]EvidenceRef{}, p.CandidateEvidence...), p.BaselineEvidence...) {
+		switch {
+		case l6Sources[f.Source]:
+			if in.Root == nil {
+				rec.MissingInputs = append(rec.MissingInputs, fmt.Sprintf("record plane for witness %s/%d (selector %q)", f.TaskID, f.EventSeq, f.Selector))
+				continue
+			}
+			if detail := verifyL6Witness(in.Root, f.Source, f.Ref, f.TaskID, f.EventSeq, ""); detail != "" {
+				rec.Discrepancies = append(rec.Discrepancies, fmt.Sprintf("selector %q: %s", f.Selector, detail))
+			}
+		case benchSources[f.Source]:
+			if in.BenchRoot == "" {
+				rec.MissingInputs = append(rec.MissingInputs, fmt.Sprintf("benchmark plane for witness %q (selector %q)", f.Ref, f.Selector))
+				continue
+			}
+			if _, detail := verifyBenchWitness(in.BenchRoot, f.Source, f.Ref, f.Value); detail != "" {
+				rec.Discrepancies = append(rec.Discrepancies, fmt.Sprintf("selector %q: %s", f.Selector, detail))
+			}
+		}
 	}
 	// D-L11-5 §2 re-verification: the admission observation against
 	// the door registry bytes it claims to be grounded in.

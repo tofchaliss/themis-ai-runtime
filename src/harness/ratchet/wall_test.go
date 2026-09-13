@@ -162,6 +162,9 @@ func TestNoMutablePackageState(t *testing.T) {
 		// M7 remediation tables: the closed door table (C-1) and the
 		// L6-plane source set (H-1) — declaration-only, like the rest.
 		"doorHashFields": true, "l6Sources": true,
+		// D-G2-1 enforcement tables: fact-kind → witness-class, and
+		// the benchmark-plane source set — declaration-only.
+		"witnessClasses": true, "benchSources": true,
 		// error values + syntax patterns
 		"ErrCriterion": true, "ErrSet": true, "ErrRegistry": true,
 		"ErrResolve": true, "shaSyntax": true, "nameSyntax": true,
@@ -337,8 +340,10 @@ func TestAPIClosure(t *testing.T) {
 		// M7 remediation surface: door resolution (C-1), evidence
 		// grounding + strict input parsing (H-1/M-2) — deliberate.
 		"ObserveAdmission": true, "ReverifyAdmission": true,
-		"GroundFacts": true, "ExternalResolver": true,
-		"ParseEvidenceRefs": true,
+		"GroundFacts": true, "ParseEvidenceRefs": true,
+		// D-G2-1 enforcement surface: cold-reconstruction inputs and
+		// the benchmark digest contract (shared with the CLI tests).
+		"ReconstructInputs": true, "BenchRunDigest": true,
 		// errors
 		"ErrCriterion": true, "ErrSet": true, "ErrRegistry": true, "ErrResolve": true,
 	}

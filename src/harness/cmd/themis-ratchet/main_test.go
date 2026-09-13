@@ -81,17 +81,34 @@ func buildWorld(t *testing.T) *cliWorld {
 	w.doorPath = filepath.Join(w.gov, "l9-catalog.json")
 	os.WriteFile(w.doorPath, doorB, 0o644)
 
-	// External-plane evidence records + refs.
+	// External-plane evidence under the canonical benchmark layout,
+	// admitted by a passing verdict whose digest covers the run
+	// (D-G2-1: the plane's own witness).
 	candRecord := []byte(`{"score":0.91,"benchmark":"themis-bench-core"}`)
 	baseRecord := []byte(`{"score":0.82,"benchmark":"themis-bench-core"}`)
-	os.WriteFile(filepath.Join(w.evidenceRoot, "cand.json"), candRecord, 0o644)
-	os.WriteFile(filepath.Join(w.evidenceRoot, "base.json"), baseRecord, 0o644)
+	runDir := filepath.Join(w.evidenceRoot, "validation", "2026-09-12", "qwen2.5:7b")
+	if err := os.MkdirAll(runDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	os.WriteFile(filepath.Join(runDir, "cand.json"), candRecord, 0o644)
+	os.WriteFile(filepath.Join(runDir, "base.json"), baseRecord, 0o644)
+	digest, err := ratchet.BenchRunDigest(runDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	vDir := filepath.Join(w.evidenceRoot, "gate", "2026-09-12", "qwen2.5:7b")
+	if err := os.MkdirAll(vDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	vb, _ := json.Marshal(map[string]any{
+		"model": "qwen2.5:7b", "current": "2026-09-12", "pass": true, "scores_digest": digest})
+	os.WriteFile(filepath.Join(vDir, "verdict.json"), vb, 0o644)
 	cf, _ := json.Marshal([]map[string]any{{
 		"selector": "candidate_score", "source": "benchmark_validated_score",
-		"ref": "cand.json", "sha256": sha256hex(candRecord), "value": json.RawMessage(candRecord)}})
+		"ref": "validation/2026-09-12/qwen2.5:7b/cand.json", "sha256": sha256hex(candRecord), "value": json.RawMessage(candRecord)}})
 	bf, _ := json.Marshal([]map[string]any{{
 		"selector": "baseline_score", "source": "benchmark_validated_score",
-		"ref": "base.json", "sha256": sha256hex(baseRecord), "value": json.RawMessage(baseRecord)}})
+		"ref": "validation/2026-09-12/qwen2.5:7b/base.json", "sha256": sha256hex(baseRecord), "value": json.RawMessage(baseRecord)}})
 	w.candFacts = filepath.Join(w.gov, "cand-facts.json")
 	w.baseFacts = filepath.Join(w.gov, "base-facts.json")
 	os.WriteFile(w.candFacts, cf, 0o644)
@@ -114,8 +131,7 @@ func (w *cliWorld) compare(t *testing.T, extra ...string) (string, int) {
 		"--observed-at", "2026-09-13T00:00:00Z",
 		"--candidate-facts", w.candFacts,
 		"--baseline-facts", w.baseFacts,
-		"--evidence-root", w.evidenceRoot,
-		"--runs", "l4:101,l4:102",
+		"--bench-root", w.evidenceRoot,
 		"--state-root", w.stateRoot,
 	}, extra...)
 	// Later flags override earlier ones in the stdlib flag package —
@@ -206,7 +222,8 @@ func TestCLIContract(t *testing.T) {
 			"--state-root", w.stateRoot,
 			"--package", pkgID,
 			"--criterion-file", w.criterionPath,
-			"--door-registry", w.doorPath)
+			"--door-registry", w.doorPath,
+			"--bench-root", w.evidenceRoot)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatalf("reconstruct: %v\n%s", err, out)

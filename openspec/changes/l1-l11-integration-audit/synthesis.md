@@ -343,3 +343,18 @@ applies (git history preserves the removed surface).
 
 Next per the fixed sequence: G1 Deployment Anchor implementation →
 Class-3 pass → production-wiring decision.
+
+
+## G1 IMPLEMENTED (2026-09-13)
+
+deployment package + L7 wiring; admission-before-consumption is the
+centerpiece (a matching hash identifies, the registry admits).
+Anchored Open verifies instruction roots/policy against the admitted
+anchor and freezes it; anchored SubmitTask refuses any bundle
+artifact, workflow, or model outside the anchored set; the task
+record carries the anchor identity. Governance-activated
+local-dev@1. Full detail: openspec/changes/g1-deployment-authority/
+design.md §Implementation record.
+
+Remaining: Class-3 pass over the G1 implementation, then the
+production-wiring decision.

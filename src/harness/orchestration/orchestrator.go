@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	l2 "github.com/tofchaliss/themis/context"
+	"github.com/tofchaliss/themis/deployment"
 	"github.com/tofchaliss/themis/execution"
 	"github.com/tofchaliss/themis/instructions"
 	"github.com/tofchaliss/themis/runtime/model"
@@ -41,6 +42,17 @@ type Config struct {
 	// resolves with the same discipline as the other roots.
 	ThemisRoot string
 	PolicyPath string
+	// G1 Deployment Anchor (D-G1-1/D-G1-1A). When AnchorPath is set,
+	// Open ADMITS the anchor against the Governance-active anchors
+	// registry (never trusting the operator hash as an admission
+	// claim), verifies the instruction roots/policy against its pins,
+	// and freezes it; SubmitTask then refuses any bundle artifact
+	// that is not the anchored one. Unanchored mode remains legal for
+	// the recorded test-harness caller role only — production wiring
+	// REQUIRES the anchor (G1 lock).
+	AnchorPath          string
+	AnchorSHA256        string
+	AnchorsRegistryPath string
 	// Model is the model.Interface provider (injected so the loop is
 	// provider-agnostic and Register-testable with a scripted model).
 	Model model.Interface
@@ -99,6 +111,7 @@ type Orchestrator struct {
 	prov   *execution.LocalProvider
 	eis    *instructions.EffectiveSet
 	policy *instructions.Policy
+	anchor *deployment.Anchor // nil = unanchored (test-harness caller role)
 }
 
 // Open prepares the orchestrator and drives every discovered
@@ -144,6 +157,36 @@ func Open(cfg Config) (*Orchestrator, *StartupReport, error) {
 		return nil, nil, err
 	}
 	o := &Orchestrator{cfg: cfg, root: root, store: store, prov: prov, eis: eis, policy: policy}
+	if cfg.AnchorPath != "" {
+		// D-G1-1A: admission first — the operator's path/hash
+		// identifies the requested deployment; the anchors registry
+		// establishes its governed status. Then the roots Open itself
+		// consumes are verified against the ADMITTED anchor's pins.
+		anchor, aerr := deployment.AdmitAnchor(cfg.AnchorPath, cfg.AnchorSHA256, cfg.AnchorsRegistryPath)
+		if aerr != nil {
+			return nil, nil, fmt.Errorf("%w: %v", ErrAssembly, aerr)
+		}
+		if cfg.ThemisRoot == "" {
+			return nil, nil, fmt.Errorf("%w: anchored deployments pin the themis instruction root — it must be configured", ErrAssembly)
+		}
+		for _, check := range []struct{ label, root, want string }{
+			{"safety instruction root", cfg.SafetyRoot, anchor.InstructionSafetyRoot},
+			{"system instruction root", cfg.SystemRoot, anchor.InstructionSystemRoot},
+			{"themis instruction root", cfg.ThemisRoot, anchor.InstructionThemisRoot},
+		} {
+			got, herr := deployment.HashDir(check.root)
+			if herr != nil {
+				return nil, nil, fmt.Errorf("%w: %s unreadable for anchor verification: %v", ErrAssembly, check.label, herr)
+			}
+			if got != check.want {
+				return nil, nil, fmt.Errorf("%w: %s is not the anchored artifact (deployment %s@%d)", ErrAssembly, check.label, anchor.Name, anchor.Deployment)
+			}
+		}
+		if got, herr := deployment.HashFile(cfg.PolicyPath); herr != nil || got != anchor.InstructionPolicy {
+			return nil, nil, fmt.Errorf("%w: instruction policy is not the anchored artifact (deployment %s@%d)", ErrAssembly, anchor.Name, anchor.Deployment)
+		}
+		o.anchor = anchor // frozen for the orchestrator lifetime (Q-G1-8: adoption by restart only)
+	}
 
 	// Startup sweep: close the past before opening the future.
 	rep := &StartupReport{}
@@ -245,6 +288,42 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	contract, err := l2.LoadContract(env.ContextContractPath)
 	if err != nil {
 		return res, err
+	}
+	// G1 bundle validation: every governing artifact must BE the
+	// anchored one — the submitter chooses a task WITHIN the
+	// deployment, never the deployment (Q-G1-5). Fail closed, no
+	// closest match, no partial bundle (Q-G1-9).
+	if a := o.anchor; a != nil {
+		for _, check := range []struct{ label, got, want string }{
+			{"tool registry", reg.Hash, a.ToolRegistry},
+			{"workflow ceiling", wfCeiling.Hash, a.WorkflowCeiling},
+			{"exec ceiling", execCeiling.Hash, a.ExecCeiling},
+			{"context contract", contract.Hash, a.ContextContract},
+		} {
+			if check.got != check.want {
+				return res, fmt.Errorf("%w: %s is not the anchored artifact (deployment %s@%d) — a mutually consistent bundle is not a governed bundle", ErrAssembly, check.label, a.Name, a.Deployment)
+			}
+		}
+		anchoredWF := false
+		for _, w := range a.Workflows {
+			if wf.Hash == w {
+				anchoredWF = true
+				break
+			}
+		}
+		if !anchoredWF {
+			return res, fmt.Errorf("%w: workflow is not in the anchored workflow set (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
+		}
+		allowedModel := false
+		for _, m := range a.Models {
+			if env.Model == m {
+				allowedModel = true
+				break
+			}
+		}
+		if !allowedModel {
+			return res, fmt.Errorf("%w: model %q is not in the anchored allowlist (deployment %s@%d) — a model enters a deployment only by Governance act", ErrAssembly, env.Model, a.Name, a.Deployment)
+		}
 	}
 	// The EXACT bytes each loader accepted, for durable storage after
 	// the task exists (ADG-L9/L6-1). These are read once here and then
@@ -455,6 +534,11 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	// the catalog after the fact.
 	for k, v := range env.Origin {
 		governed["origin:"+k] = v
+	}
+	if o.anchor != nil {
+		// Q-G1-7: the assembly record proves "executed under this
+		// ADMITTED deployment anchor", re-verifiable at replay.
+		governed["deployment_anchor"] = o.anchor.SHA256
 	}
 	task, err := o.root.CreateTask(env.TaskID, state.TaskOptions{
 		RetryOf:        env.RetryOf,

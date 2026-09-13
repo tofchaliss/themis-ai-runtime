@@ -8,12 +8,16 @@ package orchestration
 // D-L10-17 additive-only obligation).
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tofchaliss/themis/deployment"
 )
 
 func writeSeamFixture(t *testing.T, dir, name, content string) string {
@@ -293,5 +297,158 @@ func TestThemisRootWiring(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("themis root failed to resolve: %v", err)
+	}
+}
+
+// --- G1 Deployment Anchor enforcement at the L7 seam (D-G1-1 /
+// D-G1-1A). The anchor ADMISSION half is proven in the deployment
+// package; here we prove the L7 half: an admitted anchor freezes the
+// deployment at Open, and SubmitTask refuses any bundle artifact
+// that is not the anchored one.
+
+func anchorWorld(t *testing.T, mutate func(m map[string]any)) (anchorPath, anchorSHA, regPath string) {
+	t.Helper()
+	dir := t.TempDir()
+	hashDir := func(p string) string {
+		h, err := deployment.HashDir(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return h
+	}
+	hashFile := func(p string) string {
+		h, err := deployment.HashFile(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return h
+	}
+	m := map[string]any{
+		"version": 1, "name": "test-deployment", "deployment_version": 1,
+		"instruction_root_safety": hashDir(filepath.Join(repoRoot, "instructions/global/safety")),
+		"instruction_root_system": hashDir(filepath.Join(repoRoot, "instructions/global/system")),
+		"instruction_root_themis": hashDir(filepath.Join(repoRoot, "instructions/themis")),
+		"instruction_policy":      hashFile(filepath.Join(repoRoot, "policies/security/instruction-directive-patterns.json")),
+		"tool_registry":           hashFile(filepath.Join(repoRoot, "policies/tools/registry-v4.json")),
+		"workflow_ceiling":        strings.Repeat("11", 32),
+		"exec_ceiling":            strings.Repeat("22", 32),
+		"context_contract":        strings.Repeat("33", 32),
+		"workflows":               []any{strings.Repeat("44", 32)},
+		"models":                  []any{"scripted"},
+		"skill_catalog":           hashFile(filepath.Join(repoRoot, "policies/skills/catalog.json")),
+		"contract_registry":       hashFile(filepath.Join(repoRoot, "policies/verification/contracts.json")),
+		"criteria_registry":       hashFile(filepath.Join(repoRoot, "policies/ratchet/criteria.json")),
+		"regression_set_registry": hashFile(filepath.Join(repoRoot, "policies/ratchet/regression-sets.json")),
+	}
+	if mutate != nil {
+		mutate(m)
+	}
+	ab, _ := json.Marshal(m)
+	anchorPath = filepath.Join(dir, "anchor.json")
+	if err := os.WriteFile(anchorPath, ab, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(ab)
+	anchorSHA = hex.EncodeToString(sum[:])
+	rb, _ := json.Marshal(map[string]any{
+		"version": 1, "kind": "deployment-anchors",
+		"entries": []any{map[string]any{
+			"name": m["name"], "version": m["deployment_version"],
+			"artifact_sha256": anchorSHA, "state": "active", "steward": "owner"}},
+	})
+	regPath = filepath.Join(dir, "anchors.json")
+	if err := os.WriteFile(regPath, rb, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return anchorPath, anchorSHA, regPath
+}
+
+func anchoredConfig(t *testing.T, base string, anchorPath, anchorSHA, regPath string) Config {
+	t.Helper()
+	return Config{
+		StateRoot: filepath.Join(base, "state"), ArtifactDir: filepath.Join(base, "artifacts"),
+		GitPath: gitBin(t), ProviderDir: filepath.Join(base, "provider"),
+		SafetyRoot: filepath.Join(repoRoot, "instructions/global/safety"),
+		SystemRoot: filepath.Join(repoRoot, "instructions/global/system"),
+		ThemisRoot: filepath.Join(repoRoot, "instructions/themis"),
+		PolicyPath: filepath.Join(repoRoot, "policies/security/instruction-directive-patterns.json"),
+		Model:      happyScript(),
+		AnchorPath: anchorPath, AnchorSHA256: anchorSHA, AnchorsRegistryPath: regPath,
+	}
+}
+
+func TestAnchoredOpen(t *testing.T) {
+	t.Run("admitted anchor with matching roots opens", func(t *testing.T) {
+		p, sha, reg := anchorWorld(t, nil)
+		if _, _, err := Open(anchoredConfig(t, t.TempDir(), p, sha, reg)); err != nil {
+			t.Fatalf("anchored Open refused: %v", err)
+		}
+	})
+	t.Run("unregistered anchor refuses Open", func(t *testing.T) {
+		p, sha, _ := anchorWorld(t, nil)
+		empty := filepath.Join(t.TempDir(), "anchors.json")
+		rb, _ := json.Marshal(map[string]any{"version": 1, "kind": "deployment-anchors", "entries": []any{}})
+		os.WriteFile(empty, rb, 0o644)
+		_, _, err := Open(anchoredConfig(t, t.TempDir(), p, sha, empty))
+		if err == nil || !strings.Contains(err.Error(), "admission claim") {
+			t.Fatalf("forged anchor opened: %v", err)
+		}
+	})
+	t.Run("instruction root drift refuses Open", func(t *testing.T) {
+		p, sha, reg := anchorWorld(t, func(m map[string]any) {
+			m["instruction_root_system"] = strings.Repeat("99", 32)
+		})
+		_, _, err := Open(anchoredConfig(t, t.TempDir(), p, sha, reg))
+		if err == nil || !strings.Contains(err.Error(), "not the anchored artifact") {
+			t.Fatalf("unanchored instruction root opened: %v", err)
+		}
+	})
+	t.Run("anchored deployment requires the themis root configured", func(t *testing.T) {
+		p, sha, reg := anchorWorld(t, nil)
+		cfg := anchoredConfig(t, t.TempDir(), p, sha, reg)
+		cfg.ThemisRoot = ""
+		if _, _, err := Open(cfg); err == nil {
+			t.Fatal("anchored Open accepted a missing themis root")
+		}
+	})
+}
+
+func TestAnchoredSubmitRefusesUnanchoredBundle(t *testing.T) {
+	// The anchor pins placeholder hashes for the bundle artifacts, so
+	// the walk fixture's genuine artifacts cannot match: submission is
+	// refused at the FIRST unanchored artifact — a mutually
+	// consistent bundle is not a governed bundle (Q-G1-7/Q-G1-9).
+	ap, sha, reg := anchorWorld(t, nil)
+	f := setupVerif(t, happyScript(), &scriptedEvaluator{})
+	anchored, _, err := Open(anchoredConfig(t, t.TempDir(), ap, sha, reg))
+	if err != nil {
+		t.Fatal(err)
+	}
+	env := f.verifEnvelope(t, "anchored-1")
+	if _, err := anchored.SubmitTask(env); err == nil || !strings.Contains(err.Error(), "not the anchored artifact") {
+		t.Fatalf("unanchored bundle accepted: %v", err)
+	}
+
+	// And the model allowlist: an anchor whose bundle pins DO match
+	// but whose allowlist omits the envelope's model refuses too — a
+	// model enters a deployment only by Governance act.
+	regHash := func(p string) string {
+		h, herr := deployment.HashFile(p)
+		if herr != nil {
+			t.Fatal(herr)
+		}
+		return h
+	}
+	ap2, sha2, reg2 := anchorWorld(t, func(m map[string]any) {
+		m["tool_registry"] = regHash(filepath.Join(repoRoot, "policies/tools/registry-v4.json"))
+		m["workflow_ceiling"] = hashBytes([]byte(verifWalkCeiling))
+		m["models"] = []any{"some-other-model"}
+	})
+	anchored2, _, err := Open(anchoredConfig(t, t.TempDir(), ap2, sha2, reg2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := anchored2.SubmitTask(f.verifEnvelope(t, "anchored-2")); err == nil {
+		t.Fatal("bundle accepted under a non-matching anchor")
 	}
 }

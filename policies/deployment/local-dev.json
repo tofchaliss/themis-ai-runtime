@@ -1,0 +1,23 @@
+{
+ "context_contract": "dfb4ade9c5fe1f2d6f8b285ec9099c407842fa16f7a48f87cea051e9d4ed8f96",
+ "contract_registry": "f30d739cc07e7c6565f67d42d02086ba5dac275c2f3b8ba8a6e9398507f5ae6d",
+ "criteria_registry": "a4df8898dca8ef2ecca9819ec3d6a79a9da864a80add9ef925a6f013433fd438",
+ "deployment_version": 1,
+ "exec_ceiling": "17c14c2a99a6e9cab3949ec13123058955db606f7579c17c5c4fe9fdb4c7aaaa",
+ "instruction_policy": "2cfe5f336ba77a251cd2da2f0fc9ec5cd8a93de49f4aa5b7ea9a537e51324485",
+ "instruction_root_safety": "edfffe10aaa248d75a72431b68859e4c642ab4ae89b44a85d9706ec6347315b8",
+ "instruction_root_system": "3abdeeb33ce2c44b2fbed710b7eba3775738b6e70c1417105836437bbe646b43",
+ "instruction_root_themis": "6619710ad5bc1a2b75205ceba61fb60e65e98e3540472e0618919e6a58ea1ee7",
+ "models": [
+  "qwen2.5:7b"
+ ],
+ "name": "local-dev",
+ "regression_set_registry": "d5fe3e245a37d3d2fda9b459a3e3f6e49ec095840caebdd13fcd68e741b7f09c",
+ "skill_catalog": "eb66b311ced2ce321fb7088386684946501048d904539c21b98208a9e7359d9b",
+ "tool_registry": "a3e40677643119308e348314940fbffe6e926612a40437350aacd9a55269e4b6",
+ "version": 1,
+ "workflow_ceiling": "06bf8c0a9f2c06f7297dcdab90f7b12618ad72224ad288e712c391012cbf0f0f",
+ "workflows": [
+  "c10826f24c2612bb7c3135bec152f40a1b7941ffe09d5f735ebbaac536c731a9"
+ ]
+}

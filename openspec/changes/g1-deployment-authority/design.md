@@ -111,3 +111,48 @@ review; the anchor loader reuses the proven registry patterns
 check, consumption pin). Enforcement lands in
 orchestration.Open/SubmitTask. No production wiring of SubmitTask
 before the anchor enforcement exists.
+
+## Implementation record (2026-09-13)
+
+Realized in `src/harness/deployment/` (anchor schema + admission,
+read-only, no write API) and the L7 seam
+(`orchestration/orchestrator.go`):
+
+- **Open** — when `Config.AnchorPath` is set: `AdmitAnchor` resolves
+  the exact anchor bytes, verifies the operator's expected hash,
+  then ESTABLISHES admission against the Governance-active anchors
+  registry (unregistered → refusal naming the D-G1-1A rule;
+  withdrawn → refusal; two-way identity checked). Only then are the
+  instruction roots + policy verified against the ADMITTED anchor's
+  pins (HashDir/HashFile), the themis root required, and the anchor
+  frozen for the orchestrator lifetime (Q-G1-8: adoption by restart
+  only).
+- **SubmitTask** — every governing artifact must BE the anchored
+  one: tool registry, workflow ceiling, exec ceiling, context
+  contract by hash; workflow within the anchored set; envelope model
+  within the anchored allowlist ("a model enters a deployment only
+  by Governance act"). Fail closed, first mismatch refuses, no
+  partial bundle (Q-G1-5/9).
+- **Record** — `governed["deployment_anchor"]` carries the admitted
+  anchor's hash into the task's governed-hash set, so replay and
+  reconstruction establish "executed under this ADMITTED anchor"
+  (Q-G1-7).
+- **Unanchored mode** remains legal ONLY for the recorded
+  test-harness caller role; production wiring requires the anchor.
+
+Proofs: `deployment/anchor_test.go` (admission incl. the
+forged-anchor attack — self-consistent bytes + correct self-computed
+hash + no registration → refused with "identifier, never an
+admission claim"; withdrawn; two-way identity; duplicate
+registration; wrong registry kind; 9 schema refusals; HashDir
+determinism) and `orchestration/verification_seam_test.go`
+(TestAnchoredOpen: admitted open, unregistered refusal, instruction
+root drift refusal, themis root required; TestAnchoredSubmit
+RefusesUnanchoredBundle: bundle-artifact and model-allowlist
+refusals).
+
+Governed registration: `policies/deployment/local-dev.json` (anchor,
+sha256 88bdc772da01c288…) proposed via
+`anchors.proposed.json` → owner act → `anchors.json` ACTIVE
+(2026-09-13). Verified inert before activation (admission refused:
+registry unavailable) and admitted after.

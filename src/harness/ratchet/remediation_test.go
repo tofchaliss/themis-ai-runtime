@@ -878,14 +878,16 @@ func TestObserveAdmission(t *testing.T) {
 // --- Strict evidence-file parsing (M-2/M-4 remediation evidence).
 
 func TestParseEvidenceRefsStrict(t *testing.T) {
-	good := `[{"selector":"s","source":"benchmark_validated_score","ref":"r","sha256":"` + strings.Repeat("ab", 32) + `","value":1}]`
+	goodB, _ := json.Marshal([]EvidenceRef{{Selector: "s", Source: "benchmark_validated_score",
+		Ref: "r", SHA256: strings.Repeat("ab", 32), Value: []byte("1")}})
+	good := string(goodB)
 	if _, err := ParseEvidenceRefs([]byte(good), "t"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := ParseEvidenceRefs([]byte(`[{"selector":"s","selector":"x","source":"b","ref":"r","sha256":"ab","value":1}]`), "t"); err == nil {
+	if _, err := ParseEvidenceRefs([]byte(`[{"selector":"s","selector":"x","source":"b","ref":"r","sha256":"ab"}]`), "t"); err == nil {
 		t.Fatal("duplicate key accepted")
 	}
-	if _, err := ParseEvidenceRefs([]byte(`[{"selector":"s","source":"b","ref":"r","sha256":"ab","value":1,"grade":"A"}]`), "t"); err == nil {
+	if _, err := ParseEvidenceRefs([]byte(`[{"selector":"s","source":"b","ref":"r","sha256":"ab","grade":"A"}]`), "t"); err == nil {
 		t.Fatal("unknown field accepted")
 	}
 	if _, err := ParseEvidenceRefs([]byte(good+" []"), "t"); err == nil {

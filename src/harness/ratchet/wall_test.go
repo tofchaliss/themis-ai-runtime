@@ -268,6 +268,11 @@ func TestRatchetImportersAreClosed(t *testing.T) {
 	allowedImporters := map[string]bool{
 		"ratchet":            true,
 		"cmd/themis-ratchet": true,
+		// Phase C of the L1-L11 integration audit: a TEST-ONLY
+		// package (single _test.go file, no shipping code) driving
+		// the full chain into an L11 comparison. Deliberate,
+		// audit-recorded extension — not a runtime consumer.
+		"integration": true,
 	}
 	fset := token.NewFileSet()
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {

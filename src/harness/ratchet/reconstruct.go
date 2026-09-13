@@ -123,7 +123,15 @@ func Reconstruct(packageBytes []byte, in ReconstructInputs) (*Reconstruction, er
 	}
 	// Establishment witnesses, re-walked per fact (D-G2-1 Q-G2-5):
 	// absent planes are missing inputs; present planes that refuse
-	// the witness are discrepancies.
+	// the witness are discrepancies. The selector's witness_tool pin
+	// is re-applied against the minting event, exactly as at
+	// grounding.
+	pinFor := map[string]string{}
+	for _, sel := range append(append([]Selector{}, c.CandidateSelectors...), c.BaselineSelectors...) {
+		if pin, _, perr := splitToolPin(sel); perr == nil && pin != "" {
+			pinFor[sel.Name] = pin
+		}
+	}
 	for _, f := range append(append([]EvidenceRef{}, p.CandidateEvidence...), p.BaselineEvidence...) {
 		switch {
 		case l6Sources[f.Source]:
@@ -131,7 +139,7 @@ func Reconstruct(packageBytes []byte, in ReconstructInputs) (*Reconstruction, er
 				rec.MissingInputs = append(rec.MissingInputs, fmt.Sprintf("record plane for witness %s/%d (selector %q)", f.TaskID, f.EventSeq, f.Selector))
 				continue
 			}
-			if detail := verifyL6Witness(in.Root, f.Source, f.Ref, f.TaskID, f.EventSeq, ""); detail != "" {
+			if detail := verifyL6Witness(in.Root, f.Source, f.Ref, f.TaskID, f.EventSeq, pinFor[f.Selector]); detail != "" {
 				rec.Discrepancies = append(rec.Discrepancies, fmt.Sprintf("selector %q: %s", f.Selector, detail))
 			}
 		case benchSources[f.Source]:
@@ -214,7 +222,10 @@ func reverifyFacts(selectors []Selector, facts []EvidenceRef, side string) (map[
 			disc = append(disc, fmt.Sprintf("%s selector %q: embedded value bytes fail their declared hash", side, f.Selector))
 			continue
 		}
-		if r := applyParams(sel, f, side); r != nil {
+		if _, params, perr := splitToolPin(sel); perr != nil {
+			disc = append(disc, fmt.Sprintf("%s selector %q: registered params unreadable", side, f.Selector))
+			continue
+		} else if r := applyParamsMap(params, sel.Name, f, side); r != nil {
 			disc = append(disc, fmt.Sprintf("%s selector %q: fact no longer satisfies the registered params", side, f.Selector))
 			continue
 		}

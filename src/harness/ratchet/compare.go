@@ -54,11 +54,16 @@ func CheckReasonClass(r ReasonClass) error {
 // proposition referencing evidence outside its enumerated record set
 // is invalid (D-L11-4 §1) — grounding is checked, not trusted.
 type EvidenceRef struct {
-	Selector string          `json:"selector"`
-	Source   string          `json:"source"`
-	Ref      string          `json:"ref"` // ObjectID / plane-canonical path
-	SHA256   string          `json:"sha256"`
-	Value    json.RawMessage `json:"value"`
+	Selector string `json:"selector"`
+	Source   string `json:"source"`
+	Ref      string `json:"ref"` // ObjectID / plane-canonical path
+	SHA256   string `json:"sha256"`
+	// Value carries the exact fact bytes. []byte (base64 in JSON) on
+	// purpose: json.RawMessage would be COMPACTED when the package
+	// serializes, silently breaking byte-exactness for any
+	// non-compact source bytes (Phase C surfaced this) — the value
+	// must round-trip bit-identically or the hash chain lies.
+	Value []byte `json:"value"`
 
 	// The witness (D-G2-1): for L6-plane facts, the committed event
 	// that ESTABLISHED this object as a fact of this kind — task
@@ -308,8 +313,15 @@ func checkEvidence(selectors []Selector, facts []EvidenceRef, side string) (map[
 		}
 		// Registered selector params applied here too (not only at
 		// grounding), so no package can exist whose facts violate
-		// them — reconstruction parity by construction.
-		if r := applyParams(sel, f, side); r != nil {
+		// them — reconstruction parity by construction. The reserved
+		// witness_tool pin is witness-plane (checked against the
+		// minting event at grounding/reconstruction), never a fact
+		// field — split before subset-matching.
+		_, params, perr := splitToolPin(sel)
+		if perr != nil {
+			return nil, &RefusalFact{Reason: ReasonComparabilityViolation, Detail: fmt.Sprintf("%s selector %q: %v", side, f.Selector, perr)}, nil
+		}
+		if r := applyParamsMap(params, sel.Name, f, side); r != nil {
 			return nil, r, nil
 		}
 		bySel[f.Selector] = f.Value

@@ -281,3 +281,40 @@ Remaining in sequence: full negative-space sweep → Phase C
 end-to-end walk. Deferred by owner decision: R1 disposition
 execution (decommission/rebase themis-serve) — owner chose the
 action class; the removal/rebase itself is scheduled work.
+
+
+## Phase C — end-to-end chain register (2026-09-13): PASS
+
+src/harness/integration/phasec_test.go (test-only package;
+deliberate, commented extension of the ratchet importer wall). ONE
+workflow across the chain, twice (baseline walk + candidate walk in
+one state root):
+
+task initiation → L1 instructions INCLUDING the themis root (D7
+wired) → L2 context contract → L4 authorization → L5 execution
+(pinned-git workspace) → L6 record-before-effect → L7 walk gated on
+the REAL registered report-valid@1 contract (L10 PASS opens
+@complete) → the walks' OWN committed events witness the L11 facts
+(l6_execution_record via the verify_report l4-audit events,
+witness_tool pinned) → admission observed against the REAL
+Governance door (policies/skills/catalog.json, byte-hash-grounded)
+→ Compare mints the package (Δ = +0.09; run identities DERIVED as
+task:remediate-base/task:remediate-cand) → derivations
+(better-under-K) → cold reconstruction CONFIRMED from package
+bytes + criterion bytes + real catalog bytes + the same record
+plane → the door byte-identical after the whole chain → negative
+arc: a model-turn object from the same genuine history refuses to
+ground (the laundering path closed under real events, not just
+fixtures).
+
+Found-and-fixed during Phase C (implementation subtlety, no
+decision touched): EvidenceRef.Value was json.RawMessage, which
+package serialization COMPACTS — silently breaking byte-exactness
+for non-compact source bytes. Now []byte (base64 in JSON):
+bit-identical round-trip, hash chain honest. Compare and
+reconstruction also learned to split the witness_tool pin from
+fact-byte params (grounding parity).
+
+Audit sequence COMPLETE: G1/G2 closed, R1 disposition recorded
+(execution scheduled), R2–R4 ratified, D1–D13 remediated,
+negative-space sweep green (go test ./... exit 0), Phase C PASS.

@@ -103,12 +103,12 @@ func buildWorld(t *testing.T) *cliWorld {
 	vb, _ := json.Marshal(map[string]any{
 		"model": "qwen2.5:7b", "current": "2026-09-12", "pass": true, "scores_digest": digest})
 	os.WriteFile(filepath.Join(vDir, "verdict.json"), vb, 0o644)
-	cf, _ := json.Marshal([]map[string]any{{
-		"selector": "candidate_score", "source": "benchmark_validated_score",
-		"ref": "validation/2026-09-12/qwen2.5:7b/cand.json", "sha256": sha256hex(candRecord), "value": json.RawMessage(candRecord)}})
-	bf, _ := json.Marshal([]map[string]any{{
-		"selector": "baseline_score", "source": "benchmark_validated_score",
-		"ref": "validation/2026-09-12/qwen2.5:7b/base.json", "sha256": sha256hex(baseRecord), "value": json.RawMessage(baseRecord)}})
+	cf, _ := json.Marshal([]ratchet.EvidenceRef{{
+		Selector: "candidate_score", Source: "benchmark_validated_score",
+		Ref: "validation/2026-09-12/qwen2.5:7b/cand.json", SHA256: sha256hex(candRecord), Value: candRecord}})
+	bf, _ := json.Marshal([]ratchet.EvidenceRef{{
+		Selector: "baseline_score", Source: "benchmark_validated_score",
+		Ref: "validation/2026-09-12/qwen2.5:7b/base.json", SHA256: sha256hex(baseRecord), Value: baseRecord}})
 	w.candFacts = filepath.Join(w.gov, "cand-facts.json")
 	w.baseFacts = filepath.Join(w.gov, "base-facts.json")
 	os.WriteFile(w.candFacts, cf, 0o644)

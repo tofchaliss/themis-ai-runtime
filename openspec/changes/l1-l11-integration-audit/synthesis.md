@@ -318,3 +318,28 @@ fact-byte params (grounding parity).
 Audit sequence COMPLETE: G1/G2 closed, R1 disposition recorded
 (execution scheduled), R2–R4 ratified, D1–D13 remediated,
 negative-space sweep green (go test ./... exit 0), Phase C PASS.
+
+
+## R1 EXECUTED — F-1 CLOSED BY REMOVAL (2026-09-13)
+
+Consumer determination evidence (recorded): no repository consumer
+(sole importer of internal/service was cmd/themis-serve itself;
+benchmarks reference it in prose only); no deployment manifest of
+any kind in the repository; no listener on :8080; no running
+process; bin/themis-serve a stale git-ignored local build (Sep 4).
+Evidence-bounded confirmation: no consumer observable from the
+repository or this host.
+
+Removed: internal/service/{server.go,server_test.go,guardrails.go,
+guardrails_test.go,prompts/}, cmd/themis-serve, the stale local
+binary, the TestGuardrails block. RETAINED: router.go +
+router_test.go — the D-L11-8 Class-2 consumer, explicitly not
+collateral (owner instruction). README + bench help updated.
+
+F-1 disposition: CLOSED BY REMOVAL — the template-interpolation
+execution path no longer exists; not re-recorded as architecture.
+If an external consumer ever surfaces, the rebase-onto-L7-seam path
+applies (git history preserves the removed surface).
+
+Next per the fixed sequence: G1 Deployment Anchor implementation →
+Class-3 pass → production-wiring decision.

@@ -213,7 +213,7 @@ var gateCmd = &cobra.Command{
 		"points. Intended as a CI quality gate for model, prompt, or " +
 		"quantization changes.\n\n" +
 		"Records the decision at gate/<date>/<model>/verdict.json. " +
-		"themis-serve routes only to runs with a passing verdict, so a " +
+		"the model router admits only runs with a passing verdict, so a " +
 		"run is invisible to routing until this command admits it. The " +
 		"baseline must itself be an admitted run. To bootstrap a " +
 		"model's first run (and only then), gate it against itself: " +

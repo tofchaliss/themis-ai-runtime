@@ -72,9 +72,14 @@ func TestRatchetEndToEndSlice(t *testing.T) {
 	// its bytes ground the admission observation.
 	baselineContent := []byte(`{"skill":"investigate-cve","version":1}`)
 	doorRegistryRaw, _ := json.Marshal(map[string]any{
-		"catalog": []any{map[string]any{"name": "investigate-cve", "version": 1,
-			"sha256": hashBytes(baselineContent), "state": "active"}},
+		"version": 1,
+		"entries": []any{map[string]any{"name": "investigate-cve", "version": 1,
+			"composition_sha256": hashBytes(baselineContent), "state": "active"}},
 	})
+	doorRegistryPath := filepath.Join(govDir, "l9-catalog.json")
+	if err := os.WriteFile(doorRegistryPath, doorRegistryRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	govSnapshot := func() map[string]string {
 		out := map[string]string{}
@@ -138,21 +143,19 @@ func TestRatchetEndToEndSlice(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	admission := &AdmissionObservation{
-		Door: "l9-catalog", DoorRegistryHash: hashBytes(doorRegistryRaw),
-		Name: "investigate-cve", Version: 1,
-		ArtifactSHA256: hashBytes(baselineContent),
-		State:          "active", CurrentActive: true,
-		ObservedAt: "2026-09-12T12:00:00Z",
+	admission, err := ObserveAdmission("l9-catalog", doorRegistryPath, "investigate-cve", 1, "2026-09-12T12:00:00Z")
+	if err != nil || admission == nil {
+		t.Fatalf("door resolution failed: %v %v", admission, err)
 	}
 	in := CompareInput{
 		CriterionRef:    "bench-score-delta@1",
 		Criterion:       criterion,
+		RegistrySHA256:  reg.Hash,
 		CandidateHash:   hashBytes(proposedContent),
 		ClaimedBaseline: hashBytes(baselineContent),
 		Admission:       admission,
-		CandidateFacts:  []EvidenceRef{fact("candidate_score", "benchmark_validated_score", 0.91)},
-		BaselineFacts:   []EvidenceRef{fact("baseline_score", "benchmark_validated_score", 0.82)},
+		CandidateFacts:  []EvidenceRef{scoreFact("candidate_score", 0.91)},
+		BaselineFacts:   []EvidenceRef{scoreFact("baseline_score", 0.82)},
 		RunIdentities:   []string{"l4:101", "l4:102"},
 		PlanRef:         planID,
 	}
@@ -181,7 +184,7 @@ func TestRatchetEndToEndSlice(t *testing.T) {
 	}
 	sp, err := BuildRegressionPackage("core-regression@1", set, map[string]*ComparisonPackage{
 		"bench-score-delta@1": pkg,
-	})
+	}, map[string]*Criterion{"bench-score-delta@1": criterion})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,7 +226,7 @@ func TestRatchetEndToEndSlice(t *testing.T) {
 	if !bytes.Equal(stored, pkgBytes) {
 		t.Fatal("stored bytes differ from canonical bytes")
 	}
-	rec, err := Reconstruct(stored, criterionRaw)
+	rec, err := Reconstruct(stored, criterionRaw, doorRegistryRaw)
 	if err != nil || rec.Result != ReconConfirmed {
 		t.Fatalf("cold reconstruction: %+v %v", rec, err)
 	}
@@ -248,6 +251,58 @@ func TestRatchetEndToEndSlice(t *testing.T) {
 		if !strings.HasPrefix(id, "sha256:") {
 			t.Fatalf("instance %s is not content-addressed", id)
 		}
+	}
+}
+
+// The *.proposed.* handoff arc (test review M6 gap): a proposed
+// registry is INERT — resolution against it is impossible because it
+// is not the governed registry file; the owner act (copying the
+// proposed bytes into the governed location) is what makes
+// registration real. The machinery has no code path performing that
+// act — this test performs it as the owner, byte-for-byte.
+func TestProposedHandoffArc(t *testing.T) {
+	dir := t.TempDir()
+	criterionRaw := marshalCriterion(t, validCriterionMap())
+	if err := os.WriteFile(filepath.Join(dir, "criterion.json"), criterionRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	regRaw, _ := json.Marshal(map[string]any{
+		"version": 1, "kind": "criteria",
+		"entries": []any{map[string]any{
+			"name": "bench-score-delta", "version": 1,
+			"artifact_sha256": hashBytes(criterionRaw),
+			"artifact_path":   "criterion.json", "state": "active",
+		}},
+	})
+	proposed := filepath.Join(dir, "criteria-registry.proposed.json")
+	governed := filepath.Join(dir, "criteria-registry.json")
+	if err := os.WriteFile(proposed, regRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Before the owner act: the governed registry does not exist —
+	// nothing resolves; the proposed file is data.
+	if _, err := LoadRegistry(governed); err == nil {
+		t.Fatal("resolution against a nonexistent governed registry succeeded")
+	}
+
+	// The OWNER ACT (performed here by the test as the owner): the
+	// proposed bytes become the governed registry.
+	if err := os.WriteFile(governed, regRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	reg, err := LoadRegistry(governed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := reg.ResolveCriterion("bench-score-delta@1"); err != nil {
+		t.Fatalf("post-activation resolution failed: %v", err)
+	}
+	// The proposed file remains, unchanged, as the record of what
+	// was proposed — activation copied, never mutated.
+	pb, _ := os.ReadFile(proposed)
+	if hashBytes(pb) != hashBytes(regRaw) {
+		t.Fatal("proposed bytes changed during activation")
 	}
 }
 

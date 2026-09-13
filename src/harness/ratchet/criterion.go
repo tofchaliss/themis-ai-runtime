@@ -228,6 +228,14 @@ func ParseCriterion(raw []byte, origin string) (*Criterion, error) {
 	if !strings.HasPrefix(trimmed, "{") || !json.Valid(c.Config) {
 		return nil, fmt.Errorf("%w: %s: config must be a JSON object (use {} for none)", ErrCriterion, origin)
 	}
+	var cfgKeys map[string]json.RawMessage
+	if err := json.Unmarshal(c.Config, &cfgKeys); err == nil {
+		for k := range cfgKeys {
+			if err := checkNameSemantics(k, "config key"); err != nil {
+				return nil, fmt.Errorf("%w: %s: %v", ErrCriterion, origin, err)
+			}
+		}
+	}
 	if len(c.DeltaShape) == 0 {
 		return nil, fmt.Errorf("%w: %s: delta_shape required", ErrCriterion, origin)
 	}
@@ -291,6 +299,24 @@ func checkSelectors(sels []Selector, side, origin string) error {
 		}
 		if len(s.Params) == 0 || !json.Valid(s.Params) || !strings.HasPrefix(strings.TrimSpace(string(s.Params)), "{") {
 			return fmt.Errorf("%w: %s: selector %q: params must be a JSON object (use {} for none)", ErrCriterion, origin, s.Name)
+		}
+		// Params are scalar pins with fixed subset-match semantics
+		// (applied mechanically at grounding) — nested structures
+		// would be a query language; and the D-L11-18 lexical wall
+		// covers param keys too.
+		var params map[string]any
+		if err := json.Unmarshal(s.Params, &params); err != nil {
+			return fmt.Errorf("%w: %s: selector %q: params unreadable: %v", ErrCriterion, origin, s.Name, err)
+		}
+		for k, v := range params {
+			if err := checkNameSemantics(k, "selector param"); err != nil {
+				return fmt.Errorf("%w: %s: %v", ErrCriterion, origin, err)
+			}
+			switch v.(type) {
+			case string, float64, bool:
+			default:
+				return fmt.Errorf("%w: %s: selector %q: param %q must be a scalar — parameters, never programs", ErrCriterion, origin, s.Name, k)
+			}
 		}
 	}
 	return nil

@@ -55,9 +55,12 @@ type RegressionPackage struct {
 // cross-constituent inconsistency means the set-level package DOES
 // NOT EXIST (D-L11-9 case A) — the error names why; nothing partial
 // is produced, and there is no coverage field to misread.
-func BuildRegressionPackage(setRef string, set *RegressionSet, constituents map[string]*ComparisonPackage) (*RegressionPackage, error) {
+func BuildRegressionPackage(setRef string, set *RegressionSet, constituents map[string]*ComparisonPackage, criteria map[string]*Criterion) (*RegressionPackage, error) {
 	if set == nil {
 		return nil, fmt.Errorf("%w: no resolved regression set", ErrResolve)
+	}
+	if criteria == nil {
+		return nil, fmt.Errorf("%w: no resolved member criteria — constituents bind to registered artifact hashes, not ref strings", ErrResolve)
 	}
 	var candidate, baseline string
 	out := &RegressionPackage{
@@ -73,6 +76,16 @@ func BuildRegressionPackage(setRef string, set *RegressionSet, constituents map[
 		}
 		if pkg.CriterionRef != member {
 			return nil, fmt.Errorf("%w: constituent for %s was produced under %s — member identity must match exactly", ErrResolve, member, pkg.CriterionRef)
+		}
+		// Bind by registered bytes, not by ref string (close-review
+		// M-3): a package self-declaring the member ref but produced
+		// under different criterion bytes cannot claim set identity.
+		mc, ok := criteria[member]
+		if !ok || mc == nil {
+			return nil, fmt.Errorf("%w: member %s has no resolved registered criterion for hash binding", ErrResolve, member)
+		}
+		if pkg.CriterionSHA256 != mc.SHA256 {
+			return nil, fmt.Errorf("%w: constituent for %s was produced under criterion bytes that are not the registered %s", ErrResolve, member, member)
 		}
 		if candidate == "" {
 			candidate, baseline = pkg.CandidateHash, pkg.BaselineHash

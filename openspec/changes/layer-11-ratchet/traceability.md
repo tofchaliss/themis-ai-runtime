@@ -37,17 +37,96 @@ result, the full compare arc runs over it, everything durable.
 Class-6 discipline held: readable ≠ authoritative; authorship
 attributed ("qwen2.5:7b" via "live-proof:ollama").
 
-## Explicit gaps / residuals (per Gate 0)
+## M7 close reviews and remediation (2026-09-13)
 
-- Knowledge family: representation + egress-class storage proven
-  (TestKnowledgeCandidateRepresentationOnly); HANDOFF to the Themis
-  ingestion door NOT proven — door unavailable in this environment.
-  Explicit residual per the Gate 0 rule; no substitute authority
-  introduced.
-- CheckAppendOnly is implemented and proven as a check; a LIVE
-  consumption wall (the L10 seam precedent) awaits a resident
-  consuming process — the CLI is one-shot, each invocation loads one
-  atomic registry state. Recorded, not hidden.
-- cmd/themis-ratchet is a thin flag wrapper without its own test
-  binary run; behavior covered at package level. (Review may
-  reclassify.)
+Three Class-3 reviews ran against b16fc87..fca10e0. Convergent core
+finding (security CRITICAL C-1 = architecture H-1; security H-1 =
+architecture H-2): the invocation boundary trusted its caller for
+inputs the constitution assigns to L11's own mechanical
+verification. Remediated:
+
+- **C-1 admission forgery → door.go**: ObserveAdmission resolves
+  the owning door's registry BYTES (closed door table:
+  l9-catalog/l10-contract-registry/l11-criteria/l11-regression-sets)
+  and constructs the observation; the CLI no longer accepts an
+  --admission file. Reconstruct now takes door-registry bytes and
+  re-verifies the observation via the SAME derivation
+  (ReverifyAdmission) — hash mismatch = missing input, content
+  disagreement = discrepancy. Proven: TestObserveAdmission incl.
+  the forged-observation-cannot-reconstruct arc.
+- **H-1 evidence self-grounding → ground.go**: GroundFacts resolves
+  L6-plane refs in the store (byte equality, ObjectID syntax) and
+  external-plane refs through a confined resolver; registered
+  selector params are mechanically APPLIED (scalar subset-match) at
+  grounding, at Compare, and at reconstruction. Params are
+  scalar-only and lexically walled at registration. Proven:
+  TestGroundFacts, TestCompareParamsApplied.
+- **Refusal reachability (arch M-1/test H)**: acceptance boundary
+  defined in the CLI — syntax errors are usage errors (exit 1,
+  nothing minted); after acceptance, unregistered/withdrawn
+  criterion and registry-pin mismatch mint DURABLE refusals
+  (ReasonUnregisteredArtifact now reachable). Proven:
+  TestCLIContract.
+- **Registry binding (sec M-5)**: packages carry
+  criteria_registry_sha256; --registry-sha256 pin = admission-at-
+  consumption (the verdict/digest pattern).
+- **Missing-inputs durability (arch M-2)**: cmdReconstruct stores
+  missing-inputs facts as well as discrepancies.
+- **Set hash binding (arch M-3)**: BuildRegressionPackage binds
+  constituents to registered criterion BYTES (hash), not ref
+  strings; cmdSet resolves members against the criteria registry
+  and refuses non-member bindings.
+- **Strict CLI inputs (sec M-2 / arch M-4)**: ParseEvidenceRefs
+  (dup-key, unknown-field, trailing, 4MiB cap); all CLI file reads
+  bounded.
+- **Reconstruction parity (sec M-3)**: reverifyFacts now applies
+  duplicate-selector, source-match, and params checks; run-identity
+  presence, candidate-hash and registry-binding syntax re-verified.
+- **Test-review mutants**: ~19 reasoned survivors killed
+  (remediation_test.go: tie bands, boundaries, scalarization-equal,
+  checkDeltaShape ×3, CanonicalDelta golden bytes, reconstruct
+  clauses, set cross-constituent, plan-conformance clauses,
+  loader-refusal expansion ×30+). Wall upgrades: exported-method
+  closure, io/ioutil+syscall+dot-import, full-path importer match,
+  pointer/alias writes.
+- **CLI contract (test H)**: compiled-binary suite — refusal→exit 0
+  stored; usage error→exit 1 nothing minted; cross-process
+  reconstruction CONFIRMED (the D-L11-17 cold-binary evidence).
+- ***.proposed.* handoff arc (test H)**: TestProposedHandoffArc —
+  proposed registries are inert; the owner act activates;
+  activation copies, never mutates. policies/ratchet/
+  {criteria,regression-sets}.proposed.json created AWAITING the
+  owner's Governance act (bench-score-delta@1, core-regression@1).
+
+## Explicit gaps / residuals (per Gate 0 + reviews)
+
+- Knowledge family: representation + egress-class storage proven;
+  HANDOFF to the Themis ingestion door NOT proven — door
+  unavailable. Explicit residual per the Gate 0 rule; no substitute
+  authority introduced.
+- Live CheckAppendOnly wall: the CLI is process-per-invocation;
+  append-only continuity across invocations is enforced by the
+  --registry-sha256 consumption pin (supplied by the door/operator,
+  the gatePassed pattern) rather than persisted prior state — a
+  persisted "last observed registry" would be L11-owned mutable
+  state (D-L11-11). Full CheckAppendOnly live wall applies when a
+  resident consumer exists. RECORDED DECISION, owner ratification
+  at closure.
+- No-discard scope (sec H-2, classified): the MACHINERY has no
+  discard path — results are emitted only after durable store, and
+  refusal/package paths are symmetric. Operator-level suppression
+  (throwaway state roots, out-of-band re-runs) is request-level
+  cherry-picking: constitutionally visible-not-prevented (D-L11-4
+  §6), defended at doors via complete-under-S. The compute-to-store
+  crash window mints nothing and emits nothing — indistinguishable
+  from never-accepted. RECORDED CLASSIFICATION, owner ratification
+  at closure.
+- Sensitivity inheritance (sec M-4): packages embed evidence bytes
+  verbatim; no classification field exists in v1. RESIDUAL +
+  registration-review rule: criteria selecting sensitive-plane
+  evidence must not be registered until inheritance machinery
+  exists. Local single-user store makes this acceptable for v1.
+- Advisory rationale is unbounded untrusted text; terminal emit is
+  JSON-escaped; downstream renderers must treat it as data.
+- Live proof is machine-local (ollama), skip-gated — recorded as
+  such.

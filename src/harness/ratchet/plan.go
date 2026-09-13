@@ -128,5 +128,14 @@ func CheckPlanConformance(plan *EvaluationPlan, planID string, pkg *ComparisonPa
 	if !pinned && len(plan.Criteria) > 0 {
 		mismatches = append(mismatches, fmt.Sprintf("package criterion %s is not pinned by the plan", pkg.CriterionRef))
 	}
+	if plan.ClaimedBaseline != nil && pkg.ClaimedBaseline != plan.ClaimedBaseline.ArtifactSHA256 {
+		mismatches = append(mismatches, "package claimed baseline is not the plan's claimed baseline")
+	}
+	// NOTE (recorded limitation): RequiredRuns cannot be matched
+	// against pkg.RunIdentities without resolving run records —
+	// run-level conformance needs the run's plan_reference provenance
+	// (D-L11-10 §5) and is checked where those records are read. A
+	// sets-only plan likewise gets no criterion-pin check here; set
+	// membership is enforced by BuildRegressionPackage.
 	return mismatches
 }

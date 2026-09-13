@@ -83,6 +83,11 @@ type AdmissionObservation struct {
 type CompareInput struct {
 	CriterionRef string     // exact "name@version" as requested
 	Criterion    *Criterion // resolved via Registry.ResolveCriterion
+	// RegistrySHA256 binds the package to the criteria-registry
+	// state in force at invocation (the seam authRegistrySHA256
+	// precedent) — packages minted under a private registry are
+	// distinguishable from governed ones.
+	RegistrySHA256 string
 
 	CandidateHash   string // content commitment of the candidate side
 	ClaimedBaseline string // the candidate's CLAIM (D-L11-5 §6); may be ""
@@ -101,6 +106,7 @@ type CompareInput struct {
 // (D-L11-11). Terminal — it triggers nothing (D-L11-14).
 type RefusalFact struct {
 	Artifact     string      `json:"artifact"` // "l11-refusal"
+	Schema       int         `json:"schema"`
 	Reason       ReasonClass `json:"reason"`
 	Detail       string      `json:"detail"`
 	CriterionRef string      `json:"criterion_ref"`
@@ -120,6 +126,7 @@ type ComparisonPackage struct {
 
 	CriterionRef    string `json:"criterion_ref"`
 	CriterionSHA256 string `json:"criterion_sha256"`
+	RegistrySHA256  string `json:"criteria_registry_sha256"`
 	ComparatorName  string `json:"comparator_name"`
 	ComparatorVer   int    `json:"comparator_version"`
 	ConfigSHA256    string `json:"config_sha256"`
@@ -150,9 +157,13 @@ func Compare(in CompareInput) (*ComparisonPackage, *RefusalFact, error) {
 		return nil, nil, fmt.Errorf("%w: no resolved criterion supplied", ErrResolve)
 	}
 	c := in.Criterion
+	if !shaSyntax.MatchString(in.RegistrySHA256) {
+		return nil, nil, fmt.Errorf("%w: no criteria-registry hash supplied — packages must bind to the registry in force", ErrResolve)
+	}
 	refuse := func(reason ReasonClass, detail string) (*ComparisonPackage, *RefusalFact, error) {
 		return nil, &RefusalFact{
 			Artifact:     "l11-refusal",
+			Schema:       1,
 			Reason:       reason,
 			Detail:       detail,
 			CriterionRef: in.CriterionRef,
@@ -172,6 +183,9 @@ func Compare(in CompareInput) (*ComparisonPackage, *RefusalFact, error) {
 	adm := *in.Admission
 	if adm.Door == "" || !shaSyntax.MatchString(adm.DoorRegistryHash) || !shaSyntax.MatchString(adm.ArtifactSHA256) {
 		return refuse(ReasonUnadmittedBaseline, "admission observation is not grounded in door-registry bytes")
+	}
+	if adm.Name == "" || adm.Version < 1 || adm.ObservedAt == "" {
+		return refuse(ReasonUnadmittedBaseline, "admission observation lacks entry identity or observation instant")
 	}
 	if adm.State == "withdrawn" {
 		return refuse(ReasonWithdrawnArtifact, "baseline is withdrawn at its owning door — new comparison refused; history stands")
@@ -229,6 +243,7 @@ func Compare(in CompareInput) (*ComparisonPackage, *RefusalFact, error) {
 		Schema:            1,
 		CriterionRef:      in.CriterionRef,
 		CriterionSHA256:   c.SHA256,
+		RegistrySHA256:    in.RegistrySHA256,
 		ComparatorName:    c.Comparator.Name,
 		ComparatorVer:     c.Comparator.Version,
 		ConfigSHA256:      hashBytes(c.Config),
@@ -271,6 +286,12 @@ func checkEvidence(selectors []Selector, facts []EvidenceRef, side string) (map[
 		}
 		if !shaSyntax.MatchString(f.SHA256) || hashBytes(f.Value) != f.SHA256 {
 			return nil, &RefusalFact{Reason: ReasonIntegrityFailure, Detail: fmt.Sprintf("%s selector %q: value bytes do not match their declared hash", side, f.Selector)}, nil
+		}
+		// Registered selector params applied here too (not only at
+		// grounding), so no package can exist whose facts violate
+		// them — reconstruction parity by construction.
+		if r := applyParams(sel, f, side); r != nil {
+			return nil, r, nil
 		}
 		bySel[f.Selector] = f.Value
 	}

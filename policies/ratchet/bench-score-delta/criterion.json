@@ -1,0 +1,64 @@
+{
+ "version": 1,
+ "name": "bench-score-delta",
+ "criterion_version": 1,
+ "families": [
+  "skill-revision"
+ ],
+ "candidate_selectors": [
+  {
+   "name": "candidate_score",
+   "source": "benchmark_validated_score",
+   "params": {
+    "benchmark": "themis-bench-core"
+   }
+  }
+ ],
+ "baseline_selectors": [
+  {
+   "name": "baseline_score",
+   "source": "benchmark_validated_score",
+   "params": {
+    "benchmark": "themis-bench-core"
+   }
+  }
+ ],
+ "comparator": {
+  "name": "numeric-score-delta",
+  "version": 1
+ },
+ "config": {
+  "fields": [
+   {
+    "delta": "score_delta",
+    "candidate": "candidate_score",
+    "baseline": "baseline_score"
+   }
+  ]
+ },
+ "delta_shape": [
+  {
+   "name": "score_delta",
+   "type": "number"
+  }
+ ],
+ "ordering": {
+  "kind": "per-metric",
+  "fields": [
+   {
+    "name": "score_delta",
+    "direction": "maximize",
+    "equal_tolerance": 0.0,
+    "non_regression_min": -0.05
+   }
+  ]
+ },
+ "baseline_constraints": [
+  "requires-current-active"
+ ],
+ "provenance": [
+  "evidence_records",
+  "run_identities",
+  "admission_observation"
+ ]
+}

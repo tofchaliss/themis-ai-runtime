@@ -1,0 +1,14 @@
+{
+ "version": 1,
+ "kind": "criteria",
+ "entries": [
+  {
+   "name": "bench-score-delta",
+   "version": 1,
+   "artifact_sha256": "f08ab1781e9214432827f5b456933a9ed998df788c0a610f447bd740aaa29e15",
+   "artifact_path": "bench-score-delta/criterion.json",
+   "state": "active",
+   "steward": "security-engineering"
+  }
+ ]
+}

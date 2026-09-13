@@ -40,11 +40,15 @@ type Reconstruction struct {
 }
 
 // Reconstruct re-derives a comparison package cold: package bytes +
-// the registered criterion bytes are the ONLY inputs (plus this
-// binary's registered comparator table). criterionBytes may be nil
-// when the criterion could not be obtained — that is a missing-inputs
-// fact, not a discrepancy. A machinery error mints nothing.
-func Reconstruct(packageBytes, criterionBytes []byte) (*Reconstruction, error) {
+// the registered criterion bytes + the observed door-registry bytes
+// are the ONLY inputs (plus this binary's registered comparator
+// table). criterionBytes / doorRegistryBytes may be nil when they
+// could not be obtained — missing-inputs facts, not discrepancies.
+// A machinery error mints nothing. Reconstruction re-applies the
+// SAME checks Compare applied (minus plane availability), so
+// "confirmed" means "reproducible as Compare's proposition" — not
+// merely internally consistent (close-review M-3).
+func Reconstruct(packageBytes, criterionBytes, doorRegistryBytes []byte) (*Reconstruction, error) {
 	rec := &Reconstruction{Artifact: "l11-reconstruction", PackageID: "sha256:" + hashBytes(packageBytes)}
 
 	dec := jsonDecoder(packageBytes)
@@ -89,6 +93,24 @@ func Reconstruct(packageBytes, criterionBytes []byte) (*Reconstruction, error) {
 	if p.Admission.ArtifactSHA256 != p.BaselineHash {
 		rec.Discrepancies = append(rec.Discrepancies, "package baseline hash disagrees with its own admission observation")
 	}
+	if !shaSyntax.MatchString(p.CandidateHash) {
+		rec.Discrepancies = append(rec.Discrepancies, "package candidate hash is malformed")
+	}
+	if !shaSyntax.MatchString(p.RegistrySHA256) {
+		rec.Discrepancies = append(rec.Discrepancies, "package lacks a well-formed criteria-registry binding")
+	}
+	if len(p.RunIdentities) == 0 {
+		rec.Discrepancies = append(rec.Discrepancies, "package carries no run identities — Compare could not have produced it")
+	}
+	// D-L11-5 §2 re-verification: the admission observation against
+	// the door registry bytes it claims to be grounded in.
+	if doorRegistryBytes == nil {
+		rec.MissingInputs = append(rec.MissingInputs, fmt.Sprintf("door-registry bytes for %s (sha256 %s)", p.Admission.Door, p.Admission.DoorRegistryHash))
+	} else if hashBytes(doorRegistryBytes) != p.Admission.DoorRegistryHash {
+		rec.MissingInputs = append(rec.MissingInputs, "supplied door-registry bytes do not hash to the observed registry state")
+	} else {
+		rec.Discrepancies = append(rec.Discrepancies, ReverifyAdmission(p.Admission, doorRegistryBytes)...)
+	}
 	candidate, missing, disc := reverifyFacts(c.CandidateSelectors, p.CandidateEvidence, "candidate")
 	rec.MissingInputs = append(rec.MissingInputs, missing...)
 	rec.Discrepancies = append(rec.Discrepancies, disc...)
@@ -125,18 +147,33 @@ func Reconstruct(packageBytes, criterionBytes []byte) (*Reconstruction, error) {
 // declared hashes and the criterion's selector enumeration.
 func reverifyFacts(selectors []Selector, facts []EvidenceRef, side string) (map[string]json.RawMessage, []string, []string) {
 	var missing, disc []string
-	declared := map[string]bool{}
+	declared := map[string]Selector{}
 	for _, s := range selectors {
-		declared[s.Name] = true
+		declared[s.Name] = s
 	}
 	bySel := map[string]json.RawMessage{}
+	seen := map[string]bool{}
 	for _, f := range facts {
-		if !declared[f.Selector] {
+		sel, ok := declared[f.Selector]
+		if !ok {
 			disc = append(disc, fmt.Sprintf("%s evidence names undeclared selector %q", side, f.Selector))
+			continue
+		}
+		if seen[f.Selector] {
+			disc = append(disc, fmt.Sprintf("%s selector %q carries more than one fact — Compare refuses this shape", side, f.Selector))
+			continue
+		}
+		seen[f.Selector] = true
+		if f.Source != sel.Source {
+			disc = append(disc, fmt.Sprintf("%s selector %q: fact source %q disagrees with the declared source %q", side, f.Selector, f.Source, sel.Source))
 			continue
 		}
 		if hashBytes(f.Value) != f.SHA256 {
 			disc = append(disc, fmt.Sprintf("%s selector %q: embedded value bytes fail their declared hash", side, f.Selector))
+			continue
+		}
+		if r := applyParams(sel, f, side); r != nil {
+			disc = append(disc, fmt.Sprintf("%s selector %q: fact no longer satisfies the registered params", side, f.Selector))
 			continue
 		}
 		bySel[f.Selector] = f.Value

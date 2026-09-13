@@ -32,26 +32,51 @@ func fact(selector, source string, value any) EvidenceRef {
 	}
 }
 
-func admittedObs() *AdmissionObservation {
-	return &AdmissionObservation{
-		Door: "l9-catalog", DoorRegistryHash: strings.Repeat("11", 32),
-		Name: "investigate-cve", Version: 1,
-		ArtifactSHA256: strings.Repeat("22", 32),
-		State:          "active", CurrentActive: true,
-		ObservedAt: "2026-09-12T00:00:00Z",
+// scoreFact satisfies the fixture criterion's registered params
+// ({"benchmark":"themis-bench-core"}) — params are mechanically
+// applied at Compare and reconstruction.
+func scoreFact(selector string, score float64) EvidenceRef {
+	return fact(selector, "benchmark_validated_score",
+		map[string]any{"score": score, "benchmark": "themis-bench-core"})
+}
+
+// doorFixture builds real door-registry bytes and the observation
+// L11 would derive from them, so reconstruction can re-verify.
+func doorFixture(t *testing.T) ([]byte, *AdmissionObservation) {
+	t.Helper()
+	doorBytes, _ := json.Marshal(map[string]any{
+		"version": 1,
+		"entries": []any{map[string]any{
+			"name": "investigate-cve", "version": 1,
+			"composition_sha256": strings.Repeat("22", 32),
+			"state":              "active",
+		}},
+	})
+	obs, err := deriveObservation("l9-catalog", doorBytes, "investigate-cve", 1)
+	if err != nil || obs == nil {
+		t.Fatalf("door fixture derivation failed: %v", err)
 	}
+	obs.DoorRegistryHash = hashBytes(doorBytes)
+	obs.ObservedAt = "2026-09-12T00:00:00Z"
+	return doorBytes, obs
+}
+
+func admittedObs(t *testing.T) *AdmissionObservation {
+	_, obs := doorFixture(t)
+	return obs
 }
 
 func validInput(t *testing.T, candScore, baseScore float64) CompareInput {
 	return CompareInput{
-		CriterionRef: "bench-score-delta@1",
-		Criterion:    testCriterion(t),
+		CriterionRef:   "bench-score-delta@1",
+		Criterion:      testCriterion(t),
+		RegistrySHA256: strings.Repeat("ab", 32),
 
 		CandidateHash:   strings.Repeat("33", 32),
 		ClaimedBaseline: strings.Repeat("22", 32),
-		Admission:       admittedObs(),
-		CandidateFacts:  []EvidenceRef{fact("candidate_score", "benchmark_validated_score", candScore)},
-		BaselineFacts:   []EvidenceRef{fact("baseline_score", "benchmark_validated_score", baseScore)},
+		Admission:       admittedObs(t),
+		CandidateFacts:  []EvidenceRef{scoreFact("candidate_score", candScore)},
+		BaselineFacts:   []EvidenceRef{scoreFact("baseline_score", baseScore)},
 		RunIdentities:   []string{"l4:17", "l4:18"},
 	}
 }
@@ -64,7 +89,7 @@ func TestComparePackage(t *testing.T) {
 	if pkg.Delta["score_delta"] != float64(0.91)-float64(0.82) {
 		t.Fatalf("delta wrong: %v", pkg.Delta)
 	}
-	if pkg.BaselineHash != admittedObs().ArtifactSHA256 {
+	if pkg.BaselineHash != admittedObs(t).ArtifactSHA256 {
 		t.Fatal("baseline hash must come from the observation")
 	}
 	if pkg.ClaimMismatch {

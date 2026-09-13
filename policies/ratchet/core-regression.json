@@ -1,0 +1,8 @@
+{
+ "version": 1,
+ "name": "core-regression",
+ "set_version": 1,
+ "members": [
+  "bench-score-delta@1"
+ ]
+}

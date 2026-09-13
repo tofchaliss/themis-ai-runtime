@@ -55,3 +55,23 @@ Testing style: table-driven `t.Run`; helpers take `t.Helper()`; HTTP via `httpte
 5. Documents lint clean before check-in: staged Markdown must have no merge-conflict markers, no unbalanced code fences, and no broken relative links (mechanically enforced by `doc-lint-guard`; run `.claude/hooks/doc-lint-guard --all` to check staged docs manually).
 6. Never commit dot-prefixed directories — editor/tool artifacts (`.idea/`, `.vscode/`, `.venv/`, `.cache/`, …) stay out of history. Sanctioned exceptions: `.claude/` and `.github/`. Dot *files* (`.gitignore`, `.gitkeep`) are fine. (Mechanically enforced by `git-guard`.)
 7. Shared-remote pushes require owner approval per push. Approved pushes run as `THEMIS_PUSH_APPROVED=1 git push …` — the marker in the command text is the recorded approval artifact, and it may be added only on explicit owner approval in the current conversation. Force pushes are never allowed, marker or not. (Mechanically enforced by `git-guard`.)
+
+## Review-process invariant: probes never touch the live tree
+
+**No reviewer — human or agent — may run mutating or destructive
+probes (mutation testing, file restores, experimental edits) against
+the live working tree.** All such probes execute against an isolated
+copy or a disposable git worktree, and every probe artifact is
+removed before the review reports.
+
+Recorded 2026-09-13 after a G1 architecture review restored
+`orchestration/orchestrator.go` from its own backup while another
+process was editing the same file, silently reverting enforcement
+code. `go vet` stayed green (unused struct fields are legal), so the
+loss was invisible to the build. Second such incident in the
+project; treated as a standing process invariant, not an isolated
+mistake.
+
+Reviewers: read the code, reason about mutants, and REPORT them.
+If a mutant must actually be run to be credible, run it in a
+worktree (`git worktree add`) and say so in the report.

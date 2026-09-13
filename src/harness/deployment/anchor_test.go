@@ -14,11 +14,12 @@ func validAnchorMap() map[string]any {
 		"version": 1, "name": "local-dev", "deployment_version": 1,
 		"instruction_root_safety": h("safety"), "instruction_root_system": h("system"),
 		"instruction_root_themis": h("themis"), "instruction_policy": h("policy"),
-		"tool_registry": h("registry"),
-		"constitution":  map[string]any{"state": h("l6c"), "orchestration": h("l7c")},
+		"tool_registry":     h("registry"),
+		"constitution":      map[string]any{"state": h("l6c"), "orchestration": h("l7c")},
+		"execution_ceiling": h("eceiling"),
 		"workflows": []any{map[string]any{
 			"workflow": h("wf1"), "workflow_ceiling": h("wceiling"),
-			"exec_ceiling": h("eceiling"), "context_contract": h("contract")}},
+			"context_contract": h("contract")}},
 		"models":         []any{"scripted"},
 		"model_registry": "absent",
 		"skill_catalog":  h("catalog"), "contract_registry": h("l10reg"),
@@ -137,8 +138,9 @@ func TestParseAnchorRefusals(t *testing.T) {
 			m["workflows"] = []any{w, w}
 		}},
 		{"bundle missing a pin", func(m map[string]any) {
-			m["workflows"].([]any)[0].(map[string]any)["exec_ceiling"] = ""
+			m["workflows"].([]any)[0].(map[string]any)["context_contract"] = ""
 		}},
+		{"missing execution ceiling pin", func(m map[string]any) { m["execution_ceiling"] = "" }},
 		{"missing constitution pin", func(m map[string]any) {
 			m["constitution"] = map[string]any{"state": "", "orchestration": ""}
 		}},

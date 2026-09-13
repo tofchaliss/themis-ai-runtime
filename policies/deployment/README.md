@@ -36,3 +36,48 @@ opens while past records remain explicable (D-G1-1A / Q-G1-8).
 Until then, orchestrators run only in the explicitly declared
 `Unanchored` test-harness caller role, and production wiring stays
 blocked (owner gate).
+
+## The execution-ceiling contract (owner decision, 2026-09-13)
+
+**Deployment-supplied exact bytes, hash-bound by the admitted
+anchor.** The execution ceiling carries deployment-specific
+configuration (`mirror_root` and friends), so it is NOT a
+repo-committed artifact with placeholders — a placeholder would
+create a second resolution mechanism (anchor → placeholder →
+environment → authority), exactly the hidden deployment input G1
+exists to eliminate.
+
+The binding is to the CONCRETE ceiling, never a ceiling "type":
+
+    execution_ceiling: <sha256 of the exact ceiling bytes>
+
+At Open:
+
+    1. resolve the Governance-active Deployment Anchor
+    2. obtain the deployment execution ceiling (Config.ExecCeilingPath)
+    3. hash its exact bytes
+    4. compare against the anchor's execution_ceiling pin
+    5. refuse on mismatch (and refuse if it does not LOAD)
+    6. freeze anchor + ceiling hash for the Open lifetime
+
+At SubmitTask the envelope's ceiling must BE those bytes: an
+anchored task cannot choose its own ceiling. Deployment-supplied
+never means submitter-selected.
+
+Two hosts may run the same governed workflows under different
+ceilings — each pins different bytes, so each is a different
+deployment identity:
+
+    deployment-A: mirror_root=/srv/mirror/A → execution_ceiling=H1
+    deployment-B: mirror_root=/opt/mirror/B → execution_ceiling=H2
+
+Consequently a runnable anchor is DEPLOYMENT-INSTANCE-SPECIFIC and
+is created where that deployment lives — not committed here. A
+reusable "family" of local-dev deployments would be parameterization,
+which changes identity semantics and would need its own architecture
+decision; it must not be smuggled in as a parameterized anchor.
+
+Scope note: the execution ceiling is deployment-scoped, not
+workflow-scoped — it describes where and under what limits THIS
+deployment executes. Workflow bundles pin workflow + workflow
+ceiling + context contract.

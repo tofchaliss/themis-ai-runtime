@@ -169,10 +169,13 @@ func buildAnchor(t *testing.T, envDir string) (anchorPath, anchorSHA, anchorsReg
 		"tool_registry":           hf(filepath.Join(repoRoot, "policies/tools/registry-v4.json")),
 		"constitution": map[string]any{
 			"state": state.ConstitutionHash(), "orchestration": orchestration.ConstitutionHash()},
+		// The DEPLOYMENT's execution ceiling: this test IS a concrete
+		// deployment instance, so it supplies its own ceiling bytes
+		// (real mirror_root) and the anchor pins them.
+		"execution_ceiling": env("eceiling.json"),
 		"workflows": []any{map[string]any{
 			"workflow":         env("workflow.json"),
 			"workflow_ceiling": env("wceiling.json"),
-			"exec_ceiling":     env("eceiling.json"),
 			"context_contract": env("context-contract.json"),
 		}},
 		"models":                  []any{"scripted"},
@@ -300,6 +303,8 @@ func chainFixture(t *testing.T, m model.Interface) (*orchestration.Orchestrator,
 		Model:      m,
 		Verifier:   ev,
 		AnchorPath: anchorPath, AnchorSHA256: anchorSHA, AnchorsRegistryPath: anchorsReg,
+		ExecCeilingPath:  filepath.Join(envDir, "eceiling.json"),
+		SkillCatalogPath: filepath.Join(repoRoot, "policies/skills/catalog.json"),
 	})
 	if err != nil {
 		t.Fatal(err)

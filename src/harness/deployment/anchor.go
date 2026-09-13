@@ -66,6 +66,20 @@ type Anchor struct {
 	// an anchor that pinned the old ones.
 	Constitution ConstitutionPin `json:"constitution"`
 
+	// ExecutionCeiling pins the DEPLOYMENT's execution ceiling by the
+	// hash of its exact bytes (owner decision, 2026-09-13). The
+	// ceiling carries deployment-specific configuration (mirror_root
+	// and friends), so it is supplied at deployment Open — never
+	// committed as a repo artifact with placeholders, and never
+	// selected by a submitter. Two hosts may run the same governed
+	// workflows under different ceilings; each is a different
+	// deployment identity because each pins different bytes.
+	//
+	// Deployment-scoped, not workflow-scoped: the ceiling describes
+	// where and under what limits THIS deployment executes, which is
+	// a property of the deployment, not of a workflow.
+	ExecutionCeiling string `json:"execution_ceiling"`
+
 	// Enforced by L7 at SubmitTask (bundle artifact bytes):
 	ToolRegistry string `json:"tool_registry"`
 	// Workflows is the anchored workflow set, each entry a COMPLETE
@@ -104,7 +118,6 @@ type Anchor struct {
 type WorkflowBundle struct {
 	Workflow        string `json:"workflow"`
 	WorkflowCeiling string `json:"workflow_ceiling"`
-	ExecCeiling     string `json:"exec_ceiling"`
 	ContextContract string `json:"context_contract"`
 }
 
@@ -149,6 +162,7 @@ func ParseAnchor(raw []byte, origin string) (*Anchor, error) {
 		"instruction_root_themis":    a.InstructionThemisRoot,
 		"instruction_policy":         a.InstructionPolicy,
 		"tool_registry":              a.ToolRegistry,
+		"execution_ceiling":          a.ExecutionCeiling,
 		"constitution.state":         a.Constitution.State,
 		"constitution.orchestration": a.Constitution.Orchestration,
 		"skill_catalog":              a.SkillCatalog,
@@ -173,7 +187,7 @@ func ParseAnchor(raw []byte, origin string) (*Anchor, error) {
 	for _, w := range a.Workflows {
 		for field, v := range map[string]string{
 			"workflow": w.Workflow, "workflow_ceiling": w.WorkflowCeiling,
-			"exec_ceiling": w.ExecCeiling, "context_contract": w.ContextContract,
+			"context_contract": w.ContextContract,
 		} {
 			if !shaSyntax.MatchString(v) {
 				return nil, fmt.Errorf("%w: %s: workflow bundle %s must be a sha256 hex digest", ErrAnchor, origin, field)

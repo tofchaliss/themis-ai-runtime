@@ -64,6 +64,12 @@ type Config struct {
 	// resolution (owner finding 1): the submitter selects an anchored
 	// skill identity; the catalog supplies its composition hash.
 	SkillCatalogPath string
+	// ExecCeilingPath is the DEPLOYMENT's execution ceiling — exact
+	// bytes supplied at Open, hash-bound by the admitted anchor
+	// (owner decision 2026-09-13). Deployment-supplied never means
+	// submitter-selected: an anchored task's ceiling must BE these
+	// bytes, whatever path its envelope names.
+	ExecCeilingPath string
 	// Unanchored is the EXPLICIT opt-in to running without a
 	// deployment anchor — the recorded test-harness caller role
 	// (close-review MEDIUM-1). Without it an anchorless Open refuses,
@@ -129,6 +135,9 @@ type Orchestrator struct {
 	eis    *instructions.EffectiveSet
 	policy *instructions.Policy
 	anchor *deployment.Anchor // nil = unanchored (test-harness caller role)
+	// execCeiling is the frozen hash of the deployment-supplied
+	// execution ceiling verified against the anchor at Open.
+	execCeiling string
 }
 
 // Open prepares the orchestrator and drives every discovered
@@ -167,6 +176,7 @@ func Open(cfg Config) (*Orchestrator, *StartupReport, error) {
 	// (close-review CRITICAL-2 — verify-then-use, never
 	// verify-after-use).
 	var admitted *deployment.Anchor
+	frozenCeiling := ""
 	if cfg.AnchorPath != "" {
 		// Append-only across restarts (owner finding 2): the last
 		// observed registry state is held under this record root;
@@ -193,6 +203,24 @@ func Open(cfg Config) (*Orchestrator, *StartupReport, error) {
 		if verr := verifyAnchoredInstructionPlane(cfg, a); verr != nil {
 			return nil, nil, verr
 		}
+		// The deployment's execution ceiling: exact bytes supplied
+		// here, accepted only when they hash to the anchor's pin.
+		if cfg.ExecCeilingPath == "" {
+			return nil, nil, fmt.Errorf("%w: an anchored deployment supplies its execution ceiling at Open — none is configured", ErrAssembly)
+		}
+		ecHash, eerr := deployment.HashFile(cfg.ExecCeilingPath)
+		if eerr != nil {
+			return nil, nil, fmt.Errorf("%w: deployment execution ceiling unreadable: %v", ErrAssembly, eerr)
+		}
+		if ecHash != a.ExecutionCeiling {
+			return nil, nil, fmt.Errorf("%w: the supplied execution ceiling is not the one deployment %s@%d pins", ErrAssembly, a.Name, a.Deployment)
+		}
+		if _, lerr := execution.LoadCeiling(cfg.ExecCeilingPath); lerr != nil {
+			// A pinned ceiling that cannot instantiate is a governance
+			// artifact defect, caught here rather than mid-walk.
+			return nil, nil, fmt.Errorf("%w: the anchored execution ceiling does not load: %v", ErrAssembly, lerr)
+		}
+		frozenCeiling = ecHash
 		if serr := recordObservedRegistry(cfg.StateRoot, cfg.AnchorsRegistryPath); serr != nil {
 			return nil, nil, fmt.Errorf("%w: %v", ErrAssembly, serr)
 		}
@@ -215,7 +243,7 @@ func Open(cfg Config) (*Orchestrator, *StartupReport, error) {
 	if _, _, err := eis.Render(policy); err != nil {
 		return nil, nil, err
 	}
-	o := &Orchestrator{cfg: cfg, root: root, store: store, prov: prov, eis: eis, policy: policy, anchor: admitted}
+	o := &Orchestrator{cfg: cfg, root: root, store: store, prov: prov, eis: eis, policy: policy, anchor: admitted, execCeiling: frozenCeiling}
 
 	// Startup sweep: close the past before opening the future.
 	rep := &StartupReport{}
@@ -460,9 +488,15 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 		if bundle == nil {
 			return res, fmt.Errorf("%w: workflow is not in the anchored workflow set (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
 		}
+		// The execution ceiling is the DEPLOYMENT's, verified against
+		// the anchor at Open and frozen: an envelope may name any
+		// path, but its bytes must be the deployment's ceiling —
+		// deployment-supplied never means submitter-selected.
+		if execCeiling.Hash != o.execCeiling {
+			return res, fmt.Errorf("%w: the task's execution ceiling is not the deployment's ceiling (deployment %s@%d) — the ceiling is supplied at Open, never chosen per task", ErrAssembly, a.Name, a.Deployment)
+		}
 		for _, check := range []struct{ label, got, want string }{
 			{"workflow ceiling", wfCeiling.Hash, bundle.WorkflowCeiling},
-			{"exec ceiling", execCeiling.Hash, bundle.ExecCeiling},
 			{"context contract", contract.Hash, bundle.ContextContract},
 		} {
 			if check.got != check.want {

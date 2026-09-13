@@ -306,3 +306,48 @@ registry rewrite, instruction-policy pin, instruction-root drift,
 constitution drift, catalog composition mismatch, registry rebinding
 and deletion across Opens, and the read-path cases. Phase C runs
 ANCHORED end-to-end.
+
+
+## Execution-ceiling shape (owner decision 2026-09-13 — implementation/governance, NOT a new G1 decision)
+
+**Deployment-supplied exact bytes, hash-bound by the admitted
+anchor.** Rejected: a repo-committed ceiling with a placeholder
+`mirror_root` — it would create a second resolution mechanism
+(anchor → placeholder → environment → authority) and force a new
+set of questions (which variables, who supplies them, authenticated?
+mutable after Open? part of identity? reconstructible?) that G1
+exists to avoid. Also rejected: pinning a ceiling TYPE resolved into
+host values outside the anchor.
+
+Implemented:
+- `Anchor.ExecutionCeiling` pins the exact ceiling bytes,
+  DEPLOYMENT-scoped (the ceiling describes where and under what
+  limits this deployment executes — a deployment property, not a
+  workflow property). Workflow bundles now pin workflow + workflow
+  ceiling + context contract.
+- `Config.ExecCeilingPath` supplies the bytes at Open. Open hashes
+  them, compares to the pin, refuses on mismatch, ALSO refuses a
+  pinned ceiling that does not load (a governance-artifact defect is
+  caught at Open, not mid-walk), and freezes the hash.
+- SubmitTask refuses any task whose ceiling is not those bytes:
+  "supplied at Open, never chosen per task". Deployment-supplied
+  never means submitter-selected. Proof:
+  TestAnchoredSubmitRefusesUnanchoredBundle's foreign-ceiling arc.
+- Phase C is now a CONCRETE DEPLOYMENT INSTANCE: it mints its own
+  ceiling (real mirror_root), pins it, registers and admits the
+  anchor, runs the full chain anchored, and re-establishes the
+  deployment from the record.
+
+Repository state: no ACTIVE anchor, by design. `local-dev@1` stays
+WITHDRAWN and is not reactivated; a runnable anchor is
+deployment-instance-specific and is created where that deployment
+lives, not committed here (policies/deployment/README.md records the
+contract). Production wiring therefore remains gated on a concrete
+deployment, not on missing architecture.
+
+Door-table classification, recorded explicitly per the owner: the
+L11 door table is REVIEWED CODE ("adding a door is a reviewed code
+change, never data"); its four referenced registries (skill catalog,
+L10 contract registry, L11 criteria and regression-set registries)
+are the governed DATA dependencies and are pinned by the anchor; the
+constitution pins provide the binary/code integrity boundary.

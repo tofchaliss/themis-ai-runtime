@@ -66,3 +66,19 @@ Filed as findings; none block the build sequence, but F1–F3 should be fixed be
 5. **Step 7 — vertical slice** (`investigate-cve`): Task → instruction resolution → context retrieval → model reasoning → tool request → deterministic authorization → tool execution → verification → auditable result. The agentic benchmark category lands with it (L11 EXTEND).
 
 **Verdict unchanged from the baseline pass, now with evidence:** the architecture fits the code. The existing system is a *single-shot, tool-less* instance of exactly the pipeline the harness generalizes — its strongest assets (deterministic scoring, provenance envelopes, prompt hashing, advisory-only contracts) are the harness's foundations, and its defects are all in the places the harness was always going to rebuild.
+
+---
+
+**L11 note (2026-09-13, at the Ratchet close):** the relocation
+sketch above predates the L11 grill — "benchmarks Go →
+`ratchet/evaluations/`" is SUPERSEDED. The grill deleted the
+pre-grill ratchet scaffold (D-L11-20 §6: structure follows
+decisions) and the benchmark plane deliberately stays bench-owned
+(D-L11-8 §5; physical unification is a recorded residual, not a
+plan). L11 as built: `src/harness/ratchet/` (criteria +
+regression-set registries, registered comparators, comparison/
+regression packages, door-resolved admission, grounded evidence,
+cold reconstruction, stateless derivations, Candidate/Evaluation
+Plan) and `src/harness/cmd/themis-ratchet/` (the synchronous
+invocation surface). Governed registrations: `policies/ratchet/`.
+Constitution: openspec/changes/archive/2026-09-13-layer-11-ratchet.

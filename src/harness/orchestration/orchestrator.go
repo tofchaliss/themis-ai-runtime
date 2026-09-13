@@ -35,6 +35,11 @@ type Config struct {
 	// InstructionRoots + PolicyPath: the L1 governed configuration.
 	SafetyRoot string
 	SystemRoot string
+	// ThemisRoot is the themis-domain instruction root (the L2
+	// authority-vocabulary's interpretive half — integration-audit
+	// D7). Optional until the deployment anchor pins it; when set it
+	// resolves with the same discipline as the other roots.
+	ThemisRoot string
 	PolicyPath string
 	// Model is the model.Interface provider (injected so the loop is
 	// provider-agnostic and Register-testable with a scripted model).
@@ -121,10 +126,14 @@ func Open(cfg Config) (*Orchestrator, *StartupReport, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	eis, err := instructions.Resolve(instructions.Config{Policy: policy},
-		instructions.Source{Kind: instructions.ScopeHarnessSafety, Root: cfg.SafetyRoot},
-		instructions.Source{Kind: instructions.ScopeHarnessSystem, Root: cfg.SystemRoot},
-	)
+	openSources := []instructions.Source{
+		{Kind: instructions.ScopeHarnessSafety, Root: cfg.SafetyRoot},
+		{Kind: instructions.ScopeHarnessSystem, Root: cfg.SystemRoot},
+	}
+	if cfg.ThemisRoot != "" {
+		openSources = append(openSources, instructions.Source{Kind: instructions.ScopeThemisDomain, Root: cfg.ThemisRoot})
+	}
+	eis, err := instructions.Resolve(instructions.Config{Policy: policy}, openSources...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -384,7 +393,7 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	// root. Binding an instance scope is instantiation (narrowing),
 	// never authority creation; both the envelope grant hash and the
 	// effective grant hash are recorded.
-	grant, effPath, err := instantiateGrant(rawGrant, ws.Root)
+	grant, effPath, err := instantiateGrant(rawGrant, ws.Root, o.cfg.StateRoot)
 	if err != nil {
 		envn.Teardown()
 		return res, err
@@ -540,6 +549,11 @@ func (o *Orchestrator) resolveTaskEIS(env *Envelope) (*instructions.EffectiveSet
 		{Kind: instructions.ScopeHarnessSafety, Root: o.cfg.SafetyRoot},
 		{Kind: instructions.ScopeHarnessSystem, Root: o.cfg.SystemRoot},
 	}
+	if o.cfg.ThemisRoot != "" {
+		// The themis-domain root: the interpretive half of the L2
+		// authority vocabulary (integration-audit D7).
+		sources = append(sources, instructions.Source{Kind: instructions.ScopeThemisDomain, Root: o.cfg.ThemisRoot})
+	}
 	declaredProcedure := env.SkillProcedurePath != ""
 	var procedureBytes []byte
 	if declaredProcedure {
@@ -636,7 +650,7 @@ func grantWithinCeiling(g *tools.Grant, c *WorkflowCeiling) error {
 // review LOW: a token anywhere else stays literal and fails its own
 // validation) — and loads the effective grant through the normal
 // fail-closed loader.
-func instantiateGrant(raw []byte, wsRoot string) (*tools.Grant, string, error) {
+func instantiateGrant(raw []byte, wsRoot, stagingRoot string) (*tools.Grant, string, error) {
 	var doc map[string]any
 	if err := json.Unmarshal(raw, &doc); err != nil {
 		return nil, "", fmt.Errorf("%w: envelope grant: %v", ErrAssembly, err)
@@ -661,7 +675,10 @@ func instantiateGrant(raw []byte, wsRoot string) (*tools.Grant, string, error) {
 	if err != nil {
 		return nil, "", fmt.Errorf("%w: %v", ErrAssembly, err)
 	}
-	f, err := os.CreateTemp("", "effective-grant-")
+	// Staged under the state root, not shared host tmp: live
+	// authority bytes stay inside the disjoint-root discipline every
+	// other authority artifact obeys (integration-audit D10).
+	f, err := os.CreateTemp(stagingRoot, "effective-grant-")
 	if err != nil {
 		return nil, "", fmt.Errorf("%w: %v", ErrAssembly, err)
 	}

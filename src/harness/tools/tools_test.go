@@ -18,6 +18,35 @@ import (
 	"github.com/tofchaliss/themis/runtime/model"
 )
 
+// unframeResult strips the D-L4-7 result frame, returning the payload
+// and asserting the frame carries the kind/authority header (the D6
+// framing contract itself is under test here).
+func unframeResult(t *testing.T, content, wantKind, wantAuthority string) string {
+	t.Helper()
+	lines := strings.Split(content, "\n")
+	if len(lines) < 5 || !strings.HasSuffix(lines[0], "--") {
+		t.Fatalf("result is not framed: %q", content)
+	}
+	fence := strings.TrimSuffix(lines[0], "--")
+	if !strings.Contains(content, "kind: tool-result:"+wantKind) {
+		t.Fatalf("frame lacks kind %q: %q", wantKind, content)
+	}
+	if !strings.Contains(content, "authority: "+wantAuthority) {
+		t.Fatalf("frame lacks authority %q: %q", wantAuthority, content)
+	}
+	open := strings.Index(content, fence+"--\n")
+	second := strings.Index(content[open+len(fence)+3:], fence+"--\n")
+	if second < 0 {
+		t.Fatalf("frame header unterminated: %q", content)
+	}
+	start := open + len(fence) + 3 + second + len(fence) + 3
+	end := strings.LastIndex(content, fence+"-end--")
+	if end < 0 || end < start {
+		t.Fatalf("frame end missing: %q", content)
+	}
+	return content[start:end]
+}
+
 func writeFile(t *testing.T, dir, name, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(filepath.Join(dir, name)), 0o755); err != nil {
@@ -252,11 +281,14 @@ func TestHandlePipeline(t *testing.T) {
 	// 1. Authorized read: evidence + trust class + audit + mechanism.
 	msg, ev, audit := Handle(reg, grant, table, model.ToolCall{ID: "c1", Name: "read_file",
 		Arguments: args(t, map[string]any{"path": "parser.go"})}, state)
-	if msg.Role != model.RoleTool || msg.ToolCallID != "c1" || msg.Content != "package parser // libXYZ\n" {
+	if msg.Role != model.RoleTool || msg.ToolCallID != "c1" {
 		t.Fatalf("result message wrong: %+v", msg)
 	}
+	if payload := unframeResult(t, msg.Content, "read_file", string(hctx.AuthorityExternalUntrusted)); payload != "package parser // libXYZ\n" {
+		t.Fatalf("framed payload wrong: %q", payload)
+	}
 	if ev == nil || ev.Trust != hctx.AuthorityExternalUntrusted || ev.Mechanism != hctx.MechanismCapabilityFetch ||
-		ev.Hash != hctx.EvidenceHash([]byte(msg.Content)) {
+		ev.Hash != hctx.EvidenceHash(ev.Evidence) {
 		t.Fatalf("tool evidence wrong: %+v", ev)
 	}
 	if audit.Decision != "authorized" || audit.ResultHash != ev.Hash || audit.RegistryHash != reg.Hash {
@@ -295,8 +327,8 @@ func TestHandlePipeline(t *testing.T) {
 	// 5. search_code: sorted hits, confined.
 	msg6, _, _ := Handle(reg, grant, table, model.ToolCall{ID: "c6", Name: "search_code",
 		Arguments: args(t, map[string]any{"path": ".", "query": "libXYZ"})}, state)
-	if msg6.Content != "parser.go\n" {
-		t.Fatalf("search result wrong: %q", msg6.Content)
+	if payload := unframeResult(t, msg6.Content, "search_code", string(hctx.AuthorityExternalUntrusted)); payload != "parser.go\n" {
+		t.Fatalf("search result wrong: %q", payload)
 	}
 	// 6. Symlink escape through the tool path: target-refused, no bytes.
 	outside := t.TempDir()
@@ -362,12 +394,12 @@ func TestRemainingExecutorsAndEdges(t *testing.T) {
 	state := CallState{Calls: map[string]int{}}
 	msg, _, _ := Handle(reg, grant, table, model.ToolCall{ID: "l1", Name: "list_directory",
 		Arguments: args(t, map[string]any{"path": "d"})}, state)
-	if msg.Content != "x.go\n" {
-		t.Fatalf("list wrong: %q", msg.Content)
+	if payload := unframeResult(t, msg.Content, "list_directory", string(hctx.AuthorityExternalUntrusted)); payload != "x.go\n" {
+		t.Fatalf("list wrong: %q", payload)
 	}
 	msg2, ev2, _ := Handle(reg, grant, table, model.ToolCall{ID: "l2", Name: "get_product",
 		Arguments: args(t, map[string]any{"id": "PROD-1"})}, state)
-	if ev2 == nil || ev2.Trust != hctx.AuthorityGovernedRecord || msg2.Content != "libXYZ 1.4.2\n" {
+	if ev2 == nil || ev2.Trust != hctx.AuthorityGovernedRecord || unframeResult(t, msg2.Content, "get_product", string(hctx.AuthorityGovernedRecord)) != "libXYZ 1.4.2\n" {
 		t.Fatalf("get_product wrong: %+v %q", ev2, msg2.Content)
 	}
 	// Seam error path.

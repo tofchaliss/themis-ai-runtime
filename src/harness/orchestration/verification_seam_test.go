@@ -275,3 +275,23 @@ func TestPreAmendmentWorkflowUnchanged(t *testing.T) {
 		t.Error("static bound missing")
 	}
 }
+
+// TestThemisRootWiring — integration-audit D7: the themis-domain
+// instruction root is wireable (Config.ThemisRoot) and resolves
+// through the same governed L1 discipline as the other roots, so the
+// L2 authority vocabulary ships with its interpretive half.
+func TestThemisRootWiring(t *testing.T) {
+	base := t.TempDir()
+	_, _, err := Open(Config{
+		StateRoot: filepath.Join(base, "state"), ArtifactDir: filepath.Join(base, "artifacts"),
+		GitPath: gitBin(t), ProviderDir: filepath.Join(base, "provider"),
+		SafetyRoot: filepath.Join(repoRoot, "instructions/global/safety"),
+		SystemRoot: filepath.Join(repoRoot, "instructions/global/system"),
+		ThemisRoot: filepath.Join(repoRoot, "instructions/themis"),
+		PolicyPath: filepath.Join(repoRoot, "policies/security/instruction-directive-patterns.json"),
+		Model:      happyScript(),
+	})
+	if err != nil {
+		t.Fatalf("themis root failed to resolve: %v", err)
+	}
+}

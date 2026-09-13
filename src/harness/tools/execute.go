@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -336,5 +337,30 @@ func Handle(reg *Registry, grant *Grant, table map[string]Executor, call model.T
 		Hash: hctx.EvidenceHash(out.Evidence), Mechanism: hctx.MechanismCapabilityFetch,
 	}
 	audit.Decision, audit.ResultHash = "authorized", ev.Hash
-	return model.Message{Role: model.RoleTool, Content: string(out.Evidence), ToolCallID: call.ID}, ev, audit
+	// D-L4-7: the result re-enters the conversation as an
+	// L2-disciplined framed item — registered trust class, hash, and
+	// a content-derived fence — so untrusted workspace bytes are
+	// never visually indistinguishable from harness protocol text
+	// (integration-audit D6). Error results above stay unframed:
+	// they are harness-authored protocol text, not fetched content.
+	return model.Message{Role: model.RoleTool, Content: frameToolResult(call.Name, string(def.Trust), ev.Hash, out.Evidence), ToolCallID: call.ID}, ev, audit
+}
+
+// frameToolResult renders one tool result in the composition frame
+// shape (context/compose.go): fence--, header, fence--, content,
+// fence-end--. The fence is content-derived and lengthened past any
+// collision, the same discipline as chooseFence.
+func frameToolResult(name, trust, hash string, evidence []byte) string {
+	fence := "~~tool-" + hash[:12]
+	for bytes.Contains(evidence, []byte(fence)) {
+		fence += "~"
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s--\nkind: tool-result:%s\nauthority: %s\nhash: %s\n%s--\n", fence, name, trust, hash, fence)
+	b.Write(evidence)
+	if len(evidence) == 0 || evidence[len(evidence)-1] != '\n' {
+		b.WriteString("\n")
+	}
+	fmt.Fprintf(&b, "%s-end--\n", fence)
+	return b.String()
 }

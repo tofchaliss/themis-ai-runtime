@@ -67,7 +67,7 @@ func seedTask(t *testing.T, tamperOutcome bool) (*state.Root, string) {
 
 func TestReconstructTaskConsistent(t *testing.T) {
 	root, id := seedTask(t, false)
-	reports, artifacts, err := ReconstructTask(root, id)
+	reports, artifacts, _, err := ReconstructTask(root, id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +95,7 @@ func TestReconstructTaskDiscrepancy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	reports, artifacts, err := ReconstructTask(root, id)
+	reports, artifacts, _, err := ReconstructTask(root, id)
 	if err != nil {
 		t.Fatal(err)
 	}

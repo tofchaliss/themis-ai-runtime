@@ -215,7 +215,7 @@ func TestRemediateDependencyE2E(t *testing.T) {
 
 	// Cold reconstruction: same historical outcome, no discrepancy,
 	// nothing rewritten.
-	reports, artifacts, err := ReconstructTask(sroot, "remediate-1")
+	reports, artifacts, _, err := ReconstructTask(sroot, "remediate-1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -335,7 +335,7 @@ func TestLiveRemediateWalk(t *testing.T) {
 	if view.Latest["report-valid@1"] != "PASS" {
 		t.Fatalf("live walk completed without a PASS: %v", view.Latest)
 	}
-	reports, artifacts, err := ReconstructTask(sroot, "remediate-1")
+	reports, artifacts, _, err := ReconstructTask(sroot, "remediate-1")
 	if err != nil {
 		t.Fatal(err)
 	}

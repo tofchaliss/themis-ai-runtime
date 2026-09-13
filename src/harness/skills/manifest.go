@@ -73,6 +73,9 @@ func LoadManifest(path string) (*Manifest, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s: %v", ErrManifest, path, err)
 	}
+	if err := checkNoDuplicateKeys(raw); err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", ErrManifest, path, err)
+	}
 	dec := json.NewDecoder(strings.NewReader(string(raw)))
 	dec.DisallowUnknownFields()
 	var m Manifest

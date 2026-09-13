@@ -2,6 +2,7 @@ package tools
 
 import (
 	"encoding/json"
+	hctx "github.com/tofchaliss/themis/context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -87,8 +88,9 @@ func TestWriteFileExecutor(t *testing.T) {
 	}
 	var rec MutationRecord
 	msg, _, _ := Handle(reg, grant, table, mkCall("write_file", `{"path":"old.go","content":"package newer\n"}`), state)
-	if err := json.Unmarshal([]byte(msg.Content), &rec); err != nil {
-		t.Fatalf("result must be a mutation record: %v (%q)", err, msg.Content)
+	payload := unframeResult(t, msg.Content, "write_file", string(hctx.AuthorityExternalUntrusted))
+	if err := json.Unmarshal([]byte(payload), &rec); err != nil {
+		t.Fatalf("result must be a mutation record: %v (%q)", err, payload)
 	}
 	if rec.OldHash == "" || rec.NewHash == "" || rec.Op != "write" {
 		t.Fatalf("mutation record must carry old/new hashes: %+v", rec)

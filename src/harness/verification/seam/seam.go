@@ -138,7 +138,7 @@ func (e *Evaluator) EvaluateCall(taskID string, call model.ToolCall, resultEvide
 	// refusal: no evaluation instance exists yet.
 	reg, err := verification.LoadRegistry(e.RegistryPath)
 	if err != nil {
-		return refuse("contract registry unreadable: " + err.Error()), nil
+		return refuse("contract registry unreadable: " + sanitizeDetail(err.Error())), nil
 	}
 	// Live append-only verification (security review M-2): the prior
 	// observed registry state is held for the evaluator's lifetime;
@@ -153,7 +153,7 @@ func (e *Evaluator) EvaluateCall(taskID string, call model.ToolCall, resultEvide
 	e.mu.Unlock()
 	entry, contract, err := reg.Resolve(ref, e)
 	if err != nil {
-		return refuse(err.Error()), nil
+		return refuse(sanitizeDetail(err.Error())), nil
 	}
 	_ = entry
 
@@ -250,4 +250,19 @@ func (e *Evaluator) EvaluateCall(taskID string, call model.ToolCall, resultEvide
 func hashBytes(b []byte) string {
 	sum := sha256.Sum256(b)
 	return hex.EncodeToString(sum[:])
+}
+
+// sanitizeDetail strips absolute filesystem paths from refusal text
+// before it is surfaced to the model as conversation data — the
+// reason class survives; host layout does not (integration-audit
+// D11: information hygiene, not authority).
+func sanitizeDetail(msg string) string {
+	fields := strings.Fields(msg)
+	for i, f := range fields {
+		trimmed := strings.TrimRight(f, ":;,")
+		if strings.HasPrefix(trimmed, "/") && strings.Count(trimmed, "/") > 1 {
+			fields[i] = strings.Replace(f, trimmed, filepath.Base(trimmed), 1)
+		}
+	}
+	return strings.Join(fields, " ")
 }

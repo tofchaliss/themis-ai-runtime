@@ -27,10 +27,20 @@ import (
 // The task record is never modified; the examined records are never
 // rewritten (no-retroactive-mutation, proven by the caller re-reading
 // events).
-func ReconstructTask(root *state.Root, taskID string) ([]verification.Report, []string, error) {
+// ReconstructTask re-derives every verification outcome in a task's
+// committed record. The returned torn flag marks a task whose record
+// verdict is TORN: the committed prefix (and thus every report) is
+// still valid, but the reader must know the tail was expelled —
+// absence of a marker previously made tornness invisible to
+// reconstruction consumers (integration-audit D12).
+func ReconstructTask(root *state.Root, taskID string) ([]verification.Report, []string, bool, error) {
+	torn := false
+	if sv, serr := root.ReadStatus(taskID); serr == nil {
+		torn = sv.Verdict == state.VerdictTorn
+	}
 	events, err := root.ReadEvents(taskID)
 	if err != nil {
-		return nil, nil, fmt.Errorf("reconstruction inputs unavailable: %v", err)
+		return nil, nil, torn, fmt.Errorf("reconstruction inputs unavailable: %v", err)
 	}
 
 	var reports []verification.Report
@@ -44,16 +54,16 @@ func ReconstructTask(root *state.Root, taskID string) ([]verification.Report, []
 		if !rep.Consistent {
 			body, merr := json.Marshal(rep)
 			if merr != nil {
-				return nil, nil, merr
+				return nil, nil, torn, merr
 			}
 			id, serr := root.Store().StoreObject(state.ObjEvidencePayload, body)
 			if serr != nil {
-				return nil, nil, serr
+				return nil, nil, torn, serr
 			}
 			artifacts = append(artifacts, id)
 		}
 	}
-	return reports, artifacts, nil
+	return reports, artifacts, torn, nil
 }
 
 func reconstructOne(root *state.Root, ev state.Event, events []state.Event) verification.Report {

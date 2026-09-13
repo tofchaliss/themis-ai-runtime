@@ -52,6 +52,9 @@ func LoadCatalog(path string) (*Catalog, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s: %v", ErrCatalog, path, err)
 	}
+	if err := checkNoDuplicateKeys(raw); err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", ErrCatalog, path, err)
+	}
 	dec := json.NewDecoder(strings.NewReader(string(raw)))
 	dec.DisallowUnknownFields()
 	var c Catalog

@@ -22,6 +22,7 @@ import (
 	"github.com/tofchaliss/themis/execution"
 	"github.com/tofchaliss/themis/instructions"
 	"github.com/tofchaliss/themis/runtime/model"
+	"github.com/tofchaliss/themis/skills"
 	"github.com/tofchaliss/themis/state"
 	"github.com/tofchaliss/themis/tools"
 )
@@ -58,6 +59,11 @@ type Config struct {
 	// endpoint, credentials). Anchored deployments must configure it
 	// unless the anchor declares "absent" (close-review HIGH-3).
 	ModelRegistryPath string
+	// SkillCatalogPath is the governed skill catalog. Under an
+	// anchored deployment it is AUTHORITATIVE for skill composition
+	// resolution (owner finding 1): the submitter selects an anchored
+	// skill identity; the catalog supplies its composition hash.
+	SkillCatalogPath string
 	// Unanchored is the EXPLICIT opt-in to running without a
 	// deployment anchor — the recorded test-harness caller role
 	// (close-review MEDIUM-1). Without it an anchorless Open refuses,
@@ -162,6 +168,21 @@ func Open(cfg Config) (*Orchestrator, *StartupReport, error) {
 	// verify-after-use).
 	var admitted *deployment.Anchor
 	if cfg.AnchorPath != "" {
+		// Append-only across restarts (owner finding 2): the last
+		// observed registry state is held under this record root;
+		// deletion, rebinding, or un-withdrawal between Opens is
+		// TAMPER, detected at the read boundary.
+		prior, perr := deployment.LoadObserved(cfg.StateRoot)
+		if perr != nil {
+			return nil, nil, fmt.Errorf("%w: observed anchors state unreadable: %v", ErrAssembly, perr)
+		}
+		current, cerr := deployment.LoadRegistry(cfg.AnchorsRegistryPath)
+		if cerr != nil {
+			return nil, nil, fmt.Errorf("%w: %v", ErrAssembly, cerr)
+		}
+		if aoErr := current.CheckAppendOnly(prior); aoErr != nil {
+			return nil, nil, fmt.Errorf("%w: %v", ErrAssembly, aoErr)
+		}
 		a, aerr := deployment.AdmitAnchor(cfg.AnchorPath, cfg.AnchorSHA256, cfg.AnchorsRegistryPath)
 		if aerr != nil {
 			return nil, nil, fmt.Errorf("%w: %v", ErrAssembly, aerr)
@@ -171,6 +192,9 @@ func Open(cfg Config) (*Orchestrator, *StartupReport, error) {
 		}
 		if verr := verifyAnchoredInstructionPlane(cfg, a); verr != nil {
 			return nil, nil, verr
+		}
+		if serr := recordObservedRegistry(cfg.StateRoot, cfg.AnchorsRegistryPath); serr != nil {
+			return nil, nil, fmt.Errorf("%w: %v", ErrAssembly, serr)
 		}
 		admitted = a
 	}
@@ -241,6 +265,51 @@ func Open(cfg Config) (*Orchestrator, *StartupReport, error) {
 	return o, rep, nil
 }
 
+// verifyAnchoredSkill resolves a skill-attributed envelope's
+// composition from the ANCHORED catalog (owner finding 1). An
+// envelope claiming a skill under an anchored deployment must name a
+// skill the catalog registers ACTIVE, and its sealed composition
+// must be the composition that registration binds. L7 stays
+// hash-comparing — it learns nothing about skills — but the identity
+// it compares against now comes from governed bytes rather than from
+// the submitter.
+func (o *Orchestrator) verifyAnchoredSkill(a *deployment.Anchor, env *Envelope) error {
+	ref := ""
+	for k, v := range env.Origin {
+		if k == "skill" {
+			ref = v
+		}
+	}
+	if ref == "" {
+		// No skill attribution: the envelope validator already
+		// refuses skill_* keys without a commitment, so there is no
+		// skill identity to resolve.
+		return nil
+	}
+	if o.cfg.SkillCatalogPath == "" {
+		return fmt.Errorf("%w: skill-attributed task under an anchored deployment but no governed catalog is configured", ErrAssembly)
+	}
+	catalogHash, herr := deployment.HashFile(o.cfg.SkillCatalogPath)
+	if herr != nil || catalogHash != a.SkillCatalog {
+		return fmt.Errorf("%w: skill catalog is not the anchored artifact (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
+	}
+	cat, cerr := skills.LoadCatalog(o.cfg.SkillCatalogPath)
+	if cerr != nil {
+		return fmt.Errorf("%w: anchored skill catalog unreadable: %v", ErrAssembly, cerr)
+	}
+	entry, _, rerr := cat.Resolve(ref)
+	if rerr != nil {
+		return fmt.Errorf("%w: %v", ErrAssembly, rerr)
+	}
+	if env.Composition == nil {
+		return fmt.Errorf("%w: skill attribution without a composition commitment", ErrInvariant)
+	}
+	if env.Composition.Seal != entry.Composition {
+		return fmt.Errorf("%w: the submitted composition is not the composition %s registers — a submitter selects an anchored skill, never its constituent hashes", ErrAssembly, ref)
+	}
+	return nil
+}
+
 // verifyAnchoredInstructionPlane checks the instruction roots, the
 // policy, and the model registry against the ADMITTED anchor's pins.
 // Called at Open BEFORE resolution and again per task before
@@ -265,6 +334,16 @@ func verifyAnchoredInstructionPlane(cfg Config, a *deployment.Anchor) error {
 	if got, herr := deployment.HashFile(cfg.PolicyPath); herr != nil || got != a.InstructionPolicy {
 		return fmt.Errorf("%w: instruction policy is not the anchored artifact (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
 	}
+	// The compiled control vocabularies: a rebuilt binary whose
+	// constitution differs cannot open under an anchor that pinned
+	// the old one (owner finding 4 — "can changing this artifact
+	// change the behavior or authority of an anchored deployment?").
+	if a.Constitution.State != state.ConstitutionHash() {
+		return fmt.Errorf("%w: L6 constitution is not the anchored one (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
+	}
+	if a.Constitution.Orchestration != ConstitutionHash() {
+		return fmt.Errorf("%w: L7 constitution is not the anchored one (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
+	}
 	// The model registry governs what allowlisted NAMES resolve to —
 	// runtime, endpoint, credential env (close-review HIGH-3; Q-G1-2's
 	// endpoint clause). "absent" is the anchor's explicit declaration
@@ -283,6 +362,21 @@ func verifyAnchoredInstructionPlane(cfg Config, a *deployment.Anchor) error {
 		}
 	}
 	return nil
+}
+
+// recordObservedRegistry persists the anchors-registry state this
+// Open admitted against, so the next Open can prove the registry only
+// grew (owner finding 2).
+func recordObservedRegistry(stateRoot, registryPath string) error {
+	raw, err := os.ReadFile(registryPath)
+	if err != nil {
+		return err
+	}
+	dst := deployment.ObservedRegistryPath(stateRoot)
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(dst, raw, 0o644)
 }
 
 // ReadStatus serves the structurally content-free view (Q-L6-10).
@@ -349,25 +443,38 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 		if verr := verifyAnchoredInstructionPlane(o.cfg, a); verr != nil {
 			return res, verr
 		}
-		for _, check := range []struct{ label, got, want string }{
-			{"tool registry", reg.Hash, a.ToolRegistry},
-			{"workflow ceiling", wfCeiling.Hash, a.WorkflowCeiling},
-			{"exec ceiling", execCeiling.Hash, a.ExecCeiling},
-			{"context contract", contract.Hash, a.ContextContract},
-		} {
-			if check.got != check.want {
-				return res, fmt.Errorf("%w: %s is not the anchored artifact (deployment %s@%d) — a mutually consistent bundle is not a governed bundle", ErrAssembly, check.label, a.Name, a.Deployment)
-			}
+		if reg.Hash != a.ToolRegistry {
+			return res, fmt.Errorf("%w: tool registry is not the anchored artifact (deployment %s@%d) — a mutually consistent bundle is not a governed bundle", ErrAssembly, a.Name, a.Deployment)
 		}
-		anchoredWF := false
-		for _, w := range a.Workflows {
-			if wf.Hash == w {
-				anchoredWF = true
+		// The workflow bundle is INDIVISIBLE: the submitter selects an
+		// anchored workflow, and that selection fixes its ceilings and
+		// contract — no pairing an anchored workflow with another
+		// bundle's ceiling (close-review M-6 / owner finding 4).
+		var bundle *deployment.WorkflowBundle
+		for i := range a.Workflows {
+			if a.Workflows[i].Workflow == wf.Hash {
+				bundle = &a.Workflows[i]
 				break
 			}
 		}
-		if !anchoredWF {
+		if bundle == nil {
 			return res, fmt.Errorf("%w: workflow is not in the anchored workflow set (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
+		}
+		for _, check := range []struct{ label, got, want string }{
+			{"workflow ceiling", wfCeiling.Hash, bundle.WorkflowCeiling},
+			{"exec ceiling", execCeiling.Hash, bundle.ExecCeiling},
+			{"context contract", contract.Hash, bundle.ContextContract},
+		} {
+			if check.got != check.want {
+				return res, fmt.Errorf("%w: %s is not the artifact this anchored workflow bundles (deployment %s@%d)", ErrAssembly, check.label, a.Name, a.Deployment)
+			}
+		}
+		// Skill composition resolves from the ANCHORED CATALOG, never
+		// from the submitter's own hash (owner finding 1): the
+		// submitter selects an anchored skill identity; the catalog
+		// says what that identity is composed of.
+		if serr := o.verifyAnchoredSkill(a, env); serr != nil {
+			return res, serr
 		}
 		allowedModel := false
 		for _, m := range a.Models {

@@ -14,9 +14,12 @@ func validAnchorMap() map[string]any {
 		"version": 1, "name": "local-dev", "deployment_version": 1,
 		"instruction_root_safety": h("safety"), "instruction_root_system": h("system"),
 		"instruction_root_themis": h("themis"), "instruction_policy": h("policy"),
-		"tool_registry": h("registry"), "workflow_ceiling": h("wceiling"),
-		"exec_ceiling": h("eceiling"), "context_contract": h("contract"),
-		"workflows": []any{h("wf1")}, "models": []any{"scripted"},
+		"tool_registry": h("registry"),
+		"constitution":  map[string]any{"state": h("l6c"), "orchestration": h("l7c")},
+		"workflows": []any{map[string]any{
+			"workflow": h("wf1"), "workflow_ceiling": h("wceiling"),
+			"exec_ceiling": h("eceiling"), "context_contract": h("contract")}},
+		"models":         []any{"scripted"},
 		"model_registry": "absent",
 		"skill_catalog":  h("catalog"), "contract_registry": h("l10reg"),
 		"criteria_registry": h("l11reg"), "regression_set_registry": h("setreg"),
@@ -130,8 +133,14 @@ func TestParseAnchorRefusals(t *testing.T) {
 		{"malformed pin", func(m map[string]any) { m["skill_catalog"] = "zz" }},
 		{"empty workflows", func(m map[string]any) { m["workflows"] = []any{} }},
 		{"duplicate workflow", func(m map[string]any) {
-			h := m["workflows"].([]any)[0]
-			m["workflows"] = []any{h, h}
+			w := m["workflows"].([]any)[0]
+			m["workflows"] = []any{w, w}
+		}},
+		{"bundle missing a pin", func(m map[string]any) {
+			m["workflows"].([]any)[0].(map[string]any)["exec_ceiling"] = ""
+		}},
+		{"missing constitution pin", func(m map[string]any) {
+			m["constitution"] = map[string]any{"state": "", "orchestration": ""}
 		}},
 		{"empty models", func(m map[string]any) { m["models"] = []any{} }},
 		{"empty model entry", func(m map[string]any) { m["models"] = []any{""} }},
@@ -317,6 +326,113 @@ func TestAnchorLoaderBounds(t *testing.T) {
 		os.WriteFile(reg, rb, 0o644)
 		if _, err := AdmitAnchor(p, hashBytes(ab), reg); err == nil {
 			t.Fatal("malformed entry accepted")
+		}
+	})
+}
+
+// Owner finding 3: the read path re-establishes what a recorded
+// deployment identity MEANT — from the registry and the bytes, never
+// from the runtime assertion that was accepted at submission.
+func TestVerifyAnchorRecord(t *testing.T) {
+	m := validAnchorMap()
+	ab, _ := json.Marshal(m)
+	dir := t.TempDir()
+	rb, _ := json.Marshal(map[string]any{
+		"version": 1, "kind": "deployment-anchors",
+		"entries": []any{map[string]any{
+			"name": "local-dev", "version": 1,
+			"artifact_sha256": hashBytes(ab), "state": "active"}},
+	})
+	reg := filepath.Join(dir, "anchors.json")
+	os.WriteFile(reg, rb, 0o644)
+
+	t.Run("recorded identity + bytes + registry re-establish", func(t *testing.T) {
+		a, err := VerifyAnchorRecord(hashBytes(ab), ab, reg)
+		if err != nil || a.Name != "local-dev" {
+			t.Fatalf("%+v %v", a, err)
+		}
+	})
+	t.Run("bytes not matching the recorded identity refuse", func(t *testing.T) {
+		other, _ := json.Marshal(validAnchorMap())
+		if _, err := VerifyAnchorRecord(strings.Repeat("ee", 32), other, reg); err == nil {
+			t.Fatal("mismatched bytes accepted")
+		}
+	})
+	t.Run("unanchored record has nothing to verify", func(t *testing.T) {
+		if _, err := VerifyAnchorRecord("unanchored", nil, reg); err == nil {
+			t.Fatal("unanchored record verified as governed")
+		}
+	})
+	t.Run("missing bytes refuse", func(t *testing.T) {
+		if _, err := VerifyAnchorRecord(hashBytes(ab), nil, reg); err == nil {
+			t.Fatal("absent anchor bytes accepted")
+		}
+	})
+	t.Run("deregistered anchor makes the deployment uninterpretable", func(t *testing.T) {
+		empty, _ := json.Marshal(map[string]any{"version": 1, "kind": "deployment-anchors", "entries": []any{}})
+		p2 := filepath.Join(dir, "empty.json")
+		os.WriteFile(p2, empty, 0o644)
+		if _, err := VerifyAnchorRecord(hashBytes(ab), ab, p2); err == nil || !strings.Contains(err.Error(), "no longer registered") {
+			t.Fatalf("deregistered anchor verified: %v", err)
+		}
+	})
+	t.Run("withdrawn anchor still explains past execution", func(t *testing.T) {
+		wb, _ := json.Marshal(map[string]any{
+			"version": 1, "kind": "deployment-anchors",
+			"entries": []any{map[string]any{
+				"name": "local-dev", "version": 1,
+				"artifact_sha256": hashBytes(ab), "state": "withdrawn"}},
+		})
+		p3 := filepath.Join(dir, "withdrawn.json")
+		os.WriteFile(p3, wb, 0o644)
+		if _, err := VerifyAnchorRecord(hashBytes(ab), ab, p3); err != nil {
+			t.Fatalf("withdrawal rewrote history: %v", err)
+		}
+	})
+}
+
+func TestRegistryAppendOnly(t *testing.T) {
+	mk := func(entries ...map[string]any) *Registry {
+		es := make([]any, 0, len(entries))
+		for _, e := range entries {
+			es = append(es, e)
+		}
+		b, _ := json.Marshal(map[string]any{"version": 1, "kind": "deployment-anchors", "entries": es})
+		r, err := parseRegistry(b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return r
+	}
+	e1 := map[string]any{"name": "d", "version": 1, "artifact_sha256": strings.Repeat("11", 32), "state": "active"}
+	prior := mk(e1)
+	t.Run("append is legal", func(t *testing.T) {
+		e2 := map[string]any{"name": "d", "version": 2, "artifact_sha256": strings.Repeat("22", 32), "state": "active"}
+		if err := mk(e1, e2).CheckAppendOnly(prior); err != nil {
+			t.Fatal(err)
+		}
+	})
+	t.Run("withdrawal is legal", func(t *testing.T) {
+		w := map[string]any{"name": "d", "version": 1, "artifact_sha256": strings.Repeat("11", 32), "state": "withdrawn"}
+		if err := mk(w).CheckAppendOnly(prior); err != nil {
+			t.Fatal(err)
+		}
+	})
+	t.Run("un-withdrawal refused", func(t *testing.T) {
+		w := map[string]any{"name": "d", "version": 1, "artifact_sha256": strings.Repeat("11", 32), "state": "withdrawn"}
+		if err := mk(e1).CheckAppendOnly(mk(w)); err == nil {
+			t.Fatal("un-withdrawal accepted")
+		}
+	})
+	t.Run("rebinding refused", func(t *testing.T) {
+		r := map[string]any{"name": "d", "version": 1, "artifact_sha256": strings.Repeat("33", 32), "state": "active"}
+		if err := mk(r).CheckAppendOnly(prior); err == nil {
+			t.Fatal("rebinding accepted")
+		}
+	})
+	t.Run("deletion refused", func(t *testing.T) {
+		if err := mk().CheckAppendOnly(prior); err == nil {
+			t.Fatal("deletion accepted")
 		}
 	})
 }

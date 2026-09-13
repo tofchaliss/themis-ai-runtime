@@ -228,3 +228,81 @@ sha256 88bdc772da01c288…) proposed via
 `anchors.proposed.json` → owner act → `anchors.json` ACTIVE
 (2026-09-13). Verified inert before activation (admission refused:
 registry unavailable) and admitted after.
+
+
+## Owner disposition of the five findings + remediation (2026-09-13)
+
+Owner ruling: four MUST FIX, one implementation correction; **no
+D-G1-1 reopen** — the architectural rule is settled and the
+remaining question is anchor COMPLETENESS: *an admitted Deployment
+Anchor must be a closed-world declaration of the artifacts that can
+influence governed execution*, not merely "the artifacts the
+validator currently checks". Production wiring stays BLOCKED until
+these land.
+
+**1. Skill resolution from the anchored catalog (MUST FIX) — DONE.**
+Under an anchored deployment, a skill-attributed envelope resolves
+its composition from the ANCHORED catalog: the catalog file must
+hash to the anchor's `skill_catalog` pin, the skill ref must resolve
+to an ACTIVE registration, and the envelope's sealed composition
+must EQUAL that registration's `composition_sha256`. The submitter
+selects an anchored skill identity and can no longer select one of
+its constituent hashes. L7 still only compares hashes (skill-blind);
+the identity it compares against now comes from governed bytes.
+(`Orchestrator.verifyAnchoredSkill`, `Config.SkillCatalogPath`.)
+
+**2. Anchors registry append-only (MUST FIX) — DONE.**
+`deployment.Registry` + `CheckAppendOnly` (the ratified pattern):
+registrations never disappear, `name@version` never rebinds,
+state advances active→withdrawn only. The wall spans restarts — the
+observed registry state is persisted under the record root and
+re-checked at every Open, so out-of-band mutation is DETECTED
+(Register T), not trusted. deployment@N → H is immutable.
+
+**3. Read-path re-verification (MUST FIX) — DONE.**
+`deployment.VerifyAnchorRecord(recordedHash, anchorBytes,
+registryPath)`: the record IDENTIFIES the anchor; the registry and
+the bytes PROVE what that identity meant — the G2 principle applied
+to G1. The anchor bytes are durable in the record, so a cold reader
+re-parses them, re-hashes to the recorded identity, and
+re-establishes registration. A withdrawn anchor still explains past
+execution (withdrawal stops new opens, never rewrites history); a
+deregistered one makes the deployment uninterpretable and says so.
+Exercised end-to-end in Phase C (`verifyDeployment`).
+
+**4. Enumeration completeness + arity (MUST FIX) — DONE.**
+- *Constitution pins*: the anchor pins the L6 and L7 constitution
+  hashes — compiled control vocabularies that pass the owner's test
+  ("can changing this artifact change the behavior or authority of
+  an anchored deployment?"). A rebuilt binary with a different
+  constitution cannot open under the old anchor.
+- *Door table*: classified, not pinned — L11's door table is
+  compiled reviewed code ("adding a door is a reviewed code change,
+  never data"), and the four door REGISTRIES it names are pinned.
+  Changing it is a code change, covered by the constitution/binary
+  identity rather than by a file hash. Recorded classification, not
+  an omission.
+- *Arity*: `workflows` is now a list of INDIVISIBLE bundles
+  (workflow + its workflow ceiling + exec ceiling + context
+  contract), bounded at 64. Multi-workflow deployments are
+  expressible, and a submitter cannot pair an anchored workflow with
+  another bundle's ceiling.
+
+**5. local-dev@1 (implementation correction) — DONE by WITHDRAWAL.**
+The anchor pinned a spec TEMPLATE where an execution ceiling
+belongs, and no execution-ceiling artifact exists
+(`policies/execution/` is empty). Per the owner: do not reinterpret,
+do not infer a default — refuse. `local-dev@1` is WITHDRAWN (not
+deleted: the registration stays interpretable); its bytes are
+retained as `local-dev.withdrawn.json`; `policies/deployment/
+README.md` records the reason and what a runnable `local-dev@2`
+requires. **No anchor is ACTIVE**, so orchestrators run only in the
+explicitly declared Unanchored test-harness role.
+
+**Negative-space re-run:** every newly anchored dependency now has a
+submitter-alteration refusal test — bundle indivisibility,
+workflow-set membership, model allowlist (reachable now), model
+registry rewrite, instruction-policy pin, instruction-root drift,
+constitution drift, catalog composition mismatch, registry rebinding
+and deletion across Opens, and the read-path cases. Phase C runs
+ANCHORED end-to-end.

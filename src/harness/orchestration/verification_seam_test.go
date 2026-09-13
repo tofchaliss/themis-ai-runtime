@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/tofchaliss/themis/deployment"
+	"github.com/tofchaliss/themis/state"
 )
 
 func writeSeamFixture(t *testing.T, dir, name, content string) string {
@@ -331,10 +332,14 @@ func anchorWorld(t *testing.T, mutate func(m map[string]any)) (anchorPath, ancho
 		"instruction_root_themis": hashDir(filepath.Join(repoRoot, "instructions/themis")),
 		"instruction_policy":      hashFile(filepath.Join(repoRoot, "policies/security/instruction-directive-patterns.json")),
 		"tool_registry":           hashFile(filepath.Join(repoRoot, "policies/tools/registry-v4.json")),
-		"workflow_ceiling":        strings.Repeat("11", 32),
-		"exec_ceiling":            strings.Repeat("22", 32),
-		"context_contract":        strings.Repeat("33", 32),
-		"workflows":               []any{strings.Repeat("44", 32)},
+		"constitution": map[string]any{
+			"state": state.ConstitutionHash(), "orchestration": ConstitutionHash()},
+		"workflows": []any{map[string]any{
+			"workflow":         strings.Repeat("44", 32),
+			"workflow_ceiling": strings.Repeat("11", 32),
+			"exec_ceiling":     strings.Repeat("22", 32),
+			"context_contract": strings.Repeat("33", 32),
+		}},
 		"models":                  []any{"scripted"},
 		"model_registry":          "absent",
 		"skill_catalog":           hashFile(filepath.Join(repoRoot, "policies/skills/catalog.json")),
@@ -431,11 +436,13 @@ func TestAnchoredWorkflowSetEnforced(t *testing.T) {
 	envHash := func(n string) string { return fileHash(filepath.Join(f.envDir, n)) }
 	ap, sha, reg := anchorWorld(t, func(m map[string]any) {
 		m["tool_registry"] = fileHash(filepath.Join(repoRoot, "policies/tools/registry-v4.json"))
-		m["workflow_ceiling"] = envHash("wceiling.json")
-		m["exec_ceiling"] = envHash("eceiling.json")
-		m["context_contract"] = envHash("context-contract.json")
-		// every bundle pin satisfied EXCEPT the workflow set
-		m["workflows"] = []any{strings.Repeat("ee", 32)}
+		// every other pin satisfied EXCEPT the workflow identity
+		m["workflows"] = []any{map[string]any{
+			"workflow":         strings.Repeat("ee", 32),
+			"workflow_ceiling": envHash("wceiling.json"),
+			"exec_ceiling":     envHash("eceiling.json"),
+			"context_contract": envHash("context-contract.json"),
+		}}
 	})
 	o, _, err := Open(anchoredConfig(t, t.TempDir(), ap, sha, reg))
 	if err != nil {
@@ -523,7 +530,9 @@ func TestAnchoredSubmitRefusesUnanchoredBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 	env := f.verifEnvelope(t, "anchored-1")
-	if _, err := anchored.SubmitTask(env); err == nil || !strings.Contains(err.Error(), "not the anchored artifact") {
+	// Placeholder pins: the first refusal is the workflow identity —
+	// a bundle the anchor never declared cannot be run at all.
+	if _, err := anchored.SubmitTask(env); err == nil || !strings.Contains(err.Error(), "anchored workflow set") {
 		t.Fatalf("unanchored bundle accepted: %v", err)
 	}
 
@@ -541,10 +550,12 @@ func TestAnchoredSubmitRefusesUnanchoredBundle(t *testing.T) {
 	envHash := func(name string) string { return fileHash(filepath.Join(f.envDir, name)) }
 	pinBundle := func(m map[string]any) {
 		m["tool_registry"] = fileHash(filepath.Join(repoRoot, "policies/tools/registry-v4.json"))
-		m["workflow_ceiling"] = envHash("wceiling.json")
-		m["exec_ceiling"] = envHash("eceiling.json")
-		m["context_contract"] = envHash("context-contract.json")
-		m["workflows"] = []any{envHash("workflow.json")}
+		m["workflows"] = []any{map[string]any{
+			"workflow":         envHash("workflow.json"),
+			"workflow_ceiling": envHash("wceiling.json"),
+			"exec_ceiling":     envHash("eceiling.json"),
+			"context_contract": envHash("context-contract.json"),
+		}}
 	}
 
 	// Control: with every pin satisfied AND the model allowlisted,
@@ -572,5 +583,82 @@ func TestAnchoredSubmitRefusesUnanchoredBundle(t *testing.T) {
 	_, err = anchored2.SubmitTask(f.verifEnvelope(t, "anchored-2"))
 	if err == nil || !strings.Contains(err.Error(), "anchored allowlist") {
 		t.Fatalf("model allowlist branch not reached: %v", err)
+	}
+}
+
+// Owner finding 4 / M-6: the workflow bundle is indivisible — an
+// anchored workflow cannot be paired with another bundle's ceiling.
+func TestAnchoredBundleIsIndivisible(t *testing.T) {
+	f := setupVerif(t, happyScript(), &scriptedEvaluator{})
+	fileHash := func(p string) string {
+		h, herr := deployment.HashFile(p)
+		if herr != nil {
+			t.Fatal(herr)
+		}
+		return h
+	}
+	envHash := func(n string) string { return fileHash(filepath.Join(f.envDir, n)) }
+	ap, sha, reg := anchorWorld(t, func(m map[string]any) {
+		m["tool_registry"] = fileHash(filepath.Join(repoRoot, "policies/tools/registry-v4.json"))
+		m["workflows"] = []any{map[string]any{
+			"workflow":         envHash("workflow.json"),
+			"workflow_ceiling": envHash("wceiling.json"),
+			"exec_ceiling":     envHash("eceiling.json"),
+			// the contract of some OTHER bundle
+			"context_contract": strings.Repeat("cc", 32),
+		}}
+	})
+	o, _, err := Open(anchoredConfig(t, t.TempDir(), ap, sha, reg))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = o.SubmitTask(f.verifEnvelope(t, "mixed-bundle"))
+	if err == nil || !strings.Contains(err.Error(), "this anchored workflow bundles") {
+		t.Fatalf("cross-bundle pairing accepted: %v", err)
+	}
+}
+
+// Owner finding 2: the anchors registry is append-only across Opens.
+func TestAnchorsRegistryAppendOnlyAcrossOpens(t *testing.T) {
+	ap, sha, reg := anchorWorld(t, nil)
+	base := t.TempDir()
+	cfg := anchoredConfig(t, base, ap, sha, reg)
+	if _, _, err := Open(cfg); err != nil {
+		t.Fatal(err)
+	}
+	// Out-of-band mutation: the registration is rebound to different
+	// anchor bytes — deployment@N would mean something else.
+	rb, _ := json.Marshal(map[string]any{
+		"version": 1, "kind": "deployment-anchors",
+		"entries": []any{map[string]any{
+			"name": "test-deployment", "version": 1,
+			"artifact_sha256": strings.Repeat("dd", 32), "state": "active"}},
+	})
+	if err := os.WriteFile(reg, rb, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, _, err := Open(cfg)
+	if err == nil || !strings.Contains(err.Error(), "deployment identity is immutable") {
+		t.Fatalf("rebound registration accepted on reopen: %v", err)
+	}
+
+	// Deletion is equally refused.
+	empty, _ := json.Marshal(map[string]any{"version": 1, "kind": "deployment-anchors", "entries": []any{}})
+	os.WriteFile(reg, empty, 0o644)
+	if _, _, err := Open(cfg); err == nil || !strings.Contains(err.Error(), "disappeared") {
+		t.Fatalf("deleted registration accepted on reopen: %v", err)
+	}
+}
+
+// Owner finding 4: the compiled control vocabularies are pinned — a
+// binary whose constitution differs cannot open under the anchor.
+func TestAnchoredConstitutionPin(t *testing.T) {
+	ap, sha, reg := anchorWorld(t, func(m map[string]any) {
+		m["constitution"] = map[string]any{
+			"state": strings.Repeat("ab", 32), "orchestration": ConstitutionHash()}
+	})
+	_, _, err := Open(anchoredConfig(t, t.TempDir(), ap, sha, reg))
+	if err == nil || !strings.Contains(err.Error(), "L6 constitution is not the anchored one") {
+		t.Fatalf("constitution drift accepted: %v", err)
 	}
 }

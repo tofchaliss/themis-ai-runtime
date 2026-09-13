@@ -167,10 +167,14 @@ func buildAnchor(t *testing.T, envDir string) (anchorPath, anchorSHA, anchorsReg
 		"instruction_root_themis": hd(filepath.Join(repoRoot, "instructions/themis")),
 		"instruction_policy":      hf(filepath.Join(repoRoot, "policies/security/instruction-directive-patterns.json")),
 		"tool_registry":           hf(filepath.Join(repoRoot, "policies/tools/registry-v4.json")),
-		"workflow_ceiling":        env("wceiling.json"),
-		"exec_ceiling":            env("eceiling.json"),
-		"context_contract":        env("context-contract.json"),
-		"workflows":               []any{env("workflow.json")},
+		"constitution": map[string]any{
+			"state": state.ConstitutionHash(), "orchestration": orchestration.ConstitutionHash()},
+		"workflows": []any{map[string]any{
+			"workflow":         env("workflow.json"),
+			"workflow_ceiling": env("wceiling.json"),
+			"exec_ceiling":     env("eceiling.json"),
+			"context_contract": env("context-contract.json"),
+		}},
 		"models":                  []any{"scripted"},
 		"model_registry":          "absent",
 		"skill_catalog":           hf(filepath.Join(repoRoot, "policies/skills/catalog.json")),
@@ -200,6 +204,67 @@ func buildAnchor(t *testing.T, envDir string) (anchorPath, anchorSHA, anchorsReg
 		t.Fatal(err)
 	}
 	return anchorPath, anchorSHA, anchorsReg
+}
+
+// verifyDeployment re-establishes, from the durable record alone,
+// what deployment governed a task: the CREATED event's governed
+// hashes carry the anchor identity, the record's stored objects
+// carry the anchor bytes, and the registry proves what that identity
+// meant (owner finding 3 — the G2 principle applied to G1).
+func verifyDeployment(t *testing.T, root *state.Root, taskID, anchorsReg string) {
+	t.Helper()
+	events, err := root.ReadEvents(taskID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var recordedHash string
+	var anchorBytes []byte
+	for _, ev := range events {
+		var body struct {
+			To             string            `json:"to"`
+			GovernedHashes map[string]string `json:"governed_hashes"`
+		}
+		if json.Unmarshal(ev.Body, &body) == nil && body.GovernedHashes != nil {
+			if h, ok := body.GovernedHashes["deployment_anchor"]; ok {
+				recordedHash = h
+			}
+		}
+		// The anchor bytes ride the record as an ordinary governed
+		// artifact object; find the one that hashes to the identity.
+		for _, ref := range ev.Refs {
+			b, gerr := root.Store().GetObject(ref.ID)
+			if gerr != nil {
+				continue
+			}
+			if recordedHash != "" && ratchet.InstanceID(b) == recordedHash {
+				anchorBytes = b
+			}
+		}
+	}
+	if recordedHash == "" {
+		t.Fatal("task record carries no deployment identity")
+	}
+	if recordedHash == "unanchored" {
+		t.Fatal("phase C must run anchored")
+	}
+	if anchorBytes == nil {
+		// Objects may be bound before the identity is seen; re-scan.
+		for _, ev := range events {
+			for _, ref := range ev.Refs {
+				b, gerr := root.Store().GetObject(ref.ID)
+				if gerr == nil && ratchet.InstanceID(b) == recordedHash {
+					anchorBytes = b
+				}
+			}
+		}
+	}
+	a, verr := deployment.VerifyAnchorRecord(recordedHash, anchorBytes, anchorsReg)
+	if verr != nil {
+		t.Fatalf("deployment not re-establishable from the record: %v", verr)
+	}
+	if a.Name != "phase-c" || a.Deployment != 1 {
+		t.Fatalf("re-established the wrong deployment: %s@%d", a.Name, a.Deployment)
+	}
 }
 
 // chainFixture opens ONE orchestrator (with the themis root wired —

@@ -58,13 +58,23 @@ type Anchor struct {
 	InstructionThemisRoot string `json:"instruction_root_themis"`
 	InstructionPolicy     string `json:"instruction_policy"`
 
+	// Constitution pins the compiled control vocabularies whose change
+	// changes what an anchored deployment can DO (owner test: "can
+	// changing this artifact change the behavior or authority of an
+	// anchored deployment?"). They are code identities, not files, so
+	// a rebuilt binary with different constitutions cannot open under
+	// an anchor that pinned the old ones.
+	Constitution ConstitutionPin `json:"constitution"`
+
 	// Enforced by L7 at SubmitTask (bundle artifact bytes):
-	ToolRegistry    string   `json:"tool_registry"`
-	WorkflowCeiling string   `json:"workflow_ceiling"`
-	ExecCeiling     string   `json:"exec_ceiling"`
-	ContextContract string   `json:"context_contract"`
-	Workflows       []string `json:"workflows"` // the anchored workflow set
-	Models          []string `json:"models"`    // the model allowlist (names)
+	ToolRegistry string `json:"tool_registry"`
+	// Workflows is the anchored workflow set, each entry a COMPLETE
+	// bundle: the workflow and the ceilings/contract that govern it.
+	// Per-workflow arity (close-review M-6): scalar ceilings made
+	// multi-workflow deployments unexpressible, and a submitter could
+	// pair any anchored workflow with any anchored ceiling.
+	Workflows []WorkflowBundle `json:"workflows"`
+	Models    []string         `json:"models"` // the model allowlist (names)
 	// ModelRegistry pins the model-registry bytes (models.json): the
 	// allowlist governs NAMES, and this pin governs what those names
 	// RESOLVE TO — runtime, endpoint, credential env (close-review
@@ -73,9 +83,13 @@ type Anchor struct {
 	// local-only resolution; it is a declaration, never a default.
 	ModelRegistry string `json:"model_registry"`
 
-	// Consumption pins for the other governed planes (verified where
-	// those planes are consumed):
-	SkillCatalog          string `json:"skill_catalog"`
+	// SkillCatalog is AUTHORITATIVE for skill composition resolution
+	// under an anchored deployment: the submitter selects an anchored
+	// skill identity, never one of its constituent hashes (owner
+	// disposition, finding 1).
+	SkillCatalog string `json:"skill_catalog"`
+	// Consumption pins for planes consumed outside L7 (each verified
+	// by that plane's own consumer; see the residual record):
 	ContractRegistry      string `json:"contract_registry"`
 	CriteriaRegistry      string `json:"criteria_registry"`
 	RegressionSetRegistry string `json:"regression_set_registry"`
@@ -84,7 +98,27 @@ type Anchor struct {
 	Raw    []byte `json:"-"`
 }
 
+// WorkflowBundle is one anchored workflow with the artifacts that
+// govern it — an indivisible unit, never a menu of interchangeable
+// parts.
+type WorkflowBundle struct {
+	Workflow        string `json:"workflow"`
+	WorkflowCeiling string `json:"workflow_ceiling"`
+	ExecCeiling     string `json:"exec_ceiling"`
+	ContextContract string `json:"context_contract"`
+}
+
+// ConstitutionPin names the compiled control vocabularies.
+type ConstitutionPin struct {
+	State         string `json:"state"`
+	Orchestration string `json:"orchestration"`
+}
+
 const maxAnchorBytes = 1 << 20
+
+// maxWorkflowBundles bounds the enumeration: an anchor is a CLOSED
+// declaration, so its workflow set is finite and reviewable.
+const maxWorkflowBundles = 64
 
 // ParseAnchor validates anchor bytes fail-closed.
 func ParseAnchor(raw []byte, origin string) (*Anchor, error) {
@@ -110,18 +144,17 @@ func ParseAnchor(raw []byte, origin string) (*Anchor, error) {
 		return nil, fmt.Errorf("%w: %s: deployment_version must be a positive integer", ErrAnchor, origin)
 	}
 	for field, v := range map[string]string{
-		"instruction_root_safety": a.InstructionSafetyRoot,
-		"instruction_root_system": a.InstructionSystemRoot,
-		"instruction_root_themis": a.InstructionThemisRoot,
-		"instruction_policy":      a.InstructionPolicy,
-		"tool_registry":           a.ToolRegistry,
-		"workflow_ceiling":        a.WorkflowCeiling,
-		"exec_ceiling":            a.ExecCeiling,
-		"context_contract":        a.ContextContract,
-		"skill_catalog":           a.SkillCatalog,
-		"contract_registry":       a.ContractRegistry,
-		"criteria_registry":       a.CriteriaRegistry,
-		"regression_set_registry": a.RegressionSetRegistry,
+		"instruction_root_safety":    a.InstructionSafetyRoot,
+		"instruction_root_system":    a.InstructionSystemRoot,
+		"instruction_root_themis":    a.InstructionThemisRoot,
+		"instruction_policy":         a.InstructionPolicy,
+		"tool_registry":              a.ToolRegistry,
+		"constitution.state":         a.Constitution.State,
+		"constitution.orchestration": a.Constitution.Orchestration,
+		"skill_catalog":              a.SkillCatalog,
+		"contract_registry":          a.ContractRegistry,
+		"criteria_registry":          a.CriteriaRegistry,
+		"regression_set_registry":    a.RegressionSetRegistry,
 	} {
 		if !shaSyntax.MatchString(v) {
 			return nil, fmt.Errorf("%w: %s: %s must be a sha256 hex digest — nothing is defaulted", ErrAnchor, origin, field)
@@ -133,15 +166,23 @@ func ParseAnchor(raw []byte, origin string) (*Anchor, error) {
 	if len(a.Workflows) == 0 {
 		return nil, fmt.Errorf("%w: %s: the anchored workflow set must not be empty", ErrAnchor, origin)
 	}
+	if len(a.Workflows) > maxWorkflowBundles {
+		return nil, fmt.Errorf("%w: %s: the anchored workflow set exceeds %d bundles — an anchor is a closed, reviewable declaration", ErrAnchor, origin, maxWorkflowBundles)
+	}
 	seenW := map[string]bool{}
 	for _, w := range a.Workflows {
-		if !shaSyntax.MatchString(w) {
-			return nil, fmt.Errorf("%w: %s: workflow pin %q must be a sha256 hex digest", ErrAnchor, origin, w)
+		for field, v := range map[string]string{
+			"workflow": w.Workflow, "workflow_ceiling": w.WorkflowCeiling,
+			"exec_ceiling": w.ExecCeiling, "context_contract": w.ContextContract,
+		} {
+			if !shaSyntax.MatchString(v) {
+				return nil, fmt.Errorf("%w: %s: workflow bundle %s must be a sha256 hex digest", ErrAnchor, origin, field)
+			}
 		}
-		if seenW[w] {
-			return nil, fmt.Errorf("%w: %s: duplicate workflow pin", ErrAnchor, origin)
+		if seenW[w.Workflow] {
+			return nil, fmt.Errorf("%w: %s: duplicate workflow pin — one workflow, one bundle", ErrAnchor, origin)
 		}
-		seenW[w] = true
+		seenW[w.Workflow] = true
 	}
 	if len(a.Models) == 0 {
 		return nil, fmt.Errorf("%w: %s: the model allowlist must not be empty — an unlisted model is not a deployment default", ErrAnchor, origin)
@@ -193,52 +234,14 @@ func AdmitAnchor(anchorPath, expectedSHA, anchorsRegistryPath string) (*Anchor, 
 	if err != nil {
 		return nil, err
 	}
-	regRaw, err := readGoverned(anchorsRegistryPath, maxAnchorBytes)
+	reg, err := LoadRegistry(anchorsRegistryPath)
 	if err != nil {
-		return nil, fmt.Errorf("%w: anchors registry unavailable: %v", ErrAdmission, err)
+		return nil, err
 	}
-	if err := checkNoDuplicateKeys(regRaw); err != nil {
-		return nil, fmt.Errorf("%w: anchors registry: %v", ErrAdmission, err)
-	}
-	var reg struct {
-		Version int             `json:"version"`
-		Kind    string          `json:"kind"`
-		Entries []registryEntry `json:"entries"`
-	}
-	dec := json.NewDecoder(strings.NewReader(string(regRaw)))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&reg); err != nil || dec.More() {
-		return nil, fmt.Errorf("%w: anchors registry unparseable", ErrAdmission)
-	}
-	if reg.Version < 1 || reg.Kind != "deployment-anchors" {
-		return nil, fmt.Errorf("%w: not a deployment-anchors registry", ErrAdmission)
-	}
-	seen := map[string]bool{}
-	seenArtifact := map[string]bool{}
 	var admitted *registryEntry
 	for i := range reg.Entries {
-		e := &reg.Entries[i]
-		if !nameSyntax.MatchString(e.Name) || e.Version < 1 || !shaSyntax.MatchString(e.Artifact) {
-			return nil, fmt.Errorf("%w: anchors registry: malformed entry", ErrAdmission)
-		}
-		if e.State != "active" && e.State != "withdrawn" {
-			return nil, fmt.Errorf("%w: anchors registry: unknown state %q", ErrAdmission, e.State)
-		}
-		key := fmt.Sprintf("%s@%d", e.Name, e.Version)
-		if seen[key] {
-			return nil, fmt.Errorf("%w: anchors registry: duplicate registration %s", ErrAdmission, key)
-		}
-		seen[key] = true
-		// Close-review LOW-1: one artifact hash may bind to exactly
-		// one registration, or admission would be order-dependent
-		// (a withdrawn entry followed by an active one for the same
-		// bytes).
-		if seenArtifact[e.Artifact] {
-			return nil, fmt.Errorf("%w: anchors registry: artifact %s registered more than once — admission must not depend on entry order", ErrAdmission, e.Artifact[:12])
-		}
-		seenArtifact[e.Artifact] = true
-		if e.Artifact == a.SHA256 {
-			admitted = e
+		if reg.Entries[i].Artifact == a.SHA256 {
+			admitted = &reg.Entries[i]
 		}
 	}
 	if admitted == nil {
@@ -411,4 +414,159 @@ func checkNoDuplicateKeys(raw []byte) error {
 			stack[len(stack)-1].nextIsKey = true
 		}
 	}
+}
+
+// --- Append-only wall (owner finding 2) ------------------------------
+
+// Registry is a loaded anchors-registry state. Loading it separately
+// from admission lets a caller hold a PRIOR observed state and prove
+// the registry only ever grew: deployment@N → H must mean the same
+// thing forever, or the identity semantics collapse.
+type Registry struct {
+	Version int             `json:"version"`
+	Kind    string          `json:"kind"`
+	Entries []registryEntry `json:"entries"`
+
+	Hash string `json:"-"`
+}
+
+// LoadRegistry reads and validates an anchors registry fail-closed.
+func LoadRegistry(path string) (*Registry, error) {
+	raw, err := readGoverned(path, maxAnchorBytes)
+	if err != nil {
+		return nil, fmt.Errorf("%w: anchors registry unavailable: %v", ErrAdmission, err)
+	}
+	r, err := parseRegistry(raw)
+	if err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
+func parseRegistry(raw []byte) (*Registry, error) {
+	if err := checkNoDuplicateKeys(raw); err != nil {
+		return nil, fmt.Errorf("%w: anchors registry: %v", ErrAdmission, err)
+	}
+	var reg Registry
+	dec := json.NewDecoder(strings.NewReader(string(raw)))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&reg); err != nil || dec.More() {
+		return nil, fmt.Errorf("%w: anchors registry unparseable", ErrAdmission)
+	}
+	if reg.Version < 1 || reg.Kind != "deployment-anchors" {
+		return nil, fmt.Errorf("%w: not a deployment-anchors registry", ErrAdmission)
+	}
+	seen := map[string]bool{}
+	seenArtifact := map[string]bool{}
+	for i := range reg.Entries {
+		e := &reg.Entries[i]
+		if !nameSyntax.MatchString(e.Name) || e.Version < 1 || !shaSyntax.MatchString(e.Artifact) {
+			return nil, fmt.Errorf("%w: anchors registry: malformed entry", ErrAdmission)
+		}
+		if e.State != "active" && e.State != "withdrawn" {
+			return nil, fmt.Errorf("%w: anchors registry: unknown state %q", ErrAdmission, e.State)
+		}
+		key := fmt.Sprintf("%s@%d", e.Name, e.Version)
+		if seen[key] {
+			return nil, fmt.Errorf("%w: anchors registry: duplicate registration %s", ErrAdmission, key)
+		}
+		seen[key] = true
+		if seenArtifact[e.Artifact] {
+			return nil, fmt.Errorf("%w: anchors registry: artifact %s registered more than once — admission must not depend on entry order", ErrAdmission, e.Artifact[:12])
+		}
+		seenArtifact[e.Artifact] = true
+	}
+	reg.Hash = hashBytes(raw)
+	return &reg, nil
+}
+
+// CheckAppendOnly verifies this registry state against a previously
+// observed one: every prior registration must still be present with
+// the SAME anchor hash, and state may only advance active→withdrawn
+// (owner finding 2 — deployment@N → H1 must never become H2).
+// Deletion, rebinding, and un-withdrawal are refusals: out-of-band
+// registry mutation is DETECTED rather than trusted (Register T).
+func (r *Registry) CheckAppendOnly(prior *Registry) error {
+	if prior == nil {
+		return nil
+	}
+	current := map[string]registryEntry{}
+	for _, e := range r.Entries {
+		current[fmt.Sprintf("%s@%d", e.Name, e.Version)] = e
+	}
+	for _, p := range prior.Entries {
+		key := fmt.Sprintf("%s@%d", p.Name, p.Version)
+		cur, ok := current[key]
+		if !ok {
+			return fmt.Errorf("%w: %s disappeared — anchors are append-only so past deployments stay interpretable", ErrAdmission, key)
+		}
+		if cur.Artifact != p.Artifact {
+			return fmt.Errorf("%w: %s rebound to a different anchor — deployment identity is immutable", ErrAdmission, key)
+		}
+		if p.State == "withdrawn" && cur.State != "withdrawn" {
+			return fmt.Errorf("%w: %s un-withdrawn — state advances active→withdrawn only", ErrAdmission, key)
+		}
+	}
+	return nil
+}
+
+// ObservedRegistryPath is where an orchestrator persists the last
+// observed anchors-registry state under its own record root, so the
+// append-only wall spans restarts.
+func ObservedRegistryPath(stateRoot string) string {
+	return filepath.Join(stateRoot, "deployment", "anchors-observed.json")
+}
+
+// LoadObserved reads a previously observed registry state, if any.
+// A missing file is not an error: the first Open has no prior.
+func LoadObserved(stateRoot string) (*Registry, error) {
+	raw, err := readGoverned(ObservedRegistryPath(stateRoot), maxAnchorBytes)
+	if err != nil {
+		return nil, nil
+	}
+	return parseRegistry(raw)
+}
+
+// --- Read-path re-verification (owner finding 3) ---------------------
+
+// VerifyAnchorRecord re-establishes, from durable evidence alone,
+// what deployment governed a recorded task: the recorded identity
+// must be the hash of the recorded anchor BYTES, those bytes must
+// still parse, and they must still resolve to a Governance-admitted
+// anchor in the registry. Recording the anchor is not sufficient —
+// the record identifies the anchor; the registry and the bytes prove
+// what that identity meant (the G2 principle applied to G1).
+func VerifyAnchorRecord(recordedHash string, anchorBytes []byte, anchorsRegistryPath string) (*Anchor, error) {
+	if recordedHash == "unanchored" {
+		return nil, fmt.Errorf("%w: the task record declares an unanchored run — no deployment authority to verify", ErrAdmission)
+	}
+	if !shaSyntax.MatchString(recordedHash) {
+		return nil, fmt.Errorf("%w: task record carries no well-formed deployment-anchor identity", ErrAdmission)
+	}
+	if len(anchorBytes) == 0 {
+		return nil, fmt.Errorf("%w: anchor bytes for %s are not available in the record", ErrAdmission, recordedHash[:12])
+	}
+	if hashBytes(anchorBytes) != recordedHash {
+		return nil, fmt.Errorf("%w: recorded anchor bytes do not hash to the recorded identity", ErrAdmission)
+	}
+	a, err := ParseAnchor(anchorBytes, "recorded-anchor")
+	if err != nil {
+		return nil, err
+	}
+	reg, err := LoadRegistry(anchorsRegistryPath)
+	if err != nil {
+		return nil, err
+	}
+	for _, e := range reg.Entries {
+		if e.Artifact != a.SHA256 {
+			continue
+		}
+		if e.Name != a.Name || e.Version != a.Deployment {
+			return nil, fmt.Errorf("%w: recorded anchor's self-declaration disagrees with its registration", ErrAdmission)
+		}
+		// A withdrawn anchor still EXPLAINS a past execution:
+		// withdrawal stops new opens, it does not rewrite history.
+		return a, nil
+	}
+	return nil, fmt.Errorf("%w: the anchor that governed this task is no longer registered — its deployment is uninterpretable", ErrAdmission)
 }

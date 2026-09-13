@@ -1,6 +1,6 @@
 # Proposal: G2 — The Established-Fact Boundary
 
-Status: GRILL OPEN 2026-09-13. Source: L1–L11 integration audit
+Status: **GRILL CLOSED 2026-09-13 — D-G2-1 LOCKED.** See design.md. Source: L1–L11 integration audit
 synthesis G2 (owner-classified genuine cross-layer gap,
 grill-second). The D1/D4 defect remediation is BLOCKED on this
 grill by owner order: G2 defines who can establish a fact;

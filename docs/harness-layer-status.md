@@ -1,4 +1,4 @@
-# Harness Layer Status — L1 · L2 · L3 · L4 · L5 · L6 · L7 · L9 · L10 · L11
+# Harness Layer Status — L1 · L2 · L3 · L4 · L5 · L6 · L7 · L9 · L10 · L11 · cross-layer (G1/G2)
 
 Status date: 2026-09-11 (updated at L10 close). L1–L4 SHIPPED and ARCHIVED: grilled (openspec, owner-closed), implemented, security/test/architecture reviewed with three-state verdicts, live-proven against a local model. Archived changes: `openspec/changes/archive/2026-09-0{5,6}-layer-0{1,2,3,4}-*`. **L5 SHIPPED and ARCHIVED 2026-09-07** (openspec/changes/archive/2026-09-07-layer-05-execution-environment). **L6 SHIPPED and ARCHIVED 2026-09-07** (openspec/changes/archive/2026-09-07-layer-06-durable-state). **L7 SHIPPED and ARCHIVED 2026-09-07** (openspec/changes/archive/2026-09-07-layer-07-orchestration): grill closed (Q-L7-1..12), three Class-3 reviews remediated, arch HIGH 2a closed by owner decision (full L2 composition in the loop), live-proven vs qwen2.5:7b. **L9 Skills SHIPPED and ARCHIVED 2026-09-11** (openspec/changes/archive/2026-09-11-layer-09-skills): grill closed (D-L9-0..17 + amendments D-L9-11a/b/c/d), Gate 0 passed, M1–M5 implemented, residuals R-L9-1 and R-L9-2 closed, all three Class-3 reviews re-run against the final implementation with every CRITICAL/HIGH remediated and mutation-verified, live-proven vs qwen2.5:7b through the unmodified L7 loop. Three-state verdicts accepted by owner 2026-09-11; **investigate-cve@1 REGISTERED 2026-09-11** (owner-directed promotion to policies/skills/catalog.json; resolution verified ACTIVE with two-way manifest agreement); traceability.md written at archive. **L10 Verification & Observability SHIPPED and ARCHIVED 2026-09-11** (openspec/changes/archive/2026-09-11-layer-10-verification): grill closed same-day (D-L10-1..18 + D-L10-1a, owner-led), Gate 0 passed, M1–M6 implemented, three Class-3 close reviews remediated (both independent HIGHs = the same reconstruction record-selection forgery, closed by explicit record naming), five proof registers green incl. **live Register E vs qwen2.5:7b through the unmodified L7 loop with the real seam** (verify_report → report-valid@1 → PASS gates completion → cold reconstruction consistent). Three-state verdicts accepted; Governance registrations ACTIVE (registry-v4, L10 contract registry, catalog incl. remediate-dependency@1) as owner acts. Archived-layer amendments formally recorded in the L7, L4, and L6 archives (D-L10-17 discipline). Key residuals: L5 process-execution amendment for run_go_*-class verifiers (own gate), live telemetry grill (Q-L10-15), L6 audit-scope GC anchoring (ADG follow-up), one recorded equivalent mutant (verifState ordering). v1 observability = record-derived views inside the verification package; the D-L10-6 stage order carries an owner-blessed v1 clarification for read-only verifiers. Next: L11 (generalize compare/gate/variants — no second evaluation subsystem). **L11 Ratchet SHIPPED and ARCHIVED 2026-09-13** (openspec/changes/archive/2026-09-13-layer-11-ratchet): grill closed 2026-09-12 (D-L11-1..20 ALL LOCKED, 20/20, owner-led), Gate 0 PASS, M0–M7 implemented under the frozen constitution (src/harness/ratchet + cmd/themis-ratchet: criteria/regression-set registries, registered comparators, comparison packages with full conditioning tuples, door-resolved admission observations, grounded evidence, cold reconstruction, stateless derivations, Candidate/Evaluation Plan, structural walls). Three Class-3 close reviews 2026-09-13 converged on one seam (invocation boundary trusting its caller — sec CRITICAL C-1 admission forgery = arch H-1; evidence self-grounding); ALL CRITICAL/HIGH remediated (ObserveAdmission door resolution, GroundFacts, acceptance boundary with durable refusals, registry consumption-pin, reconstruction parity, ~19 mutants killed, CLI contract suite with cross-process cold reconstruction). Owner closure judgment 2026-09-13: CLOSED, three-state PASS (operationally-proven machine-local); three classifications RATIFIED (no-discard scope, consumption-pin wall shape, sensitivity residual as admission restriction). **Governance activated bench-score-delta@1 + core-regression@1 (policies/ratchet/, owner-directed act 2026-09-13).** Live proof PASS vs qwen2.5:7b (model authors candidate substance as Class-6 data-reader; every wall held). L11 residuals: knowledge-family handoff (Themis door unavailable — explicit, no substitute authority), meta-comparison / Δ-in-routing / multi-baseline (each = fresh architecture decision), benchmark-plane physical unification not performed (bench stays bench-owned), sensitivity inheritance. Owner closing sentence: no remaining L11 architecture work to design — failures default to implementation defect or recorded residual; architecture reopens only on a genuine D-L11-20 §7 gap.
 
@@ -154,3 +154,66 @@ A system message stating its rules (minus the rejected injection), evidence labe
 ## Standing safety property (owner-accepted, applies to all three)
 
 Failure of L1/L2/L3 can garble or starve model input; it can never bypass authorization, verification, or governance. Deferred behind dedicated grills: probabilistic selection, compression, repository/skill instruction sources (L5/L9 provenance), capability-fetch expansion (L4), trace persistence (L6), the approval channel + subagents + run_command (L7 residuals / L8 / OPEN-2).
+
+## Cross-layer integration audit + G1/G2 (2026-09-13, pushed at 9de4958)
+
+**L1–L11 integration audit COMPLETE** (charter → three parallel seam
+audits S1–S10+X1–X3 → synthesis → remediation → Phase C):
+openspec/changes/l1-l11-integration-audit/. Result: the intra-layer
+walls held essentially everywhere; every serious leak was an entry or
+consumption boundary trusting its caller. Two genuine cross-layer
+gaps were surfaced, grilled, closed, implemented, reviewed, and
+re-remediated.
+
+**G1 — Deployment Authority Anchoring: CLOSED and IMPLEMENTED**
+(openspec/changes/g1-deployment-authority/). D-G1-1 + owner
+amendment D-G1-1A: a caller-supplied anchor path/hash IDENTIFIES a
+requested deployment; only resolution against the Governance-active
+anchors registry ADMITS it. Implemented in src/harness/deployment/
+(read-only, no write API) and the L7 seam: admission before the
+instruction plane is consumed, per-task re-verification, indivisible
+per-workflow bundles (bounded), constitution pins, model-registry
+pin, append-only anchors registry across restarts, durable anchor
+bytes plus a read-path VerifyAnchorRecord, and an explicit
+`Unanchored` opt-in (no silent bypass; unanchored records carry a
+sentinel). Execution ceiling: DEPLOYMENT-scoped, deployment-supplied
+exact bytes, hash-bound by the anchor, verified and frozen at Open —
+no placeholders, no environment indirection, and an anchored task can
+never choose its own ceiling. **No ACTIVE anchor ships in the repo by
+design**: local-dev@1 is WITHDRAWN (it pinned a spec template where a
+ceiling belongs; the loader was not weakened), and a runnable anchor
+is deployment-instance-specific — see policies/deployment/README.md.
+Production wiring is therefore gated on a concrete deployment, not on
+missing architecture.
+
+**G2 — The Established-Fact Boundary: CLOSED and ENFORCED.**
+D-G2-1: storage proves bytes; EVENTS prove establishment. An L6
+object is a fact of kind F only when a committed event of F's minting
+class names it. Model-authored bytes are not a fact kind; L11's own
+packages have no witnessing event and so are unestablishable —
+closing the laundering path (model assertion → object → selector → Δ)
+and the P1→K2→P2 bypass structurally. Enforced across L11 grounding,
+Compare, and cold reconstruction.
+
+**R1 executed:** the legacy themis-serve HTTP surface
+(/v1/extract, /v1/recommend-position) is DECOMMISSIONED — it invoked
+models entirely outside the governed chain. The model router
+(internal/service/router.go) is retained as the D-L11-8 Class-2
+consumer.
+
+**Phase C register:** one workflow across the whole chain, twice,
+under a concrete anchored deployment — walks' own committed events
+witness the L11 facts, admission observed at the real catalog door,
+cold reconstruction CONFIRMED, the deployment re-established from the
+record, and the door byte-identical afterward; a model-turn object
+from that same genuine history refuses to ground.
+
+**Process invariant (AGENTS.md):** reviewers never run mutating or
+destructive probes against the live working tree — use a copy or a
+git worktree. Recorded after a second lost-edit incident.
+
+Standing residuals: submitter authentication (G1, explicit);
+sensitivity inheritance (local-endpoint scope); the four
+consumption-pinned registries whose consumers live outside L7; plus
+the pre-existing layer residuals. TestLivePressureProof remains a
+documented full-suite-contention flake (passes in isolation).

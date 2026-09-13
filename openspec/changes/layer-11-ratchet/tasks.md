@@ -31,30 +31,33 @@ The D-L11-20 §2 artifact inventory is the architectural whitelist.
 ## The four flagged implementation choices (D-L11-20 §4)
 
 Settle each at its milestone, ordinary review, no new architecture:
-- [ ] (a) Attribution representation: existing task-envelope field
-      vs narrow additive L6 amendment (M4).
-- [ ] (b) Fixture/golden physical housing: registry-plane files vs
-      L6 objects by size (M1).
-- [ ] (c) v1 comparator set: ≥1 concrete family for the proof slice
-      (proposed: numeric-score-delta over benchmark/L10 facts) (M2).
-- [ ] (d) Invocation surface: CLI subcommand vs service endpoint —
-      Class-3 review either way (M4).
+- [x] (a) Attribution representation: SETTLED v1 as package-level
+      plan_ref (ComparisonPackage.PlanRef, object-id-validated) +
+      plan-conformance matching; run-envelope attribution awaits
+      run-record integration (recorded in plan.go conformance note).
+      No L6 amendment needed.
+- [x] (b) Fixture/golden housing: SETTLED as registry-plane files,
+      registry-relative, hash-pinned (policies/ratchet/ layout).
+- [x] (c) v1 comparator: SETTLED — numeric-score-delta@1 (registered
+      table, comparator.go).
+- [x] (d) Invocation surface: SETTLED — cmd/themis-ratchet CLI,
+      synchronous-only, compiled-binary contract tests.
 
 ## M0 — Scaffold deletion + docs
 
-- [ ] DELETE src/harness/ratchet/{candidates,evaluations,feedback,
+- [x] DELETE src/harness/ratchet/{candidates,evaluations,feedback,
       promotion,regression} (D-L11-20 §6: structure follows
       decisions; feedback/ and promotion/ name forbidden
       subsystems).
-- [ ] Status/code-map docs note the frozen constitution.
+- [x] Status/code-map docs note the frozen constitution.
 
 ## M1 — Registries (D-L11-6/9/13)
 
-- [ ] Criterion registry: format + fail-closed read-only loader
+- [x] Criterion registry: format + fail-closed read-only loader
       (verification/registry.go pattern: append-only rules,
       CheckAppendOnly, exact ParseRef, two-way identity, withdrawn
       semantics). NO write API (AST wall).
-- [ ] Criterion schema loader (contract.go pattern): closed schema —
+- [x] Criterion schema loader (contract.go pattern): closed schema —
       identity, families, evidence selectors (closed vocabulary,
       established facts only, NO L11 outputs), comparator binding
       (name@version), pinned config (by value, hashed), Δ shape,
@@ -63,74 +66,74 @@ Settle each at its milestone, ordinary review, no new architecture:
       ({requires-current-active}), provenance requirements. Refuse:
       continuation language, security predicates, semantic region
       names (D-L11-6 §5, D-L11-18 walls).
-- [ ] Regression-set registry: exact K@v member pins; supplied-S@v
+- [x] Regression-set registry: exact K@v member pins; supplied-S@v
       only (D-L11-9 Am. 2 — no latest resolution).
-- [ ] Registry proofs: loader refusals (doctored artifacts),
+- [x] Registry proofs: loader refusals (doctored artifacts),
       append-only violations, two-way identity, unregistered=data.
 
 ## M2 — Comparator + evaluation core (D-L11-4/5/7/17)
 
-- [ ] Comparator interface: pure, deterministic, environment-free;
+- [x] Comparator interface: pure, deterministic, environment-free;
       canonical Δ serialization as registered semantics; semantic
       change = new version (D-L11-17 §2iv).
-- [ ] v1 comparator (choice (c)).
-- [ ] Selector resolution over committed L2/L6/L10/benchmark
+- [x] v1 comparator (choice (c)).
+- [x] Selector resolution over committed L2/L6/L10/benchmark
       records; refusal on unresolvable (closed reason classes,
       D-L11-16 §3).
-- [ ] Baseline observation: door-registry-hash-grounded admission
+- [x] Baseline observation: door-registry-hash-grounded admission
       observation; claim/observation mismatch recorded, never
       silently substituted; admission = production precondition
       (refusal, no package).
-- [ ] Ordering derivations: better-under-K / equal / worse /
+- [x] Ordering derivations: better-under-K / equal / worse /
       incomparable — stateless, never stored; incomparability per K
       declaration only.
-- [ ] Proofs: determinism (bit-identical reruns), direction
+- [x] Proofs: determinism (bit-identical reruns), direction
       symmetry, refusal neutrality, no-ordering ⇒ no better-claim.
 
 ## M3 — Packages, persistence, reconstruction (D-L11-4/9/11/17)
 
-- [ ] Comparative-evidence package: full conditioning tuple
+- [x] Comparative-evidence package: full conditioning tuple
       (D-L11-17 §1); content-hash identity; L6 StoreObject
       persistence; refusal facts and discrepancy facts as instance
       artifacts.
-- [ ] Regression-evidence package: complete-under-S only (one
+- [x] Regression-evidence package: complete-under-S only (one
       constituent per member; no partial packages, no coverage
       fields); resistant-under-S as stateless derivation.
-- [ ] Reconstruct (L10 pattern): CONFIRMED /
+- [x] Reconstruct (L10 pattern): CONFIRMED /
       UNREPRODUCIBLE-FOR-MISSING-INPUTS / DISCREPANCY; never
       repairs; cold — package + L6 + registries only.
-- [ ] Proofs: cold reconstruction (delete-cache test), tamper
+- [x] Proofs: cold reconstruction (delete-cache test), tamper
       detection at read boundary, no-discard-after-accepted-
       invocation (D-L11-14 §3).
 
 ## M4 — Candidate, Evaluation Plan, invocation (D-L11-3/10/14)
 
-- [ ] Candidate schema: closed contents (D-L11-3), content-hash
+- [x] Candidate schema: closed contents (D-L11-3), content-hash
       identity, no lifecycle state, lineage as hash claims;
       families incl. criterion-revision + regression-set-revision
       (D-L11-19 §2).
-- [ ] Evaluation Plan schema: declarative allowed-list only
+- [x] Evaluation Plan schema: declarative allowed-list only
       (D-L11-10); inert; never authority; plan-conformance =
       record-to-plan matching.
-- [ ] Attribution (choice (a)): run → plan reference as provenance;
+- [x] Attribution (choice (a)): run → plan reference as provenance;
       must not alter L7/L10/L4/L5 behavior.
-- [ ] Invocation surface (choice (d)): synchronous-only entry;
+- [x] Invocation surface (choice (d)): synchronous-only entry;
       exact pins required (K@v, S@v, B identity); no defaults.
-- [ ] Proofs: plan cannot execute; candidate confers nothing;
+- [x] Proofs: plan cannot execute; candidate confers nothing;
       machinery authors no candidates.
 
 ## M5 — Walls, guards, registers (D-L11-11/12/14/15/16/18)
 
-- [ ] AST walls: no registry write APIs; no
+- [x] AST walls: no registry write APIs; no
       timers/tickers/watchers/pollers/queues/background goroutines;
       L11 package imports audited (terminal output — no path from
       package production to any initiation API).
-- [ ] Negative-state guards: no status columns, no caches with
+- [x] Negative-state guards: no status columns, no caches with
       authority, no champion/current pointers, no feedback
       artifacts, no outcome enum, no L10 tokens as L11 states, no
       security predicates in schemas.
-- [ ] API-closure allowlist extensions (deliberate, commented).
-- [ ] Registers: proposition boundary (six claims refused at every
+- [x] API-closure allowlist extensions (deliberate, commented).
+- [x] Registers: proposition boundary (six claims refused at every
       surface), consumption classes (P1→K2→P2 refused; Δ not a
       selection input), recursion (L11-about-L11 criterion
       unregistrable), adversarial register (weight-flattering,
@@ -139,14 +142,14 @@ Settle each at its milestone, ordinary review, no new architecture:
 
 ## M6 — Proof slice (live) (D-L11-20 §3)
 
-- [ ] End-to-end: author candidate (model, governed task) →
+- [x] End-to-end: author candidate (model, governed task) →
       registration via door (*.proposed.* → owner act) → governed
       evaluation runs (ordinary tasks, plan-attributed) → comparison
       request (exact pins) → package → derived views → human reads
       evidence at door → promotion act → regression admission.
-- [ ] Knowledge-family egress path per the Gate 0 rule (or recorded
+- [x] Knowledge-family egress path per the Gate 0 rule (or recorded
       residual — no substitute door).
-- [ ] Live model proof (ollama) for the authored-candidate arc.
+- [x] Live model proof (ollama) for the authored-candidate arc.
 
 ## M7 — Close reviews + archive
 

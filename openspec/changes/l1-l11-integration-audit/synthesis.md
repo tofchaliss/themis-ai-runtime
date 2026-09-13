@@ -170,3 +170,36 @@ widened; no third l2-delivery semantic.
    cluster first (D1–D5), then D6/D7, then the LOWs.
 5. Phase C (live end-to-end walk) runs AFTER the D-pass, so the
    walk exercises the corrected seams.
+
+## Phase B disposition (OWNER VERDICTS, 2026-09-13)
+
+| Item | Decision |
+|---|---|
+| G1 | GRILL FIRST — no production wiring until closed |
+| G2 | GRILL SECOND — sharpened statement below |
+| R1 | DECOMMISSION / REBASE — never re-record as accepted; removal preferred unless a real consumer requires the interface, in which case rebase onto the L7 seam, never preserve old semantics |
+| R2 | RATIFIED — the ADG must restore event-carried classification; "object exists + retained = established" is prohibited |
+| R3 | RATIFIED with explicit applicability: valid ONLY under local-endpoint deployments; cross-endpoint execution requires sensitivity inheritance before sensitive-plane selectors admit |
+| R4 | RATIFIED — "no evaluation backdoor" stays classified a VISIBILITY guarantee, never upgraded to structural |
+| D1–D13 | Remediate AFTER G1/G2 close — D1 must not pre-decide G2 (G2 defines who can establish a fact; implementation then enforces that boundary, never the reverse) |
+| Phase C | Runs only after the defect pass |
+
+**G2 sharpened problem statement (owner):** L11 has a vocabulary of
+fact references, but the architecture has not established a
+sufficiently authoritative mapping between an L6 object and the
+fact class L11 may treat as established evidence. Durable storage
+does not make an established fact; an ObjectID proves identity of
+bytes, not epistemic authority of bytes. The grill must establish
+the fact taxonomy (executor-minted, model-authored, L10 outcomes,
+L6 execution records, external, derived, L11-produced) and WHICH
+MECHANISM establishes that a particular object is eligible to
+satisfy a particular L11 fact selector. PROHIBITED solution shape:
+an `established_fact: true` boolean on L6 objects — that merely
+moves the trust problem; authority must come from the minting/
+establishing mechanism with provenance sufficient for L11 to
+verify eligibility.
+
+**Preserved headline (owner):** the audit did not invalidate
+L1–L11. It demonstrated that the completed layers need two
+additional cross-layer authority boundaries before the chain can be
+considered production-wired.

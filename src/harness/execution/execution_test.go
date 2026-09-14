@@ -580,7 +580,30 @@ func TestProvisionFailurePaths(t *testing.T) {
 	}
 }
 
+// TestExecTimeoutGroupKill proves bounded termination at the
+// subprocess tier (Q-L5-2/6): at the effective deadline the whole
+// execution-owned process group dies, not merely the direct child,
+// and the timeout is typed and audited.
+//
+// The child is substituted through spawnOverride rather than relying
+// on git being slower than the deadline. That assumption held on
+// darwin (git log ~6ms vs a 1ms deadline) and failed on Linux (<1ms),
+// where the call simply succeeded — so this control went unproven on
+// the platform deployments run on. The substitute also forks a
+// GRANDCHILD, which the single git process never did: killing only
+// the direct child leaves the grandchild alive to create the marker.
 func TestExecTimeoutGroupKill(t *testing.T) {
+	if spawnOverride != nil {
+		t.Fatal("spawnOverride must be nil in production — a test leaked the seam")
+	}
+	shBin, err := exec.LookPath("sh")
+	if err != nil {
+		t.Skipf("no sh: %v", err)
+	}
+	sleepBin, err := exec.LookPath("sleep")
+	if err != nil {
+		t.Skipf("no sleep: %v", err)
+	}
 	mirrorRoot, repo, sha := mkMirror(t)
 	ceiling := testCeiling(t, mirrorRoot)
 	p, err := NewLocalProvider(gitBin(t), t.TempDir())
@@ -592,15 +615,33 @@ func TestExecTimeoutGroupKill(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = env.Seal(SealCallerAbort); env.Teardown() }()
-	// A deadline shorter than process spawn: deterministic timeout,
-	// group-killed, typed.
-	if _, err := env.ExecGit(time.Millisecond, "log"); err == nil || !strings.Contains(err.Error(), "timeout") {
-		t.Fatalf("sub-spawn deadline must produce a typed timeout: %v", err)
+
+	// The grandchild would create the marker well after the deadline
+	// but well before this test checks; the parent blocks far beyond
+	// both. The environment carries no PATH, so every binary is
+	// absolute and only shell builtins (`:` and redirection) are used
+	// for the marker itself.
+	marker := filepath.Join(t.TempDir(), "grandchild-survived")
+	script := "( " + sleepBin + " 0.5; : > '" + marker + "' ) & " + sleepBin + " 30"
+	spawnOverride = func() (string, []string) { return shBin, []string{"-c", script} }
+	t.Cleanup(func() { spawnOverride = nil })
+
+	start := time.Now()
+	if _, err := env.ExecGit(100*time.Millisecond, "log"); err == nil || !strings.Contains(err.Error(), "timeout") {
+		t.Fatalf("deadline must produce a typed timeout: %v", err)
+	}
+	if el := time.Since(start); el > 5*time.Second {
+		t.Fatalf("the deadline did not bound the call: returned after %s", el)
 	}
 	tr := env.Trace()
 	last := tr.Ops[len(tr.Ops)-1]
 	if last.Outcome != "timeout" {
 		t.Fatalf("timeout must be audited: %+v", last)
+	}
+	// Group kill, not child kill: the grandchild must never run.
+	time.Sleep(2 * time.Second)
+	if _, err := os.Stat(marker); !os.IsNotExist(err) {
+		t.Fatalf("grandchild outlived the deadline — the execution-owned process group was not killed (stat: %v)", err)
 	}
 }
 

@@ -319,6 +319,24 @@ func (e *Env) ExecGit(deadline time.Duration, sub string, args ...string) (strin
 	return out, err
 }
 
+// spawnOverride is the deterministic termination-proof seam
+// (Q-L5-2/6), in the shape of the L6/L7 fault seams. Nil in
+// production: runGit always executes the pinned git binary.
+//
+// A test sets it to substitute a child that forks a grandchild, so
+// that the deadline AND the process-GROUP kill are proven on every
+// platform. The proof previously rode on git's spawn latency being
+// longer than a fixed 1ms deadline — true on darwin (~6ms), false on
+// Linux (<1ms), where the timeout branch was therefore never reached
+// and the group kill went unexercised.
+//
+// The substitution changes only WHICH binary this one invocation
+// runs. The deadline computation, process group, environment
+// allowlist, endpoint refusal, audit record and group kill are all
+// the production ones, so this cannot reach git with arguments the
+// caller vocabulary forbids, and it is not a second execution path.
+var spawnOverride func() (string, []string)
+
 // runGit is the single subprocess invocation path: pinned absolute
 // binary, endpoint-refused argv, hooks neutralized, empty allowlist
 // environment, execution-owned process group, group-killed at the
@@ -338,7 +356,11 @@ func (e *Env) runGit(phase string, deadline time.Duration, dir string, args ...s
 		e.record(OpRecord{Phase: phase, Argv: argv, Exit: -1, Outcome: "budget-exhausted"})
 		return "", fmt.Errorf("%w: environment wall-clock budget exhausted", ErrExec)
 	}
-	cmd := exec.Command(e.provider.GitPath, argv...)
+	bin, cargv := e.provider.GitPath, argv
+	if spawnOverride != nil {
+		bin, cargv = spawnOverride()
+	}
+	cmd := exec.Command(bin, cargv...)
 	cmd.Dir = dir
 	cmd.Env = e.allowEnv()
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}

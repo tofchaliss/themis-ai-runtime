@@ -127,6 +127,32 @@ if [ -z "$TAGS" ]; then
   note "verdict requires a named local execution with a recorded model."
 else
   ok "model endpoint reachable"
+  # Acceleration decides WHERE inference contends. With a GPU, inference
+  # and the Go suite use different silicon. CPU-only, they fight for the
+  # same cores — a contention axis memory size says nothing about, and
+  # the one that actually applies on a GPU-less server.
+  ACCEL="cpu-only"
+  if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then
+    ACCEL="nvidia"
+  elif [ -e /dev/kfd ]; then
+    ACCEL="amd-rocm"
+  elif [ "$OS" = "Darwin" ] && [ "$ARCH" = "arm64" ]; then
+    ACCEL="metal"
+  fi
+  if [ "$ACCEL" = "cpu-only" ]; then
+    warn "inference is CPU-ONLY — it competes with the suite for the same cores"
+    note "no NVIDIA/AMD GPU detected. Every live proof's model turns will run on"
+    note "the same $CPUS cores the test suite is using, so a full sweep contends"
+    note "on CPU regardless of how much memory this host has."
+    note "Consequences to plan around, not fix:"
+    note "  - live proofs take substantially longer; turn_timeout_sec and the"
+    note "    ceiling's max_wall_deadline_sec must accommodate real turn latency"
+    note "  - a large model (~20B) may be impractical here: roughly 3x a 7B per"
+    note "    turn, which multi-turn walks multiply again"
+    note "  - prefer running live proofs SEPARATELY from the full sweep"
+  else
+    ok "inference acceleration: $ACCEL — inference does not contend for suite cores"
+  fi
   MODELS=$(printf '%s' "$TAGS" | python3 -c 'import sys,json;print(" ".join(m["name"] for m in json.load(sys.stdin).get("models",[])))' 2>/dev/null)
   note "models: ${MODELS:-<none>}"
   # live proofs are ENDPOINT-gated, not opt-in: if this answers, they run.

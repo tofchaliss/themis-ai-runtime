@@ -288,15 +288,17 @@ themis-bench gate MODEL --baseline YYYY-MM-DD
 
 Contains model, baseline and current dates, max allowed drop, averages,
 `pass`, and a `scores_digest` fingerprinting the judged score files.
-Routing (`themis-serve`) admits a validation run only when a `pass:
-true` verdict exists for its date, names that model and date, and its
-digest still matches the score files; runs without one are invisible to
-the router, so a regressed, ungated, or post-gate-modified run never
-shadows the last admitted one. The baseline must itself be an admitted
-run; a model's first run (and only its first) bootstraps by gating
-against itself (`--baseline` equal to the run date). Verdicts are read
-once at service startup — revoking an admission (or admitting a new
-run) takes effect on the next themis-serve restart.
+The model router (`internal/service`) admits a validation run only when
+a `pass: true` verdict exists for its date, names that model and date,
+and its digest still matches the score files; runs without one are
+invisible to the router, so a regressed, ungated, or post-gate-modified
+run never shadows the last admitted one. The baseline must itself be an
+admitted run; a model's first run (and only its first) bootstraps by
+gating against itself (`--baseline` equal to the run date). Verdicts
+are read once when the router is constructed — revoking an admission
+(or admitting a new run) takes effect the next time the consuming
+process builds its routing table. (The `themis-serve` HTTP surface that
+once hosted the router was decommissioned 2026-09-13, audit R1.)
 
 Validation is deterministic.
 

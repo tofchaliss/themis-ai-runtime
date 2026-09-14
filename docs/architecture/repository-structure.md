@@ -75,7 +75,7 @@ themis-ai-runtime/
 - **Existing-code destinations** (relocation is its own reviewed step, not part of skeleton creation):
   - `src/harness/internal/llm` → `src/harness/runtime/model/`
   - `src/harness/benchmarks` (Go pipeline) → `src/harness/ratchet/evaluations/`; benchmark definitions/prompts/expected → `evaluations/`
-  - `src/harness/internal/service` (themis-serve) → `src/harness/integrations/themis/` — the Themis-facing seam, absorbed or retired as the real harness API lands
+  - `src/harness/internal/service` → `src/harness/integrations/themis/` — the Themis-facing seam. **Partly settled 2026-09-13:** the `themis-serve` HTTP surface was retired outright (audit R1); what remains to relocate is the model router alone.
 - **Go tests** live beside their packages (Go idiom, existing 2,000 test LOC); `tests/` holds only cross-cutting integration and evaluation suites.
 - **`src/themis/` interior** is not scaffolded — the application arrives with its own tree.
 - Layer documents follow `docs/architecture/harness/NN-<layer>.md` (01–11).

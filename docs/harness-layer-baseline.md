@@ -2,6 +2,16 @@
 
 **Date:** 2026-09-04 · **Steps 1–2 of the build sequence** (baseline the repository; map existing code to the layers). Verdict at the end: does the architecture fit the existing code?
 
+> **HISTORICAL — do not read as current state.** This is the
+> pre-implementation snapshot taken on 2026-09-04, when the eleven
+> layer directories held only `.gitkeep` and `themis-serve` still
+> existed. L1–L11 have since shipped, G1/G2 closed, and the legacy
+> HTTP surface was decommissioned (2026-09-13, audit R1). For the
+> as-built state read
+> [`docs/architecture/harness/execution-chain.md`](architecture/harness/execution-chain.md)
+> and [`docs/harness-layer-status.md`](harness-layer-status.md).
+> The value of this document is the *starting point* it records.
+
 ## 1. Repository baseline
 
 | Component | LOC (of which tests) | What it is |

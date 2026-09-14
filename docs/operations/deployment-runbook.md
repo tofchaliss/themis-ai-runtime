@@ -58,7 +58,7 @@ Everything else is computed from the repository.
 
 ```bash
 sudo apt-get update && sudo apt-get install -y git curl build-essential
-curl -fsSL https://go.dev/dl/go1.23.0.linux-amd64.tar.gz -o /tmp/go.tgz
+curl -fsSL https://go.dev/dl/go1.24.0.linux-amd64.tar.gz -o /tmp/go.tgz
 sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf /tmp/go.tgz
 export PATH=$PATH:/usr/local/go/bin
 go version && which git
@@ -74,15 +74,22 @@ export REPO=/opt/themis/themis-ai-runtime
 git clone <repo-url> "$REPO" && cd "$REPO/src/harness"
 git rev-parse HEAD          # record the SHA this deployment runs
 go build ./... && go vet ./... && gofmt -l .
-go test ./... -count=1
+go test ./... -count=1      # ~10 minutes
 ```
 
-Expect green except `TestLivePressureProof` under full-suite
-contention; confirm it passes alone:
+Expect green except the documented live-contention flakes
+(`context.TestLivePressureProof`, `context.TestLiveOperationalProof`);
+confirm they pass alone:
 
 ```bash
-go test ./context/ -run TestLivePressureProof -count=1
+go test ./context/ -run 'TestLiveOperationalProof|TestLivePressureProof' -count=1
 ```
+
+The live proofs are **endpoint-gated, not opt-in**: they skip only when
+nothing answers at `THEMIS_LIVE_OLLAMA` (default
+`http://localhost:11434`). If this host runs a model endpoint, pull the
+models the proofs name (`THEMIS_LIVE_TOOL_MODEL`, default `qwen2.5:7b`;
+`THEMIS_LIVE_MODEL`) or point the variables at models you have.
 
 A failure anywhere else stops the deployment.
 

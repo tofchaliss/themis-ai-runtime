@@ -36,9 +36,9 @@ Architecture and Day-0 rules are governed by `ARCHITECTURE.md` and `.claude/poli
 Go 1.24+; one module at `src/harness/` (root `go.work`); the Themis application joins under `src/` later. From the repo root:
 
 ```bash
-go build -o bin/themis-bench ./src/harness/benchmarks/cmd/themis-bench
-go build -o bin/themis-serve ./src/harness/cmd/themis-serve
-go test ./src/harness/...        # all tests (no live model needed)
+go build -o bin/themis-bench   ./src/harness/benchmarks/cmd/themis-bench
+go build -o bin/themis-ratchet ./src/harness/cmd/themis-ratchet
+go test ./src/harness/...        # all tests; live proofs skip with no model endpoint
 go vet ./src/harness/...
 gofmt -l .                       # CI fails on any output
 cd src/harness/benchmarks && make check   # fmt + vet + test

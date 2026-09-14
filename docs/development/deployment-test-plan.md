@@ -39,9 +39,19 @@ from the repository and the supplied ceiling.
 | A1 | `cd src/harness && go build ./...` | clean |
 | A2 | `go vet ./...` | clean |
 | A3 | `gofmt -l .` | no output |
-| A4 | `go test ./... -count=1` | all green except `TestLivePressureProof` under full-suite contention (documented flake) |
-| A5 | `go test ./context/ -run TestLivePressureProof -count=1` | green in isolation — confirms the flake, not a regression |
+| A4 | `go test ./... -count=1` | all green except the documented live-contention flakes (`context.TestLivePressureProof`, `context.TestLiveOperationalProof`) |
+| A5 | `go test ./context/ -run 'TestLiveOperationalProof\|TestLivePressureProof' -count=1` | green in isolation — confirms contention, not a regression |
 | A6 | `go test ./deployment/ ./orchestration/ ./integration/ -count=1` | green — anchor, seam, and Phase C |
+
+**Live proofs are endpoint-gated, not opt-in.** They skip only when
+nothing answers at `THEMIS_LIVE_OLLAMA` (default
+`http://localhost:11434`). If a model endpoint is up on the build host,
+they run, and they need their models present:
+`THEMIS_LIVE_TOOL_MODEL` (default `qwen2.5:7b`) and
+`THEMIS_LIVE_MODEL` (default
+`WhiteRabbitNeo/WHiteRabbitNeo-2.5-Qwen-2.5-Coder-7B:latest`). A live
+failure caused by a missing model or by memory pressure is category 1;
+a live failure **in isolation** is not.
 
 Gate: A1–A6 pass before any deployment artifact is created.
 
@@ -162,7 +172,7 @@ Commands assume `$REPO` = the checkout and `$DEPLOY` = a directory
 # base tooling
 sudo apt-get update && sudo apt-get install -y git curl build-essential
 # Go (match go.mod; adjust version as needed)
-curl -fsSL https://go.dev/dl/go1.23.0.linux-amd64.tar.gz -o /tmp/go.tgz
+curl -fsSL https://go.dev/dl/go1.24.0.linux-amd64.tar.gz -o /tmp/go.tgz
 sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf /tmp/go.tgz
 export PATH=$PATH:/usr/local/go/bin && go version
 
@@ -180,9 +190,13 @@ Record: OS, kernel, Go version, git version and absolute path
 git clone <repo-url> "$REPO" && cd "$REPO/src/harness"
 git rev-parse HEAD                       # record the SHA under test
 go build ./... && go vet ./... && gofmt -l .
-go test ./... -count=1                   # expect the documented flake only
-go test ./context/ -run TestLivePressureProof -count=1   # green in isolation
+go test ./... -count=1                   # expect the documented flakes only (~10 min)
+go test ./context/ -run 'TestLiveOperationalProof|TestLivePressureProof' -count=1
 ```
+
+If a model endpoint is running on this host, the live proofs execute
+rather than skip — pull `qwen2.5:7b` and whatever `THEMIS_LIVE_MODEL`
+names, or the suite fails for a category-1 reason.
 
 ## VM-2 — Deployment directory and execution ceiling (Phase B1–B3)
 
@@ -310,8 +324,9 @@ the deployment actually did.
 
 | Symptom | Meaning |
 |---|---|
-| `TestLivePressureProof` fails in a full sweep, passes alone | documented CPU-contention flake |
-| Live tests skip | no model endpoint reachable — skip-gated by design |
+| `TestLivePressureProof` / `TestLiveOperationalProof` fail in a full sweep, pass alone | documented contention flake (Ollama `500 timed out waiting for llama-server to start` under memory pressure) |
+| Live tests skip | no model endpoint reachable — endpoint-gated by design |
+| Live tests fail with "model not found" | the default `THEMIS_LIVE_MODEL` / `THEMIS_LIVE_TOOL_MODEL` is not pulled — category 1 |
 | `Open` refuses with "no deployment anchor configured and Unanchored not explicitly set" | correct: production has no silent unanchored path |
 | Admission refuses a hand-written anchor | correct: identity is not admission |
 

@@ -4,7 +4,15 @@
 
 **Status vocabulary:** `REUSE` (as-is) · `EXTEND` (grow in place) · `EVOLVE` (reshape, behavior-compatible where possible) · `BUILD` (greenfield) · `DEFER` (post-P0).
 
-## 1. Repository baseline
+> **Mixed vintage — read the dates.** §1 is the 2026-09-04 baseline
+> snapshot and is historical: the layer directories are no longer
+> empty and `themis-serve` no longer exists (decommissioned
+> 2026-09-13, audit R1). §2 onward has been maintained per layer and
+> carries dated `DONE` / `COMPLETE` markers. For the as-built chain
+> read [`architecture/harness/execution-chain.md`](architecture/harness/execution-chain.md);
+> for shipped-state and residuals, [`harness-layer-status.md`](harness-layer-status.md).
+
+## 1. Repository baseline (2026-09-04 snapshot — historical)
 
 All Go code lives in three trees — `internal/llm` (970 LOC), `internal/service` (980), `benchmarks/` (3,638 + CLI) — the 11-layer scaffold directories contain only `.gitkeep`. Zero TODO/FIXME markers. Essentially no concurrency (one goroutine in themis-serve's lifecycle). The service and the benchmark suite share exactly one Go seam (`internal/llm`) and one *implicit filesystem contract* (`definitions/` + `validation/` read by the router — no shared schema type; the date regex and result struct are re-declared on each side).
 

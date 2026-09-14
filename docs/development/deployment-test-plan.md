@@ -39,19 +39,35 @@ from the repository and the supplied ceiling.
 | A1 | `cd src/harness && go build ./...` | clean |
 | A2 | `go vet ./...` | clean |
 | A3 | `gofmt -l .` | no output |
-| A4 | `go test ./... -count=1` | all green except the documented live-contention flakes (`context.TestLivePressureProof`, `context.TestLiveOperationalProof`) |
-| A5 | `go test ./context/ -run 'TestLiveOperationalProof\|TestLivePressureProof' -count=1` | green in isolation — confirms contention, not a regression |
+| A4 | `THEMIS_LIVE_OLLAMA=http://127.0.0.1:9 go test ./... -count=1` | **all green, no exceptions.** The dead endpoint makes the nine live proofs skip, so this is purely deterministic and any failure is real |
+| A5 | each live proof run SEPARATELY (see below) | each green, with model name and duration recorded |
 | A6 | `go test ./deployment/ ./orchestration/ ./integration/ -count=1` | green — anchor, seam, and Phase C |
 
 **Live proofs are endpoint-gated, not opt-in.** They skip only when
 nothing answers at `THEMIS_LIVE_OLLAMA` (default
-`http://localhost:11434`). If a model endpoint is up on the build host,
-they run, and they need their models present:
-`THEMIS_LIVE_TOOL_MODEL` (default `qwen2.5:7b`) and
-`THEMIS_LIVE_MODEL` (default
-`WhiteRabbitNeo/WHiteRabbitNeo-2.5-Qwen-2.5-Coder-7B:latest`). A live
-failure caused by a missing model or by memory pressure is category 1;
-a live failure **in isolation** is not.
+`http://localhost:11434`). If a model endpoint is up on the build host
+they run, and they need their models present: `THEMIS_LIVE_TOOL_MODEL`
+(default `qwen2.5:7b`) and `THEMIS_LIVE_MODEL` (default
+`WhiteRabbitNeo/WHiteRabbitNeo-2.5-Qwen-2.5-Coder-7B:latest`).
+
+**A5 — run each one separately.** Nine live proofs across nine packages
+that `go test` runs in parallel will all drive one model server and time
+out. Measured on 62 GB / 24-core / CPU-only: six failed in the sweep,
+every one passing alone minutes earlier. Record model name and duration
+for each:
+
+```bash
+go test ./context/ -run 'TestLiveOperationalProof|TestLivePressureProof' -count=1 -v
+go test ./verification/seam/ -run TestLiveRemediateWalk -count=1 -v
+go test ./ratchet/ -run TestLiveModelAuthorsCandidate -count=1 -v
+go test ./tools/ -run TestLiveToolProof -count=1 -v
+go test ./execution/ -run TestLiveExecutionProof -count=1 -v
+go test ./state/ -run TestLiveTaskReconstruction -count=1 -v
+go test ./orchestration/ -run 'TestLiveWalkProof|TestLiveSkillWalk' -count=1 -v
+```
+
+A live failure from a missing model, or from running them concurrently,
+is category 1. A live failure **in isolation** is not.
 
 Gate: A1–A6 pass before any deployment artifact is created.
 
@@ -336,7 +352,7 @@ the deployment actually did.
 
 | Symptom | Meaning |
 |---|---|
-| `TestLivePressureProof` / `TestLiveOperationalProof` fail in a full sweep, pass alone | documented contention flake (Ollama `500 timed out waiting for llama-server to start` under memory pressure) |
+| Live proofs fail in a full sweep, pass alone | nine live proofs across nine parallel packages driving one model server; run them separately (A5). Not a host-capacity issue — reproduces on 16GB/8-core and worse on 62GB/24-core |
 | Live tests skip | no model endpoint reachable — endpoint-gated by design |
 | Live tests fail with "model not found" | the default `THEMIS_LIVE_MODEL` / `THEMIS_LIVE_TOOL_MODEL` is not pulled — category 1 |
 | `Open` refuses with "no deployment anchor configured and Unanchored not explicitly set" | correct: production has no silent unanchored path |

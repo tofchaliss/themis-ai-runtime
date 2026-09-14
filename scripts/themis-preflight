@@ -56,15 +56,17 @@ if [ "$MEMGB" -gt 0 ] && [ "$MEMGB" -lt 8 ]; then
 else
   ok "memory present (${MEMGB}GB)"
 fi
-# Contention, not capacity, is what actually bites: the full suite drives
-# several packages at the model at once while Go builds and links. The
-# 16GB development Mac reproduces the documented TestLivePressureProof /
-# TestLiveOperationalProof failures on every full sweep and passes both
-# in isolation, so 16GB is demonstrably NOT enough to call a full-sweep
-# green trustworthy. Threshold set from that observation, not a guess.
-# (Evaluated again below once endpoint reachability is known.)
-MEM_CONTENTION_RISK=0
-[ "$MEMGB" -gt 0 ] && [ "$MEMGB" -lt 32 ] && MEM_CONTENTION_RISK=1
+# Contention is about CONCURRENCY, not host size. Nine live proofs
+# across nine packages drive ONE model server; go test runs packages in
+# parallel, so they queue behind each other and time out. Measured on
+# two very different hosts, both failing:
+#   16GB / 8-core / Metal      — context proofs fail in the sweep
+#   62GB / 24-core / CPU-only  — SIX live proofs fail in the sweep,
+#                                every one passing alone minutes earlier
+# An earlier version of this script warned below 32GB, inferring a memory
+# threshold from the first host alone. The second host disproved it: more
+# memory and 3x the cores made it worse, because parallelism is the
+# mechanism. No host size fixes this; scheduling does.
 
 # identity: root silently voids permission-based fixtures
 if [ "$(id -u)" = "0" ]; then
@@ -171,19 +173,26 @@ else
   # Endpoint reachable AND modest memory: live proofs will run and will
   # contend. Say so, because the green line above would otherwise imply
   # a full-sweep pass is meaningful evidence on this host.
-  if [ "$MEM_CONTENTION_RISK" = "1" ]; then
-    warn "live proofs will contend for the model on ${MEMGB}GB"
-    note "the endpoint answers, so live proofs RUN during the full suite while"
-    note "several packages drive the model concurrently. Below ~32GB that"
-    note "reproduces the documented context/TestLivePressureProof and"
-    note "TestLiveOperationalProof failures — ollama returning 500 or the"
-    note "request deadline expiring. They pass in isolation."
-    note "So on this host a FULL-SWEEP failure of those two is not evidence of"
-    note "a defect, and a full-sweep PASS is not strong evidence either."
-    note "Re-run them alone to get a real verdict:"
-    note "  go test ./context/ -run 'TestLiveOperationalProof|TestLivePressureProof' -count=1"
-    note "A live proof that fails IN ISOLATION is a real failure."
-  fi
+  warn "do NOT run the full suite with live proofs enabled"
+  note "The endpoint answers, so live proofs RUN. Nine of them, across nine"
+  note "packages that go test executes in PARALLEL, all driving this ONE model"
+  note "server. They queue behind each other and time out. This is not a host"
+  note "capacity question: it reproduces on 16GB/8-core/Metal AND on"
+  note "62GB/24-core/CPU-only, where it is worse because more parallelism"
+  note "means more simultaneous callers."
+  note ""
+  note "Run the suite hermetic, then the live proofs separately:"
+  note "  THEMIS_LIVE_OLLAMA=http://127.0.0.1:9 go test ./... -count=1"
+  note "  go test ./context/ -run 'TestLiveOperationalProof|TestLivePressureProof' -count=1"
+  note "  go test ./verification/seam/ -run TestLiveRemediateWalk -count=1"
+  note "  go test ./ratchet/ -run TestLiveModelAuthorsCandidate -count=1"
+  note "  go test ./tools/ -run TestLiveToolProof -count=1"
+  note "  go test ./execution/ -run TestLiveExecutionProof -count=1"
+  note "  go test ./state/ -run TestLiveTaskReconstruction -count=1"
+  note "  go test ./orchestration/ -run 'TestLiveWalkProof|TestLiveSkillWalk' -count=1"
+  note ""
+  note "A full-sweep live failure is NOT evidence of a defect."
+  note "A live proof that fails IN ISOLATION is a real failure."
 fi
 
 # ----------------------------------------------------------- deployment

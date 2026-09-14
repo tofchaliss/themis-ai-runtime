@@ -81,23 +81,41 @@ Consequences:
   export THEMIS_LIVE_MODEL=qwen2.5-coder:7b      # if the default is absent
   ```
 
-- **Endpoint up, models present, whole suite at once → contention
-  flakes.** Several packages drive the model concurrently; Ollama can
-  return `500 timed out waiting for llama-server to start` under memory
-  pressure.
+- **Endpoint up, models present, whole suite at once → the live proofs
+  fight each other.** Do not do this. See below.
 
-### The documented contention flakes
+### Never run the full suite with live proofs enabled
 
-`context.TestLiveOperationalProof` and `context.TestLivePressureProof`
-can fail in a full sweep and pass alone. Confirm rather than assume:
+There are nine live proofs, in nine packages, and `go test` runs
+packages in **parallel** — so all nine drive one model server at once.
+They queue behind each other and time out.
+
+This is a concurrency property, not a host-capacity one. Measured on two
+very different hosts, both failing:
+
+| Host | Result with live proofs in the full sweep |
+|---|---|
+| 16 GB / 8-core / Metal | the two `context` proofs fail |
+| 62 GB / 24-core / CPU-only | **six** live proofs fail — every one passing alone minutes earlier |
+
+More memory and three times the cores made it *worse*, because
+parallelism is the mechanism. An earlier version of this document
+blamed "memory pressure"; that was inferred from the first host alone
+and the second host disproved it. No host size fixes this — scheduling
+does.
+
+So: run the suite hermetic, then the live proofs separately.
 
 ```bash
-go test ./context/ -run 'TestLiveOperationalProof|TestLivePressureProof' -count=1 -v
+THEMIS_LIVE_OLLAMA=http://127.0.0.1:9 go test ./... -count=1   # hermetic
 ```
 
-Last confirmed 2026-09-14: both failed/flaked under the full sweep and
-passed in isolation (40.7s and 22.6s). A live proof that fails **in
-isolation** is a real failure — do not wave it away as the flake.
+Pointing the endpoint at a closed port makes every live proof skip
+cleanly, giving a purely deterministic result where any failure is
+unambiguously real.
+
+**A full-sweep live failure is not evidence of a defect. A live proof
+that fails in isolation is a real failure** — do not wave that one away.
 
 ### Running the live proofs deliberately
 

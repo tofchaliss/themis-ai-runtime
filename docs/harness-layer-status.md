@@ -289,12 +289,25 @@ No L5 decision or declaration changed.
 Standing residuals: submitter authentication (G1, explicit);
 sensitivity inheritance (local-endpoint scope); the four
 consumption-pinned registries whose consumers live outside L7; plus
-the pre-existing layer residuals. `context.TestLivePressureProof` and
-`context.TestLiveOperationalProof` remain documented full-suite
-contention flakes — both re-confirmed 2026-09-14: failed/flaked in the
-full sweep, passed in isolation (40.7s / 22.6s). The live proofs are
-endpoint-gated, not opt-in: they run whenever a model endpoint answers
-at `THEMIS_LIVE_OLLAMA`, so a build host with Ollama up must have
+the pre-existing layer residuals.
+
+**Live-proof concurrency, corrected 2026-09-14.** This was recorded as
+a "contention flake" affecting two `context` proofs under memory
+pressure. First run on the deployment host (62 GB, 24-core, CPU-only)
+disproved that characterisation: **six** live proofs failed in the full
+sweep there — more, not fewer, than on the 16 GB laptop — and every one
+passed alone minutes earlier. The mechanism is concurrency, not
+capacity: nine live proofs live in nine packages, `go test` runs
+packages in parallel, and all nine drive one model server. A larger host
+makes it worse by running more of them at once.
+
+It is therefore not a flake to tolerate but a scheduling rule: run the
+suite hermetic (`THEMIS_LIVE_OLLAMA` at a closed port) and the live
+proofs separately. Recorded in TESTING.md, the runbook Step 2, test-plan
+A4/A5, and enforced as a warning by `scripts/themis-preflight`.
+
+The live proofs remain endpoint-gated, not opt-in: they run whenever a
+model endpoint answers, so a build host with Ollama up must have
 `THEMIS_LIVE_TOOL_MODEL` / `THEMIS_LIVE_MODEL` pulled.
 
 ## Where to look

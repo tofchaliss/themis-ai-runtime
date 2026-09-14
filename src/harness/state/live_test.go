@@ -184,8 +184,18 @@ func TestLiveTaskReconstruction(t *testing.T) {
 		Tools: []model.ToolDef{{Name: "write_file", Description: "Create one file in the workspace.",
 			Parameters: json.RawMessage(`{"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]}`)}},
 		Options: model.DefaultOptions()})
-	if err != nil || resp.Termination != model.TerminationToolCalls || len(resp.ToolCalls) == 0 {
-		t.Fatalf("live model must emit a tool call: %v %+v", err, resp.Termination)
+	// The transport error is reported on its own, BEFORE anything
+	// touches resp: on a failed call resp is nil, and formatting
+	// resp.Termination in the diagnostic segfaults — the failure
+	// handler crashing instead of reporting the failure, which also
+	// aborts the whole package binary and takes the other state tests
+	// with it. Observed on 2026-09-14 when model contention made every
+	// live call time out. Every other live test already splits these.
+	if err != nil {
+		t.Fatalf("live execution failed: %v", err)
+	}
+	if resp.Termination != model.TerminationToolCalls || len(resp.ToolCalls) == 0 {
+		t.Fatalf("live model must emit a tool call: %+v", resp.Termination)
 	}
 	call := resp.ToolCalls[0]
 	msg, ev4, audit := tools.Handle(reg, grant, table, call, tools.CallState{Calls: map[string]int{}})

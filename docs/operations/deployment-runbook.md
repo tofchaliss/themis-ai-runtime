@@ -74,15 +74,21 @@ export REPO=/opt/themis/themis-ai-runtime
 git clone <repo-url> "$REPO" && cd "$REPO/src/harness"
 git rev-parse HEAD          # record the SHA this deployment runs
 go build ./... && go vet ./... && gofmt -l .
-go test ./... -count=1      # ~10 minutes
+THEMIS_LIVE_OLLAMA=http://127.0.0.1:9 go test ./... -count=1
 ```
 
-Expect green except the documented live-contention flakes
-(`context.TestLivePressureProof`, `context.TestLiveOperationalProof`);
-confirm they pass alone:
+The dead endpoint makes the nine live proofs skip, so this run is purely
+deterministic and must be **fully green** — any failure is real. Measured
+on 24 vCPU: about 8 seconds.
+
+Then run the live proofs SEPARATELY. Nine of them across nine packages
+that `go test` runs in parallel will all drive one model server and time
+out; this is concurrency, not host capacity (it is worse on a bigger
+host). See the test plan's A5 for the full list:
 
 ```bash
 go test ./context/ -run 'TestLiveOperationalProof|TestLivePressureProof' -count=1
+go test ./verification/seam/ -run TestLiveRemediateWalk -count=1
 ```
 
 The live proofs are **endpoint-gated, not opt-in**: they skip only when

@@ -43,6 +43,7 @@ func main() {
 	gitPath := flag.String("git", "/usr/bin/git", "absolute git binary the deployment pins")
 	turnTimeout := flag.Int("turn-timeout-sec", 180, "per-turn model timeout")
 	wallSec := flag.Int("wall-sec", 300, "spec wall_deadline_s (must be <= ceiling)")
+	payloadFile := flag.String("payload-file", "", "task brief file; empty uses the built-in default")
 	flag.Parse()
 
 	for name, v := range map[string]string{
@@ -118,14 +119,16 @@ func main() {
 			{"tool": "declare_done", "max_calls": 6},
 		},
 	})
+	payload := defaultPayload
+	if *payloadFile != "" {
+		b, err := os.ReadFile(*payloadFile)
+		must(err, "read payload file")
+		payload = string(b)
+	}
 	envPath := writeJSON(envDir, *taskID+"-envelope.json", map[string]any{
 		"version": 1, "task_id": *taskID, "model": *modelName,
-		"turn_timeout_sec": *turnTimeout,
-		"payload": "Remediate the vulnerable dependency github.com/dgrijalva/jwt-go " +
-			"(advisory CVE-2020-26160) in this workspace. The maintained successor is " +
-			"github.com/golang-jwt/jwt/v4 at v4.5.0. Update go.mod, write report.json at " +
-			"the workspace root with the required fields, verify it under the registered " +
-			"contract, then declare done.",
+		"turn_timeout_sec":      *turnTimeout,
+		"payload":               payload,
 		"workflow_path":         filepath.Join(skill, "workflow.json"),
 		"workflow_ceiling_path": filepath.Join(skill, "ceiling.json"),
 		"context_contract_path": filepath.Join(skill, "contract.json"),
@@ -206,6 +209,46 @@ func main() {
 	fmt.Println("\nD1-D6 evidence produced. A non-COMPLETED status is still")
 	fmt.Println("evidence: what Phase D requires is a TYPED terminal, not success.")
 }
+
+// defaultPayload states the ORDER of work explicitly. The first Phase D
+// run (rsys-d1) showed why: qwen2.5:7b called declare_done on turn 1,
+// never called write_file at all, then tried three times to verify a
+// report.json it had never written — each attempt failing closed with
+// file-unreadable until the tool-error counter exhausted. The model's
+// belief that it had done the work is not evidence that it had; the
+// brief therefore spells out that the file must EXIST before it can be
+// verified.
+//
+// This is task framing, not a control. Nothing here can make an invalid
+// report pass report-valid@1 — the gate is deterministic and lives in
+// L10. A clearer brief only removes an avoidable reason to fail.
+const defaultPayload = `Remediate one vulnerable dependency in this workspace.
+
+Dependency: github.com/dgrijalva/jwt-go
+Advisory:   CVE-2020-26160
+Fixed by:   github.com/golang-jwt/jwt/v4 at v4.5.0 (the maintained successor)
+
+Do the work in this order. Each step depends on the previous one.
+
+1. ANALYZE. Read go.mod and the files that import the dependency.
+   Establish what is vulnerable strictly from what you read here.
+   When the picture is clear, request phase completion.
+
+2. REMEDIATE. Update go.mod to the fixed module and version using
+   write_file.
+
+3. Then WRITE report.json at the workspace root using write_file. It
+   must be a JSON object with exactly three non-empty string fields:
+     "finding"     - what was vulnerable, citing workspace evidence
+     "remediation" - what you changed
+     "evidence"    - where the change is visible
+   State plain facts. Do not draw security conclusions.
+
+4. ONLY AFTER report.json exists, call verify_report on it under the
+   contract report-valid@1. Verifying a file you have not written will
+   fail: the file must be on disk first.
+
+5. When verification reports PASS, declare done.`
 
 func section(s string) { fmt.Printf("\n=== %s ===\n", s) }
 

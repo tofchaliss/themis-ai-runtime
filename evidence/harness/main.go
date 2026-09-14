@@ -36,6 +36,7 @@ func main() {
 	anchorSHA := flag.String("anchor-sha256", "", "operator's expected anchor hash")
 	anchorName := flag.String("anchor-name", "rsys", "expected deployment name")
 	anchorVer := flag.Int("anchor-version", 1, "expected deployment version")
+	anchorFile := flag.String("anchor-file", "rsys.json", "anchor filename under policies/deployment/")
 	taskID := flag.String("task", "rsys-d1", "task id")
 	repoName := flag.String("mirror-repo", "demo-vuln-app", "repo dir under mirror_root")
 	pinnedSHA := flag.String("pinned-sha", "", "40-hex commit to provision at")
@@ -65,7 +66,7 @@ func main() {
 	artifactDir := filepath.Join(*deploy, "artifacts")
 	providerDir := filepath.Join(*deploy, "provider")
 	mirrorRoot := filepath.Join(*deploy, "mirror")
-	anchorPath := filepath.Join(*repo, "policies", "deployment", "rsys.json")
+	anchorPath := filepath.Join(*repo, "policies", "deployment", *anchorFile)
 	anchorsReg := filepath.Join(*repo, "policies", "deployment", "anchors.json")
 	ceilingPath := filepath.Join(*deploy, "execution-ceiling.json")
 

@@ -117,7 +117,17 @@ func TestRealKillNoContinuation(t *testing.T) {
 	if baseDir := os.Getenv("L7_CHILD_BASE"); baseDir != "" {
 		// Child: run a walk that stays busy (prose turns against a
 		// generous stay budget) until killed.
-		m := &scriptedModel{}
+		//
+		// The per-turn delay is what makes the kill land MID-walk.
+		// Without it the scripted turns cost nothing, so on a fast
+		// host the whole walk finishes inside the parent's 25ms poll
+		// interval and the kill arrives after a typed terminal —
+		// the task is then Terminal, not Recovered, and the proof's
+		// premise is void. That is a real Linux CI failure
+		// (2026-09-07 and 2026-09-14), not a hypothetical: it is the
+		// same host-timing assumption as the L5 group-kill finding.
+		// 150ms × the stay budget leaves seconds of window.
+		m := &scriptedModel{delay: 150 * time.Millisecond}
 		for i := 0; i < 200; i++ {
 			m.steps = append(m.steps, prose(fmt.Sprintf("thinking %d", i)))
 		}
@@ -252,6 +262,11 @@ func TestRealKillNoContinuation(t *testing.T) {
 		}
 	}
 	if !found {
+		for _, id := range rep.Terminal {
+			if id == "t-kill" {
+				t.Fatalf("the child reached a typed terminal BEFORE the kill — this proof never exercised mid-walk recovery; its timing premise is void, not merely unmet: %+v", rep)
+			}
+		}
 		t.Fatalf("startup must recover the killed task: %+v", rep)
 	}
 	view, err := o2.ReadStatus("t-kill")

@@ -406,7 +406,10 @@ Evidence under the deployment root: `phase-a-evidence.txt`,
 `docs/development/deployment-signoff-rsys.md` — identities, per-phase
 results, every Phase C refusal text, ten findings with triage categories
 and dispositions, residuals, and an explicit list of what the record
-does NOT establish. Owner acceptance pending.
+does NOT establish. **Owner ACCEPTED 2026-09-14** — including its §8
+limits: one host, no production-wiring grant, model selection unsettled,
+five C rows unexercised. Deployment confidence is established for `rsys`
+and remains unrated in general.
 
 **Not done:** four Phase C rows (C4, C5, C9, C17) plus C15, which needs
 a two-bundle anchor. Production wiring (runbook Step 12) remains an open

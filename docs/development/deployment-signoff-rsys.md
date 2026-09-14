@@ -220,4 +220,10 @@ Phases A, B, D and E complete; C at 13 of 19 with every omission stated.
 No category-4 finding: nothing here reopened a locked architectural
 decision. All ten findings are closed or recorded; none remain open.
 
-Owner acceptance: _pending_.
+**Owner acceptance: ACCEPTED 2026-09-14.**
+
+Accepted on the evidence above, with §8 standing as part of what is
+accepted: this record covers `rsys` on one host, it does not grant
+production wiring, it does not settle model selection, and five C rows
+remain unexercised. Deployment confidence for this instance is
+established; deployment confidence in general remains unrated.

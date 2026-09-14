@@ -67,6 +67,49 @@ go version && which git
 Record: OS/kernel, Go version, **absolute git path** (the harness
 pins the git binary), hostname.
 
+**Check the Go caches are not on a quota-limited filesystem.** Go
+defaults `GOCACHE` and `GOMODCACHE` to `~/.cache` and `~/go`. On hosts
+with a networked or quota'd home — common in corporate estates, where
+`/home` is autofs while the bulk storage is local — the build cache
+exhausts the quota mid-run:
+
+```bash
+df -hT /home "$(go env GOCACHE)" .
+go env GOCACHE GOMODCACHE
+```
+
+If home is limited, relocate them to the local filesystem and persist
+it, because the process that eventually runs governed tasks builds
+under the same account:
+
+```bash
+sudo mkdir -p /srv/themis/build && sudo chown "$(id -u):$(id -g)" /srv/themis/build
+mkdir -p /srv/themis/build/{gocache,gomodcache}
+grep -q GOCACHE ~/.profile || {
+  echo 'export GOCACHE=/srv/themis/build/gocache'
+  echo 'export GOMODCACHE=/srv/themis/build/gomodcache'
+} >> ~/.profile
+```
+
+**Why this is a provisioning step and not a footnote:** a quota
+exhausted mid-run does not fail the suite cleanly. Packages that cannot
+build simply do not run, their tests never report, and the shell still
+exits 0. Observed 2026-09-14: a run that looked plausible had silently
+executed five fewer packages than the one before it, detectable only
+because the skip audit returned 5 lines instead of 10. A green result
+from a host in this state means nothing.
+
+Finally, confirm the host is ready:
+
+```bash
+scripts/themis-preflight --deploy "$DEPLOY"
+```
+
+It reports the conditions under which parts of the suite SKIP rather
+than fail — git outside the probed paths, a reachable endpoint whose
+models are absent, running as root, CPU-only inference. Resolve every
+FAIL before Step 2.
+
 ## Step 2 — Check out and gate the build
 
 ```bash

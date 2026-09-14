@@ -212,6 +212,24 @@ from that same genuine history refuses to ground.
 destructive probes against the live working tree — use a copy or a
 git worktree. Recorded after a second lost-edit incident.
 
+**CI restored 2026-09-14 (run 34797631381) — first green run since
+2026-09-06.** CI was red for the whole L5→L11 build: a gofmt failure
+(09-06), then `TestExecTimeoutGroupKill` failing on Linux (09-07), then
+a build step pointing at the decommissioned `themis-serve` (09-13). All
+three closed. Consequence for the record: every "full suite green"
+claim in the L5–L11 archives was **darwin-local evidence**; Linux is
+independently verified only from 2026-09-14 onward.
+
+**L5 evidence correction (2026-09-14):** the Linux failure exposed an
+overstated traceability row, not a control defect — the archived
+`TestExecTimeoutGroupKill` ran a single git process, so it could not
+distinguish a group kill from a child kill on any platform, and its
+fixed 1ms deadline never reached the timeout branch on Linux. The test
+now forks a grandchild through a production-inert seam and is
+mutation-verified. Recorded as
+`openspec/changes/archive/2026-09-07-layer-05-execution-environment/amendments/group-kill-evidence/AMENDMENT.md`.
+No L5 decision or declaration changed.
+
 Standing residuals: submitter authentication (G1, explicit);
 sensitivity inheritance (local-endpoint scope); the four
 consumption-pinned registries whose consumers live outside L7; plus

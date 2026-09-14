@@ -229,9 +229,22 @@ if [ -n "$CEILING" ]; then
     if [ -n "$MR" ]; then
       if [ -d "$MR" ]; then
         ok "mirror_root exists" "$MR"
-        MIRRORS=$(find "$MR" -maxdepth 1 -name '*.git' 2>/dev/null | wc -l | tr -d ' ')
-        [ "$MIRRORS" -gt 0 ] 2>/dev/null \
-          && ok "mirrors present" "$MIRRORS bare repo(s) — L5 may provision from these" \
+        # Detect repositories by SHAPE, not by a ".git" suffix. The
+        # directory name under mirror_root is the spec's `repo` value
+        # and carries no required suffix, so matching "*.git" reported
+        # "no source" for a perfectly good mirror (observed on the
+        # first real deployment). Bare repos have HEAD+objects at the
+        # top; non-bare ones have .git/HEAD. Both clone fine.
+        MIRRORS=0
+        for d in "$MR"/*/; do
+          [ -d "$d" ] || continue
+          if { [ -e "$d/HEAD" ] && [ -d "$d/objects" ]; } || [ -e "$d/.git/HEAD" ]; then
+            MIRRORS=$((MIRRORS + 1))
+            printf '        repo %-20s spec must say "repo": "%s"\n' "$(basename "$d")" "$(basename "$d")"
+          fi
+        done
+        [ "$MIRRORS" -gt 0 ] \
+          && ok "mirrors present" "$MIRRORS repo(s) — L5 may provision from these" \
           || warn "mirrors present" "none — provisioning has no source (runbook Step 4)"
       else
         bad "mirror_root MISSING" "$MR"

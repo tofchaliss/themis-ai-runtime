@@ -19,6 +19,8 @@ package main
 
 import (
 	stdctx "context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -39,6 +41,8 @@ type ctx struct {
 	pinnedSHA, mirrorRepo string
 	gitPath               string
 	rowDir                string // per-row scratch
+	anchorOverride        string // row-minted anchor, when set
+	shaOverride           string
 }
 
 type row struct {
@@ -150,6 +154,20 @@ func (c *ctx) verifier() orchestration.VerificationEvaluator {
 		RegistryPath: filepath.Join(c.rowDir, "policies/verification/contracts.json"), L4: l4}
 }
 
+func (c *ctx) anchorPath() string {
+	if c.anchorOverride != "" {
+		return c.anchorOverride
+	}
+	return filepath.Join(c.rowDir, "policies/deployment", c.anchorFile)
+}
+
+func (c *ctx) anchorExpected() string {
+	if c.shaOverride != "" {
+		return c.shaOverride
+	}
+	return c.anchorSHA
+}
+
 func (c *ctx) open() error { _, _, err := orchestration.Open(c.cfg()); return err }
 
 // openThenSubmit opens successfully, then submits an envelope the row
@@ -181,6 +199,124 @@ func (c *ctx) openThenSubmit(mutate func(env map[string]any)) error {
 	mutate(env)
 	_, err = o.SubmitTask(writeJSON(r, "envelope.json", env))
 	return err
+}
+
+// mintAnchor rewrites this row's anchor copy through `mutate`, registers
+// the result as ACTIVE in the row's own anchors.json, and returns its
+// path and hash. Scratch only — the deployment's anchor and registry are
+// never touched.
+func (c *ctx) mintAnchor(mutate func(map[string]any)) (string, string, error) {
+	src := filepath.Join(c.rowDir, "policies/deployment", c.anchorFile)
+	raw, err := os.ReadFile(src)
+	if err != nil {
+		return "", "", err
+	}
+	var a map[string]any
+	if err := json.Unmarshal(raw, &a); err != nil {
+		return "", "", err
+	}
+	mutate(a)
+	out, err := json.MarshalIndent(a, "", " ")
+	if err != nil {
+		return "", "", err
+	}
+	out = append(out, '\n')
+	p := filepath.Join(c.rowDir, "policies/deployment", "minted.json")
+	if err := os.WriteFile(p, out, 0o600); err != nil {
+		return "", "", err
+	}
+	sum := sha256.Sum256(out)
+	sha := hex.EncodeToString(sum[:])
+	name, _ := a["name"].(string)
+	ver := 1
+	if f, ok := a["deployment_version"].(float64); ok {
+		ver = int(f)
+	}
+	reg := map[string]any{"version": 1, "kind": "deployment-anchors",
+		"entries": []map[string]any{{"name": name, "version": ver,
+			"artifact_sha256": sha, "state": "active", "steward": "phase-c"}}}
+	rb, _ := json.MarshalIndent(reg, "", " ")
+	if err := os.WriteFile(filepath.Join(c.rowDir, "policies/deployment/anchors.json"), rb, 0o600); err != nil {
+		return "", "", err
+	}
+	return p, sha, nil
+}
+
+// openTwice opens once (which persists the observed registry state under
+// the state root), mutates the registry, then opens again. The
+// append-only wall spans restarts, so the SECOND open is the one that
+// must refuse.
+func (c *ctx) openTwice(mutateRegistry func(reg map[string]any)) error {
+	if _, _, err := orchestration.Open(c.cfg()); err != nil {
+		return fmt.Errorf("row setup: first Open refused: %w", err)
+	}
+	regPath := filepath.Join(c.rowDir, "policies/deployment/anchors.json")
+	raw, err := os.ReadFile(regPath)
+	if err != nil {
+		return err
+	}
+	var reg map[string]any
+	if err := json.Unmarshal(raw, &reg); err != nil {
+		return err
+	}
+	mutateRegistry(reg)
+	out, _ := json.MarshalIndent(reg, "", " ")
+	if err := os.WriteFile(regPath, out, 0o600); err != nil {
+		return err
+	}
+	_, _, err = orchestration.Open(c.cfg())
+	return err
+}
+
+// sealComposition reproduces L7's composition seal (envelope.go
+// canonical()): a versioned, ordered, length-prefixed field list. It is
+// replicated rather than imported because the function is unexported —
+// if L7's form changes, C17 will refuse for the wrong reason and the
+// matrix will say so rather than silently pass.
+func sealComposition(f map[string]string) string {
+	order := []string{"workflow", "workflow_ceiling", "context_contract",
+		"grant_template", "spec_template", "input_schema", "procedure", "grant", "spec"}
+	var b strings.Builder
+	b.WriteString("themis-skill-composition-v1")
+	for _, k := range order {
+		fmt.Fprintf(&b, "|%d:%s=%s", len(f[k]), k, f[k])
+	}
+	sum := sha256.Sum256([]byte(b.String()))
+	return hex.EncodeToString(sum[:])
+}
+
+func fileSHA(p string) string {
+	b, err := os.ReadFile(p)
+	if err != nil {
+		return ""
+	}
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:])
+}
+
+func skillHashes(skillDir string) map[string]string {
+	raw, err := os.ReadFile(filepath.Join(skillDir, "skill.json"))
+	if err != nil {
+		return nil
+	}
+	var m map[string]any
+	if json.Unmarshal(raw, &m) != nil {
+		return nil
+	}
+	get := func(k string) string {
+		if e, ok := m[k].(map[string]any); ok {
+			if s, ok := e["sha256"].(string); ok {
+				return s
+			}
+		}
+		return ""
+	}
+	return map[string]string{
+		"workflow": get("workflow"), "workflow_ceiling": get("workflow_ceiling"),
+		"context_contract": get("context_contract"), "grant_template": get("grant_template"),
+		"spec_template": get("spec_template"), "input_schema": get("input_schema"),
+		"procedure": get("procedure"),
+	}
 }
 
 func matrix() []row {
@@ -248,16 +384,108 @@ func matrix() []row {
 						"policies/skills/investigate-cve/workflow.json")
 				})
 			}},
-		// C15 targets pairing an anchored workflow with ANOTHER
-		// ANCHORED bundle's ceiling — the indivisibility of a bundle.
-		// rsys@2 anchors exactly one workflow, so no second anchored
-		// bundle exists and the row is unexercisable here. Substituting
-		// an UNANCHORED ceiling tests something else and is refused
-		// earlier, by the workflow loader on a capability/ceiling
-		// mismatch, before the bundle check can speak. Claiming that as
-		// C15 would be claiming a control that never ran.
-		{"C15", "NOT APPLICABLE — rsys@2 anchors one bundle; C15 needs two", "",
-			func(c *ctx) error { return nil }},
+		{"C4", "registration rebound to different bytes between Opens", "deployment identity is immutable",
+			func(c *ctx) error {
+				return c.openTwice(func(reg map[string]any) {
+					for _, e := range reg["entries"].([]any) {
+						m := e.(map[string]any)
+						if m["name"] == "rsys" {
+							m["artifact_sha256"] = strings.Repeat("ab", 32)
+						}
+					}
+				})
+			}},
+		{"C5", "registration deleted between Opens", "disappeared",
+			func(c *ctx) error {
+				return c.openTwice(func(reg map[string]any) {
+					var kept []any
+					for _, e := range reg["entries"].([]any) {
+						if e.(map[string]any)["name"] != "rsys" {
+							kept = append(kept, e)
+						}
+					}
+					reg["entries"] = kept
+				})
+			}},
+		{"C9", "anchor pins a constitution this binary does not have", "constitution is not the anchored one",
+			func(c *ctx) error {
+				p, sha, err := c.mintAnchor(func(a map[string]any) {
+					a["constitution"] = map[string]any{
+						"state":         strings.Repeat("cd", 32),
+						"orchestration": strings.Repeat("ef", 32)}
+				})
+				if err != nil {
+					return fmt.Errorf("row setup: %w", err)
+				}
+				cfg := c.cfg()
+				cfg.AnchorPath, cfg.AnchorSHA256 = p, sha
+				_, _, err = orchestration.Open(cfg)
+				return err
+			}},
+		{"C15", "anchored workflow paired with ANOTHER anchored bundle's ceiling", "not the artifact this anchored workflow bundles",
+			func(c *ctx) error {
+				// A second bundle is required for this row to mean
+				// anything. Its ceiling is a byte-variant of the first
+				// bundle's — semantically identical, so the workflow
+				// loader accepts it and the ANCHOR check is what speaks.
+				rem := filepath.Join(c.rowDir, "policies/skills/remediate-dependency")
+				variant := filepath.Join(c.rowDir, "variant-ceiling.json")
+				b, err := os.ReadFile(filepath.Join(rem, "ceiling.json"))
+				if err != nil {
+					return err
+				}
+				if err := os.WriteFile(variant, append(b, ' '), 0o600); err != nil {
+					return err
+				}
+				inv := filepath.Join(c.rowDir, "policies/skills/investigate-cve")
+				p, sha, err := c.mintAnchor(func(a map[string]any) {
+					a["workflows"] = []map[string]any{
+						{"workflow": fileSHA(filepath.Join(rem, "workflow.json")),
+							"workflow_ceiling": fileSHA(filepath.Join(rem, "ceiling.json")),
+							"context_contract": fileSHA(filepath.Join(rem, "contract.json"))},
+						{"workflow": fileSHA(filepath.Join(inv, "workflow.json")),
+							"workflow_ceiling": fileSHA(variant),
+							"context_contract": fileSHA(filepath.Join(inv, "contract.json"))},
+					}
+				})
+				if err != nil {
+					return fmt.Errorf("row setup: %w", err)
+				}
+				c.anchorOverride, c.shaOverride = p, sha
+				defer func() { c.anchorOverride, c.shaOverride = "", "" }()
+				return c.openThenSubmit(func(e map[string]any) {
+					e["workflow_ceiling_path"] = variant
+				})
+			}},
+		{"C17", "submitter-chosen skill composition differing from the catalog's", "never its constituent hashes",
+			func(c *ctx) error {
+				skill := filepath.Join(c.rowDir, "policies/skills/remediate-dependency")
+				h := skillHashes(skill)
+				if h == nil || h["workflow"] == "" {
+					return fmt.Errorf("row setup: skill.json unreadable")
+				}
+				return c.openThenSubmit(func(e map[string]any) {
+					h["grant"] = fileSHA(e["grant_path"].(string))
+					h["spec"] = fileSHA(e["spec_path"].(string))
+					// Perturb one constituent L7 does NOT materialize,
+					// then reseal: internally intact, so it reaches the
+					// catalog comparison rather than failing seal
+					// integrity first.
+					h["input_schema"] = strings.Repeat("12", 32)
+					comp := map[string]any{
+						"workflow_sha256": h["workflow"], "workflow_ceiling_sha256": h["workflow_ceiling"],
+						"context_contract_sha256": h["context_contract"], "grant_template_sha256": h["grant_template"],
+						"spec_template_sha256": h["spec_template"], "input_schema_sha256": h["input_schema"],
+						"grant_sha256": h["grant"], "spec_sha256": h["spec"],
+						"composition_sha256": sealComposition(h),
+					}
+					if h["procedure"] != "" {
+						comp["procedure_sha256"] = h["procedure"]
+					}
+					e["origin"] = map[string]any{"skill": "remediate-dependency@1"}
+					e["composition"] = comp
+				})
+			}},
 		{"C16", "tool registry swapped", "tool registry is not the anchored artifact",
 			func(c *ctx) error {
 				return c.openThenSubmit(func(e map[string]any) {

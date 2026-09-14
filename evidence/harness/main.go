@@ -14,6 +14,7 @@
 package main
 
 import (
+	stdctx "context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -44,6 +45,8 @@ func main() {
 	turnTimeout := flag.Int("turn-timeout-sec", 180, "per-turn model timeout")
 	wallSec := flag.Int("wall-sec", 300, "spec wall_deadline_s (must be <= ceiling)")
 	payloadFile := flag.String("payload-file", "", "task brief file; empty uses the built-in default")
+	scripted := flag.Bool("scripted", false, "drive the walk with a deterministic scripted model instead of a live one")
+	score := flag.Float64("score", 0.82, "score field in the scripted report (Phase E compares two runs)")
 	flag.Parse()
 
 	for name, v := range map[string]string{
@@ -95,10 +98,15 @@ func main() {
 		SkillCatalogPath:    filepath.Join(*repo, "policies/skills/catalog.json"),
 		// ModelRegistryPath stays empty: the anchor declares "absent".
 
-		Model:    model.NewOllamaChat(*endpoint),
+		Model:    chooseModel(*scripted, *endpoint, *score),
 		Verifier: ev,
 	})
 	must(err, "Open")
+	if *scripted {
+		fmt.Printf("  model: SCRIPTED (deterministic; report score %g)\n", *score)
+	} else {
+		fmt.Printf("  model: live at %s\n", *endpoint)
+	}
 	fmt.Printf("  opened; startup sweep: recovered=%v terminal=%v corrupt=%v\n",
 		report.Recovered, report.Terminal, report.Corrupt)
 
@@ -110,10 +118,21 @@ func main() {
 		"repo": *repoName, "pinned_sha": *pinnedSHA,
 		"limits": []map[string]any{{"dimension": "wall_deadline_s", "value": *wallSec}},
 	})
+	// The grant must cover EVERY capability the workflow's phases
+	// declare. ANALYZE declares list_directory and search_code; the
+	// first live run granted neither, and `toolDefs` offers the
+	// phase's capabilities without intersecting the grant — so the
+	// model was offered list_directory, called it, and L4 denied it
+	// `not-available`. Correct refusal, but it cost a turn and then
+	// the no-action counter exhausted. A grant narrower than the
+	// phase's capabilities spends the model's budget on calls that
+	// could never have been authorized.
 	grantPath := writeJSON(envDir, *taskID+"-grant.json", map[string]any{
-		"version": 1, "task_id": *taskID, "total_max_calls": 30,
+		"version": 1, "task_id": *taskID, "total_max_calls": 40,
 		"entries": []map[string]any{
 			{"tool": "read_file", "max_calls": 10, "workspace": "@workspace"},
+			{"tool": "list_directory", "max_calls": 6, "workspace": "@workspace"},
+			{"tool": "search_code", "max_calls": 6, "workspace": "@workspace"},
 			{"tool": "write_file", "max_calls": 4, "workspace": "@workspace", "mutating": true},
 			{"tool": "verify_report", "max_calls": 6, "workspace": "@workspace"},
 			{"tool": "declare_done", "max_calls": 6},
@@ -249,6 +268,77 @@ Do the work in this order. Each step depends on the previous one.
    fail: the file must be on disk first.
 
 5. When verification reports PASS, declare done.`
+
+// --- scripted model -------------------------------------------------
+//
+// Phase E tests the CHAIN — two comparable walks, an L10 gate, witnessed
+// L11 facts, cold reconstruction. A deterministic model is the right
+// instrument for that, exactly as integration/phasec_test.go uses one: a
+// live model introduces variance in the thing that is NOT under test,
+// and two live runs cannot be relied upon to differ only in the score.
+//
+// This grants nothing. The scripted model proposes tool calls like any
+// other; L4 authorizes or refuses them, L10 grades the report, and the
+// completion gate still requires report-valid@1 to be PASS. A script
+// that proposed an ungranted call would be denied identically.
+
+type scriptedModel struct {
+	steps []model.ExecutionResponse
+	i     int
+}
+
+func (s *scriptedModel) Name() string { return "scripted" }
+
+func (s *scriptedModel) Execute(_ stdctx.Context, _ model.ExecutionRequest) (*model.ExecutionResponse, error) {
+	if s.i >= len(s.steps) {
+		// Past the script: say nothing and let the workflow's
+		// no-action counter govern, rather than inventing a step.
+		return &model.ExecutionResponse{
+			Content: "script exhausted", Termination: model.TerminationStop}, nil
+	}
+	r := s.steps[s.i]
+	s.i++
+	return &r, nil
+}
+
+func toolCall(name string, args any) model.ExecutionResponse {
+	b, _ := json.Marshal(args)
+	return model.ExecutionResponse{
+		Termination: model.TerminationToolCalls,
+		ToolCalls:   []model.ToolCall{{ID: "c", Name: name, Arguments: json.RawMessage(b)}},
+	}
+}
+
+func chooseModel(scripted bool, endpoint string, score float64) model.Interface {
+	if !scripted {
+		return model.NewOllamaChat(endpoint)
+	}
+	// The remediation the live model never managed: read, request phase
+	// completion, apply the fix, write the report, verify it, then
+	// declare done into the gated edge.
+	report := map[string]any{
+		"finding": "github.com/dgrijalva/jwt-go v3.2.0+incompatible in go.mod " +
+			"is covered by CVE-2020-26160",
+		"remediation": "replaced the requirement with " +
+			"github.com/golang-jwt/jwt/v4 v4.5.0, the maintained successor",
+		"evidence": "go.mod require line; import sites in internal/auth/",
+		"score":    score,
+	}
+	rb, _ := json.Marshal(report)
+	fixed := "module example.com/demo-vuln-app\n\ngo 1.24\n\n" +
+		"require github.com/golang-jwt/jwt/v4 v4.5.0\n"
+	return &scriptedModel{steps: []model.ExecutionResponse{
+		// ANALYZE
+		toolCall("read_file", map[string]string{"path": "go.mod"}),
+		toolCall("declare_done", map[string]string{}),
+		// REMEDIATE
+		toolCall("write_file", map[string]string{"path": "go.mod", "content": fixed}),
+		toolCall("write_file", map[string]string{"path": "report.json", "content": string(rb)}),
+		toolCall("verify_report", map[string]string{
+			"path": "report.json", "contract": "report-valid@1"}),
+		toolCall("declare_done", map[string]string{}),
+	}}
+}
 
 func section(s string) { fmt.Printf("\n=== %s ===\n", s) }
 

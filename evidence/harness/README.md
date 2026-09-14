@@ -48,10 +48,57 @@ GOWORK=off go build -o /tmp/themis-evidence .
 
 Flags with defaults: `-anchor-name rsys`, `-anchor-version 1`,
 `-model qwen2.5:7b`, `-endpoint http://localhost:11434`,
-`-git /usr/bin/git`, `-turn-timeout-sec 180`, `-wall-sec 300`.
+`-git /usr/bin/git`, `-turn-timeout-sec 180`, `-wall-sec 300`,
+`-payload-file` (empty uses the built-in brief).
 
 `-model` must be in the anchor's allowlist and `-wall-sec` must be
 within the ceiling, or assembly refuses — which is itself evidence.
+
+## Scripted mode (`-scripted`)
+
+```bash
+/tmp/themis-evidence ... -scripted -score 0.82 -task rsys-e-base
+/tmp/themis-evidence ... -scripted -score 0.91 -task rsys-e-cand
+```
+
+Drives the walk with a deterministic model instead of a live one.
+
+**Why, for Phase E.** Phase E tests the *chain* — two comparable walks,
+an L10 gate, witnessed L11 facts, cold reconstruction. A live model
+introduces variance in the one thing not under test, and two live runs
+cannot be relied upon to differ only in the score.
+`integration/phasec_test.go` uses a scripted model for exactly this
+reason. `-score` is what makes the two walks comparable: it lands in the
+report as an extra field (the contract permits unknown fields) and is
+what L11 derives a Δ from.
+
+**It grants nothing.** The scripted model proposes tool calls like any
+other model. L4 authorizes or refuses them, L10 grades the report
+against `report-valid@1`, and the completion gate still requires PASS. A
+script proposing an ungranted call is denied identically to a live one.
+
+**Live mode remains the honest test of a model.** Two live runs with
+`qwen2.5:7b` on CPU both reached governed terminals without ever calling
+`write_file` — see the findings note below. Scripted mode is for
+evidencing the chain, not for pretending a model can drive it.
+
+## A finding worth knowing about grants
+
+`orchestration.loop.toolDefs` offers the model **the phase's declared
+capabilities**, without intersecting the task's grant — its comment says
+"granted capability subset", but the code does not consult the grant.
+
+That is not a security hole: L4 re-checks everything, and the denial is
+correctly zero-detail (`not-available`, revealing nothing about whether
+the tool exists). But it has a real cost. In run `rsys-d2` the model was
+offered `list_directory` (declared by ANALYZE), called it, was denied
+because the grant omitted it, and then stalled into no-action exhaustion.
+
+**So a grant narrower than the workflow's declared capabilities spends
+the model's turn budget on calls that could never have been authorized.**
+This harness therefore grants every capability the phases declare. Worth
+deciding whether `toolDefs` should intersect the grant, or whether the
+comment should be corrected to match the code.
 
 ## Reading the result
 

@@ -177,7 +177,7 @@ fixture.
 
 | # | Finding | Cat. | Disposition |
 |---|---|---|---|
-| F-1 | `orchestration.loop.toolDefs` offers the phase's declared capabilities **without intersecting the grant**, though its comment says "granted capability subset". L4 re-checks and denies zero-detail, so not a security hole — but the model spends turns and counters on calls that could never be authorized, which exhausted `rsys-d2` | 2 | **OPEN — owner decision.** Intersect the grant, or correct the comment. Not changed for a harness convenience |
+| F-1 | `orchestration.loop.toolDefs` offers the phase's declared capabilities **without intersecting the grant**, though its comment says "granted capability subset". L4 re-checks and denies zero-detail, so not a security hole — but the model spends turns and counters on calls that could never be authorized, which exhausted `rsys-d2` | 2 | **CLOSED 2026-09-14** — `toolDefs` now intersects the grant, making the code match its own comment. Narrowing only; L4 authority unchanged. Pinned by `TestToolDefsIntersectGrant`, mutation-verified against the pre-fix behaviour |
 | F-2 | No registered criterion could consume governed-walk evidence (`bench-score-delta@1` selects the benchmark plane) | 1 | **CLOSED** — `walk-report-score-delta@1` registered by Governance act; forced `rsys@2` |
 | F-3 | Go caches default into a quota-limited autofs `/home`; exhaustion does **not** fail cleanly — unbuildable packages simply do not run, tests never report, shell exits 0 | 1 | **CLOSED** — relocated to `/srv`; recorded as runbook Step 1 provisioning requirement |
 | F-4 | Runbook Steps 5/8/9 used `go run - <<'GO'`; `go run` does not read a program from stdin, so all three verification commands failed as written | 2 | **CLOSED** — rewritten to a file; each corrected form executed |
@@ -218,7 +218,6 @@ fixture.
 
 Phases A, B, D and E complete; C at 13 of 19 with every omission stated.
 No category-4 finding: nothing here reopened a locked architectural
-decision. One category-2 finding (F-1) remains open for owner decision;
-all other findings are closed or recorded.
+decision. All ten findings are closed or recorded; none remain open.
 
 Owner acceptance: _pending_.

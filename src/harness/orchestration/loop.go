@@ -572,10 +572,29 @@ func (w *walk) composePhase(p *Phase) ([]model.Message, error) {
 }
 
 // toolDefs exposes exactly the phase's granted capability subset to
-// the model (declaration only — L4 re-checks everything anyway).
+// the model: the intersection of the PHASE's declared capabilities and
+// the TASK's grant. Declaration only — L4 re-checks everything anyway,
+// and nothing here authorizes.
+//
+// The intersection is not cosmetic. Offering a capability the grant
+// omits spends the model's turn budget and its error/no-action counters
+// on calls that could never have been authorized: L4 refuses them
+// `not-available` with zero detail — correctly, since the denial must
+// not reveal whether the tool exists — which leaves the model nothing to
+// adapt to. Observed on the first real deployment (2026-09-14, finding
+// F-1): a phase declared list_directory, the task's grant omitted it,
+// the model called it, was refused, and then stalled into no-action
+// exhaustion. This function previously ignored the grant entirely while
+// its comment claimed otherwise.
+//
+// Narrowing only. The intersection can never offer more than the phase
+// declares, so phase-level narrowing is unaffected.
 func (w *walk) toolDefs(p *Phase) []model.ToolDef {
 	var defs []model.ToolDef
 	for _, cap := range p.Capabilities {
+		if !w.granted(cap) {
+			continue
+		}
 		for _, t := range w.reg.Tools {
 			if t.Name != cap {
 				continue
@@ -593,6 +612,21 @@ func (w *walk) toolDefs(p *Phase) []model.ToolDef {
 		}
 	}
 	return defs
+}
+
+// granted reports whether the task's grant carries an entry for this
+// capability. Presence only — quotas, workspaces and mutating flags are
+// L4's to enforce at the call, not this declaration's to pre-judge.
+func (w *walk) granted(tool string) bool {
+	if w.grant == nil {
+		return false
+	}
+	for _, e := range w.grant.Entries {
+		if e.Tool == tool {
+			return true
+		}
+	}
+	return false
 }
 
 func (w *walk) recordTurn(fact string, outObj *string, content string) error {

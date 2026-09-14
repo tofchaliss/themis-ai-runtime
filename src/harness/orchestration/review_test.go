@@ -474,3 +474,52 @@ func TestGrantToolAboveCeiling(t *testing.T) {
 		t.Fatalf("grant tool outside workflow ceiling must refuse: %v", err)
 	}
 }
+
+// TestToolDefsIntersectGrant pins F-1 (first deployment, 2026-09-14):
+// the model is offered the intersection of the PHASE's declared
+// capabilities and the TASK's grant — not the phase's capabilities
+// alone.
+//
+// Before the fix, toolDefs ignored the grant entirely while its comment
+// claimed otherwise, so a capability the phase declared but the grant
+// omitted was still offered. The model would call it, L4 would refuse
+// it `not-available` with zero detail — correctly, since the denial must
+// not reveal whether the tool exists — and the model, given nothing to
+// adapt to, would burn turns and counters on a call that could never
+// have been authorized. That is what exhausted a real deployment walk.
+//
+// ANALYZE declares read_file AND declare_done; this grant carries only
+// read_file. declare_done must therefore never be declared to the model.
+func TestToolDefsIntersectGrant(t *testing.T) {
+	m := &scriptedModel{steps: []model.ExecutionResponse{
+		toolCall("read_file", `{"path":"parser.go"}`),
+	}}
+	f := setup(t, m, "")
+	// Narrow the grant: read_file only. The phase still declares both.
+	writeJSON(t, f.envDir, "grant.json",
+		`{"version":1,"task_id":"T","total_max_calls":20,"entries":[
+		  {"tool":"read_file","max_calls":8,"workspace":"@workspace"}]}`)
+
+	if _, err := f.o.SubmitTask(f.envelope(t, "t-intersect")); err != nil {
+		t.Fatalf("governed failure is not an error: %v", err)
+	}
+	if len(m.offered) == 0 {
+		t.Fatal("the model was never invoked — nothing to evidence")
+	}
+	for turn, names := range m.offered {
+		sawRead := false
+		for _, n := range names {
+			if n == "declare_done" {
+				t.Errorf("turn %d: declare_done was DECLARED to the model though the grant omits it: %v", turn, names)
+			}
+			if n == "read_file" {
+				sawRead = true
+			}
+		}
+		// Narrowing only: the granted capability must still be offered,
+		// or the intersection has removed something it should not.
+		if !sawRead {
+			t.Errorf("turn %d: read_file is granted and phase-declared but was not offered: %v", turn, names)
+		}
+	}
+}

@@ -28,11 +28,19 @@ type scriptedModel struct {
 	i     int
 	fail  bool
 	delay time.Duration // per-turn wall-clock cost, for budget-floor tests
+	// offered records the tool names the loop DECLARED to the model on
+	// each turn — the evidence for what toolDefs actually exposes.
+	offered [][]string
 }
 
 func (s *scriptedModel) Name() string { return "scripted" }
 
 func (s *scriptedModel) Execute(ctx stdctx.Context, req model.ExecutionRequest) (*model.ExecutionResponse, error) {
+	names := make([]string, 0, len(req.Tools))
+	for _, td := range req.Tools {
+		names = append(names, td.Name)
+	}
+	s.offered = append(s.offered, names)
 	if s.delay > 0 {
 		time.Sleep(s.delay)
 	}

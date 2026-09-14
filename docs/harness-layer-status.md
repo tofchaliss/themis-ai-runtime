@@ -376,13 +376,14 @@ the tool does not do.
 
 **Two findings from the deployment, neither a defect:**
 
-1. `orchestration.loop.toolDefs` offers the phase's declared
+1. `orchestration.loop.toolDefs` offered the phase's declared
    capabilities **without intersecting the task grant**, though its
-   comment says "granted capability subset". Not a security hole — L4
-   re-checks and denies zero-detail — but the model spends turns and
+   comment said "granted capability subset". Not a security hole — L4
+   re-checks and denies zero-detail — but the model spent turns and
    counters on calls that could never be authorized, which is what
-   exhausted one walk. Open: intersect the grant, or correct the
-   comment. See `evidence/harness/README.md`.
+   exhausted one walk. **CLOSED 2026-09-14:** toolDefs now intersects
+   the grant (narrowing only; L4 authority unchanged), pinned by
+   `TestToolDefsIntersectGrant` and mutation-verified.
 2. No registered criterion could consume governed-walk evidence
    (`bench-score-delta@1` selects the benchmark plane). Closed by
    registering `walk-report-score-delta@1` as a Governance act.

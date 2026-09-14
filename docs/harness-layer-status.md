@@ -320,6 +320,68 @@ The live proofs remain endpoint-gated, not opt-in: they run whenever a
 model endpoint answers, so a build host with Ollama up must have
 `THEMIS_LIVE_TOOL_MODEL` / `THEMIS_LIVE_MODEL` pulled.
 
+## First deployment instance — `rsys` (2026-09-14)
+
+The first concrete Deployment Instance was stood up and validated on a
+real host (Ubuntu 6.8, x86_64, 24 vCPU, 62 GB, CPU-only inference,
+quota-limited autofs home). Deployment confidence is no longer unrated
+for this instance; it remains unrated in general.
+
+| Phase | Result |
+|---|---|
+| A build/static | 21/21 green hermetic, 7.6s; skip audit exactly 10; all live proofs green individually |
+| B artifact + admission | ceiling pinned `fd8fcdc1`; anchor `rsys@1` = `04fcdfaf`; **refused before the act**, admitted after |
+| C negative space | partial — C2 and C3 proven against REAL anchors (see below) |
+| D anchored path | 5 governed walks, all typed terminals, D4–D6 on every one |
+| E governed chain | **all six rows** — E3 grounding, E4 real-door admission, E5 Δ with derived run identities, E6 cold reconstruction CONFIRMED, E7 door byte-identical, E8 laundering refused |
+
+**Supersession proven end to end.** Registering
+`walk-report-score-delta@1` changed the criteria-registry pin, which
+*forced* a second deployment identity — `rsys@2` (`666fd868`) — with
+`rsys@1` withdrawn. Both then coexist in one record plane: four tasks
+attributable to `rsys@1`, one to `rsys@2`. Against the *same* registry
+in the *same* moment, `AdmitAnchor(rsys@1)` refuses ("a superseded
+deployment definition cannot open") while `VerifyAnchorRecord(rsys@1)`
+re-establishes all four of its records. Withdrawal closes the future and
+preserves the past; a deletion would have made four completed governed
+walks permanently unattributable.
+
+**Real-anchor refusals observed** (test-plan C rows, on real artifacts
+rather than test-minted ones): C2 — "a matching hash is an identifier,
+never an admission claim"; C3 — "anchor rsys@1 is withdrawn". Also, at
+L11: "unregistered artifacts are data and measure nothing".
+
+**Two findings from the deployment, neither a defect:**
+
+1. `orchestration.loop.toolDefs` offers the phase's declared
+   capabilities **without intersecting the task grant**, though its
+   comment says "granted capability subset". Not a security hole — L4
+   re-checks and denies zero-detail — but the model spends turns and
+   counters on calls that could never be authorized, which is what
+   exhausted one walk. Open: intersect the grant, or correct the
+   comment. See `evidence/harness/README.md`.
+2. No registered criterion could consume governed-walk evidence
+   (`bench-score-delta@1` selects the benchmark plane). Closed by
+   registering `walk-report-score-delta@1` as a Governance act.
+
+**Live-model result, recorded because it is evidence about models
+rather than about the harness:** `qwen2.5:7b` on CPU could not drive
+`remediate-dependency` in two attempts — it never called `write_file`,
+once trying three times to verify a report it had never written, once
+inventing a tool it was not granted and then stalling. Both runs still
+reached typed terminals through declared edges. Phase E therefore used a
+scripted model, as `integration/phasec_test.go` does, since Phase E
+tests the chain and not the model.
+
+Evidence under the deployment root: `phase-a-evidence.txt`,
+`phase-b-evidence.txt`, `phase-d-evidence.txt`, `phase-d2-evidence.txt`,
+`phase-e-walks.txt`, `phase-e-evidence.txt`,
+`phase-d-rsys2-evidence.txt`. Tooling: `evidence/harness/`.
+
+**Not done:** the remaining Phase C rows against the real anchor, and
+Phase F sign-off. Production wiring (runbook Step 12) remains an open
+owner decision — the evidence harness is deliberately not it.
+
 ## Where to look
 
 - As-built chain diagram: `docs/architecture/harness/execution-chain.md`

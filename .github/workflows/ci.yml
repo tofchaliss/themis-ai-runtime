@@ -34,5 +34,6 @@ jobs:
       - name: build themis-bench
         run: go build -o bin/themis-bench ./benchmarks/cmd/themis-bench
 
-      - name: build themis-serve
-        run: go build -o bin/themis-serve ./cmd/themis-serve
+      # themis-serve was decommissioned 2026-09-13 (integration-audit R1).
+      - name: build themis-ratchet
+        run: go build -o bin/themis-ratchet ./cmd/themis-ratchet

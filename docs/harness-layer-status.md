@@ -220,6 +220,33 @@ three closed. Consequence for the record: every "full suite green"
 claim in the L5–L11 archives was **darwin-local evidence**; Linux is
 independently verified only from 2026-09-14 onward.
 
+**Archive evidence sweep (2026-09-14).** Prompted by the L5 finding
+below, all 312 test names cited across archive traceability files were
+cross-checked against the 447 tests that exist, and every skip in the
+suite was enumerated. Three gaps found and closed — in each case the
+control was sound and only the evidence was missing:
+
+1. **L10 Register T #5** — `TestEventTamperDetectedAtReadBoundary` read
+   `events.jsonl` where L6 writes `events.log`, so it silently skipped
+   and had never executed on any platform. The L10 close recorded T #5
+   CLOSED on it. Path fixed, both skip guards converted to failures.
+   (`archive/2026-09-11-layer-10-verification/amendments/register-t5-evidence/`)
+2. **L7 envelope 64KiB payload cap** (D-L7-1, Q-L7-10) — cited as
+   `TestPayloadCap`, which did not exist. Deleting the cap left the
+   whole suite green. Test written.
+3. **L7 worst-case walk ≤ ceiling** (D-L7-3/4, Q-L7-9) — cited as
+   `TestWorstCaseWalkBound`, which did not exist. Same: mutant survived
+   the full suite. Test written.
+   (2 and 3: `archive/2026-09-07-layer-07-orchestration/amendments/untested-controls-evidence/`)
+
+Remaining known-thin evidence, recorded not closed: `TestTeardownAnomalous`
+skips on Linux (darwin `chflags uchg` fixture), so L5's "anomaly typed,
+never false success" clause is darwin-only; `TestEgressMemObservedGate`
+uses a 1-byte bound and so cannot discriminate the Linux `Maxrss`
+KB→bytes conversion; `TestBudgetMidDrainAutoSeals` carries the same
+1ms-vs-git-spawn assumption class as the L5 finding, passing on Linux
+with an undesigned margin; two egress tests skip under root.
+
 **L5 evidence correction (2026-09-14):** the Linux failure exposed an
 overstated traceability row, not a control defect — the archived
 `TestExecTimeoutGroupKill` ran a single git process, so it could not

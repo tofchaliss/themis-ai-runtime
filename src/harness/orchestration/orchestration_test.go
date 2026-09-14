@@ -644,6 +644,72 @@ func TestEnvelopeNoDefaulting(t *testing.T) {
 	}
 }
 
+// TestPayloadCap: the payload is the one unbounded caller string in
+// the envelope, capped at 64KiB (D-L7-1, Q-L7-10). The L7 archive
+// cited this test by name; it did not exist, and removing the cap
+// broke nothing in the whole module suite.
+//
+// Both directions are asserted. Without the at-cap case a refusal
+// could come from anywhere and still look like the cap working.
+func TestPayloadCap(t *testing.T) {
+	dir := t.TempDir()
+	const cap64 = 64 << 10
+	mk := func(n int) string {
+		m := map[string]any{"version": 1, "task_id": "t", "model": "m",
+			"payload":          strings.Repeat("x", n),
+			"turn_timeout_sec": 60,
+			"workflow_path":    "/w", "workflow_ceiling_path": "/c", "registry_path": "/r",
+			"grant_path": "/g", "exec_ceiling_path": "/e", "spec_path": "/s",
+			"context_contract_path": "/ctx"}
+		raw, _ := json.Marshal(m)
+		return writeJSON(t, dir, fmt.Sprintf("e-%d.json", n), string(raw))
+	}
+	if _, err := LoadEnvelope(mk(cap64)); err != nil {
+		t.Fatalf("a payload exactly at the 64KiB cap must load: %v", err)
+	}
+	_, err := LoadEnvelope(mk(cap64 + 1))
+	if err == nil || !errors.Is(err, ErrEnvelope) || !strings.Contains(err.Error(), "64KiB") {
+		t.Fatalf("one byte over the cap must refuse typed and name the cap: %v", err)
+	}
+}
+
+// TestWorstCaseWalkBound: the statically computed worst-case walk must
+// be bounded by the ceiling at load (D-L7-3/4, Q-L7-9). Also cited by
+// the L7 archive without existing; the refusal was unreachable by any
+// test in the module.
+//
+// The bound is read back from a permissive load rather than hardcoded,
+// so the assertion follows the fixture instead of silently drifting
+// away from it — the failure mode that produced this gap.
+func TestWorstCaseWalkBound(t *testing.T) {
+	dir := t.TempDir()
+	ceilingWith := func(name string, walk int64) *WorkflowCeiling {
+		t.Helper()
+		body := fmt.Sprintf(`{"version":1,"allowed_tools":["read_file","declare_done"],"max_total_calls":20,"max_walk_length":%d,"max_turns_per_phase":10}`, walk)
+		c, err := LoadWorkflowCeiling(writeJSON(t, dir, name, body))
+		if err != nil {
+			t.Fatalf("ceiling %s: %v", name, err)
+		}
+		return c
+	}
+	wf, err := LoadWorkflow(writeJSON(t, dir, "w.json", defaultWorkflow), ceilingWith("generous.json", 1_000_000))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if wf.WorstCaseLen <= 0 {
+		t.Fatalf("worst-case walk must be computed at load, got %d", wf.WorstCaseLen)
+	}
+	// Exactly at the ceiling loads: the bound is >, not >=.
+	if _, err := LoadWorkflow(writeJSON(t, dir, "w-at.json", defaultWorkflow), ceilingWith("at.json", wf.WorstCaseLen)); err != nil {
+		t.Fatalf("worst case %d must load under a ceiling of exactly %d: %v", wf.WorstCaseLen, wf.WorstCaseLen, err)
+	}
+	// One below refuses, typed, naming both numbers.
+	_, err = LoadWorkflow(writeJSON(t, dir, "w-over.json", defaultWorkflow), ceilingWith("under.json", wf.WorstCaseLen-1))
+	if err == nil || !errors.Is(err, ErrWorkflow) || !strings.Contains(err.Error(), "exceeds ceiling") {
+		t.Fatalf("worst case %d over a ceiling of %d must refuse typed: %v", wf.WorstCaseLen, wf.WorstCaseLen-1, err)
+	}
+}
+
 // Grant above the workflow ceiling refuses at assembly.
 func TestGrantCeilingAtAssembly(t *testing.T) {
 	f := setup(t, happyScript(), "")

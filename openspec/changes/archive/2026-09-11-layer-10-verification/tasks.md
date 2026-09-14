@@ -249,7 +249,12 @@ evidence. The L9 mutation-testing lesson applies from day one.
       unobservable since commit failure is always fatal pre-gate).
       Register T #8 cross-task replay → CLOSED
       (TestCrossTaskReplayCannotSatisfyGate). T #5 event tamper →
-      CLOSED (TestEventTamperDetectedAtReadBoundary). INVALID/
+      CLOSED (TestEventTamperDetectedAtReadBoundary) — **evidence
+      corrected 2026-09-14: that test read `events.jsonl` where L6
+      writes `events.log` and silently SKIPPED, so it never executed;
+      path fixed, skip guards converted to failures,
+      mutation-verified. The control was sound throughout. See
+      amendments/register-t5-evidence/AMENDMENT.md.** INVALID/
       INCONCLUSIVE production walks → CLOSED. CheckAppendOnly wired
       (security M-2). Seeder-drift risk noted: the consistent
       reconstruction case is production-driven via e2e; the seeder

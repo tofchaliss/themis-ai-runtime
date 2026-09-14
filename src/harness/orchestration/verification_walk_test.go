@@ -492,17 +492,25 @@ func TestEventTamperDetectedAtReadBoundary(t *testing.T) {
 
 	// Post-hoc storage tamper: flip the recorded outcome in the raw
 	// event stream file.
-	streamPath := filepath.Join(f.stateDir, "tasks", "verif-tamper", "events.jsonl")
+	//
+	// Neither condition below may skip. As written at the L10 close
+	// this read named "events.jsonl" while L6 writes "events.log", so
+	// the missing file skipped and the test reported green without
+	// ever running — Register T #5 was recorded CLOSED on evidence
+	// that never executed. A skip here means the stream's storage
+	// shape moved out from under this test, which is precisely when
+	// the tamper evidence must fail loudly rather than evaporate.
+	streamPath := filepath.Join(f.stateDir, "tasks", "verif-tamper", "events.log")
 	raw, rerr := os.ReadFile(streamPath)
 	if rerr != nil {
-		t.Skipf("stream file not at expected path: %v", rerr)
+		t.Fatalf("event stream not at the expected path — this test cannot prove tamper detection: %v", rerr)
 	}
 	tampered := strings.Replace(string(raw), `\"outcome\":\"PASS\"`, `\"outcome\":\"FAIL\"`, 1)
 	if tampered == string(raw) {
 		tampered = strings.Replace(string(raw), `"outcome":"PASS"`, `"outcome":"FAIL"`, 1)
 	}
 	if tampered == string(raw) {
-		t.Skip("outcome bytes not found in stream representation")
+		t.Fatalf("no PASS outcome bytes in the stream representation — nothing was tampered, so a clean read back would prove nothing (stream %d bytes)", len(raw))
 	}
 	if err := os.WriteFile(streamPath, []byte(tampered), 0o644); err != nil {
 		t.Fatal(err)

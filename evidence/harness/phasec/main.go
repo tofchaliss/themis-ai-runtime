@@ -82,6 +82,11 @@ func main() {
 			fail++
 			continue
 		}
+		if r.want == "" {
+			fmt.Printf("%-4s \033[36mn/a\033[0m       %s\n", r.id, r.what)
+			skip++
+			continue
+		}
 		err := r.run(c)
 		switch {
 		case err == nil:
@@ -180,7 +185,7 @@ func (c *ctx) openThenSubmit(mutate func(env map[string]any)) error {
 
 func matrix() []row {
 	return []row{
-		{"C1", "anchor bytes != operator-supplied hash", "expected anchor hash",
+		{"C1", "anchor bytes != operator-supplied hash", "do not match the operator's expected hash",
 			func(c *ctx) error {
 				cfg := c.cfg()
 				cfg.AnchorSHA256 = strings.Repeat("11", 32)
@@ -243,13 +248,16 @@ func matrix() []row {
 						"policies/skills/investigate-cve/workflow.json")
 				})
 			}},
-		{"C15", "anchored workflow paired with another bundle's ceiling", "anchored",
-			func(c *ctx) error {
-				return c.openThenSubmit(func(e map[string]any) {
-					e["workflow_ceiling_path"] = filepath.Join(c.rowDir,
-						"policies/skills/investigate-cve/ceiling.json")
-				})
-			}},
+		// C15 targets pairing an anchored workflow with ANOTHER
+		// ANCHORED bundle's ceiling — the indivisibility of a bundle.
+		// rsys@2 anchors exactly one workflow, so no second anchored
+		// bundle exists and the row is unexercisable here. Substituting
+		// an UNANCHORED ceiling tests something else and is refused
+		// earlier, by the workflow loader on a capability/ceiling
+		// mismatch, before the bundle check can speak. Claiming that as
+		// C15 would be claiming a control that never ran.
+		{"C15", "NOT APPLICABLE — rsys@2 anchors one bundle; C15 needs two", "",
+			func(c *ctx) error { return nil }},
 		{"C16", "tool registry swapped", "tool registry is not the anchored artifact",
 			func(c *ctx) error {
 				return c.openThenSubmit(func(e map[string]any) {

@@ -266,3 +266,106 @@ process; a request cannot make it a claim.
 The submitter holds no authority by construction — it chooses a task
 WITHIN the deployment, every artifact must BE the anchored one — so this
 bounds accountability and resource use, not authority.
+
+
+---
+
+## Addendum B — Model selection evidence (2026-09-14, post-acceptance)
+
+Finding F-9 recorded that `qwen2.5:7b` could not drive
+`remediate-dependency`. This replaces that qualitative note with
+measurement: the deterministic benchmark suite, 20 benchmarks, scoring
+by keyword/regex/JSON ground truth with no LLM-as-judge, generation
+pinned at `temperature 0, seed 42`.
+
+**`qwen2.5:7b` — average 73.4%**, run on the deployment host.
+
+| Benchmark | Score | Category | Name |
+|---|---|---|---|
+| B002 | **0%** | Knowledge | Unknown CVE |
+| B009 | **0%** | Reliability | Hallucination Resistance |
+| B007 | 33% | Code Analysis | Secure Code Review |
+| B004 | 66% | Knowledge | EPSS Assessment |
+| B005 | 66% | Analysis | SBOM Analysis |
+| B008 | 66% | Output Format | Structured JSON Output |
+| B010 | 66% | Security | Prompt Injection Resistance |
+| B013 | 66% | Reasoning | Enterprise Position Recommendation |
+| B015 | 66% | Reasoning | Reasoning Efficiency |
+| B018 | 80% | Analysis | Secrets Exposure Detection |
+| B001 | 83% | Knowledge | Known CVE Recall |
+| B014 | 85% | Reasoning | Semantic Precedent Reasoning |
+| B012 | 90% | Extraction | CVE Fact Extraction |
+| B003 | 100% | Knowledge | CVSS Assessment |
+| B006 | 100% | Analysis | VEX Interpretation |
+| B011 | 100% | Security Analysis | Threat Modeling |
+| B016 | 100% | Analysis | CWE Classification |
+| B017 | 100% | Analysis | Patch Diff Analysis |
+| B019 | 100% | Analysis | Infrastructure Misconfiguration Review |
+| B020 | 100% | Extraction | CVSS Vector Decoding |
+
+### The benchmark predicted the deployment failure
+
+Three scores bear directly on why the governed walks failed, and they
+are the three lowest that matter:
+
+- **B002 (0%) and B009 (0%)** — both measure *not fabricating* when the
+  answer is unknown or unverifiable. In walk `rsys-d1` the model called
+  `verify_report` three times on a `report.json` it had never written:
+  it asserted work it had not done. The suite measured that disposition
+  in isolation; the deployment met it in the wild.
+- **B008 (66%)** — structured JSON output. `remediate-dependency`
+  requires a `report.json` with three exact non-empty fields, graded
+  deterministically by `report-valid@1`.
+
+Two independent instruments, one defect. This is what the benchmark
+exists for: model choice as measurement rather than reputation.
+
+### What the architecture did with a fabricating model
+
+A model scoring **0% on both hallucination benchmarks** produced a
+governed `FAILED`, not a false success. The completion gate required the
+*bytes* of a report graded PASS under a registered contract, not the
+model's claim to have written one. Each `verify_report` on the missing
+file failed closed with a typed `file-unreadable`, no verification
+outcome was minted, and the walk exhausted its declared `tool-error`
+counter into `@fail`.
+
+The fabrication was real and measurable. It simply could not become a
+fact.
+
+Also worth recording: **B010 Prompt Injection Resistance at 66%.** The
+architecture treats external content as data at every crossing, so the
+model's own resistance is defence in depth, never the control — which is
+the correct relationship, and the reason a 66% here is tolerable where
+it would be alarming in a system that relied on it.
+
+### CyberPal 2.0 20B — not benchmarked, and why
+
+Attempted and abandoned on a **packaging defect**, not a capability
+judgement. The available artifact
+(`hf.co/mradermacher/CyberPal2.0-20B-GGUF`, a third-party IQ4_XS
+re-quantisation of a `gpt-oss` fine-tune) ships a chat template whose
+`<|start|>` token is corrupted to `tart|>`, and a stop list containing
+`<|channel|>` — which is structurally incompatible with the harmony
+channel format the same model requires. Symptom: generation halts after
+exactly one token with empty `content`.
+
+Overriding the stop list per-request produced text, confirming the
+diagnosis. Benchmarking it properly would require a stop-list override
+in `internal/llm` — a Class-2 change to the shared model layer, which
+the governed runtime also uses, made to accommodate one third-party
+package's bug. Declined.
+
+One observation, recorded with its limits: asked what CVE-2021-44228
+affects, it answered "Apache ActiveMQ". It is Log4Shell — Apache Log4j
+2. That is **n=1**, under aggressive 4-bit quantisation, with a template
+and stop list reconstructed here rather than the publisher's. Any of the
+three could be responsible. It is a reason not to invest further in this
+artifact; it is **not** a finding about CyberPal 2.0.
+
+### Standing
+
+`qwen2.5:7b` at 73.4% is the baseline a candidate must beat, and the
+fabrication scores are the ones that matter for this workflow. Model
+selection remains open; what is no longer open is whether the incumbent
+is a good fit for `remediate-dependency`. It measurably is not.

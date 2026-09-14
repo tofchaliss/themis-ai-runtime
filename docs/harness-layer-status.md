@@ -388,6 +388,19 @@ the tool does not do.
    (`bench-score-delta@1` selects the benchmark plane). Closed by
    registering `walk-report-score-delta@1` as a Governance act.
 
+**Model selection is now measured, not asserted** (sign-off Addendum B):
+`qwen2.5:7b` benchmarks at **73.4%** across the 20-benchmark suite, with
+**0% on B002 "Unknown CVE" and 0% on B009 "Hallucination Resistance"** —
+the two that measure not fabricating — and 66% on B008 structured JSON
+output. Those three predict exactly the governed-walk failure: the model
+asserted a report it had never written. A model scoring zero on
+fabrication still produced a governed FAILED rather than a false
+success, because the gate required the report's BYTES graded under a
+registered contract, not the claim to have written one. CyberPal 2.0 20B
+was attempted and abandoned on a GGUF packaging defect (corrupted
+harmony template, `<|channel|>` in the stop list), not a capability
+judgement.
+
 **Live-model result, recorded because it is evidence about models
 rather than about the harness:** `qwen2.5:7b` on CPU could not drive
 `remediate-dependency` in two attempts — it never called `write_file`,

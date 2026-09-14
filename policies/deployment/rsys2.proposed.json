@@ -1,0 +1,27 @@
+{
+ "version": 1,
+ "kind": "deployment-anchors",
+ "entries": [
+  {
+   "name": "local-dev",
+   "version": 1,
+   "artifact_sha256": "c34a7de9242a1c62d33548307e5fd0f14216494c69efa0fb94173b263373ab3e",
+   "state": "withdrawn",
+   "steward": "security-engineering"
+  },
+  {
+   "name": "rsys",
+   "version": 1,
+   "artifact_sha256": "04fcdfaf609457d76b7be467cea91eded7318bf575d6c224e16ad586b8909b30",
+   "state": "withdrawn",
+   "steward": "deployment-validation"
+  },
+  {
+   "name": "rsys",
+   "version": 2,
+   "artifact_sha256": "666fd868f34f54fad02eef104a5f8b5fce0b4e7958d42da64b8764741c4f5918",
+   "state": "active",
+   "steward": "deployment-validation"
+  }
+ ]
+}

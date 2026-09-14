@@ -1,0 +1,28 @@
+{
+ "version": 1,
+ "name": "rsys",
+ "deployment_version": 2,
+ "instruction_root_safety": "2accb7bfe3043617be1d82e98fe28d06a69dcfe559fd8b5b1a98a7bf103b9f28",
+ "instruction_root_system": "4ab949a297a3b5be0bc2e1c11adf6df778f8c0a956f6a22650e66b442ae6d6d4",
+ "instruction_root_themis": "c6efa6aa3d114981b01d318342d6315eaa75285855b3f4cd8cc8904201d3659b",
+ "instruction_policy": "2cfe5f336ba77a251cd2da2f0fc9ec5cd8a93de49f4aa5b7ea9a537e51324485",
+ "constitution": {
+  "state": "b25ed6fbb5b46a566019d1b09c7e4fb9404352773e290dbf16dc2861aaab85ec",
+  "orchestration": "008be050c29740ce8d863b3f7ae858fa6b63eb29ad853d563b358e2156662370"
+ },
+ "execution_ceiling": "fd8fcdc19e23d2833e2efb5c5323d1b68b16b647826e4baf88d430e31b696f13",
+ "tool_registry": "a3e40677643119308e348314940fbffe6e926612a40437350aacd9a55269e4b6",
+ "workflows": [
+  {
+   "workflow": "c10826f24c2612bb7c3135bec152f40a1b7941ffe09d5f735ebbaac536c731a9",
+   "workflow_ceiling": "06bf8c0a9f2c06f7297dcdab90f7b12618ad72224ad288e712c391012cbf0f0f",
+   "context_contract": "dfb4ade9c5fe1f2d6f8b285ec9099c407842fa16f7a48f87cea051e9d4ed8f96"
+  }
+ ],
+ "models": ["qwen2.5:7b"],
+ "model_registry": "absent",
+ "skill_catalog": "eb66b311ced2ce321fb7088386684946501048d904539c21b98208a9e7359d9b",
+ "contract_registry": "f30d739cc07e7c6565f67d42d02086ba5dac275c2f3b8ba8a6e9398507f5ae6d",
+ "criteria_registry": "d739002c16d9286712b8f7230f632de9faf66de5ba0564f19a614f171d13d2a4",
+ "regression_set_registry": "d5fe3e245a37d3d2fda9b459a3e3f6e49ec095840caebdd13fcd68e741b7f09c"
+}

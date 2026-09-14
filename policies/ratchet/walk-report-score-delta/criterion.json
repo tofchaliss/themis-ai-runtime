@@ -1,0 +1,35 @@
+{
+ "version": 1,
+ "name": "walk-report-score-delta",
+ "criterion_version": 1,
+ "families": ["skill-revision"],
+ "candidate_selectors": [
+  {
+   "name": "candidate_report",
+   "source": "l6_execution_record",
+   "params": {"witness_tool": "verify_report"}
+  }
+ ],
+ "baseline_selectors": [
+  {
+   "name": "baseline_report",
+   "source": "l6_execution_record",
+   "params": {"witness_tool": "verify_report"}
+  }
+ ],
+ "comparator": {"name": "numeric-score-delta", "version": 1},
+ "config": {
+  "fields": [
+   {"delta": "score_delta", "candidate": "candidate_report", "baseline": "baseline_report"}
+  ]
+ },
+ "delta_shape": [{"name": "score_delta", "type": "number"}],
+ "ordering": {
+  "kind": "per-metric",
+  "fields": [
+   {"name": "score_delta", "direction": "maximize", "equal_tolerance": 0.0, "non_regression_min": -0.05}
+  ]
+ },
+ "baseline_constraints": ["requires-current-active"],
+ "provenance": ["evidence_records", "run_identities", "admission_observation"]
+}

@@ -135,8 +135,8 @@ func (c *ctx) cfg() orchestration.Config {
 		SystemRoot:          filepath.Join(r, "instructions/global/system"),
 		ThemisRoot:          filepath.Join(r, "instructions/themis"),
 		PolicyPath:          filepath.Join(r, "policies/security/instruction-directive-patterns.json"),
-		AnchorPath:          filepath.Join(r, "policies/deployment", c.anchorFile),
-		AnchorSHA256:        c.anchorSHA,
+		AnchorPath:          c.anchorPath(),
+		AnchorSHA256:        c.anchorExpected(),
 		AnchorsRegistryPath: filepath.Join(r, "policies/deployment/anchors.json"),
 		ExecCeilingPath:     filepath.Join(r, "execution-ceiling.json"),
 		SkillCatalogPath:    filepath.Join(r, "policies/skills/catalog.json"),
@@ -387,9 +387,13 @@ func matrix() []row {
 		{"C4", "registration rebound to different bytes between Opens", "deployment identity is immutable",
 			func(c *ctx) error {
 				return c.openTwice(func(reg map[string]any) {
+					// Rebind exactly the entry in force. Rebinding every
+					// entry named rsys gave both versions the same hash
+					// and tripped the duplicate-artifact check instead —
+					// a correct refusal, for a different reason.
 					for _, e := range reg["entries"].([]any) {
 						m := e.(map[string]any)
-						if m["name"] == "rsys" {
+						if m["artifact_sha256"] == c.anchorSHA {
 							m["artifact_sha256"] = strings.Repeat("ab", 32)
 						}
 					}
@@ -400,7 +404,7 @@ func matrix() []row {
 				return c.openTwice(func(reg map[string]any) {
 					var kept []any
 					for _, e := range reg["entries"].([]any) {
-						if e.(map[string]any)["name"] != "rsys" {
+						if e.(map[string]any)["artifact_sha256"] != c.anchorSHA {
 							kept = append(kept, e)
 						}
 					}
@@ -479,9 +483,12 @@ func matrix() []row {
 						"grant_sha256": h["grant"], "spec_sha256": h["spec"],
 						"composition_sha256": sealComposition(h),
 					}
-					if h["procedure"] != "" {
-						comp["procedure_sha256"] = h["procedure"]
-					}
+					// procedure_sha256 may only appear alongside
+					// skill_procedure_path. Omitting both is legal and the
+					// seal still matches: L7's sealed field list carries an
+					// empty procedure identity in that case.
+					h["procedure"] = ""
+					comp["composition_sha256"] = sealComposition(h)
 					e["origin"] = map[string]any{"skill": "remediate-dependency@1"}
 					e["composition"] = comp
 				})

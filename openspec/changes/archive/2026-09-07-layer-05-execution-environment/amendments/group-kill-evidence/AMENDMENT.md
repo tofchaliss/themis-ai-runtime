@@ -82,3 +82,72 @@ claim is now backed by a test that distinguishes what it asserts.
 Verified at amendment: `go build ./...`, `go vet ./...`, `gofmt -l .`
 clean; `./execution` green (104.8s, live proofs included); CI green on
 Linux — run 34797631381, the first green run since 2026-09-06.
+
+---
+
+# Addendum (2026-09-14): two further L5 evidence gaps closed
+
+The archive sweep that followed this correction surfaced two more L5
+rows whose evidence did not discriminate what they claimed. Same
+character as the above: controls sound, evidence thin. No L5 decision
+is amended.
+
+## 1. Teardown anomaly had no Linux evidence
+
+Row: *"Teardown unconditional …; DESTROYED only verified; anomaly
+typed, never false success (Q-L5-12, M1 MED-5)"*. The clause "anomaly
+typed, never false success" rested solely on `TestTeardownAnomalous`,
+whose fixture used darwin `chflags uchg` and **skipped on Linux** —
+so on the platform deployments run on, nothing proved that an
+unverifiable teardown is typed rather than reported as DESTROYED.
+
+`TestTeardownAnomalous` is now two fixtures:
+
+- **`unremovable-parent` (portable, primary)** — the environment's
+  parent directory is made non-writable, so unlinking `baseDir` itself
+  fails. `teardown`'s permission-restore walk is scoped to `baseDir`
+  and never chmods its parent, so unlike a 0555 directory *inside* the
+  workspace this survives the walk on every platform.
+- **`immutable-flag` (darwin)** — the original mechanism, retained: the
+  immutable flag is a genuinely different failure, surviving the
+  restore walk rather than side-stepping it.
+
+Both are permission/flag based and so skip under root, following the
+convention already used by the egress fixtures.
+
+## 2. The observed-RSS unit conversion was undiscriminated
+
+`local.go` multiplies `ru_maxrss` by 1024 on Linux, because getrusage
+reports bytes on darwin and **kilobytes** on Linux. Nothing tested that
+branch. `TestEgressMemObservedGate` cannot: its bound is
+`mem_bytes: 1`, which every observation breaches, so a missing
+conversion (1024× low) or a doubled one (1024× high) passed
+identically.
+
+This matters for an honesty claim, not an enforcement one. L5 refused
+"the 'we support memory limits' lie" in writing (design.md §3 item
+183); an *observation* wrong by three orders of magnitude is the same
+kind of dishonesty in the other direction.
+
+`TestObservedRSSIsInBytes` asserts the recorded peak lies in
+[1 MiB, 1 GiB] — deliberately loose bounds that make no claim about
+git's footprint, chosen as the widest window that still separates
+bytes from kilobytes.
+
+## Mutation verification (disposable worktree, AGENTS.md isolation)
+
+| Mutant | Result |
+| --- | --- |
+| `MaxRSSByte = rss / 1024` (conversion missing) | FAIL — 5664 bytes, caught as kilobytes |
+| `MaxRSSByte = rss * 1024` (conversion doubled) | FAIL — 5.9 GB, caught as over-converted |
+| removal failure ignored (`verified = true`) | **SURVIVES** — equivalent mutant, see below |
+| removal failure ignored **and** post-removal `Stat` assertion dropped | FAIL in both teardown subtests |
+
+**Recorded equivalent mutant:** ignoring `removeErr` alone does not
+produce a false DESTROYED, because `teardown` independently re-checks
+with `os.Stat` ("asserted, not assumed"). That is defence in depth
+working as designed, not a coverage hole — the property survives the
+loss of either layer and fails only when both go. Recorded in the same
+form as the L10 close's `verifState`-ordering equivalent mutant.
+
+Full module suite green at addendum.

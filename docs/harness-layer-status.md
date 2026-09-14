@@ -239,13 +239,29 @@ control was sound and only the evidence was missing:
    the full suite. Test written.
    (2 and 3: `archive/2026-09-07-layer-07-orchestration/amendments/untested-controls-evidence/`)
 
-Remaining known-thin evidence, recorded not closed: `TestTeardownAnomalous`
-skips on Linux (darwin `chflags uchg` fixture), so L5's "anomaly typed,
-never false success" clause is darwin-only; `TestEgressMemObservedGate`
-uses a 1-byte bound and so cannot discriminate the Linux `Maxrss`
-KB→bytes conversion; `TestBudgetMidDrainAutoSeals` carries the same
-1ms-vs-git-spawn assumption class as the L5 finding, passing on Linux
-with an undesigned margin; two egress tests skip under root.
+Three further gaps, closed 2026-09-14 in the same sweep:
+
+4. **L7 real-kill proof raced the host** — `TestRealKillNoContinuation`
+   killed its child on a "stream > 2048 bytes" trigger polled every
+   25ms, with a zero-cost scripted model. On Linux the walk finished
+   inside one poll interval, so the kill landed after a typed terminal
+   and the proof's premise was void (`Terminal:[t-kill]`, not
+   `Recovered`). Real Linux CI failures 2026-09-07 and 2026-09-14. The
+   child now costs 150ms/turn, giving the kill about a second of
+   window, and the void-premise case is self-describing.
+5. **L5 teardown anomaly had no Linux evidence** — the only fixture used
+   darwin `chflags uchg`. A portable `unremovable-parent` fixture now
+   runs everywhere; the darwin one is retained as a distinct mechanism.
+6. **L5 observed-RSS conversion was undiscriminated** — `Maxrss` is
+   bytes on darwin, KB on Linux; `TestEgressMemObservedGate`'s 1-byte
+   bound passes identically whether the conversion is missing, correct,
+   or doubled. `TestObservedRSSIsInBytes` asserts the magnitude.
+   (4–6: L7 and L5 amendment records.)
+
+Remaining known-thin evidence, recorded not closed:
+`TestBudgetMidDrainAutoSeals` carries the same 1ms-vs-git-spawn
+assumption class as finding below, passing on Linux with an undesigned
+margin; two egress tests skip under root (void there by construction).
 
 **L5 evidence correction (2026-09-14):** the Linux failure exposed an
 overstated traceability row, not a control defect — the archived

@@ -645,47 +645,142 @@ func TestExecTimeoutGroupKill(t *testing.T) {
 	}
 }
 
-func TestTeardownAnomalous(t *testing.T) {
+// TestObservedRSSIsInBytes: the observed max-RSS accounting is in
+// BYTES on every platform. getrusage reports ru_maxrss in bytes on
+// darwin and in KILOBYTES on Linux, so local.go multiplies by 1024
+// there — a platform branch nothing discriminated.
+//
+// TestEgressMemObservedGate cannot: its bound is mem_bytes=1, which
+// every observation breaches, so a missing conversion (1024x low) or a
+// doubled one (1024x high) passed identically. L5 refused "the 'we
+// support memory limits' lie" in writing; an observation wrong by
+// three orders of magnitude is the same kind of dishonesty, so the
+// magnitude needs an assertion of its own.
+//
+// The bounds are deliberately loose. They are not a claim about git's
+// footprint — they are the widest window that still separates bytes
+// from kilobytes.
+func TestObservedRSSIsInBytes(t *testing.T) {
 	mirrorRoot, repo, sha := mkMirror(t)
-	ceiling := testCeiling(t, mirrorRoot)
 	p, err := NewLocalProvider(gitBin(t), t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	env, err := p.Provision(ceiling, testSpec(t, repo, sha, ""))
+	env, err := p.Provision(testCeiling(t, mirrorRoot), testSpec(t, repo, sha, ""))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if runtime.GOOS != "darwin" {
-		t.Skip("uchg immutable-flag fixture is darwin-specific")
+	defer func() { _ = env.Seal(SealCallerAbort); env.Teardown() }()
+
+	var peak int64
+	for _, op := range env.Trace().Ops {
+		if op.MaxRSSByte > peak {
+			peak = op.MaxRSSByte
+		}
 	}
-	ws := env.Workspace()
-	// An unremovable entry: the immutable flag survives teardown's
-	// permission-restore walk (a plain 0555 dir would not — the walk
-	// exists so the OS-level seal can be undone before RemoveAll).
-	pinned := filepath.Join(ws.Root, "pinned")
-	if err := os.WriteFile(pinned, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+	t.Logf("observed peak RSS across provisioning ops: %d bytes (%.1f MiB) on %s",
+		peak, float64(peak)/(1<<20), runtime.GOOS)
+	// 1 MiB floor: below it the value is kilobytes. 1 GiB ceiling:
+	// git on this single-commit mirror observes a few MiB, so 1 GiB is
+	// generous for a real process yet still catches a doubled
+	// conversion, which lands three orders of magnitude above it.
+	const floorByte = int64(1) << 20
+	const capByte = int64(1) << 30
+	if peak < floorByte {
+		t.Fatalf("observed RSS %d is implausible for a real git process — the platform unit conversion is missing (value looks like KILOBYTES)", peak)
 	}
-	if out, err := exec.Command("/usr/bin/chflags", "uchg", pinned).CombinedOutput(); err != nil {
-		t.Skipf("cannot set uchg: %v %s", err, out)
+	if peak > capByte {
+		t.Fatalf("observed RSS %d exceeds any plausible git footprint — the unit conversion was applied where it should not be", peak)
 	}
-	defer func() {
-		_ = exec.Command("/usr/bin/chflags", "nouchg", pinned).Run()
-		_ = os.RemoveAll(env.baseDir)
-	}()
-	if err := env.Seal(SealCallerAbort); err != nil {
-		t.Fatal(err)
+}
+
+// A teardown that cannot verify host state is TEARDOWN_ANOMALOUS,
+// typed in the trace, and never a false DESTROYED (Q-L5-12, M1 MED-5).
+//
+// Two fixtures make removal fail, because the single darwin-only one
+// this test shipped with left the whole clause unevidenced on Linux —
+// the platform deployments run on. `unremovable-parent` is portable
+// and is the primary case; `immutable-flag` keeps the original darwin
+// mechanism, which is a genuinely different failure (the flag survives
+// teardown's permission-restore walk).
+func TestTeardownAnomalous(t *testing.T) {
+	// Both fixtures are permission/flag based and void under root,
+	// which cannot remove the ability to remove (same convention as
+	// the egress fixtures).
+	if os.Getuid() == 0 {
+		t.Skip("removal-blocking fixtures are void under root")
 	}
-	if st := env.Teardown(); st != StateTeardownAnomalous {
-		t.Fatalf("unverifiable teardown must be TEARDOWN_ANOMALOUS, got %s", st)
+	assertAnomalous := func(t *testing.T, env *Env) {
+		t.Helper()
+		if err := env.Seal(SealCallerAbort); err != nil {
+			t.Fatal(err)
+		}
+		if st := env.Teardown(); st != StateTeardownAnomalous {
+			t.Fatalf("unverifiable teardown must be TEARDOWN_ANOMALOUS, got %s", st)
+		}
+		tr := env.Trace()
+		if tr.TeardownVerified {
+			t.Fatal("anomalous teardown must not claim verification")
+		}
+		final := tr.Transitions[len(tr.Transitions)-1]
+		if final.To != StateTeardownAnomalous || !strings.Contains(final.Reason, "host-state-unverified") {
+			t.Fatalf("anomaly must be typed in the trace: %+v", final)
+		}
 	}
-	tr := env.Trace()
-	if tr.TeardownVerified {
-		t.Fatal("anomalous teardown must not claim verification")
-	}
-	final := tr.Transitions[len(tr.Transitions)-1]
-	if final.To != StateTeardownAnomalous || !strings.Contains(final.Reason, "host-state-unverified") {
-		t.Fatalf("anomaly must be typed in the trace: %+v", final)
-	}
+
+	// Portable: the environment's PARENT is made non-writable, so
+	// unlinking baseDir itself fails. teardown's restore walk is
+	// scoped to baseDir and never chmods its parent, so — unlike a
+	// 0555 directory inside the workspace — this survives the walk on
+	// every platform.
+	t.Run("unremovable-parent", func(t *testing.T) {
+		mirrorRoot, repo, sha := mkMirror(t)
+		providerDir := t.TempDir()
+		p, err := NewLocalProvider(gitBin(t), providerDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		env, err := p.Provision(testCeiling(t, mirrorRoot), testSpec(t, repo, sha, ""))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chmod(providerDir, 0o555); err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			_ = os.Chmod(providerDir, 0o755)
+			_ = os.RemoveAll(env.baseDir)
+		}()
+		assertAnomalous(t, env)
+	})
+
+	// darwin: the immutable flag survives the permission-restore walk
+	// (a plain 0555 dir would not — the walk exists so the OS-level
+	// seal can be undone before RemoveAll).
+	t.Run("immutable-flag", func(t *testing.T) {
+		if runtime.GOOS != "darwin" {
+			t.Skip("uchg immutable-flag fixture is darwin-specific")
+		}
+		mirrorRoot, repo, sha := mkMirror(t)
+		p, err := NewLocalProvider(gitBin(t), t.TempDir())
+		if err != nil {
+			t.Fatal(err)
+		}
+		env, err := p.Provision(testCeiling(t, mirrorRoot), testSpec(t, repo, sha, ""))
+		if err != nil {
+			t.Fatal(err)
+		}
+		pinned := filepath.Join(env.Workspace().Root, "pinned")
+		if err := os.WriteFile(pinned, []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if out, err := exec.Command("/usr/bin/chflags", "uchg", pinned).CombinedOutput(); err != nil {
+			t.Skipf("cannot set uchg: %v %s", err, out)
+		}
+		defer func() {
+			_ = exec.Command("/usr/bin/chflags", "nouchg", pinned).Run()
+			_ = os.RemoveAll(env.baseDir)
+		}()
+		assertAnomalous(t, env)
+	})
 }

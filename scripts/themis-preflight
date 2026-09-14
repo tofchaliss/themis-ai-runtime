@@ -51,12 +51,20 @@ note "cpus=$CPUS memory=${MEMGB}GB"
 [ "$CPUS" != "?" ] && [ "$CPUS" -lt 4 ] 2>/dev/null \
   && warn "only $CPUS vCPU — the suite drives several packages at the model concurrently" \
   || ok "cpu count adequate ($CPUS)"
-if [ "$MEMGB" -gt 0 ] && [ "$MEMGB" -lt 16 ]; then
-  warn "${MEMGB}GB RAM — live proofs contend for the model server below ~16GB"
-  note "that contention is the documented cause of the TestLivePressureProof flake"
+if [ "$MEMGB" -gt 0 ] && [ "$MEMGB" -lt 8 ]; then
+  bad "${MEMGB}GB RAM — too little to hold a 7B model and build concurrently"
 else
-  ok "memory adequate (${MEMGB}GB)"
+  ok "memory present (${MEMGB}GB)"
 fi
+# Contention, not capacity, is what actually bites: the full suite drives
+# several packages at the model at once while Go builds and links. The
+# 16GB development Mac reproduces the documented TestLivePressureProof /
+# TestLiveOperationalProof failures on every full sweep and passes both
+# in isolation, so 16GB is demonstrably NOT enough to call a full-sweep
+# green trustworthy. Threshold set from that observation, not a guess.
+# (Evaluated again below once endpoint reachability is known.)
+MEM_CONTENTION_RISK=0
+[ "$MEMGB" -gt 0 ] && [ "$MEMGB" -lt 32 ] && MEM_CONTENTION_RISK=1
 
 # identity: root silently voids permission-based fixtures
 if [ "$(id -u)" = "0" ]; then
@@ -134,6 +142,22 @@ else
       note "fix: ollama pull $want   (or point $var at a model you have)"
     fi
   done
+  # Endpoint reachable AND modest memory: live proofs will run and will
+  # contend. Say so, because the green line above would otherwise imply
+  # a full-sweep pass is meaningful evidence on this host.
+  if [ "$MEM_CONTENTION_RISK" = "1" ]; then
+    warn "live proofs will contend for the model on ${MEMGB}GB"
+    note "the endpoint answers, so live proofs RUN during the full suite while"
+    note "several packages drive the model concurrently. Below ~32GB that"
+    note "reproduces the documented context/TestLivePressureProof and"
+    note "TestLiveOperationalProof failures — ollama returning 500 or the"
+    note "request deadline expiring. They pass in isolation."
+    note "So on this host a FULL-SWEEP failure of those two is not evidence of"
+    note "a defect, and a full-sweep PASS is not strong evidence either."
+    note "Re-run them alone to get a real verdict:"
+    note "  go test ./context/ -run 'TestLiveOperationalProof|TestLivePressureProof' -count=1"
+    note "A live proof that fails IN ISOLATION is a real failure."
+  fi
 fi
 
 # ----------------------------------------------------------- deployment

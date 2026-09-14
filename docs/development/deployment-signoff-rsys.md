@@ -227,3 +227,42 @@ accepted: this record covers `rsys` on one host, it does not grant
 production wiring, it does not settle model selection, and five C rows
 remain unexercised. Deployment confidence for this instance is
 established; deployment confidence in general remains unrated.
+
+
+---
+
+## Addendum A — Production wiring exercised (2026-09-14, post-acceptance)
+
+Appended rather than merged into the accepted record above: the sign-off
+was accepted at a point where production wiring was still an open owner
+decision. This records what changed afterwards, without rewriting what
+was accepted.
+
+**Decision:** Q-PW-1..4 locked; `cmd/themis-run` built and wired into CI.
+
+**Exercised on the deployment host against `rsys@2`:**
+
+| Check | Result |
+|---|---|
+| Production run, task `rsys-prod-1` | `FAILED` / `VERIFIED`, deployment `666fd868f34f`, **exit 0** |
+| Submitted envelope authored by the runner | `$DEPLOY/submissions/rsys-prod-1-submitted.json` |
+| Origin **observed** | `submitter_uid=10290 submitter_user=fchaliss submitter_host=fchaliss-9ahv6n` |
+| Origin in the record plane | `origin:submitter_*` recorded beside `deployment_anchor` |
+| **Forged origin refused** | request asserting `submitter_uid: 0 / root` → **exit 2**, refused before the deployment opened |
+
+`FAILED` with `exit 0` is the correct production outcome here: a live
+`qwen2.5:7b` on CPU cannot drive this workflow (finding F-9), and the
+walk reached a typed terminal through a declared edge. Exit 0 covers any
+governed terminal; only a refused *submission* exits 1. Conflating them
+would teach operators to retry governed failures.
+
+The forgery refusal is the substantive result. A request claiming it was
+submitted by root was rejected at submission time, so **no task was
+created and nothing in the record plane asserts root submitted
+anything**. Submitter origin is an observation by the submitting
+process; a request cannot make it a claim.
+
+**Unchanged:** submitter *authentication* remains a recorded residual.
+The submitter holds no authority by construction — it chooses a task
+WITHIN the deployment, every artifact must BE the anchored one — so this
+bounds accountability and resource use, not authority.

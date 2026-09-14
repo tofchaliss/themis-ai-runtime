@@ -426,6 +426,13 @@ means the deployment refused the submission. Submitter *authentication*
 remains a recorded residual — bounded, since the submitter holds no
 authority by construction.
 
+**Exercised on the deployment host 2026-09-14:** `themis-run` against
+`rsys@2` produced a governed terminal (FAILED/VERIFIED, exit 0) with
+`origin:submitter_uid/user/host` recorded beside `deployment_anchor`;
+a request asserting `submitter_uid: 0 / root` was **refused at exit 2
+before the deployment opened**, so no record anywhere claims root
+submitted anything. Sign-off Addendum A.
+
 **Not done:** four Phase C rows (C4, C5, C9, C17) plus C15, which needs
 a two-bundle anchor. Production wiring (runbook Step 12) remains an open
 owner decision — the evidence harness is deliberately not it.

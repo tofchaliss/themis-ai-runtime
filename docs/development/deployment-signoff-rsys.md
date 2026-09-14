@@ -339,33 +339,74 @@ model's own resistance is defence in depth, never the control — which is
 the correct relationship, and the reason a 66% here is tolerable where
 it would be alarming in a system that relied on it.
 
-### CyberPal 2.0 20B — not benchmarked, and why
+### Head-to-head: CyberPal 2.0 20B
 
-Attempted and abandoned on a **packaging defect**, not a capability
-judgement. The available artifact
-(`hf.co/mradermacher/CyberPal2.0-20B-GGUF`, a third-party IQ4_XS
-re-quantisation of a `gpt-oss` fine-tune) ships a chat template whose
-`<|start|>` token is corrupted to `tart|>`, and a stop list containing
-`<|channel|>` — which is structurally incompatible with the harmony
-channel format the same model requires. Symptom: generation halts after
-exactly one token with empty `content`.
+Benchmarked after working around a packaging defect in the available
+artifact (`hf.co/mradermacher/CyberPal2.0-20B-GGUF`, a third-party
+IQ4_XS re-quantisation of a `gpt-oss` fine-tune). As published it ships
+a chat template whose `<|start|>` is corrupted to `tart|>` and a stop
+list containing `<|channel|>` — structurally incompatible with the
+harmony channel format it requires, halting generation after one token
+with empty content. Rebuilding `FROM` the raw GGUF blob (rather than the
+published model, whose parameters are inherited) with the authoritative
+`gpt-oss:20b` template produced a clean stop list and a usable model, so
+`themis-bench` drove it unmodified — **no change to `internal/llm`**.
 
-Overriding the stop list per-request produced text, confirming the
-diagnosis. Benchmarking it properly would require a stop-list override
-in `internal/llm` — a Class-2 change to the shared model layer, which
-the governed runtime also uses, made to accommodate one third-party
-package's bug. Declined.
+| Benchmark | qwen2.5:7b | cyberpal20b-v3 | Δ |
+|---|---:|---:|---:|
+| **B001 Known CVE Recall** | 83% | **16%** | **−67** |
+| B020 CVSS Vector Decoding | 100% | 88% | −12 |
+| **B002 Unknown CVE** *(no fabrication)* | **0%** | **0%** | — |
+| **B009 Hallucination Resistance** | **0%** | **0%** | — |
+| B004 EPSS Assessment | 66% | 100% | +34 |
+| B007 Secure Code Review | 33% | 66% | +33 |
+| B008 Structured JSON Output | 66% | 100% | +34 |
+| B010 Prompt Injection Resistance | 66% | 100% | +34 |
+| B012 CVE Fact Extraction | 90% | 100% | +10 |
+| B014 Semantic Precedent Reasoning | 85% | 100% | +15 |
+| B003/B005/B006/B011/B013/B015/B016/B017/B018/B019 | — | — | tied |
+| **Average** | **73%** | **77%** | **+4** |
 
-One observation, recorded with its limits: asked what CVE-2021-44228
-affects, it answered "Apache ActiveMQ". It is Log4Shell — Apache Log4j
-2. That is **n=1**, under aggressive 4-bit quantisation, with a template
-and stop list reconstructed here rather than the publisher's. Any of the
-three could be responsible. It is a reason not to invest further in this
-artifact; it is **not** a finding about CyberPal 2.0.
+**The higher average is the wrong conclusion.** CyberPal wins overall
+and is the worse choice for CVE work: Known CVE Recall collapsed from
+83% to **16%**, independently confirming two by-hand probes that named
+CVE-2021-44228 (Log4Shell) as affecting "Apache ActiveMQ" and then
+"Apache InLong" — different confident wrong answers each time.
+
+The *shape* of the difference is diagnostic: reasoning benchmarks rose
+(B007 +33, B010 +34, B014 +15, B008 +34) while factual recall collapsed.
+That is the signature of aggressive quantisation, which degrades
+memorised facts far harder than reasoning. The fair statement is
+therefore **"this IQ4_XS packaging is unusable for CVE work"**, not
+"CyberPal 2.0 is a poor model". Evaluating the model itself would need
+the publisher's weights at a higher precision.
+
+**Neither model fixed fabrication.** B002 and B009 are 0% for both. A
+security-tuned, grounded-CoT model is exactly as willing to invent a CVE
+as a general one. Whatever is chosen, the harness's requirement for
+witnessed bytes remains the thing standing between a confident
+fabrication and a recorded fact.
+
+**Throughput is at parity**, contrary to the estimate made before
+measuring: 21.83 TPS (CyberPal) vs 21.89 (qwen), 23.2 s vs 22.4 s
+average generation, 511 s for the full 20-benchmark run. The prediction
+that a 20B would be ~3x slower assumed a dense model; `gpt-oss-20b` is
+mixture-of-experts with far fewer active parameters per token. Recorded
+because it was wrong and the measurement is what settles it.
+
+**B008 66% → 100% is the one genuinely relevant gain.** Structured JSON
+output is what `remediate-dependency` needs for `report.json`. CyberPal
+is materially better at the shape of the work while being materially
+worse at the facts in it.
 
 ### Standing
 
-`qwen2.5:7b` at 73.4% is the baseline a candidate must beat, and the
-fabrication scores are the ones that matter for this workflow. Model
-selection remains open; what is no longer open is whether the incumbent
-is a good fit for `remediate-dependency`. It measurably is not.
+Model selection remains **open**, and neither candidate is suitable as
+measured. `qwen2.5:7b` (73%) cannot drive the workflow and fabricates;
+`cyberpal20b-v3` (77%) scores higher, fixes the output-shape problem,
+and cannot recall CVEs at all in this packaging. Both score 0% on
+fabrication.
+
+The next candidate should be judged on **B001, B002, B008 and B009** —
+recall, the two fabrication benchmarks, and output shape — rather than
+on the average, which ranked the worse CVE model first.

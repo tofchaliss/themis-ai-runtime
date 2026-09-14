@@ -291,6 +291,16 @@ sensitivity inheritance (local-endpoint scope); the four
 consumption-pinned registries whose consumers live outside L7; plus
 the pre-existing layer residuals.
 
+**G1 pin determinism confirmed cross-platform (2026-09-14).** At the
+same commit, `scripts/themis-status` produced byte-identical values on
+darwin/arm64 and linux/amd64 for all eleven pinned identities: both
+constitution hashes (L6, L7), the three instruction-root `HashDir`
+values, and the six `HashFile` registry/policy pins. An anchor minted on
+one host therefore admits on another — a property G1 depends on and
+which had never been checked, since CI runs only Linux and development
+ran only on darwin. Had `HashDir` varied with filesystem ordering or
+path semantics, anchors would have been silently host-specific.
+
 **Live-proof concurrency, corrected 2026-09-14.** This was recorded as
 a "contention flake" affecting two `context` proofs under memory
 pressure. First run on the deployment host (62 GB, 24-core, CPU-only)

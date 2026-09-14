@@ -331,7 +331,7 @@ for this instance; it remains unrated in general.
 |---|---|
 | A build/static | 21/21 green hermetic, 7.6s; skip audit exactly 10; all live proofs green individually |
 | B artifact + admission | ceiling pinned `fd8fcdc1`; anchor `rsys@1` = `04fcdfaf`; **refused before the act**, admitted after |
-| C negative space | partial — C2 and C3 proven against REAL anchors (see below) |
+| C negative space | **13 of 19 rows proven against the REAL anchor**, 2 n/a, 4 uncovered (see below) |
 | D anchored path | 5 governed walks, all typed terminals, D4–D6 on every one |
 | E governed chain | **all six rows** — E3 grounding, E4 real-door admission, E5 Δ with derived run identities, E6 cold reconstruction CONFIRMED, E7 door byte-identical, E8 laundering refused |
 
@@ -346,10 +346,33 @@ re-establishes all four of its records. Withdrawal closes the future and
 preserves the past; a deletion would have made four completed governed
 walks permanently unattributable.
 
-**Real-anchor refusals observed** (test-plan C rows, on real artifacts
-rather than test-minted ones): C2 — "a matching hash is an identifier,
-never an admission claim"; C3 — "anchor rsys@1 is withdrawn". Also, at
-L11: "unregistered artifacts are data and measure nothing".
+**Phase C against the real anchor** (`evidence/harness/phasec`, 11
+rows in one run plus C2/C3 proven earlier): C1 hash mismatch, C2 "a
+matching hash is an identifier, never an admission claim", C3 "anchor
+rsys@1 is withdrawn", C6 mutated instruction root, C7 "non-regular
+entry in a pinned tree", C8 swapped policy, C11 registry against an
+`absent` declaration, C12 "a model enters a deployment only by
+Governance act", C13 "the ceiling is supplied at Open, never chosen per
+task", C14 unanchored workflow, C16 "a mutually consistent bundle is
+not a governed bundle", C18 "a deployment governs by anchor or refuses
+to open", C19 ambiguous caller role. Also at L11: "unregistered
+artifacts are data and measure nothing".
+
+Every row corrupts a byte-identical COPY of the pinned trees in its own
+scratch state root — the live deployment and its record plane are never
+written, per the AGENTS.md probe-isolation invariant. The injected model
+is inert and errors if reached, since a row that gets to a model turn
+has already failed.
+
+Not claimed: **C15** is n/a because `rsys@2` anchors one workflow bundle
+and the row tests bundle indivisibility, which needs two; substituting
+an unanchored ceiling was refused by the workflow loader before the
+bundle check could speak, and recording that as a pass would have
+claimed a control that never ran. **C10** is n/a because the anchor
+declares `model_registry: absent`, making C11 its applicable form.
+**C4, C5** (registry rebound/deleted between Opens), **C9** (rebuilt
+constitution) and **C17** (submitter-chosen composition hash) need setup
+the tool does not do.
 
 **Two findings from the deployment, neither a defect:**
 

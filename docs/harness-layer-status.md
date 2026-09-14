@@ -401,8 +401,14 @@ Evidence under the deployment root: `phase-a-evidence.txt`,
 `phase-e-walks.txt`, `phase-e-evidence.txt`,
 `phase-d-rsys2-evidence.txt`. Tooling: `evidence/harness/`.
 
-**Not done:** the remaining Phase C rows against the real anchor, and
-Phase F sign-off. Production wiring (runbook Step 12) remains an open
+**Phase F sign-off record:**
+`docs/development/deployment-signoff-rsys.md` — identities, per-phase
+results, every Phase C refusal text, ten findings with triage categories
+and dispositions, residuals, and an explicit list of what the record
+does NOT establish. Owner acceptance pending.
+
+**Not done:** four Phase C rows (C4, C5, C9, C17) plus C15, which needs
+a two-bundle anchor. Production wiring (runbook Step 12) remains an open
 owner decision — the evidence harness is deliberately not it.
 
 ## Where to look

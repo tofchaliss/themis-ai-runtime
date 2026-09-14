@@ -160,6 +160,11 @@ Mirrors `integration/phasec_test.go`, run against the real deployment:
 
 ## Phase F — Sign-off evidence
 
+**Worked example:** `docs/development/deployment-signoff-rsys.md` is the
+Phase F record for the first instance (`rsys`, 2026-09-14) — what a
+completed sign-off looks like, including how omissions and
+not-applicable rows are stated rather than dropped.
+
 Record, do not summarize away:
 - Phase A–E results with dates and commit SHA.
 - The anchor identity (`name@version` + hash) and the ceiling hash.

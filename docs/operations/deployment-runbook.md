@@ -157,11 +157,26 @@ configuration, not a repository artifact.
 ## Step 4 — Seed the governed mirror
 
 ```bash
-git clone --mirror <governed-source-repo> "$DEPLOY/mirror/<repo>.git"
+git clone --mirror <governed-source-repo> "$DEPLOY/mirror/<repo>"
+git -C "$DEPLOY/mirror/<repo>" rev-parse HEAD   # a spec pins this SHA
 ```
 
 The mirror is what L5 provisions workspaces from. Only repositories
 placed here are reachable.
+
+**The directory name under `mirror_root` IS the spec's `repo` value.**
+L5 resolves `repo` directly against the mirror root
+(`confine.ResolvePath(ceiling.MirrorRoot, spec.Repo)`), so a mirror
+cloned as `<repo>.git` requires every spec to say `"repo": "<repo>.git"`.
+Cloning without the suffix keeps specs readable; either is valid, but
+the two must agree exactly or provisioning refuses.
+
+**Mirror contents are not pinned by the anchor.** The ceiling pins
+`mirror_root` as a path; what sits inside it is operational state. That
+means a repository can be added later without a new anchor version —
+and equally, **write access to `mirror_root` is the control** over what
+this deployment can ever provision from. Keep `$DEPLOY` mode 700 and
+treat that directory as governed infrastructure.
 
 ## Step 5 — Write the execution ceiling
 

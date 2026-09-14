@@ -7,9 +7,10 @@ deployment. Written 2026-09-13 against the frozen architecture
 **What this produces:** a Governance-ACTIVE Deployment Anchor and a
 verified deployment whose every governing artifact is pinned.
 
-**What this does NOT do:** grant production wiring. Wiring a
-production caller to `orchestration.Open`/`SubmitTask` is a separate
-owner decision (see Step 12).
+**What this does NOT do:** decide what a task should be, or who in
+your organisation may ask for one. The production caller is
+`cmd/themis-run` (Step 12); access to it is the operating system's
+concern.
 
 **Read first:** `docs/architecture/harness/execution-chain.md` (what
 the chain is), `policies/deployment/README.md` (the ceiling
@@ -346,19 +347,57 @@ configuration:
 `Unanchored` stays **false**. Open must succeed; on refusal, read the
 message — it names the artifact that is not the anchored one.
 
-## Step 12 — Production wiring (owner decision, NOT part of this runbook)
+## Step 12 — Production wiring
 
-**There is no shipped production entry binary.** `src/harness/cmd/`
-contains `themis-ratchet` (the L11 invocation surface) only; the
-legacy HTTP service was decommissioned (audit R1). The process that
-opens an orchestrator and submits governed tasks in production is
-the remaining decision: what it is, who may call it, and how a
-submitter is authenticated (submitter authentication is an explicit
-recorded G1 residual — origin is recorded, never treated as
-Governance authority).
+**Decided 2026-09-14 (Q-PW-1..4, owner-locked). `cmd/themis-run` is
+the production invocation surface.**
 
-Until that decision, a deployment is **prepared and verifiable but
-not wired**.
+```bash
+themis-run \
+  -deploy "$DEPLOY" \
+  -governed-root "$REPO" \
+  -anchor "$REPO/policies/deployment/<name>.json" \
+  -anchor-sha256 <the operator's expected anchor hash> \
+  -anchors-registry "$REPO/policies/deployment/anchors.json" \
+  -envelope <task request> \
+  [-model-registry <models.json>] [-json]
+```
+
+**A CLI invoked per task, not a service** (Q-PW-1). Every operation is
+a synchronous response to explicit invocation — nothing watches,
+schedules, retries, or continues, the discipline D-L11-14 fixed for
+`themis-ratchet`. A service would add a lifecycle, a listening surface
+and a scheduler; the constitution refuses all three elsewhere.
+
+**It holds no authority** (Q-PW-2). It is a submitter, and a submitter
+chooses a task WITHIN the deployment, never the deployment. Access
+control is the operating system's: whoever can execute the binary and
+read `$DEPLOY` (mode 700) can submit. `Unanchored` is not exposed as a
+flag, so this binary cannot fall into the test-harness caller role even
+by mistake.
+
+**Submitter origin is observed, not asserted.** `themis-run` authors the
+submitted envelope — the operator's file is a *request* — stamping
+`submitter_uid`, `submitter_user`, `submitter_host` into the envelope's
+opaque `origin` map (D-L9-13), which L7 records verbatim and exercises
+zero semantics on. A request that sets `submitter_*` itself is
+**refused**: the record must carry an observation, never a claim about
+who submitted. L9 skill attribution on the same map is preserved
+untouched. The submitted envelope is written to `$DEPLOY/submissions/`
+so what actually ran is inspectable.
+
+**What crosses back is a receipt, not a judgement** (Q-PW-4): typed
+terminal status, record verdict, artifact address, deployment identity.
+Exit 0 when the task reached a governed terminal — **including FAILED**,
+which means it walked a declared edge and is the system working; exit 1
+only when the deployment REFUSED the submission; exit 2 on usage or
+machinery failure. Conflating the first two would teach operators to
+retry governed failures.
+
+**Still a recorded residual:** submitter *authentication*. The submitter
+holds no authority by construction, so this bounds accountability and
+resource use rather than authority. Anyone who can execute the binary
+can submit; the record says which account did.
 
 ## Step 13 — Validate
 

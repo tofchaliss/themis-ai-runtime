@@ -411,6 +411,21 @@ limits: one host, no production-wiring grant, model selection unsettled,
 five C rows unexercised. Deployment confidence is established for `rsys`
 and remains unrated in general.
 
+**Production wiring decided and built 2026-09-14** (Q-PW-1..4,
+owner-locked): `cmd/themis-run` — a CLI invoked per task, not a service,
+following the D-L11-14 discipline that nothing watches, schedules,
+retries or continues. It holds no authority: a submitter chooses a task
+WITHIN the deployment, `Unanchored` is not exposed as a flag, and access
+control is the OS's. Submitter origin is **observed, not asserted** —
+the runner authors the submitted envelope, stamping `submitter_*` into
+the opaque `origin` map (D-L9-13), and **refuses a request that sets
+those keys itself**, because the record must carry an observation rather
+than a claim about who submitted. Skill attribution on the same map is
+preserved. Exit 0 covers any governed terminal including FAILED; exit 1
+means the deployment refused the submission. Submitter *authentication*
+remains a recorded residual — bounded, since the submitter holds no
+authority by construction.
+
 **Not done:** four Phase C rows (C4, C5, C9, C17) plus C15, which needs
 a two-bundle anchor. Production wiring (runbook Step 12) remains an open
 owner decision — the evidence harness is deliberately not it.

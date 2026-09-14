@@ -1,0 +1,282 @@
+#!/bin/bash
+# themis-status — governance and deployment state of a Themis checkout.
+#
+# READ-ONLY BY CONSTRUCTION. It reads files, computes hashes, and prints.
+# It writes nothing under policies/, proposes nothing, activates nothing.
+#
+# It DISPLAYS artifact pins for diagnosis. It is deliberately NOT an
+# anchor-minting tool and must not become one: whether a reviewed minting
+# helper should exist is an open owner decision (runbook Step 7). Emitting
+# an anchor from here would settle that decision by accident, and would
+# put a convenience path next to a governance act. Copy pins by hand, or
+# raise the minting question on its own terms.
+#
+# Usage:
+#   scripts/themis-status [--ceiling FILE] [--state-root DIR] [--full]
+#     --ceiling FILE     check a deployment execution ceiling LOADS
+#     --state-root DIR   summarise a record plane (tasks and statuses)
+#     --full             also run build/vet/gofmt (slower)
+set -uo pipefail
+
+REPO_ROOT=$(cd "$(dirname "$0")/.." && pwd)
+MOD="$REPO_ROOT/src/harness"
+CEILING=""; STATE_ROOT=""; FULL=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --ceiling)    CEILING="${2:-}"; shift 2 ;;
+    --state-root) STATE_ROOT="${2:-}"; shift 2 ;;
+    --full)       FULL=1; shift ;;
+    -h|--help)    sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) echo "unknown argument: $1" >&2; exit 2 ;;
+  esac
+done
+
+sec()  { printf '\n\033[1m%s\033[0m\n' "$*"; }
+kv()   { printf '  %-26s %s\n' "$1" "$2"; }
+ok()   { printf '  \033[32m%-26s\033[0m %s\n' "$1" "$2"; }
+warn() { printf '  \033[33m%-26s\033[0m %s\n' "$1" "$2"; }
+bad()  { printf '  \033[31m%-26s\033[0m %s\n' "$1" "$2"; }
+
+printf '\033[1mThemis AI Runtime — status\033[0m\n'
+printf 'repo: %s\ndate: %s\n' "$REPO_ROOT" "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+
+# ------------------------------------------------------------- identity
+sec "Repository identity"
+if git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+  kv "commit" "$(git -C "$REPO_ROOT" rev-parse HEAD)"
+  kv "branch" "$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD)"
+  DIRTY=$(git -C "$REPO_ROOT" status --porcelain | wc -l | tr -d ' ')
+  if [ "$DIRTY" = "0" ]; then ok "working tree" "clean"
+  else warn "working tree" "$DIRTY modified file(s) — a deployment must pin a committed SHA"; fi
+else
+  bad "git" "not a git repository"
+fi
+
+# --------------------------------------------------------------- module
+if [ "$FULL" = "1" ]; then
+  sec "Module (build / vet / fmt)"
+  ( cd "$MOD" && go build ./... 2>&1 ) && ok "go build" "clean" || bad "go build" "FAILED"
+  ( cd "$MOD" && go vet ./... 2>&1 ) && ok "go vet" "clean" || bad "go vet" "FAILED"
+  FMT=$( cd "$MOD" && gofmt -l . )
+  [ -z "$FMT" ] && ok "gofmt" "clean" || bad "gofmt" "$(echo "$FMT" | tr '\n' ' ')"
+fi
+
+# ---------------------------------------------- go-side facts in one run
+# Constitution hashes and content pins are Go functions; one program
+# answers them all. NOTE: `go run - <<EOF` does NOT work (go does not
+# read a program from stdin) — the program goes in a real file.
+HELPER=$(mktemp -t themis-status-XXXXXX).go
+trap 'rm -f "$HELPER"' EXIT
+cat > "$HELPER" <<'GO'
+package main
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/tofchaliss/themis/deployment"
+	"github.com/tofchaliss/themis/execution"
+	"github.com/tofchaliss/themis/orchestration"
+	"github.com/tofchaliss/themis/state"
+)
+
+func main() {
+	repo := os.Args[1]
+	fmt.Printf("CONST\tl6\t%s\n", state.ConstitutionHash())
+	fmt.Printf("CONST\tl7\t%s\n", orchestration.ConstitutionHash())
+	dirs := map[string]string{
+		"instruction_root_safety": "instructions/global/safety",
+		"instruction_root_system": "instructions/global/system",
+		"instruction_root_themis": "instructions/themis",
+	}
+	for name, rel := range dirs {
+		if h, err := deployment.HashDir(repo + "/" + rel); err == nil {
+			fmt.Printf("PIN\t%s\t%s\n", name, h)
+		} else {
+			fmt.Printf("PINERR\t%s\t%v\n", name, err)
+		}
+	}
+	files := map[string]string{
+		"instruction_policy":      "policies/security/instruction-directive-patterns.json",
+		"tool_registry":           "policies/tools/registry-v4.json",
+		"skill_catalog":           "policies/skills/catalog.json",
+		"contract_registry":       "policies/verification/contracts.json",
+		"criteria_registry":       "policies/ratchet/criteria.json",
+		"regression_set_registry": "policies/ratchet/regression-sets.json",
+	}
+	for name, rel := range files {
+		if h, err := deployment.HashFile(repo + "/" + rel); err == nil {
+			fmt.Printf("PIN\t%s\t%s\n", name, h)
+		} else {
+			fmt.Printf("PINERR\t%s\t%v\n", name, err)
+		}
+	}
+	if len(os.Args) > 2 && os.Args[2] != "" {
+		p := os.Args[2]
+		if c, err := execution.LoadCeiling(p); err != nil {
+			fmt.Printf("CEILING\tREFUSED\t%v\n", err)
+		} else {
+			h, _ := deployment.HashFile(p)
+			fmt.Printf("CEILING\tLOADS\tmirror_root=%s wall=%ds sha256=%s\n",
+				c.MirrorRoot, c.MaxWallDeadlineSec, h)
+		}
+	}
+}
+GO
+GOOUT=$( cd "$MOD" && go run "$HELPER" "$REPO_ROOT" "$CEILING" 2>&1 )
+GORC=$?
+
+sec "Code identity (constitution pins)"
+if [ "$GORC" != "0" ]; then
+  bad "go helper" "failed — module may not build"
+  printf '%s\n' "$GOOUT" | sed 's/^/        /'
+else
+  printf '%s\n' "$GOOUT" | awk -F'\t' '$1=="CONST"{printf "  %-26s %s\n",$2,$3}'
+  printf '        a rebuilt binary with different control vocabularies changes these,\n'
+  printf '        and an anchor pinning the old values will refuse to open.\n'
+fi
+
+# --------------------------------------------------------- anchors (G1)
+sec "Deployment anchors (G1)"
+DEPL="$REPO_ROOT/policies/deployment"
+if [ -f "$DEPL/anchors.json" ]; then
+  python3 - "$DEPL/anchors.json" <<'PY'
+import json,sys
+try:
+    d=json.load(open(sys.argv[1]))
+except Exception as e:
+    print("  \033[31manchors.json\033[0m               unparseable: %s"%e); sys.exit(0)
+ents=d.get("entries") or d.get("registrations") or []
+active=[e for e in ents if e.get("state")=="active"]
+# The single most important fact this script reports: is any deployment
+# actually governed by this checkout right now?
+if active:
+    print("  \033[32m%-24s\033[0m %d"%("ACTIVE",len(active)))
+else:
+    print("  \033[33m%-24s\033[0m none — no deployment is governed by this checkout"%"ACTIVE")
+    print("        Designed state, not a fault: an anchor's ceiling carries host paths,")
+    print("        so it is created where the deployment lives, never committed here.")
+    print("        Open() therefore refuses unless the caller declares Unanchored.")
+for e in ents:
+    st=e.get("state","?")
+    col="\033[32m" if st=="active" else "\033[33m"
+    print("  %s%-24s\033[0m %s@%s sha=%s steward=%s"%(col,st,e.get("name","?"),e.get("version","?"),str(e.get("artifact_sha256",""))[:16],e.get("steward","?")))
+PY
+else
+  warn "anchors.json" "absent — admission has no registry to resolve against"
+fi
+for f in "$DEPL"/*.proposed.json "$DEPL"/*.withdrawn.json; do
+  [ -e "$f" ] || continue
+  case "$f" in
+    *proposed*) warn "proposed" "$(basename "$f") — inert until a Governance act" ;;
+    *withdrawn*) kv "withdrawn" "$(basename "$f") — retained so past records stay interpretable" ;;
+  esac
+done
+
+# ------------------------------------------------- governance registries
+sec "Governance registries"
+reg() { # path label name-key
+  local p="$REPO_ROOT/$1" label="$2"
+  if [ ! -f "$p" ]; then bad "$label" "missing"; return; fi
+  python3 - "$p" "$label" <<'PY'
+import json,sys
+p,label=sys.argv[1],sys.argv[2]
+try: d=json.load(open(p))
+except Exception as e:
+    print("  \033[31m%-26s\033[0m unparseable: %s"%(label,e)); sys.exit(0)
+ents=d.get("entries") or d.get("criteria") or d.get("sets") or d.get("contracts") or []
+if isinstance(ents,dict): ents=list(ents.values())
+states={}
+for e in ents:
+    if isinstance(e,dict): states[e.get("state","?")]=states.get(e.get("state","?"),0)+1
+sm=" ".join("%s=%d"%(k,v) for k,v in sorted(states.items())) or "-"
+print("  %-26s %d entr%s  %s"%(label,len(ents),"y" if len(ents)==1 else "ies",sm))
+for e in ents:
+    if isinstance(e,dict) and e.get("name"):
+        print("        %s@%s  %s"%(e["name"],e.get("version","?"),e.get("state","")))
+PY
+}
+reg policies/skills/catalog.json          "skills catalog"
+reg policies/verification/contracts.json  "L10 contracts"
+reg policies/ratchet/criteria.json        "L11 criteria"
+reg policies/ratchet/regression-sets.json "L11 regression sets"
+
+# ------------------------------------------------------ artifact pins
+sec "Artifact pins (diagnostic display only — not an anchor)"
+if [ "$GORC" = "0" ]; then
+  printf '%s\n' "$GOOUT" | awk -F'\t' '$1=="PIN"{printf "  %-26s %s\n",$2,$3}'
+  printf '%s\n' "$GOOUT" | awk -F'\t' '$1=="PINERR"{printf "  \033[31m%-26s\033[0m %s\n",$2,$3}'
+  printf '        These are what an anchor WOULD pin today. Copy them deliberately;\n'
+  printf '        this script does not emit an anchor (see the header).\n'
+fi
+
+# ---------------------------------------------------------- the ceiling
+if [ -n "$CEILING" ]; then
+  sec "Execution ceiling: $CEILING"
+  if [ "$GORC" = "0" ]; then
+    L=$(printf '%s\n' "$GOOUT" | awk -F'\t' '$1=="CEILING"')
+    case "$L" in
+      *LOADS*)   ok   "loads" "$(printf '%s' "$L" | cut -f3-)" ;;
+      *REFUSED*) bad  "REFUSED" "$(printf '%s' "$L" | cut -f3-)"
+                 printf '        A ceiling that cannot instantiate must never be pinned.\n' ;;
+      *)         warn "ceiling" "not evaluated" ;;
+    esac
+    # LoadCeiling requires mirror_root to be ABSOLUTE, not to EXIST.
+    # A mistyped path therefore survives Step 5, the pin, the Governance
+    # act and Open, and fails at the first governed task instead. Check
+    # it here, because the loader deliberately does not.
+    MR=$(printf '%s' "$L" | sed -n 's/.*mirror_root=\([^ ]*\).*/\1/p')
+    if [ -n "$MR" ]; then
+      if [ -d "$MR" ]; then
+        ok "mirror_root exists" "$MR"
+        MIRRORS=$(find "$MR" -maxdepth 1 -name '*.git' 2>/dev/null | wc -l | tr -d ' ')
+        [ "$MIRRORS" -gt 0 ] 2>/dev/null \
+          && ok "mirrors present" "$MIRRORS bare repo(s) — L5 may provision from these" \
+          || warn "mirrors present" "none — provisioning has no source (runbook Step 4)"
+      else
+        bad "mirror_root MISSING" "$MR"
+        printf '        The loader accepts this (it only requires an absolute path), so the\n'
+        printf '        ceiling would pin and admit cleanly and fail at the FIRST governed\n'
+        printf '        task. Create it before pinning, or fix the path.\n'
+      fi
+    fi
+  fi
+  case "$CEILING" in
+    "$REPO_ROOT"/*) bad "location" "ceiling is INSIDE the repository — it is deployment configuration" ;;
+  esac
+fi
+
+# ------------------------------------------------------- record plane
+if [ -n "$STATE_ROOT" ]; then
+  sec "Record plane: $STATE_ROOT"
+  if [ ! -d "$STATE_ROOT/tasks" ]; then
+    warn "tasks/" "absent — no governed task has run under this root"
+  else
+    python3 - "$STATE_ROOT" <<'PY'
+import json,os,sys
+root=sys.argv[1]; tdir=os.path.join(root,"tasks")
+ids=sorted(os.listdir(tdir))
+print("  %-26s %d"%("tasks",len(ids)))
+counts={}
+for i in ids:
+    d=os.path.join(tdir,i); mp=os.path.join(d,"manifest.json")
+    st="<no manifest: mid-flight or crashed>"; ev=""
+    if os.path.exists(mp):
+        try:
+            m=json.load(open(mp)); st=m.get("status","?"); ev="events=%s"%m.get("event_count","?")
+        except Exception as e: st="<unreadable: %s>"%e
+    counts[st]=counts.get(st,0)+1
+    print("        %-24s %-22s %s"%(i,st,ev))
+print()
+for k,v in sorted(counts.items()):
+    print("  %-26s %d"%(k,v))
+print("        A task with no manifest never reached a typed terminal — the startup")
+print("        sweep drives it to one on the next Open. It is not corruption.")
+PY
+  fi
+fi
+
+sec "Next"
+printf '  Deployment steps: docs/operations/deployment-runbook.md\n'
+printf '  Validation plan:  docs/development/deployment-test-plan.md\n'
+printf '  Host readiness:   scripts/themis-preflight\n'

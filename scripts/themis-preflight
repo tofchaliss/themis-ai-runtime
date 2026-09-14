@@ -1,0 +1,173 @@
+#!/bin/bash
+# themis-preflight — host readiness for a Themis AI Runtime deployment.
+#
+# Read-only. Creates nothing, changes nothing, contacts nothing except a
+# local model endpoint if one is configured. Safe to run repeatedly.
+#
+# Why this exists: several of this repository's evidence-producing tests
+# SKIP rather than fail when the host is not what they expect — git at an
+# unprobed path, no model endpoint, running as root. A skipped proof
+# reports green. This script makes those conditions visible BEFORE you
+# read a green suite as evidence.
+#
+# Usage:  scripts/themis-preflight [--deploy DIR]
+#   --deploy DIR   also check capacity/permissions for a deployment root
+#
+# Exit: 0 all checks pass (warnings allowed), 1 one or more FAIL.
+set -uo pipefail
+
+DEPLOY=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --deploy) DEPLOY="${2:-}"; shift 2 ;;
+    -h|--help) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) echo "unknown argument: $1" >&2; exit 2 ;;
+  esac
+done
+
+PASS=0; WARN=0; FAIL=0
+ok()   { printf '  \033[32mPASS\033[0m  %s\n' "$*"; PASS=$((PASS+1)); }
+warn() { printf '  \033[33mWARN\033[0m  %s\n' "$*"; WARN=$((WARN+1)); }
+bad()  { printf '  \033[31mFAIL\033[0m  %s\n' "$*"; FAIL=$((FAIL+1)); }
+note() { printf '        %s\n' "$*"; }
+sec()  { printf '\n\033[1m%s\033[0m\n' "$*"; }
+
+printf '\033[1mThemis AI Runtime — host preflight\033[0m\n'
+printf 'date: %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+
+# ---------------------------------------------------------------- host
+sec "Host"
+OS=$(uname -s); ARCH=$(uname -m); KERNEL=$(uname -r)
+note "os=$OS arch=$ARCH kernel=$KERNEL host=$(hostname)"
+case "$OS" in
+  Linux)  CPUS=$(nproc 2>/dev/null || echo '?')
+          MEMKB=$(awk '/MemTotal/{print $2}' /proc/meminfo 2>/dev/null || echo 0)
+          MEMGB=$((MEMKB/1024/1024)) ;;
+  Darwin) CPUS=$(sysctl -n hw.ncpu 2>/dev/null || echo '?')
+          MEMGB=$(( $(sysctl -n hw.memsize 2>/dev/null || echo 0) / 1024/1024/1024 )) ;;
+  *)      CPUS='?'; MEMGB=0 ;;
+esac
+note "cpus=$CPUS memory=${MEMGB}GB"
+[ "$CPUS" != "?" ] && [ "$CPUS" -lt 4 ] 2>/dev/null \
+  && warn "only $CPUS vCPU — the suite drives several packages at the model concurrently" \
+  || ok "cpu count adequate ($CPUS)"
+if [ "$MEMGB" -gt 0 ] && [ "$MEMGB" -lt 16 ]; then
+  warn "${MEMGB}GB RAM — live proofs contend for the model server below ~16GB"
+  note "that contention is the documented cause of the TestLivePressureProof flake"
+else
+  ok "memory adequate (${MEMGB}GB)"
+fi
+
+# identity: root silently voids permission-based fixtures
+if [ "$(id -u)" = "0" ]; then
+  bad "running as root — permission-based fixtures SKIP and their controls go unproven"
+  note "affected: TestEgressPersistenceFailure, TestSealedWorkspaceReadOnly,"
+  note "TestTeardownAnomalous (both subtests). Run the suite as a normal user."
+else
+  ok "running as non-root (uid $(id -u)) — permission fixtures will execute"
+fi
+
+# ------------------------------------------------------------ toolchain
+sec "Toolchain"
+if command -v go >/dev/null 2>&1; then
+  GOV=$(go version | awk '{print $3}' | sed 's/^go//')
+  MAJ=${GOV%%.*}; REST=${GOV#*.}; MIN=${REST%%.*}
+  if [ "${MAJ:-0}" -gt 1 ] 2>/dev/null || { [ "${MAJ:-0}" -eq 1 ] && [ "${MIN:-0}" -ge 24 ]; } 2>/dev/null; then
+    ok "go $GOV (module requires 1.24+)"
+  else
+    bad "go $GOV is below the 1.24 required by src/harness/go.mod"
+  fi
+else
+  bad "go not found on PATH"
+fi
+
+# git: the harness pins the ABSOLUTE path, and the test helpers probe
+# exactly two locations. Elsewhere and the governed-chain tests skip.
+if command -v git >/dev/null 2>&1; then
+  GITPATH=$(command -v git); GITV=$(git --version | awk '{print $3}')
+  note "git $GITV at $GITPATH"
+  if [ -x /usr/bin/git ] || [ -x /opt/homebrew/bin/git ]; then
+    ok "git present at a probed path — governed-chain tests will run"
+    [ "$GITPATH" != "/usr/bin/git" ] && [ "$GITPATH" != "/opt/homebrew/bin/git" ] \
+      && note "PATH git ($GITPATH) differs from the probed one; tests use the probed path"
+  else
+    bad "git is not at /usr/bin/git or /opt/homebrew/bin/git"
+    note "test helper gitBin() probes only those two paths and calls t.Skip otherwise,"
+    note "so execution, integration, orchestration and verification/seam would SKIP"
+    note "SILENTLY — the entire governed-chain proof would vanish from a green run."
+  fi
+  note "record this absolute path: the Deployment Anchor host config pins it"
+else
+  bad "git not found — required at runtime, not only to build"
+fi
+
+# fixtures added for bounded-termination proofs need a shell and sleep
+for b in sh sleep; do
+  if command -v "$b" >/dev/null 2>&1; then ok "$b present ($(command -v $b))"
+  else bad "$b not found — termination fixtures (group-kill, mid-drain) would skip"; fi
+done
+
+# ---------------------------------------------------------------- model
+sec "Model endpoint"
+OLLAMA="${THEMIS_LIVE_OLLAMA:-http://localhost:11434}"
+note "endpoint=$OLLAMA (override with THEMIS_LIVE_OLLAMA)"
+TAGS=$(curl -fsS --max-time 5 "$OLLAMA/api/tags" 2>/dev/null)
+if [ -z "$TAGS" ]; then
+  warn "no model endpoint reachable — every live proof will SKIP (CI-equivalent)"
+  note "that is a clean state, not an error: the suite stays hermetic."
+  note "But live proofs then produce NO evidence; the operationally-proven"
+  note "verdict requires a named local execution with a recorded model."
+else
+  ok "model endpoint reachable"
+  MODELS=$(printf '%s' "$TAGS" | python3 -c 'import sys,json;print(" ".join(m["name"] for m in json.load(sys.stdin).get("models",[])))' 2>/dev/null)
+  note "models: ${MODELS:-<none>}"
+  # live proofs are ENDPOINT-gated, not opt-in: if this answers, they run.
+  TOOLM="${THEMIS_LIVE_TOOL_MODEL:-qwen2.5:7b}"
+  CONVM="${THEMIS_LIVE_MODEL:-WhiteRabbitNeo/WHiteRabbitNeo-2.5-Qwen-2.5-Coder-7B:latest}"
+  for pair in "THEMIS_LIVE_TOOL_MODEL:$TOOLM" "THEMIS_LIVE_MODEL:$CONVM"; do
+    var=${pair%%:*}; want=${pair#*:}
+    if printf '%s' " $MODELS " | grep -q " $want "; then
+      ok "$var model present: $want"
+    else
+      bad "$var model MISSING: $want"
+      note "the endpoint answers, so live proofs RUN and will fail on this model."
+      note "fix: ollama pull $want   (or point $var at a model you have)"
+    fi
+  done
+fi
+
+# ----------------------------------------------------------- deployment
+if [ -n "$DEPLOY" ]; then
+  sec "Deployment root: $DEPLOY"
+  if [ -d "$DEPLOY" ]; then
+    ok "exists"
+    [ -w "$DEPLOY" ] && ok "writable" || bad "not writable by $(id -un)"
+    PERM=$(stat -c '%a' "$DEPLOY" 2>/dev/null || stat -f '%Lp' "$DEPLOY" 2>/dev/null)
+    [ "$PERM" = "700" ] && ok "mode 700" || warn "mode $PERM — the runbook uses 700"
+  else
+    warn "does not exist yet (runbook Step 3 creates it)"
+  fi
+  TARGET="$DEPLOY"; [ -d "$TARGET" ] || TARGET=$(dirname "$DEPLOY")
+  if [ -d "$TARGET" ]; then
+    AVAIL=$(df -Pk "$TARGET" 2>/dev/null | awk 'NR==2{print int($4/1024/1024)}')
+    note "free space at $TARGET: ${AVAIL}GB"
+    [ "${AVAIL:-0}" -lt 20 ] 2>/dev/null \
+      && warn "under 20GB free — mirrors, state and artifacts all live here" \
+      || ok "disk space adequate (${AVAIL}GB)"
+  fi
+  case "$DEPLOY" in
+    */src/harness*|*/policies/*) bad "deployment root is inside the repository — it must not be" ;;
+  esac
+fi
+
+# --------------------------------------------------------------- verdict
+sec "Summary"
+printf '  %d pass, %d warn, %d fail\n' "$PASS" "$WARN" "$FAIL"
+if [ "$FAIL" -gt 0 ]; then
+  printf '\n\033[31mNot ready.\033[0m Resolve the FAIL items above; each one either blocks\n'
+  printf 'the build or silently removes evidence from an otherwise green suite.\n'
+  exit 1
+fi
+printf '\n\033[32mHost is ready.\033[0m Next: runbook Step 2 (checkout and gate the build).\n'
+[ "$WARN" -gt 0 ] && printf 'Warnings do not block, but record them — they change what a green run means.\n'
+exit 0

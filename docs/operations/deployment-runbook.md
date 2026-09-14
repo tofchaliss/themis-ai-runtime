@@ -136,11 +136,25 @@ going further — a ceiling that cannot instantiate must never be
 pinned:
 
 ```bash
-cd "$REPO/src/harness" && go run - <<'GO' "$DEPLOY/execution-ceiling.json"
+scripts/themis-status --ceiling "$DEPLOY/execution-ceiling.json"
+```
+
+**`LoadCeiling` requires `mirror_root` to be absolute, not to exist.**
+A mistyped path therefore passes this step, pins cleanly, survives the
+Governance act and `Open`, and fails at the first governed task. The
+status script checks existence separately for exactly that reason;
+if you verify by hand instead, check the directory yourself.
+
+Equivalent by hand (`go run` does **not** read a program from stdin, so
+the program goes in a file):
+
+```bash
+cat > /tmp/ceilingcheck.go <<'GO'
 package main
 import ("fmt";"os";"github.com/tofchaliss/themis/execution")
 func main(){ if _,err:=execution.LoadCeiling(os.Args[1]);err!=nil{fmt.Println("REFUSED:",err);os.Exit(1)}; fmt.Println("ceiling loads") }
 GO
+cd "$REPO/src/harness" && go run /tmp/ceilingcheck.go "$DEPLOY/execution-ceiling.json"
 ```
 
 ## Step 6 — Decide the model registry
@@ -201,12 +215,13 @@ anchor file's exact bytes.
 must never reach Governance:
 
 ```bash
-cd "$REPO/src/harness" && go run - <<'GO' "$REPO/policies/deployment/<name>.json"
+cat > /tmp/anchorcheck.go <<'GO'
 package main
 import ("fmt";"os";"github.com/tofchaliss/themis/deployment")
 func main(){ b,_:=os.ReadFile(os.Args[1]); a,err:=deployment.ParseAnchor(b,os.Args[1])
  if err!=nil{fmt.Println("REFUSED:",err);os.Exit(1)}; fmt.Println("anchor ok:",a.Name,a.Deployment,a.SHA256) }
 GO
+cd "$REPO/src/harness" && go run /tmp/anchorcheck.go "$REPO/policies/deployment/<name>.json"
 ```
 
 ## Step 9 — Prove the proposal is INERT
@@ -215,12 +230,15 @@ Before the Governance act, admission **must refuse** — a prepared
 anchor has no authority:
 
 ```bash
-cd "$REPO/src/harness" && go run - <<'GO' "$REPO/policies/deployment/<name>.json" "<anchor-sha>" "$REPO/policies/deployment/anchors.json"
+cat > /tmp/admitcheck.go <<'GO'
 package main
 import ("fmt";"os";"github.com/tofchaliss/themis/deployment")
 func main(){ _,err:=deployment.AdmitAnchor(os.Args[1],os.Args[2],os.Args[3])
  fmt.Println("pre-activation admission:",err) }
 GO
+cd "$REPO/src/harness" && go run /tmp/admitcheck.go \
+  "$REPO/policies/deployment/<name>.json" "<anchor-sha>" \
+  "$REPO/policies/deployment/anchors.json"
 ```
 
 Expected: a refusal (registry unavailable, or the anchor not

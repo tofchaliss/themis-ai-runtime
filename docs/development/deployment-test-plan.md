@@ -62,7 +62,7 @@ Gate: A1–A6 pass before any deployment artifact is created.
 | # | Step | Expected |
 |---|---|---|
 | B1 | Write the execution ceiling with the owner's exact values to a deployment-local path (NOT the repo) | file exists, valid JSON |
-| B2 | Confirm it LOADS: it must satisfy `execution.LoadCeiling` (mirror_root present and real, all bounds positive) | loads |
+| B2 | Confirm it LOADS: `scripts/themis-status --ceiling <file>`. `execution.LoadCeiling` requires `mirror_root` **absolute** and all bounds positive — it does **not** check that the directory exists, so the script checks that separately | loads; mirror_root exists; at least one bare mirror present |
 | B3 | Compute `sha256` of the exact ceiling bytes | the `execution_ceiling` pin |
 | B4 | Compute the artifact pins: instruction roots (dir hashes), instruction policy, tool registry, per-workflow bundles (workflow + workflow ceiling + context contract), skill catalog, L10 contract registry, L11 criteria + regression-set registries, model registry (or `"absent"`), L6 + L7 constitution hashes | all sha256 |
 | B5 | Emit `policies/deployment/<name>.json` (anchor) and `<...>.proposed.json` (registration) | proposed only — NOT active |
@@ -183,6 +183,18 @@ ollama pull qwen2.5:7b
 
 Record: OS, kernel, Go version, git version and absolute path
 (`which git` — the harness pins the git binary), model name/digest.
+
+Then run the preflight, which records most of that for you and, more
+importantly, reports the conditions under which parts of the suite
+SKIP rather than fail — git outside the two probed paths, a running
+model endpoint whose models are absent, running as root:
+
+```bash
+scripts/themis-preflight --deploy "$DEPLOY"
+```
+
+Any FAIL there either blocks the build or silently removes evidence
+from a green run. Resolve before Phase A, not after.
 
 ## VM-1 — Checkout and static gate (Phase A)
 

@@ -21,7 +21,17 @@ case "$MODE" in
     ;;
   clear)
     CMD=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null) || exit 0
-    if echo "$CMD" | grep -Eq '(^|[;&|][[:space:]]*)go[[:space:]]+test([[:space:]]|$)'; then
+    # Leading VAR=value assignments must not defeat the clear. The
+    # documented hermetic verification is
+    #   THEMIS_LIVE_OLLAMA=http://127.0.0.1:9 go test ./... -count=1
+    # (TESTING.md, runbook Step 2, test-plan A4), so without the
+    # assignment prefix the PRESCRIBED way to verify could never clear
+    # the flag it exists to satisfy — the guard then fires against a
+    # green suite, which is how a guard gets ignored.
+    #
+    # This widens only the CLEAR path and grants nothing: anyone who
+    # can run "FOO=1 go test" can run "go test".
+    if echo "$CMD" | grep -Eq '(^|[;&|][[:space:]]*)([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+)*go[[:space:]]+test([[:space:]]|$)'; then
       rm -f "$MARKER" 2>/dev/null || true
     fi
     exit 0

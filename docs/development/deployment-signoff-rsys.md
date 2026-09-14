@@ -410,3 +410,60 @@ fabrication.
 The next candidate should be judged on **B001, B002, B008 and B009** —
 recall, the two fabrication benchmarks, and output shape — rather than
 on the average, which ranked the worse CVE model first.
+
+
+---
+
+## Addendum C — Phase C completed (2026-09-14, post-acceptance)
+
+§4 above recorded five rows as uncovered and one as unexercisable. All
+six are now resolved: **18 of 19 rows proven against the real anchor**,
+one n/a with its reason. Appended rather than merged, per Addendum A.
+
+Full matrix, 16 rows in one isolated run (`exit 0`, zero findings), plus
+C2 and C3 proven during admission and supersession:
+
+| Row | Refusal |
+|---|---|
+| C4 | `rsys@2 rebound to a different anchor — deployment identity is immutable` |
+| C5 | `rsys@2 disappeared — anchors are append-only so past deployments stay interpretable` |
+| C9 | `L6 constitution is not the anchored one (deployment rsys@2)` |
+| C15 | `workflow ceiling is not the artifact this anchored workflow bundles` |
+| C17 | `the submitted composition is not the composition remediate-dependency@1 registers — a submitter selects an anchored skill, never its constituent hashes` |
+
+C10 remains n/a: this anchor declares `model_registry: absent`, so C11
+is its applicable form.
+
+**How the previously-blocked rows were reached.** C4/C5 need two Opens
+with the registry mutated between them — the append-only wall spans
+restarts through the observed-registry state persisted under the state
+root, so the *second* Open refuses. C9 tests the constitution pin from
+the anchor side (an anchor pinning constitutions this binary lacks)
+rather than by rebuilding the binary: same control, no rebuild. C15
+needs a genuinely two-bundle anchor whose second ceiling is a
+**byte-variant** of the first's — semantically identical so the workflow
+loader admits it, byte-different so the anchor check is what speaks.
+C17 supplies a composition whose seal is internally intact but is not
+the catalog's, perturbing `input_schema`, which L7 does not materialize.
+
+### C15 took three attempts, and the failures are the record
+
+1. Paired with an **unanchored** ceiling: refused by the *workflow
+   loader* on a capability/ceiling mismatch, before the bundle check
+   ran. A refusal that looked like a pass.
+2. Pointed at a two-bundle anchor, but the patch routing `Config`
+   through the minted anchor **silently failed to apply** — it matched
+   one space where gofmt had aligned with padding. `str.replace` does
+   not error on no-match and unused Go *methods* compile, so the build
+   was clean and the row ran against the original anchor.
+3. Correct: loader admits the byte-variant, bundle check refuses.
+
+**Bundle indivisibility had never been exercised against a real anchor
+before attempt three.** Twice it produced a refusal that would have been
+recorded as a pass by anything checking only *that* something refused
+rather than *which control* refused.
+
+That distinction is what the matrix's WRONG REASON outcome exists for.
+It has now caught a false pass in the L10 archive, in the first C15
+attempt, and three times in this tool's own rows — every one of which
+produced a refusal and would have scored 16/16 under a looser check.

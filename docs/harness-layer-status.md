@@ -331,7 +331,7 @@ for this instance; it remains unrated in general.
 |---|---|
 | A build/static | 21/21 green hermetic, 7.6s; skip audit exactly 10; all live proofs green individually |
 | B artifact + admission | ceiling pinned `fd8fcdc1`; anchor `rsys@1` = `04fcdfaf`; **refused before the act**, admitted after |
-| C negative space | **13 of 19 rows proven against the REAL anchor**, 2 n/a, 4 uncovered (see below) |
+| C negative space | **18 of 19 rows proven against the REAL anchor**; C10 n/a (see below) |
 | D anchored path | 5 governed walks, all typed terminals, D4–D6 on every one |
 | E governed chain | **all six rows** — E3 grounding, E4 real-door admission, E5 Δ with derived run identities, E6 cold reconstruction CONFIRMED, E7 door byte-identical, E8 laundering refused |
 
@@ -446,8 +446,14 @@ a request asserting `submitter_uid: 0 / root` was **refused at exit 2
 before the deployment opened**, so no record anywhere claims root
 submitted anything. Sign-off Addendum A.
 
-**Not done:** four Phase C rows (C4, C5, C9, C17) plus C15, which needs
-a two-bundle anchor. Production wiring (runbook Step 12) remains an open
+**Phase C completed 2026-09-14** (sign-off Addendum C): C4, C5, C9, C15
+and C17 all now refuse for the right reason — 16 rows in one isolated
+run, exit 0, plus C2/C3 proven at admission and supersession. C10 stays
+n/a (this anchor declares `model_registry: absent`; C11 is its form).
+C15 required three attempts: twice it produced a refusal from the WRONG
+control, which a looser check would have scored as a pass — bundle
+indivisibility had never actually been exercised against a real anchor
+until the third. Production wiring (runbook Step 12) remains an open
 owner decision — the evidence harness is deliberately not it.
 
 ## Where to look

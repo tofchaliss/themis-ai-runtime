@@ -134,6 +134,29 @@ kind of dishonesty in the other direction.
 git's footprint, chosen as the widest window that still separates
 bytes from kilobytes.
 
+## 3. The mid-drain budget proof rode the same timing assumption
+
+Row: *"Envelope wall-clock budget enforced: pre-exec exhaustion and
+mid-op drain both seal `env-deadline`"*. `TestBudgetMidDrainAutoSeals`
+set the remaining budget to 1ms and ran real `git log`, assuming git
+would be slower — the same assumption that made
+`TestExecTimeoutGroupKill` fail on Linux. It survived there only
+because `time.Since(start)` also counts `cmd.Start()`, leaving a margin
+of one fork/exec that nothing designed. Had git won that race the op
+would have SUCCEEDED and the test's first assertion would have failed.
+
+It now drives the drain through `spawnOverride` with a child outliving
+the budget 100×, making the drain a consequence of the budget — which
+is what the row claims — rather than of host process-spawn latency,
+which it does not.
+
+The test also now pins **which** branch sealed. Pre-exec exhaustion
+(`TestBudgetExhaustionSeals`) seals with the *same* `SealDeadline`
+reason but records no op at all, so the two were indistinguishable by
+assertion: a regression collapsing mid-drain into pre-exec would have
+left both tests green. The mid-drain test now requires the trace's last
+op to exist and carry outcome `timeout`.
+
 ## Mutation verification (disposable worktree, AGENTS.md isolation)
 
 | Mutant | Result |
@@ -142,6 +165,8 @@ bytes from kilobytes.
 | `MaxRSSByte = rss * 1024` (conversion doubled) | FAIL — 5.9 GB, caught as over-converted |
 | removal failure ignored (`verified = true`) | **SURVIVES** — equivalent mutant, see below |
 | removal failure ignored **and** post-removal `Stat` assertion dropped | FAIL in both teardown subtests |
+| mid-drain auto-seal removed | FAIL `TestBudgetMidDrainAutoSeals` (`ACTIVE ""`); `TestBudgetExhaustionSeals` still PASSES, confirming the two branches are now separately evidenced |
+| remaining budget no longer caps the effective deadline | FAIL `TestBudgetMidDrainAutoSeals` at 5.22s — the op ran uncapped to completion and succeeded |
 
 **Recorded equivalent mutant:** ignoring `removeErr` alone does not
 produce a false DESTROYED, because `teardown` independently re-checks

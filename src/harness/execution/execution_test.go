@@ -337,7 +337,30 @@ func TestLifecycleEdgeProductExhaustive(t *testing.T) {
 
 // Budget drained DURING an op auto-seals with the typed deadline
 // reason (test review LOW: the mid-drain branch, not just pre-exec).
+//
+// The drain is driven through the spawnOverride seam rather than by
+// setting the budget to 1ms and hoping git is slower. That hope is the
+// assumption that made TestExecTimeoutGroupKill fail on Linux: git
+// takes ~6ms to spawn on darwin but under 1ms on a Linux runner, where
+// the op would simply SUCCEED and this test's first assertion would
+// fail. It passed there only because `time.Since(start)` also counts
+// cmd.Start(), a margin of one fork/exec that nothing designed.
+//
+// A child outliving the budget by 100x makes the drain a consequence
+// of the budget, which is what this test is about, rather than of host
+// process-spawn latency, which it is not.
 func TestBudgetMidDrainAutoSeals(t *testing.T) {
+	if spawnOverride != nil {
+		t.Fatal("spawnOverride must be nil in production — a test leaked the seam")
+	}
+	shBin, err := exec.LookPath("sh")
+	if err != nil {
+		t.Skipf("no sh: %v", err)
+	}
+	sleepBin, err := exec.LookPath("sleep")
+	if err != nil {
+		t.Skipf("no sleep: %v", err)
+	}
 	mirrorRoot, repo, sha := mkMirror(t)
 	p, err := NewLocalProvider(gitBin(t), t.TempDir())
 	if err != nil {
@@ -348,14 +371,33 @@ func TestBudgetMidDrainAutoSeals(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.Teardown()
+
+	spawnOverride = func() (string, []string) { return shBin, []string{"-c", sleepBin + " 5"} }
+	t.Cleanup(func() { spawnOverride = nil })
+
+	const budget = 50 * time.Millisecond
 	env.mu.Lock()
-	env.remaining = time.Millisecond // drains during the next spawn
+	env.remaining = budget // positive: the pre-exec check must pass
 	env.mu.Unlock()
+
+	start := time.Now()
 	if _, err := env.ExecGit(30*time.Second, "log"); err == nil {
 		t.Fatal("draining op must fail")
 	}
+	// The REMAINING budget bounds the op, not the requested 30s.
+	if el := time.Since(start); el > 3*time.Second {
+		t.Fatalf("the remaining budget must cap the effective deadline: op took %s", el)
+	}
 	if env.State() != StateSealed || env.Trace().SealReason != SealDeadline {
 		t.Fatalf("mid-op drain must auto-seal env-deadline: %s %q", env.State(), env.Trace().SealReason)
+	}
+	// Pin the branch. Pre-exec exhaustion (TestBudgetExhaustionSeals)
+	// seals with the SAME reason but records no op at all, so without
+	// this the two branches are indistinguishable and a regression
+	// collapsing mid-drain into pre-exec would go unnoticed.
+	ops := env.Trace().Ops
+	if len(ops) == 0 || ops[len(ops)-1].Outcome != "timeout" {
+		t.Fatalf("the drain must be attributable to an op that actually ran: %+v", ops)
 	}
 }
 

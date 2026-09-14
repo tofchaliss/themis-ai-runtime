@@ -258,10 +258,23 @@ Three further gaps, closed 2026-09-14 in the same sweep:
    or doubled. `TestObservedRSSIsInBytes` asserts the magnitude.
    (4–6: L7 and L5 amendment records.)
 
-Remaining known-thin evidence, recorded not closed:
-`TestBudgetMidDrainAutoSeals` carries the same 1ms-vs-git-spawn
-assumption class as finding below, passing on Linux with an undesigned
-margin; two egress tests skip under root (void there by construction).
+7. **L5 mid-drain budget proof rode the same timing assumption** —
+   `TestBudgetMidDrainAutoSeals` set a 1ms budget and assumed real git
+   was slower, surviving on Linux only by the width of one fork/exec.
+   It now drives the drain through the `spawnOverride` seam, and pins
+   which branch sealed: pre-exec exhaustion seals with the *same*
+   reason but records no op, so the two were indistinguishable by
+   assertion.
+
+Remaining known-thin evidence, recorded not closed: two egress tests
+skip under root (void there by construction — the mechanism they prove
+is permissions, which root does not have to obey).
+
+**Method note.** Five of these seven surfaced only because CI went
+green on a second platform after eight dark days; the cited-test
+cross-check found two more. Neither method finds a control that is
+both untested and correctly cited — that class needs a systematic
+mutation pass over the whole suite, which has not been run.
 
 **L5 evidence correction (2026-09-14):** the Linux failure exposed an
 overstated traceability row, not a control defect — the archived

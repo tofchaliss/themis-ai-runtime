@@ -110,9 +110,14 @@ func main() {
 	fmt.Printf("green across %d package(s)\n\n", len(pkgs))
 
 	var survivors []guard
+	var untested []guard
 	killed, compileErr := 0, 0
 	start := time.Now()
 	for i, g := range guards {
+		if !hasTests(mod, g.pkg) {
+			untested = append(untested, g)
+			continue
+		}
 		orig, err := os.ReadFile(g.file)
 		if err != nil {
 			bail("read %s: %v", g.file, err)
@@ -149,6 +154,16 @@ func main() {
 	fmt.Printf("  killed         : %d\n", killed)
 	fmt.Printf("  did not compile: %d  (cannot ship — not a gap)\n", compileErr)
 	fmt.Printf("  SURVIVED       : %d\n", len(survivors))
+	if len(untested) > 0 {
+		pkgs := map[string]int{}
+		for _, g := range untested {
+			pkgs[g.pkg]++
+		}
+		fmt.Printf("  not mutated    : %d — package has no test files of its own\n", len(untested))
+		for p, n := range pkgs {
+			fmt.Printf("                   ./%s (%d guards; its tests, if any, live elsewhere)\n", p, n)
+		}
+	}
 	if len(survivors) == 0 {
 		fmt.Println("\nEvery refusal guard is covered by its package's tests.")
 		return
@@ -232,6 +247,25 @@ func collect(mod, only string) ([]guard, error) {
 		return nil
 	})
 	return out, err
+}
+
+// hasTests reports whether the package has its own test files. A
+// package whose tests live elsewhere (confine's are in context/) would
+// otherwise report EVERY mutant as surviving, because `go test` on a
+// package with no test files exits 0. That is a false positive, not a
+// finding, and it silently inflates the survivor count.
+func hasTests(mod, pkg string) bool {
+	dir := filepath.Join(mod, pkg)
+	es, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+	for _, e := range es {
+		if strings.HasSuffix(e.Name(), "_test.go") {
+			return true
+		}
+	}
+	return false
 }
 
 func runTests(mod, pkg, timeout string) (bool, string) {

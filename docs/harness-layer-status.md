@@ -2,6 +2,91 @@
 
 Status date: 2026-09-14 (last updated when INSTALLATION/TESTING were rebuilt against the as-built tree; content through the L11 close, the integration audit, and G1/G2). L1–L4 SHIPPED and ARCHIVED: grilled (openspec, owner-closed), implemented, security/test/architecture reviewed with three-state verdicts, live-proven against a local model. Archived changes: `openspec/changes/archive/2026-09-0{5,6}-layer-0{1,2,3,4}-*`. **L5 SHIPPED and ARCHIVED 2026-09-07** (openspec/changes/archive/2026-09-07-layer-05-execution-environment). **L6 SHIPPED and ARCHIVED 2026-09-07** (openspec/changes/archive/2026-09-07-layer-06-durable-state). **L7 SHIPPED and ARCHIVED 2026-09-07** (openspec/changes/archive/2026-09-07-layer-07-orchestration): grill closed (Q-L7-1..12), three Class-3 reviews remediated, arch HIGH 2a closed by owner decision (full L2 composition in the loop), live-proven vs qwen2.5:7b. **L9 Skills SHIPPED and ARCHIVED 2026-09-11** (openspec/changes/archive/2026-09-11-layer-09-skills): grill closed (D-L9-0..17 + amendments D-L9-11a/b/c/d), Gate 0 passed, M1–M5 implemented, residuals R-L9-1 and R-L9-2 closed, all three Class-3 reviews re-run against the final implementation with every CRITICAL/HIGH remediated and mutation-verified, live-proven vs qwen2.5:7b through the unmodified L7 loop. Three-state verdicts accepted by owner 2026-09-11; **investigate-cve@1 REGISTERED 2026-09-11** (owner-directed promotion to policies/skills/catalog.json; resolution verified ACTIVE with two-way manifest agreement); traceability.md written at archive. **L10 Verification & Observability SHIPPED and ARCHIVED 2026-09-11** (openspec/changes/archive/2026-09-11-layer-10-verification): grill closed same-day (D-L10-1..18 + D-L10-1a, owner-led), Gate 0 passed, M1–M6 implemented, three Class-3 close reviews remediated (both independent HIGHs = the same reconstruction record-selection forgery, closed by explicit record naming), five proof registers green incl. **live Register E vs qwen2.5:7b through the unmodified L7 loop with the real seam** (verify_report → report-valid@1 → PASS gates completion → cold reconstruction consistent). Three-state verdicts accepted; Governance registrations ACTIVE (registry-v4, L10 contract registry, catalog incl. remediate-dependency@1) as owner acts. Archived-layer amendments formally recorded in the L7, L4, and L6 archives (D-L10-17 discipline). Key residuals: L5 process-execution amendment for run_go_*-class verifiers (own gate), live telemetry grill (Q-L10-15), L6 audit-scope GC anchoring (ADG follow-up), one recorded equivalent mutant (verifState ordering). v1 observability = record-derived views inside the verification package; the D-L10-6 stage order carries an owner-blessed v1 clarification for read-only verifiers. Next: L11 (generalize compare/gate/variants — no second evaluation subsystem). **L11 Ratchet SHIPPED and ARCHIVED 2026-09-13** (openspec/changes/archive/2026-09-13-layer-11-ratchet): grill closed 2026-09-12 (D-L11-1..20 ALL LOCKED, 20/20, owner-led), Gate 0 PASS, M0–M7 implemented under the frozen constitution (src/harness/ratchet + cmd/themis-ratchet: criteria/regression-set registries, registered comparators, comparison packages with full conditioning tuples, door-resolved admission observations, grounded evidence, cold reconstruction, stateless derivations, Candidate/Evaluation Plan, structural walls). Three Class-3 close reviews 2026-09-13 converged on one seam (invocation boundary trusting its caller — sec CRITICAL C-1 admission forgery = arch H-1; evidence self-grounding); ALL CRITICAL/HIGH remediated (ObserveAdmission door resolution, GroundFacts, acceptance boundary with durable refusals, registry consumption-pin, reconstruction parity, ~19 mutants killed, CLI contract suite with cross-process cold reconstruction). Owner closure judgment 2026-09-13: CLOSED, three-state PASS (operationally-proven machine-local); three classifications RATIFIED (no-discard scope, consumption-pin wall shape, sensitivity residual as admission restriction). **Governance activated bench-score-delta@1 + core-regression@1 (policies/ratchet/, owner-directed act 2026-09-13).** Live proof PASS vs qwen2.5:7b (model authors candidate substance as Class-6 data-reader; every wall held). L11 residuals: knowledge-family handoff (Themis door unavailable — explicit, no substitute authority), meta-comparison / Δ-in-routing / multi-baseline (each = fresh architecture decision), benchmark-plane physical unification not performed (bench stays bench-owned), sensitivity inheritance. Owner closing sentence: no remaining L11 architecture work to design — failures default to implementation defect or recorded residual; architecture reopens only on a genuine D-L11-20 §7 gap.
 
+---
+
+## Checkpoint — 2026-09-15
+
+State of the project at the end of the session. Read this before the
+long status paragraph above, which is cumulative history.
+
+| Area | State |
+|---|---|
+| L1–L7, L9–L11 | implemented, archived, frozen |
+| **L8 Subagents** | **UNIMPLEMENTED** — scaffold only; grill starts **2026-09-17** |
+| G1, G2 | closed and implemented |
+| Deployment `rsys@3` | **ACTIVE** (`b5f551ab7076`); `rsys@2`, `rsys@1`, `local-dev@1` withdrawn and interpretable |
+| Model allowlist | `qwen2.5:7b`, `gpt-oss:20b`, `cyberpal20b-v3` — three admitted, **none selected** |
+| Model selection | **OPEN**. Admitting is not selecting; selection is per-task in the envelope |
+| **L9 skills under G1** | **BLOCKED — see below** |
+| Live-model COMPLETED | **not achieved**; blocked behind the skill-admission defect, not behind the model |
+| Mutation Tier 1–4 | closed, 37 controls; ~190 error-propagation survivors deliberately untriaged |
+| CI | green, dual-platform (ubuntu CI + darwin development) |
+
+### The one blocking defect
+
+**Anchored skill admission refuses every legitimate submission.**
+`verifyAnchoredSkill` compares the registered manifest identity
+(`sha256` of `skill.json`) against the instantiated composition seal
+(`sha256` over nine members, two of them per-task). Different identity
+domains; the comparison succeeds for no input. **Both catalog skills are
+ACTIVE and unreachable under an anchored deployment**, which is the
+production configuration.
+
+Found live, not by reading. No test could have caught it: the only
+coverage is Phase C row C17, which asserts a *doctored* composition is
+refused — and an unconditional refusal satisfies that. It established
+"bad input is refused" and never the required pair.
+
+- Evidence: `docs/development/finding-anchored-skill-admission-2026-09-15.md`
+- Tracked: GitHub issue #1 (`needs-triage`)
+- Decision: `openspec/changes/l9-l7-skill-admission-identity/proposal.md`
+- **Not fixed.** The correspondence between registered skill identity and
+  instantiated composition identity is an owner decision spanning L9 and
+  L7 with G1 as context. Phase C row C17 is **unproven** pending a
+  positive counterpart.
+
+### What today established
+
+- **35 + 2 controls closed** across the mutation Tier-1 list, the G1
+  anchor pin surface, L7 static boundedness, the L9 substitution
+  boundary, the L5 execution floors, and egress discipline. One real code
+  defect underneath them: `grantAuthorityDigest` was blind to
+  `ThemisScope`, so grants with materially different themis-id authority
+  recorded an identical `grant_authority`.
+- **Records survive a binary change.** All six `rsys` tasks
+  re-establish identity → durable bytes → registry under the rebuilt
+  binary, four of them under a *withdrawn* anchor (Addendum D).
+- **`gpt-oss:20b` benchmarked** — first candidate to move fabrication
+  resistance off zero (B009 0% → 50%), and confirmation of Addendum B's
+  quantisation hypothesis (recall 16% → 83%). Addendum E.
+- **A live model drove the governed workflow to the L10 gate** for the
+  first time: explored, transitioned phases, wrote files, called
+  `verify_report`. It does **not** establish that `gpt-oss:20b` can
+  complete the task end to end.
+
+### Two grills queued, both owner-led
+
+1. **L8 Subagents** — `openspec/changes/l8-subagents/proposal.md`.
+   Starting 2026-09-17. Nothing locked; the four directories under
+   `src/harness/subagents/` stay scaffold-only until it closes.
+2. **L9/L7 skill-admission identity** —
+   `openspec/changes/l9-l7-skill-admission-identity/proposal.md`.
+   Blocks the live-COMPLETED work.
+
+### The session's recurring finding
+
+Every defect found today — in the harness, in the evidence tooling, and
+in the instruments written to look for defects — was the same shape: **a
+check whose message claimed more than the check established.** Mutual
+cover (two adjacent guards, one test tripping both) accounted for six
+instances; the rechecker misreported a working append-only registry as
+broken; the benchmark evaluator misdiagnosed a model's repetition loop
+as a transport fault; a report rendered an unvalidated run as 0%. None
+was found by reading. Each was found by running something that could
+disagree.
+
+---
+
 ## Architecture flow
 
 ```

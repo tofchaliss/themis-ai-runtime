@@ -12,7 +12,7 @@ long status paragraph above, which is cumulative history.
 | Area | State |
 |---|---|
 | L1–L7, L9–L11 | implemented, archived, frozen |
-| **L8 Subagents** | **UNIMPLEMENTED** — scaffold only; grill starts **2026-09-17** |
+| **L8 Subagents** | **UNIMPLEMENTED** — scaffold only; grill starts **2026-09-16** |
 | G1, G2 | closed and implemented |
 | Deployment `rsys@3` | **ACTIVE** (`b5f551ab7076`); `rsys@2`, `rsys@1`, `local-dev@1` withdrawn and interpretable |
 | Model allowlist | `qwen2.5:7b`, `gpt-oss:20b`, `cyberpal20b-v3` — three admitted, **none selected** |
@@ -67,7 +67,7 @@ refused — and an unconditional refusal satisfies that. It established
 ### Two grills queued, both owner-led
 
 1. **L8 Subagents** — `openspec/changes/l8-subagents/proposal.md`.
-   Starting 2026-09-17. Nothing locked; the four directories under
+   Starting 2026-09-16. Nothing locked; the four directories under
    `src/harness/subagents/` stay scaffold-only until it closes.
 2. **L9/L7 skill-admission identity** —
    `openspec/changes/l9-l7-skill-admission-identity/proposal.md`.

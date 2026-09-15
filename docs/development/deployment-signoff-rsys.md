@@ -467,3 +467,110 @@ That distinction is what the matrix's WRONG REASON outcome exists for.
 It has now caught a false pass in the L10 archive, in the first C15
 attempt, and three times in this tool's own rows — every one of which
 produced a refusal and would have scored 16/16 under a looser check.
+
+---
+
+## Addendum D — Re-verification after a binary change (2026-09-15)
+
+Appended per Addendum A's rule. The deployment was **not** re-run; what
+was asked is a different question: the harness binary changed
+substantially on 2026-09-15 (31 refusal guards closed, and
+`orchestration/orchestrator.go` edited — `grantAuthorityDigest` widened
+to cover `ThemisScope`, the durable-capture check lifted into
+`captureVerified`). `rsys@2` pins the L7 constitution and its record
+plane predates the change, so two properties were live questions rather
+than settled ones.
+
+### S1 — does the rebuilt binary still admit `rsys@2`?
+
+**PASS.** Both constitution pins are byte-identical to what `rsys2.json`
+anchors:
+
+| Pin | Value | Anchor |
+|---|---|---|
+| `constitution.state` | `b25ed6fbb5b46a56…` | match |
+| `constitution.orchestration` | `008be050c29740ce…` | match |
+
+The pin covers the compiled control vocabulary — verbs, transition
+events, terminals, the reserved approval prefix — not source text, so a
+day of test work and two function changes moved neither. Computed
+independently on darwin/arm64 and confirmed on the deployment host
+(linux/amd64), which is a second data point for the 2026-09-14
+cross-platform determinism result.
+
+This is the owner-finding-4 test answered empirically rather than by
+reading: *can changing this artifact change the behaviour or authority
+of an anchored deployment?* For these edits, no.
+
+### S2 — do past records survive the binary change?
+
+**PASS, 6/6.** Every task in the record plane re-establishes its
+deployment from the record and the Governance registry alone, under the
+binary running now — D4 identity, D5 durable anchor bytes recovered by
+their own hash, D6 registry re-establishment, plus the L6 verdict.
+
+| Task | Anchor | Status |
+|---|---|---|
+| `rsys-d1`, `rsys-d2` | `rsys@1` (**withdrawn**) | FAILED |
+| `rsys-e-base`, `rsys-e-cand` | `rsys@1` (**withdrawn**) | COMPLETED |
+| `rsys-prod-1` | `rsys@2` | FAILED |
+| `rsys-v2-w1` | `rsys@2` | COMPLETED |
+
+The four under `rsys@1` are the sharper half. A **withdrawn** anchor
+still explains the executions it governed, across a binary change —
+withdrawal stops new opens without rewriting history. That is what
+append-only registration buys, and it had never been tested against an
+actual rebuild.
+
+Tooling: `evidence/harness/recheck`, read-only and authority-free. It
+creates no task, writes no object, and registers nothing; it calls the
+same `VerifyAnchorRecord` any caller would. Phase D's D4/D5/D6 prove a
+record is re-establishable at the moment it is written; this asks the
+older question — whether it still is once the binary is different.
+
+### The finding was in the instrument
+
+Run with `-anchor-sha256` pinned to `rsys@2`, the first version reported
+the four `rsys@1` tasks as:
+
+> A past execution is no longer interpretable from its own record.
+
+False, and the unpinned run had already proved it false. Those tasks
+re-establish completely; they belong to a *different deployment* than the
+one asked about, which is precisely what a superseded deployment's
+record plane is supposed to look like. The tool reported a working
+append-only registry as a broken one.
+
+That is the same defect class the 2026-09-14 mutation pass spent the day
+on — **a message claiming more than its check established** — this time
+in an instrument written an hour earlier. Fixed in `ea6a800`: D5/D6/L6
+now run regardless of the expectation, a mismatch reports `OTHER` with
+its re-established identity, exit 1 stays reserved for genuine
+durability failure, and a mismatch-only run exits 3.
+
+### Host hygiene (not governed)
+
+Installed models reduced 7 → 3, 70.2 GB → 29 GB: `qwen2.5:7b` (the
+anchored name), `cyberpal20b-v3` (Addendum B's candidate), `gpt-oss:20b`
+(present, never benchmarked). Superseded `cyberpal20b`/`-v2` builds, the
+GGUF base they derived from, and WhiteRabbitNeo removed. No disk
+pressure existed (6% of 1 TB); the reason is that `rsys@2` declares
+`model_registry: absent`, so allowlisted names resolve against whatever
+this host holds — the local install *is* the resolution surface, and
+narrowing it removes ambiguity. `Modelfile.cyberpal{,2,3}` retained as
+the reproduction recipes.
+
+### What Addendum D does not establish
+
+- **A live model has still never driven a governed task to COMPLETED
+  here.** All three COMPLETED records are scripted; all three
+  live-model runs reached FAILED — correctly, typed, through declared
+  edges. `rsys@2`'s allowlist is exactly `["qwen2.5:7b"]`, measured
+  unable to drive `remediate-dependency` (F-9, Addendum B).
+- Closing that gap is a **Governance act**, not a configuration change:
+  either an anchor admitting a better model, or a workflow the 7B can
+  complete. `cyberpal20b-v3` and `gpt-oss:20b` are present on the host
+  and unusable under `rsys@2` by design — a model enters a deployment
+  only by Governance act.
+- Nothing here re-establishes the architecture, and nothing here is a
+  new deployment. `rsys@2` is unchanged and remains ACTIVE.

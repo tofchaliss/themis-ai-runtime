@@ -3,6 +3,7 @@ package ratchet
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
@@ -221,4 +222,69 @@ func TestRegressionPackageCompleteness(t *testing.T) {
 			t.Fatalf("out-of-region derived as resistant: %v %v", within, err)
 		}
 	})
+}
+
+// D-L11-9 Amendment 1: resistant-under-S is recomputed from the
+// constituent packages and their criteria. The criterion supplied for
+// that recomputation must be the one the constituent comparison was
+// CONDITIONED on — its hash is part of the package's conditioning
+// tuple for exactly this reason.
+//
+// Without the binding, the derivation is a question you can answer by
+// choosing the question: pair a regressed comparison with a more
+// permissive criterion and "resistant under S" comes out true. The
+// substitute here is a real criterion the registry would accept; only
+// its non-regression region is wider.
+func TestResistantUnderSetRefusesUnboundCriterion(t *testing.T) {
+	in := validInput(t, 0.30, 0.82) // -0.52: far outside the fixture region
+	worse, ref, err := Compare(in)
+	if err != nil || ref != nil {
+		t.Fatalf("unfavorable comparison refused: %v %v", ref, err)
+	}
+	set := &RegressionSet{Version: 1, Name: "core-regression", Set: 1,
+		Members: []string{"bench-score-delta@1"}, SHA256: strings.Repeat("66", 32)}
+
+	// A criterion wide enough to call -0.52 a non-regression.
+	m := validCriterionMap()
+	m["config"] = map[string]any{"fields": []any{map[string]any{
+		"delta": "score_delta", "candidate": "candidate_score", "baseline": "baseline_score"}}}
+	m["ordering"] = map[string]any{"kind": "per-metric", "fields": []any{
+		map[string]any{"name": "score_delta", "direction": "maximize",
+			"equal_tolerance": 0.0, "non_regression_min": -1.0}}}
+	lenient, perr := ParseCriterion(marshalCriterion(t, m), "lenient")
+	if perr != nil {
+		t.Fatalf("the substitute must be a criterion the registry accepts: %v", perr)
+	}
+	if lenient.SHA256 == worse.CriterionSHA256 {
+		t.Fatal("the substitute hashes to the conditioning criterion — it is not a substitute")
+	}
+	// Premise: the substitute really would flip the answer, so the
+	// refusal below is the binding and not a coincidence of region.
+	if within, derr := DeriveNonRegression(lenient, worse.Delta); derr != nil || !within {
+		t.Fatalf("the substitute must accept this delta, or nothing is being bypassed: %v %v", within, derr)
+	}
+
+	within, err := DeriveResistantUnderSet(set,
+		map[string]*Criterion{"bench-score-delta@1": lenient},
+		map[string]*ComparisonPackage{"bench-score-delta@1": worse})
+	if err == nil {
+		t.Fatalf("a criterion that did not condition the comparison was ACCEPTED (derived resistant=%v)", within)
+	}
+	if !errors.Is(err, ErrResolve) {
+		t.Errorf("refused as %v, want a resolve refusal", err)
+	}
+	if !strings.Contains(err.Error(), "conditioning tuple") {
+		t.Errorf("refused for the wrong reason: %v", err)
+	}
+	if within {
+		t.Error("a refusing derivation must not also report resistant")
+	}
+
+	// And the bound criterion still derives, so the check narrows to
+	// substitution rather than refusing everything.
+	if _, derr := DeriveResistantUnderSet(set,
+		map[string]*Criterion{"bench-score-delta@1": in.Criterion},
+		map[string]*ComparisonPackage{"bench-score-delta@1": worse}); derr != nil {
+		t.Fatalf("the conditioning criterion must still derive: %v", derr)
+	}
 }

@@ -60,7 +60,7 @@ survivor that Phase C does not cover either is genuinely unguarded.
 | ~~`skills/catalog.go:85`~~ — manifest_path traversal (`..`, absolute) | path containment. **Closed 2026-09-15**. See below. |
 | ~~`orchestration/loop.go:474`~~ — verification event undeclared yet produced | L7 invariant. **Resolved 2026-09-15**: equivalent mutant; two of the three gates it rests on were untested and now are. See below. |
 | ~~`orchestration/loop.go:382`~~ — verifier-eligible call with no evaluator wired | fail-closed. **Resolved 2026-09-15**: equivalent mutant; its assembly gate was already tested. |
-| `ratchet/package.go:129` — criterion bytes ≠ constituent conditioning tuple | L11 binding |
+| ~~`ratchet/package.go:129`~~ — criterion bytes ≠ constituent conditioning tuple | L11 binding. **Closed 2026-09-15**. See below. |
 | `verification/contract.go:249/257` — provenance completeness | "not contract-relaxable" |
 
 ### One that deserves separate attention
@@ -350,6 +350,33 @@ promoting two dead guards into live ones.
 
 Lesson for the Tier-1 ranking itself: neither surviving gate was ON the
 Tier-1 list. They were the premise of an item that was.
+
+### `ratchet/package.go:129` — answering the question by choosing it
+
+**CONFIRMED and CLOSED 2026-09-15.** `DeriveResistantUnderSet`
+recomputes resistance from the constituent packages and their criteria.
+The criterion supplied for that recomputation must be the one each
+constituent comparison was CONDITIONED on — its hash is in the
+package's conditioning tuple for precisely this reason. Existing tests
+cover derivation and the unfavorable case; both pass the *matching*
+criterion, so the binding had never been exercised.
+
+The exposure is not subtle. Pair a regressed comparison with a more
+permissive criterion and "resistant under S" comes out true:
+
+    candidate 0.30 vs baseline 0.82  →  score_delta -0.52
+    conditioning criterion: non_regression_min -0.05  →  regression
+    substituted criterion:  non_regression_min -1.00  →  "resistant"
+
+`TestResistantUnderSetRefusesUnboundCriterion` uses a substitute the
+registry would accept — only its region is wider — and asserts its own
+premise both ways: the substitute really does accept the delta (or
+nothing is being bypassed), and the conditioning criterion still
+derives (or the check refuses everything rather than substitution).
+
+Mutation-verified: with the binding replaced by `if false`, the
+derivation returns `resistant=true` for a comparison that regressed by
+0.52.
 
 ## What this pass does not establish
 

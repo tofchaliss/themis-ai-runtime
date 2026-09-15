@@ -25,9 +25,18 @@ func Markdown(report Report) string {
 	fmt.Fprintf(&b, "- Average Generation Time: **%.2f ms**\n", report.AverageGenerationMS)
 	fmt.Fprintf(&b, "- Average Total Time: **%.2f ms**\n", report.AverageTotalMS)
 
-	// Validation Summary
+	// Validation Summary. An unvalidated report has no score, and
+	// rendering that absence as "0%" invites exactly the wrong reading:
+	// zero passed AND zero failed means no check ran, not that the
+	// model answered everything wrongly. The two are opposite
+	// conclusions about the same model, and a reader scanning a summary
+	// will take the number over the ratio above it.
 	fmt.Fprintf(&b, "- Validated: **%d/%d**\n", report.Validated, report.Benchmarks)
-	fmt.Fprintf(&b, "- Average Score: **%d%%**\n", report.AverageScore)
+	if report.Validated == 0 {
+		fmt.Fprintf(&b, "- Average Score: **not validated** — run `themis-bench validate` before reading a score\n")
+	} else {
+		fmt.Fprintf(&b, "- Average Score: **%d%%**\n", report.AverageScore)
+	}
 	fmt.Fprintf(&b, "- Passed Checks: **%d**\n", report.TotalPassed)
 	fmt.Fprintf(&b, "- Failed Checks: **%d**\n", report.TotalFailed)
 

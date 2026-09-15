@@ -443,6 +443,17 @@ func TestEndpointRefusal(t *testing.T) {
 		"host:path",              // ditto
 		"ext::sh -c evil",        // protocol.ext transport helper (MED-1)
 		"fd::17",                 // transport-helper syntax
+		// Transport-helper syntax behind a PATH-LIKE prefix. These are
+		// the only cases the scheme/"::" check catches alone: the
+		// colon-heuristic below it does not fire, because the text
+		// before the first colon contains "/". Without them the first
+		// check is never the control that refuses, and the mutation
+		// pass of 2026-09-14 showed it could be deleted with this test
+		// still green — while the L5 traceability cites this test as
+		// its evidence. git reads <transport>::<address>, so
+		// "/abs/path::evil" names a remote helper.
+		"/local/mirror/repo::evil",
+		"./dir/x://y",
 	}
 	for _, a := range bad {
 		if err := refuseEndpoints([]string{"clone", a}); !errors.Is(err, ErrEndpoint) {

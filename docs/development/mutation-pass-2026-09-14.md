@@ -71,11 +71,31 @@ this guard survives. The likely cause is that `refuseEndpoints` carries
 several conditions and every test case is caught by a *different* one,
 leaving this branch unexercised.
 
-That is the same shape as Phase C row C15: a test that passes while the
-specific control beneath it never fires. It is worth confirming, because
-if correct it means a cited, passing test does not exercise the line it
-is cited for — the exact defect this pass exists to find, occurring in a
-control the L5 archive lists as evidenced.
+**CONFIRMED and CLOSED 2026-09-14.** `refuseEndpoints` carries two
+checks. The second — first colon with no `/` before it — catches
+everything the first catches *unless* the text before the colon contains
+a slash. Every case in `TestEndpointRefusal` (schemes, scp with and
+without user, `ext::`, `fd::`) has no slash before its colon, so the
+second check always fired and the first was never the control under
+test.
+
+The gap the first check alone covers is real, not cosmetic:
+
+    /abs/path::evil   second check: prefix "/abs/path" contains "/", does not fire
+                      first  check: contains "::", fires
+
+git reads `<transport>::<address>`, so that names a remote helper —
+exactly what the control exists to refuse.
+
+Closed by adding the two cases only the first check can catch,
+`/local/mirror/repo::evil` and `./dir/x://y`. Mutation-verified: with
+the guard replaced by `if false`, both new cases fail and the eight
+original cases still pass — which is the point. The test was green
+before and green after; only the new cases distinguish them.
+
+This is the third instance that day of a passing test standing in for a
+control that never fired, after the never-executed L10 tamper test and
+Phase C row C15.
 
 ## What this pass does not establish
 

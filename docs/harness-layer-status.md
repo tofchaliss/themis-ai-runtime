@@ -284,9 +284,14 @@ shortlist of twelve — including two TOCTOU guards, the Open-side G1
 ceiling check, the L7 constitution pin, and L9 two-way identity — is
 recorded with dispositions in
 `docs/development/mutation-pass-2026-09-14.md`. **Open: which deserve
-tests is an owner judgement.** Note `execution/local.go:153`, where a
-cited and passing test appears not to exercise the line it is cited
-for.
+tests is an owner judgement.** One item is already CLOSED:
+`execution/local.go:153`, the endpoint-refusal guard, where
+`TestEndpointRefusal` was cited as evidence by the L5 traceability yet
+never exercised that line — its second check caught every test case
+first. Closed by adding the two cases only the first check can catch
+(`/abs/path::evil` names a git remote helper); mutation-verified. Third
+instance that day of a passing test standing in for a control that never
+fired.
 
 **L5 evidence correction (2026-09-14):** the Linux failure exposed an
 overstated traceability row, not a control defect — the archived

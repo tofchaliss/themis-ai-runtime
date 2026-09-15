@@ -187,3 +187,125 @@ func TestManifestPinPathRefusals(t *testing.T) {
 		}
 	}
 }
+
+// D-L9-5, the rest of checkGrantShape. The narrowing-completeness and
+// never-mint-a-scope rules have cases above; these two did not, and
+// both guard the same thing from the other side — substitution must not
+// be able to produce a grant the reviewed template could not have been.
+//
+// An empty entry list with a positive aggregate is the sharpest: the
+// completeness rule compares the total against a sum of ZERO, so a
+// grant with no entries at all would sail past every other check while
+// carrying an aggregate cap that authorizes nothing and bounds nothing.
+func TestGrantShapeStructuralRefusals(t *testing.T) {
+	for what, tc := range map[string]struct{ body, want string }{
+		"no entries after substitution": {
+			`{"version":1,"task_id":"t-1","total_max_calls":4,"entries":[]}`,
+			"no entries",
+		},
+		"entry with a zero cap": {
+			`{"version":1,"task_id":"t-1","total_max_calls":4,
+			 "entries":[{"tool":"read_file","max_calls":0,"workspace":"@workspace"}]}`,
+			"needs a positive cap",
+		},
+		"entry with a negative cap": {
+			`{"version":1,"task_id":"t-1","total_max_calls":4,
+			 "entries":[{"tool":"read_file","max_calls":-1,"workspace":"@workspace"}]}`,
+			"needs a positive cap",
+		},
+		"entry naming no tool": {
+			`{"version":1,"task_id":"t-1","total_max_calls":4,
+			 "entries":[{"tool":"","max_calls":4,"workspace":"@workspace"}]}`,
+			"needs a positive cap",
+		},
+	} {
+		err := checkGrantShape([]byte(tc.body), "t-1")
+		if err == nil {
+			t.Errorf("%s: an effective grant that no reviewed template could produce was ACCEPTED", what)
+			continue
+		}
+		if !errors.Is(err, ErrResolve) {
+			t.Errorf("%s: refused as %v, want a resolve refusal", what, err)
+		}
+		if !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("%s: refused for the wrong reason: %v", what, err)
+		}
+	}
+	// Premise: a well-formed effective grant passes, so these refusals
+	// are about the doctored field and not a broken shape check.
+	if err := checkGrantShape([]byte(`{"version":1,"task_id":"t-1","total_max_calls":4,
+	 "entries":[{"tool":"read_file","max_calls":4,"workspace":"@workspace"}]}`), "t-1"); err != nil {
+		t.Fatalf("a well-formed effective grant must pass: %v", err)
+	}
+}
+
+// The spec template's Class-3 subject fields are PLACEHOLDERS that L9
+// binds. A template carrying a literal in their place is one that was
+// reviewed with a subject already chosen — so the instantiation would
+// silently keep the template author's task, repo, or commit instead of
+// the caller's, and the record would attribute it to the caller.
+//
+// Downward-only wall-deadline narrowing has the same shape from two
+// directions, and neither was covered: a template declaring the
+// dimension twice would have one copy narrowed and one left standing,
+// and a template declaring it not at all would accept the caller's
+// narrowing request and apply it to nothing — the task then runs at the
+// template's own bound while the caller believes it asked for less.
+func TestSpecTemplateSubstitutionRefusals(t *testing.T) {
+	const good = `{"version":1,"task_id":"@task_id","repo":"@repo","pinned_sha":"@pinned_sha",` +
+		`"limits":[{"dimension":"wall_deadline_s","value":90}]}`
+	// Premise: the well-formed template instantiates and actually
+	// narrows, so each refusal below is its own doctored rule.
+	out, err := instantiateSpecTemplate([]byte(good), "t-1", "demo", strings.Repeat("a", 40), 30)
+	if err != nil {
+		t.Fatalf("the well-formed template must instantiate: %v", err)
+	}
+	if !strings.Contains(string(out), `"value":30`) {
+		t.Fatalf("the narrowing was not applied: %s", out)
+	}
+
+	for what, tc := range map[string]struct {
+		body, want string
+		wallS      int
+	}{
+		"task_id is a literal": {
+			strings.Replace(good, `"task_id":"@task_id"`, `"task_id":"t-author"`, 1),
+			"must be the @task_id placeholder", 30,
+		},
+		"repo is a literal": {
+			strings.Replace(good, `"repo":"@repo"`, `"repo":"author-repo"`, 1),
+			"must be the @repo placeholder", 30,
+		},
+		"pinned_sha is a literal": {
+			strings.Replace(good, `"pinned_sha":"@pinned_sha"`, `"pinned_sha":"`+strings.Repeat("b", 40)+`"`, 1),
+			"must be the @pinned_sha placeholder", 30,
+		},
+		"wall_deadline_s declared twice": {
+			strings.Replace(good,
+				`"limits":[{"dimension":"wall_deadline_s","value":90}]`,
+				`"limits":[{"dimension":"wall_deadline_s","value":90},{"dimension":"wall_deadline_s","value":120}]`, 1),
+			"more than once", 30,
+		},
+		"no wall_deadline_s to narrow": {
+			strings.Replace(good,
+				`{"dimension":"wall_deadline_s","value":90}`,
+				`{"dimension":"max_file_bytes","value":1024}`, 1),
+			"declares no wall_deadline_s bound to narrow", 30,
+		},
+	} {
+		if tc.body == good {
+			t.Fatalf("%s: the patch anchor was not found — the fixture changed shape", what)
+		}
+		_, err := instantiateSpecTemplate([]byte(tc.body), "t-1", "demo", strings.Repeat("a", 40), tc.wallS)
+		if err == nil {
+			t.Errorf("%s: accepted — the caller's subject or bound would be silently discarded", what)
+			continue
+		}
+		if !errors.Is(err, ErrResolve) {
+			t.Errorf("%s: refused as %v, want a resolve refusal", what, err)
+		}
+		if !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("%s: refused for the wrong reason: %v", what, err)
+		}
+	}
+}

@@ -458,6 +458,45 @@ Recorded in `docs/development/g1-anchor-pin-sweep-2026-09-15.md`, with
 the completeness criterion stated so it can be checked rather than
 asserted: every `Anchor` field L7 enforces has a drift test.
 
+## Tier 3 — two more surfaces (closed 2026-09-15)
+
+Same unit of work as the anchor sweep: a surface with a claim attached,
+not a list of lines.
+
+**L7 static boundedness (`orchestration/workflow.go`) — 5 guards.**
+Q-L7-4 enforces "every walk terminates" entirely at load, so no walk
+needs a runtime escape hatch. `TestWorkflowLoaderFailsClosed` covered
+the event vocabulary and ONE member of the family (counter-free
+cycles); the other five had no lattice violating them. One tested
+member had been standing in for its siblings — the same shape as
+`local.go:153`, at the level of a rule family rather than a pair. Each
+case now violates exactly one rule and asserts the refusal names it.
+The sixth rule does not compile when suppressed, so it was never a
+survivor.
+
+**L9 substitution boundary (`skills/instantiate.go`) — 5 guards.**
+D-L9-5 says L9 narrows and never mints; these guard the claim that a
+substituted artifact is one the reviewed template could have produced.
+The spec-template placeholder rule is the sharpest: a template carrying
+a literal in a Class-3 subject field was reviewed with a subject already
+chosen, so instantiation keeps the template author's task, repo, or
+commit while the record attributes it to the caller. Wall-deadline
+narrowing was open from both directions — declared twice (one copy
+narrowed, one left standing) and not declared at all (the caller's
+narrowing request applied to nothing, so the task runs at the template's
+own bound while the caller believes it asked for less).
+
+One detail from the mutation run worth keeping: with the positive-cap
+guard suppressed, grant entries with zero or negative caps still refuse
+via the narrowing-completeness rule — but an entry naming **no tool at
+all**, with a consistent aggregate, was accepted outright. Partial
+mutual cover: four of five cases were caught by a neighbour and exactly
+one was not.
+
+Recorded totals for the day: 21 controls closed across Tier 1, the G1
+anchor surface, and these two; plus one found during the confirmation
+re-run (`themis-ratchet derive`).
+
 ## Disposition
 
 **Tier 1 closed 2026-09-15** — all twelve worked through, one at a time,

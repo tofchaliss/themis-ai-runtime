@@ -327,6 +327,33 @@ sensitivity inheritance (local-endpoint scope); the four
 consumption-pinned registries whose consumers live outside L7; plus
 the pre-existing layer residuals.
 
+**L8 Subagents — UNIMPLEMENTED, grill required (proposal written
+2026-09-15).** The only unimplemented layer of the eleven. Proposal at
+`openspec/changes/l8-subagents/proposal.md`: governing constraint ("a
+subagent is a delegated reasoning execution, not a delegated
+authority"), eleven prohibitions in force unless a locked decision
+lifts each by name, twenty draft grill questions, and Gate 0 criteria.
+Nothing is locked; the grill has not started and is owner-led.
+
+`src/harness/subagents/{delegation,isolation,roles,runtime}/` stay
+scaffold-only until it closes. The hazard is that "subagent" ordinarily
+implies a second orchestration authority, another runtime, another
+tool-selection mechanism, independent durable state or instructions,
+role-based authority, uncontrolled delegation, or an approval path
+around L7 — and L8 sits between the model's reasoning and the governed
+execution machinery, so a second orchestrator built there would sit in
+FRONT of L7 rather than beside it. The chain to preserve is L7 → L8 →
+model → L8 result → L7 → L4/L5/L6: L8 returns to L7 and never reaches
+L4.
+
+The approval channel and `run_command` / OPEN-2 remain SEPARATE
+decisions. They were deferred alongside L8, not merged into it; they
+may constrain its design but must not be absorbed by it.
+
+Two tracks, neither blocking the other: L8 is the next major
+architecture activity, deployment validation the next major empirical
+one.
+
 **G1 pin determinism confirmed cross-platform (2026-09-14).** At the
 same commit, `scripts/themis-status` produced byte-identical values on
 darwin/arm64 and linux/amd64 for all eleven pinned identities: both

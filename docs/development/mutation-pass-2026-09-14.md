@@ -61,7 +61,7 @@ survivor that Phase C does not cover either is genuinely unguarded.
 | ~~`orchestration/loop.go:474`~~ — verification event undeclared yet produced | L7 invariant. **Resolved 2026-09-15**: equivalent mutant; two of the three gates it rests on were untested and now are. See below. |
 | ~~`orchestration/loop.go:382`~~ — verifier-eligible call with no evaluator wired | fail-closed. **Resolved 2026-09-15**: equivalent mutant; its assembly gate was already tested. |
 | ~~`ratchet/package.go:129`~~ — criterion bytes ≠ constituent conditioning tuple | L11 binding. **Closed 2026-09-15**. See below. |
-| `verification/contract.go:249/257` — provenance completeness | "not contract-relaxable" |
+| ~~`verification/contract.go:249/257`~~ — provenance completeness | "not contract-relaxable". **Closed 2026-09-15**. See below. |
 
 ### One that deserves separate attention
 
@@ -377,6 +377,32 @@ derives (or the check refuses everything rather than substitution).
 Mutation-verified: with the binding replaced by `if false`, the
 derivation returns `resistant=true` for a comparison that regressed by
 0.52.
+
+### `verification/contract.go:249` and `:257` — mutual cover, again
+
+**CONFIRMED and CLOSED 2026-09-15.** D-L10-10 completeness is not
+contract-relaxable and two checks say so: the provenance list must have
+exactly the required length, and it must contain every required element.
+The loader-refusal table covers only the case where BOTH fire — a list
+shortened to one element — so either alone refuses it and neither is the
+control under test.
+
+One case per dimension:
+
+| Provenance declared | Fires |
+|---|---|
+| `[execution_record, raw_output, canonical_result, raw_output]` | count only |
+| `[execution_record, raw_output, invented_element]` | membership only |
+
+The second is the one that matters on its own: a contract declaring
+three elements, one invented, passes any count check and ships with
+`canonical_result` never demanded. Mutation-verified — each check falls
+to its own case and to no other.
+
+Third instance of mutual cover in this list, after `local.go:153` and
+the verification assembly gates. The pattern is now the most common
+single finding of the pass: **two adjacent guards, one test that trips
+both, and no evidence for either.**
 
 ## What this pass does not establish
 

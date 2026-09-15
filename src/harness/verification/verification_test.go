@@ -516,3 +516,53 @@ func readFile(t *testing.T, path string) string {
 	}
 	return string(b)
 }
+
+// D-L10-10 completeness is not contract-relaxable, and two separate
+// checks say so: the provenance list must have exactly the required
+// length, and it must contain every required element. The table above
+// covers only the case where BOTH fire — a list shortened to one
+// element — so either alone refuses it and neither is the control under
+// test. Both survived the 2026-09-14 mutation pass for that reason.
+//
+// Each case here moves one dimension. The membership case is the one
+// that matters on its own: a contract declaring three elements, one of
+// them invented, passes any count check and would ship with
+// canonical_result never demanded.
+func TestProvenanceCompletenessChecksAreSeparate(t *testing.T) {
+	dir := t.TempDir()
+	full := `"provenance": ["execution_record", "raw_output", "canonical_result"]`
+	for _, tc := range []struct {
+		name, provenance, want string
+	}{
+		{
+			name:       "right elements, wrong count",
+			provenance: `"provenance": ["execution_record", "raw_output", "canonical_result", "raw_output"]`,
+			want:       "completeness is not contract-relaxable",
+		},
+		{
+			name:       "right count, an element substituted",
+			provenance: `"provenance": ["execution_record", "raw_output", "invented_element"]`,
+			want:       `missing required element "canonical_result"`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			body := strings.Replace(validContract(), full, tc.provenance, 1)
+			if body == validContract() {
+				t.Fatal("the provenance line was not found — the fixture changed shape")
+			}
+			path := write(t, dir, "prov-"+strings.ReplaceAll(tc.name, " ", "-")+".json", body)
+			_, err := LoadContract(path)
+			if err == nil {
+				t.Fatal("a contract that does not demand the complete provenance set LOADED")
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("refused for the wrong reason — the other check must still hold: %v", err)
+			}
+		})
+	}
+	// Premise: the complete set loads, so these refusals are about
+	// completeness and not some unrelated defect in the fixture.
+	if _, err := LoadContract(write(t, dir, "prov-good.json", validContract())); err != nil {
+		t.Fatalf("the complete contract must load, or these refusals prove nothing: %v", err)
+	}
+}

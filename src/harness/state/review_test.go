@@ -289,8 +289,18 @@ func TestProjectionReDerivation(t *testing.T) {
 	}
 }
 
-// Security MED-LOW: BindArtifact enforces the reference rule at its
-// door; EvArtifact is primitive-owned.
+// Security MED-LOW: BindArtifact refuses a non-durable address, and
+// EvArtifact is primitive-owned.
+//
+// What this does NOT establish, despite its name: that the check in
+// BindArtifact is the one refusing. The sink applies the identical
+// predicate to the same address on the same store, with a message that
+// also says "already-durable", so every case here passes with
+// BindArtifact's own check suppressed. The enforcing rule for this path
+// is the sink's, covered by TestEventPlaneBehavior's dangling-reference
+// case; BindArtifact's is defence in depth against a future binding
+// path that does not reach the sink, and nothing reachable today can
+// distinguish the two. Recorded in the 2026-09-14 mutation pass.
 func TestBindArtifactDoor(t *testing.T) {
 	r := testRoot(t)
 	tr, _ := r.CreateTask("t-bindd", TaskOptions{})

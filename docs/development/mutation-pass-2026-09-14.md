@@ -54,7 +54,7 @@ survivor that Phase C does not cover either is genuinely unguarded.
 | ~~`orchestration/orchestrator.go:547`~~ — artifact changed between loading and durable capture | TOCTOU on the governed record. **Closed 2026-09-15**: the positive half was proven e2e, the refusal never exercised. See below. |
 | ~~`orchestration/orchestrator.go:215`~~ — supplied ceiling ≠ anchored ceiling **at Open** | G1. The C matrix covers only the SubmitTask side (C13). **Closed 2026-09-15**. See below. |
 | ~~`orchestration/orchestrator.go:372`~~ — **L7** constitution pin | C9 exercised the **L6** pin at `:369`; this is a separate line. **Closed 2026-09-15**, both pins. See below. |
-| `state/task.go:211` — a record may reference only already-durable objects | record-before-effect |
+| ~~`state/task.go:211`~~ — a record may reference only already-durable objects | record-before-effect. **Resolved 2026-09-15**: equivalent mutant; the sink enforces it and IS covered. The test naming it was overstated. See below. |
 | `execution/local.go:243` — HEAD ≠ pinned SHA post-condition | workspace could sit at the wrong commit |
 | `skills/catalog.go:193` — manifest self-declaration ≠ registration | L9 two-way identity |
 | `skills/catalog.go:85` — manifest_path traversal (`..`, absolute) | path containment |
@@ -226,6 +226,34 @@ another.
 
 Mutation-verified independently: suppressing the L7 pin fails only the
 L7 subtest, suppressing the L6 pin fails only the L6 subtest.
+
+### `state/task.go:211` — a duplicate rule, and a test that named the wrong one
+
+**RESOLVED 2026-09-15.** Equivalent mutant. `BindArtifact` checks
+`store.HasObject(addr)` before appending, and the sink applies the
+*identical* predicate to the same address on the same store
+(`sink.go:102`) when the event's reference is validated. Every
+`BindArtifact` call passes its address as that reference, so nothing
+reachable today can distinguish the two checks: with `BindArtifact`'s
+suppressed, the refusal still happens, still before anything is
+recorded, still as `ErrStream`, with a message that also contains
+"already-durable".
+
+The enforcing rule is the sink's, and it is properly covered —
+suppressing `sink.go:102` fails `TestEventPlaneBehavior`'s
+dangling-reference case. `BindArtifact`'s is defence in depth against a
+future binding path that does not reach the sink; like `:763`, that is a
+guard a test cannot pre-empt, and removing a security-review-mandated
+duplicate is not a call to make from a mutation result.
+
+What was wrong here was the *test's claim*. `TestBindArtifactDoor` is
+named for the door and asserts only outcomes the sink produces, so it
+reads as evidence for a control it never exercises. Comment corrected to
+say what it establishes and what it does not.
+
+Fourth instance of one guard standing in for another, after the L10
+tamper test, Phase C row C15, and `local.go:153` — and the first where
+the redundancy is exact rather than accidental.
 
 ## What this pass does not establish
 

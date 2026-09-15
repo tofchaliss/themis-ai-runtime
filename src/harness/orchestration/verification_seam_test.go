@@ -472,6 +472,41 @@ func TestAnchoredOpen(t *testing.T) {
 			t.Fatalf("refused for the wrong reason: %v", err)
 		}
 	})
+	// The compiled control vocabularies. Phase C row C9 exercises the
+	// L6 pin; the L7 pin is a separate line and was exercised by
+	// nothing. Both are pinned here, and each subtest moves ONLY its
+	// own hash — a mutate that broke both would pass against either
+	// guard alone and prove neither.
+	t.Run("L7 constitution drift refuses Open", func(t *testing.T) {
+		p, sha, reg, pinned := anchorWorld(t, func(m map[string]any) {
+			m["constitution"] = map[string]any{
+				"state":         state.ConstitutionHash(),
+				"orchestration": strings.Repeat("7c", 32),
+			}
+		})
+		_, _, err := Open(anchoredConfig(t, t.TempDir(), p, sha, reg, pinned))
+		if err == nil {
+			t.Fatal("a binary whose L7 constitution differs opened under an anchor that pinned the old one")
+		}
+		if !strings.Contains(err.Error(), "L7 constitution is not the anchored one") {
+			t.Fatalf("refused for the wrong reason: %v", err)
+		}
+	})
+	t.Run("L6 constitution drift refuses Open", func(t *testing.T) {
+		p, sha, reg, pinned := anchorWorld(t, func(m map[string]any) {
+			m["constitution"] = map[string]any{
+				"state":         strings.Repeat("6c", 32),
+				"orchestration": ConstitutionHash(),
+			}
+		})
+		_, _, err := Open(anchoredConfig(t, t.TempDir(), p, sha, reg, pinned))
+		if err == nil {
+			t.Fatal("a binary whose L6 constitution differs opened under an anchor that pinned the old one")
+		}
+		if !strings.Contains(err.Error(), "L6 constitution is not the anchored one") {
+			t.Fatalf("refused for the wrong reason: %v", err)
+		}
+	})
 	t.Run("anchored deployment requires the themis root configured", func(t *testing.T) {
 		p, sha, reg, pCeiling := anchorWorld(t, nil)
 		cfg := anchoredConfig(t, t.TempDir(), p, sha, reg, pCeiling)

@@ -53,7 +53,7 @@ survivor that Phase C does not cover either is genuinely unguarded.
 | ~~`orchestration/orchestrator.go:763`~~ — grant digest changed between attribution and execution | TOCTOU on authority itself. **Resolved 2026-09-15**: equivalent mutant, but its premise was not — the digest omitted `ThemisScope`. See below. |
 | ~~`orchestration/orchestrator.go:547`~~ — artifact changed between loading and durable capture | TOCTOU on the governed record. **Closed 2026-09-15**: the positive half was proven e2e, the refusal never exercised. See below. |
 | ~~`orchestration/orchestrator.go:215`~~ — supplied ceiling ≠ anchored ceiling **at Open** | G1. The C matrix covers only the SubmitTask side (C13). **Closed 2026-09-15**. See below. |
-| `orchestration/orchestrator.go:372` — **L7** constitution pin | C9 exercised the **L6** pin at `:369`; this is a separate line |
+| ~~`orchestration/orchestrator.go:372`~~ — **L7** constitution pin | C9 exercised the **L6** pin at `:369`; this is a separate line. **Closed 2026-09-15**, both pins. See below. |
 | `state/task.go:211` — a record may reference only already-durable objects | record-before-effect |
 | `execution/local.go:243` — HEAD ≠ pinned SHA post-condition | workspace could sit at the wrong commit |
 | `skills/catalog.go:193` — manifest self-declaration ≠ registration | L9 two-way identity |
@@ -207,6 +207,25 @@ subtest would pass anyway — the Phase C row C15 failure mode exactly.
 
 Mutation-verified: with the pin replaced by `if false`, the deployment
 opens and the subtest fails.
+
+### `orchestrator.go:372` — the L7 constitution pin
+
+**CONFIRMED and CLOSED 2026-09-15.** Two adjacent guards refuse a binary
+whose compiled control vocabulary differs from the one its anchor
+pinned. Phase C row C9 exercises the L6 pin at `:369`; the L7 pin one
+line down was exercised by nothing, so a rebuilt binary with a changed
+L7 constitution could have opened under an anchor that pinned the old
+one — which is exactly owner finding 4's question ("can changing this
+artifact change the behavior or authority of an anchored deployment?")
+answered wrongly.
+
+Both pins now have a subtest, and each moves ONLY its own hash. A single
+subtest doctoring both would pass against either guard alone and prove
+neither — the same trap as `local.go:153`, where one guard stood in for
+another.
+
+Mutation-verified independently: suppressing the L7 pin fails only the
+L7 subtest, suppressing the L6 pin fails only the L6 subtest.
 
 ## What this pass does not establish
 

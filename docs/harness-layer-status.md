@@ -283,15 +283,34 @@ survived**. Decomposed: 191 I/O error propagation, 60 schema validation,
 shortlist of twelve — including two TOCTOU guards, the Open-side G1
 ceiling check, the L7 constitution pin, and L9 two-way identity — is
 recorded with dispositions in
-`docs/development/mutation-pass-2026-09-14.md`. **Open: which deserve
-tests is an owner judgement.** One item is already CLOSED:
-`execution/local.go:153`, the endpoint-refusal guard, where
-`TestEndpointRefusal` was cited as evidence by the L5 traceability yet
-never exercised that line — its second check caught every test case
-first. Closed by adding the two cases only the first check can catch
-(`/abs/path::evil` names a git remote helper); mutation-verified. Third
-instance that day of a passing test standing in for a control that never
-fired.
+`docs/development/mutation-pass-2026-09-14.md`.
+
+**Tier 1 CLOSED 2026-09-15** — all twelve worked through individually,
+each mutation-verified in a disposable worktree. Seven were real
+coverage gaps now pinned by tests (endpoint refusal, the durable-capture
+TOCTOU, the Open-side G1 ceiling pin, both constitution pins, the
+HEAD-at-pin post-condition, L9 two-way identity and manifest_path
+containment, the L11 criterion binding, provenance completeness). Five
+were equivalent mutants — and **two of those rested on a premise that
+was wrong**: `grantAuthorityDigest` omitted `GrantEntry.ThemisScope`, so
+two grants with materially different themis-id authority recorded an
+identical `grant_authority` (fixed); and `loop.go:474`'s "unreachable
+when assembly held" rested on two assembly gates nothing tested (now
+tested).
+
+Three findings could not have come from reading. The `ThemisScope`
+omission was a defect in a shipping control. **Mutual cover** — two
+adjacent guards with one test tripping both, green and evidencing
+neither half — accounted for three of the twelve. And the Tier-1
+ranking was itself incomplete: the two gates beneath `loop.go:474` were
+not on the list, they were the premise of an item that was.
+
+The rule this earned: an equivalent mutant is not a closed question.
+Ask "unreachable because of what, and is that tested?"
+
+The ~190 error-propagation survivors remain a recorded coverage map,
+deliberately untriaged. Remaining open: which of those deserve tests is
+an owner judgement.
 
 **L5 evidence correction (2026-09-14):** the Linux failure exposed an
 overstated traceability row, not a control defect — the archived

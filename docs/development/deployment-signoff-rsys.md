@@ -574,3 +574,150 @@ the reproduction recipes.
   only by Governance act.
 - Nothing here re-establishes the architecture, and nothing here is a
   new deployment. `rsys@2` is unchanged and remains ACTIVE.
+
+---
+
+## Addendum E — Model selection, `rsys@3`, and the anchored-skill finding (2026-09-15)
+
+Appended per Addendum A's rule. Addendum B left model selection **open**
+with neither candidate suitable, and recorded the criteria for the next
+one: B001, B002, B008, B009 — recall, both fabrication benchmarks, and
+output shape — rather than the average, which had ranked the worse CVE
+model first.
+
+### The third candidate
+
+`gpt-oss:20b`, present on the host and never measured. 19 of 20
+benchmarks; B005 excluded, see below.
+
+| | qwen2.5:7b | cyberpal20b-v3 | **gpt-oss:20b** |
+|---|---:|---:|---:|
+| B001 Known CVE Recall | 83% | 16% | **83%** |
+| B002 Unknown CVE *(no fabrication)* | 0% | 0% | **0%** |
+| B008 Structured JSON Output | 66% | 100% | **100%** |
+| B009 Hallucination Resistance | 0% | 0% | **50%** |
+| B010 Prompt Injection Resistance | 66% | **100%** | 66% |
+| Average | 73% | 77% | **80%** ⁽¹⁹⁾ |
+
+Two results matter more than the average.
+
+**Fabrication resistance moved off zero for the first time.** Addendum B
+recorded that "a security-tuned, grounded-CoT model is exactly as
+willing to invent a CVE as a general one", true while both candidates
+sat at 0% on B009. `gpt-oss:20b` scores 50%. B002 remains 0% for all
+three: every candidate still invents CVEs when asked about unknown ones.
+
+**Addendum B's own hypothesis is confirmed.** `cyberpal20b-v3` is an
+IQ4_XS re-quantisation of a `gpt-oss` fine-tune, and Addendum B argued
+the fair statement was "this packaging is unusable for CVE work", not
+"CyberPal 2.0 is a poor model" — and that testing it properly would need
+higher-precision weights. This is that test. Recall went **16% → 83%**
+while the reasoning gains held. The quantisation explanation was right.
+
+**Latency is not the discriminator it appears to be.** `gpt-oss:20b`
+averages 44.6 s per benchmark against cyberpal's 23.2 s, but at
+**25.60 TPS against 21.83** — 17% *faster* per token. The gap is output
+volume (~1042 tokens per benchmark against ~500), because it runs a
+reasoning channel. Verbosity is tunable; cyberpal's 16% recall is a
+property of the weights.
+
+**B005 is excluded, and why matters.** `gpt-oss:20b` entered a repetition
+loop, spending 3911 tokens in the reasoning channel repeating one
+sentence, hit `done_reason: length`, and emitted an empty answer. The
+80% average therefore omits its worst behaviour. Deterministic at
+temperature 0, seed 42.
+
+Two harness defects surfaced while reading that result, both fixed
+(`99ca127`, `564a3ed`): the evaluator misreported an empty-answer
+envelope as `done=false; re-run the benchmark` — false in all three
+claims — and the report rendered `Average Score: 0%` for a run that had
+never been validated, which is the opposite conclusion from the one the
+evidence supported.
+
+### Governance act: `rsys@3`
+
+Allowlist widened to `["qwen2.5:7b", "gpt-oss:20b", "cyberpal20b-v3"]` —
+all three, because **admitting is not selecting**: the envelope chooses
+per task, so the same workflow can be run under each and compared on the
+governed task rather than on benchmark scores.
+
+Pins computed in-session per runbook Step 7 ("do not script this into an
+unreviewed tool"); the transcript is the evidence. All twelve carried
+pins matched what `themis-status` recomputed from the current tree —
+a second confirmation of Addendum D's S1. Derivation differed from
+`rsys@2` in exactly two fields, `deployment_version` and `models`.
+
+Gates, in order: parse-verify derived `b5f551ab…` independently;
+admission **refused** before the act —
+
+> *"a matching hash is an identifier, never an admission claim"*
+
+— then after the act returned `<nil>`, with a four-entry readback
+confirming `local-dev@1` and `rsys@1` untouched. `rsys@2` withdrawn;
+`active → withdrawn` is one-way and was chosen deliberately.
+
+### Three live runs, and where they stopped
+
+| Run | Model | Result | Stopped by |
+|---|---|---|---|
+| `rsys-gpt-1` | gpt-oss:20b | FAILED, 277 s | `REMEDIATE/turns-exhausted`, after `report-valid@1` FAIL |
+| `rsys-gpt-2` | gpt-oss:20b | FAILED, 91 s | `ANALYZE/turns-exhausted`, never declared phase completion |
+| `rsys-gpt-3` | gpt-oss:20b | **refused at submission**, exit 1 | anchored-skill admission defect |
+
+**Run 1 is the substantive capability evidence.** The model explored the
+workspace over six turns, declared phase completion, transitioned
+`ANALYZE → REMEDIATE`, wrote files, and **called `verify_report`** —
+reaching the L10 gate, which no live model had done. F-9 recorded
+`qwen2.5:7b` calling `declare_done` on turn 1 and never writing
+anything.
+
+Its report was rejected by `report-valid@1` as `report_invalid`, and the
+reason is instructive: the **substance was correct** — right CVE, right
+package, right fix version, real `go_mod_before`/`go_mod_after` — but
+the contract requires three flat top-level **strings**, and the model
+produced nested objects with `remediation` inside `finding`. A model
+scoring 100% on structured JSON was penalised for producing richer
+structure than the contract accepts.
+
+Every control fired correctly across both runs: `write_file` denied in
+ANALYZE (phase capability), `read_file` on a directory (execution
+error), `report-valid@1` FAIL (L10 gate), `write_file` quota exhausted
+(grant cap), `search_code` denied as *"confinement: path escapes the
+confinement root"* (L5), and typed `turns-exhausted` terminals (L7).
+Nothing leaked.
+
+### Run 3, and the finding
+
+Runs 1 and 2 failed at exactly the two points that
+`remediate-dependency@1`'s **governed procedure** addresses — "non-empty
+strings" for the report, and "when the picture is clear, declare
+completion of this phase". We had been hand-writing a worse version of a
+governed artifact that already exists.
+
+Instantiating the skill properly produced a valid envelope that L7
+**refused at submission**: the anchored-skill admission check compares
+the registered manifest identity against the instantiated composition
+seal, two different identity domains, and can succeed for no input.
+Recorded in
+[`finding-anchored-skill-admission-2026-09-15.md`](finding-anchored-skill-admission-2026-09-15.md)
+and GitHub issue #1. Not fixed — the correspondence between registered
+skill identity and instantiated composition identity is an owner
+decision.
+
+### What Addendum E establishes, and what it does not
+
+**Changed:** the live-COMPLETED gap is no longer "unknown whether a model
+can drive the governed workflow". Run 1 demonstrates useful
+workflow-driving capability, and the current blocker is the skill
+admission defect preventing the governed procedure from being used.
+
+**Not established:** that `gpt-oss:20b` can complete the governed task
+end to end. Run 1 shows it drives the workflow far enough to make
+genuine workflow mistakes. That is capability evidence and nothing more.
+
+**Not established:** a model selection. Three candidates are now
+admitted to `rsys@3`; none is selected, and selection remains per-task
+in the envelope.
+
+**Unchanged:** `rsys@3` is correctly configured and ACTIVE. The run-3
+refusal is not a deployment defect.

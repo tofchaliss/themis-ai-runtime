@@ -56,8 +56,8 @@ survivor that Phase C does not cover either is genuinely unguarded.
 | ~~`orchestration/orchestrator.go:372`~~ — **L7** constitution pin | C9 exercised the **L6** pin at `:369`; this is a separate line. **Closed 2026-09-15**, both pins. See below. |
 | ~~`state/task.go:211`~~ — a record may reference only already-durable objects | record-before-effect. **Resolved 2026-09-15**: equivalent mutant; the sink enforces it and IS covered. The test naming it was overstated. See below. |
 | ~~`execution/local.go:243`~~ — HEAD ≠ pinned SHA post-condition | workspace could sit at the wrong commit. **Closed 2026-09-15**. See below. |
-| `skills/catalog.go:193` — manifest self-declaration ≠ registration | L9 two-way identity |
-| `skills/catalog.go:85` — manifest_path traversal (`..`, absolute) | path containment |
+| ~~`skills/catalog.go:193`~~ — manifest self-declaration ≠ registration | L9 two-way identity. **Closed 2026-09-15**. See below. |
+| ~~`skills/catalog.go:85`~~ — manifest_path traversal (`..`, absolute) | path containment. **Closed 2026-09-15**. See below. |
 | `orchestration/loop.go:474` — verification event undeclared yet produced | L7 invariant |
 | `orchestration/loop.go:382` — verifier-eligible call with no evaluator wired | fail-closed |
 | `ratchet/package.go:129` — criterion bytes ≠ constituent conditioning tuple | L11 binding |
@@ -280,6 +280,35 @@ provision tears down to `StateDestroyed` with its trace.
 
 Mutation-verified: with the post-condition replaced by `if false`,
 provisioning returns success with HEAD not at the pinned string.
+
+### `skills/catalog.go:193` and `:85` — the L9 catalog boundary
+
+**CONFIRMED and CLOSED 2026-09-15.** Both are reachable, both were
+unexercised, and both now fail without their guard.
+
+**`:193` — two-way identity.** `TestCompositionHashMismatchRefused`
+covers the hash check one line above, which is why this looked covered.
+It is not the same control and cannot substitute: `CompositionHash` is
+`json:"-"` and DERIVED from the manifest bytes, so a doctored manifest
+registered under *its own true hash* satisfies the hash check
+completely. The attack it leaves open is registering one skill's bundle
+under another's identity — every hash in the chain verifies, and a
+caller asking for `investigate-cve@1` runs the other composition under
+`investigate-cve@1`'s attribution. `TestManifestSelfDeclarationMustMatch
+Registration` doctors the name and the version independently and
+asserts the refusal names the two-way check, so a failure of the hash
+check would not be mistaken for a pass.
+
+**`:85` — manifest_path containment.** The catalog root bounds every
+manifest it registers; `manifest_path` is resolved against it, so an
+absolute path or one climbing out points the registration at any file on
+the host, and every pin, template, and procedure then resolves against
+the attacker's directory. Refused at LOAD, before any entry resolves — a
+catalog containing such a row is not a catalog with one bad entry.
+`TestCatalogRefusesManifestPathOutsideRoot` covers absolute, leading,
+embedded, and trailing traversal plus empty; mutation-verified, all five
+load with the guard suppressed. It also asserts its premise — the same
+catalog with an in-root path loads.
 
 ## What this pass does not establish
 

@@ -423,3 +423,96 @@ func readFileT(t *testing.T, p string) string {
 	}
 	return string(b)
 }
+
+// L9 two-way identity: the registration names an identity, the manifest
+// names itself, and both must agree. The composition hash alone cannot
+// establish this — it is DERIVED from the manifest bytes, so a doctored
+// manifest registered under its own true hash satisfies the hash check
+// completely. Only the self-declaration comparison catches a bundle
+// registered under someone else's name.
+//
+// That is the whole attack: register `evil-skill@1`'s bundle as
+// `investigate-cve@1`, set composition_sha256 to the doctored manifest's
+// real hash, and every hash in the chain verifies. Without this check,
+// callers asking for investigate-cve@1 would run the other skill's
+// composition under investigate-cve@1's attribution.
+func TestManifestSelfDeclarationMustMatchRegistration(t *testing.T) {
+	for what, doctor := range map[string]func(string) string{
+		"a different skill name": func(m string) string {
+			return strings.Replace(m, `"name":"investigate-cve"`, `"name":"evil-skill"`, 1)
+		},
+		"a different skill version": func(m string) string {
+			return strings.Replace(m, `"skill_version":1`, `"skill_version":7`, 1)
+		},
+	} {
+		b := newBundle(t)
+		man := doctor(readFileT(t, filepath.Join(b.dir, "skill.json")))
+		write(t, b.dir, "doctored.json", man)
+		// Registered under the ORIGINAL identity, with the doctored
+		// manifest's own true hash — so the composition-hash check at
+		// the line above cannot be what refuses.
+		cat := fmt.Sprintf(`{"version":1,"entries":[
+		 {"name":"investigate-cve","version":1,"composition_sha256":%q,"manifest_path":"bundle/doctored.json","state":"active"}]}`,
+			sha([]byte(man)))
+		p := write(t, b.catalogDir, "swapped.json", cat)
+		c, err := LoadCatalog(p)
+		if err != nil {
+			t.Fatalf("%s: the doctored catalog must LOAD, or the resolve-time check is not what refuses: %v", what, err)
+		}
+		_, _, err = c.Resolve("investigate-cve@1")
+		if err == nil {
+			t.Errorf("%s: a bundle registered under another identity RESOLVED — callers would run it under the registered attribution", what)
+			continue
+		}
+		if !errors.Is(err, ErrResolve) {
+			t.Errorf("%s: refused as %v, want a resolve refusal", what, err)
+		}
+		if !strings.Contains(err.Error(), "two-way identity") {
+			t.Errorf("%s: refused for the wrong reason — the composition hash must have matched: %v", what, err)
+		}
+	}
+}
+
+// The catalog root is the containment boundary for every manifest it
+// registers. manifest_path is resolved against it, so an absolute path
+// or one climbing out would let a registration point at any file on the
+// host — and everything downstream (pins, procedure, templates) then
+// resolves against the attacker's directory instead.
+//
+// This is refused at LOAD, before any entry is resolved: a catalog
+// containing such an entry is not a catalog with one bad row, it is a
+// catalog that cannot be trusted to bound anything.
+func TestCatalogRefusesManifestPathOutsideRoot(t *testing.T) {
+	b := newBundle(t)
+	for what, mp := range map[string]string{
+		"absolute path":        "/etc/passwd",
+		"parent traversal":     "../outside/skill.json",
+		"embedded traversal":   "bundle/../../outside/skill.json",
+		"traversal at the end": "bundle/..",
+		"empty":                "",
+	} {
+		cat := fmt.Sprintf(`{"version":1,"entries":[
+		 {"name":"investigate-cve","version":1,"composition_sha256":%q,"manifest_path":%q,"state":"active"}]}`,
+			b.composition, mp)
+		p := write(t, b.catalogDir, "escape.json", cat)
+		_, err := LoadCatalog(p)
+		if err == nil {
+			t.Errorf("%s (%q): a catalog registering a manifest outside its own root LOADED", what, mp)
+			continue
+		}
+		if !errors.Is(err, ErrCatalog) {
+			t.Errorf("%s: refused as %v, want a catalog refusal", what, err)
+		}
+		if !strings.Contains(err.Error(), "relative within the catalog root") {
+			t.Errorf("%s: refused for the wrong reason: %v", what, err)
+		}
+	}
+	// Premise: the same catalog with an in-root path loads, so
+	// containment is what refuses above and not some unrelated defect.
+	good := fmt.Sprintf(`{"version":1,"entries":[
+	 {"name":"investigate-cve","version":1,"composition_sha256":%q,"manifest_path":"bundle/skill.json","state":"active"}]}`,
+		b.composition)
+	if _, err := LoadCatalog(write(t, b.catalogDir, "good.json", good)); err != nil {
+		t.Fatalf("the in-root catalog must load, or these refusals prove nothing: %v", err)
+	}
+}

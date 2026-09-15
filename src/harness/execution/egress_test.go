@@ -567,3 +567,124 @@ func TestNoPushStructuralProof(t *testing.T) {
 		}
 	}
 }
+
+// M2/M3 security review LOW: the egress read runs ONLY in EGRESSING,
+// "asserted by mechanism, not by the current call graph". That phrasing
+// is the whole point — today every caller happens to seal first, so the
+// guard is unreachable through the public surface and survived the
+// mutation pass. It exists so a future caller that forgets cannot read
+// a workspace still being written to, and a manifest built over a
+// moving tree would describe something that never existed at any
+// instant.
+//
+// Reached directly, which is the only way. A REAL provisioned
+// environment is used rather than a bare literal so that suppressing
+// the guard fails this test by its assertion — a manifest actually
+// built outside EGRESSING — instead of by a nil-pointer panic from an
+// under-constructed fixture. A crash is a kill, but it is not the thing
+// being claimed.
+func TestManifestBuildRefusedOutsideEgressing(t *testing.T) {
+	env, ceiling, spec, _ := provisioned(t)
+	defer env.Teardown()
+	if env.State() == StateEgressing {
+		t.Fatal("fixture precondition: a freshly provisioned env must not be EGRESSING")
+	}
+	_, err := env.buildManifest(ceiling, spec)
+	if err == nil {
+		t.Fatalf("state %s: a manifest was built outside EGRESSING — over a workspace that may still be moving", env.State())
+	}
+	if !errors.Is(err, ErrEgress) {
+		t.Errorf("refused as %v, want an egress refusal", err)
+	}
+	if !strings.Contains(err.Error(), "manifest build refused in state") {
+		t.Errorf("refused for the wrong reason: %v", err)
+	}
+
+	// Every other non-egressing state refuses too, and the check
+	// precedes any dereference of its arguments — nil is safe here
+	// precisely because nothing has been touched yet.
+	for _, st := range []State{StateProvisioning, StateSealed, StateDestroyed} {
+		e := &Env{state: st}
+		if _, nerr := e.buildManifest(nil, nil); nerr == nil {
+			t.Errorf("state %s: a manifest was built outside EGRESSING", st)
+		} else if !strings.Contains(nerr.Error(), "manifest build refused in state") {
+			t.Errorf("state %s: refused for the wrong reason: %v", st, nerr)
+		}
+	}
+}
+
+// pinnedBlobHash asks what a path's content WAS at the pinned commit,
+// which is how egress tells a modification from a creation. It is
+// called for every renamed, deleted and modified entry — never for an
+// added one, because an added path has no pinned content by definition.
+//
+// The shape guard covers both ways `ls-tree HEAD -- <path>` can fail to
+// name a blob, and they are different faults:
+//
+//   - fewer than three fields: the path is not in HEAD at all. Without
+//     the guard this indexes fields[2] on a short slice and PANICS —
+//     a crash mid-egress, with the environment neither sealed nor torn
+//     down.
+//   - a non-blob entry: the path is a tree (a directory) or a commit
+//     (a submodule). fields[2] is then a tree or commit id, and
+//     `cat-file blob` on it would hash the wrong kind of object or fail
+//     with a git-shaped message instead of a typed egress refusal.
+func TestPinnedBlobHashRefusesNonBlob(t *testing.T) {
+	env, _, _, _ := provisioned(t)
+	defer env.Teardown()
+	root := env.Trace().Workspace.Root
+
+	// Premise: a real tracked file DOES resolve, so the refusals below
+	// are about the path's kind and not a broken invocation.
+	var tracked string
+	for _, cand := range []string{"go.mod", "README.md", "main.go"} {
+		if _, err := os.Stat(filepath.Join(root, cand)); err == nil {
+			tracked = cand
+			break
+		}
+	}
+	if tracked == "" {
+		t.Skip("fixture mirror has none of the expected tracked files")
+	}
+	if h, err := env.pinnedBlobHash(root, tracked); err != nil || h == "" {
+		t.Fatalf("a tracked file must resolve to its pinned blob: %q %v", h, err)
+	}
+
+	// Not in HEAD at all — the short-slice case that would otherwise
+	// panic.
+	_, err := env.pinnedBlobHash(root, "never-committed-file.txt")
+	if err == nil {
+		t.Error("a path absent from HEAD reported a pinned blob")
+	} else {
+		if !errors.Is(err, ErrEgress) {
+			t.Errorf("absent path: refused as %v, want an egress refusal", err)
+		}
+		if !strings.Contains(err.Error(), "no pinned blob") {
+			t.Errorf("absent path: refused for the wrong reason: %v", err)
+		}
+	}
+
+	// A directory: ls-tree names it, but as a tree rather than a blob.
+	dir := filepath.Join(root, "subdir")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "f.txt"), []byte("x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git := gitBin(t)
+	for _, args := range [][]string{{"add", "subdir"}, {"-c", "user.name=t", "-c", "user.email=t@t", "commit", "-m", "subdir"}} {
+		cmd := exec.Command(git, args...)
+		cmd.Dir = root
+		cmd.Env = append(os.Environ(), "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null")
+		if out, cerr := cmd.CombinedOutput(); cerr != nil {
+			t.Skipf("could not commit a subdirectory in the fixture: %v\n%s", cerr, out)
+		}
+	}
+	_, err = env.pinnedBlobHash(root, "subdir")
+	if err == nil {
+		t.Error("a directory reported a pinned BLOB — cat-file would have hashed a tree")
+	} else if !strings.Contains(err.Error(), "no pinned blob") {
+		t.Errorf("directory: refused for the wrong reason: %v", err)
+	}
+}

@@ -584,9 +584,47 @@ it claimed to check. Given a real provider, it now fails with
 refused. Same principle as everything else here: the check must
 establish what its message says.
 
-Remaining on this surface, not taken: `egress.go:162` (egress permitted
-only from the egressing state) and `:291` (`cat-file` output shape).
-Those belong to egress discipline rather than the environment floor.
+### Egress discipline — the same surface's other half (closed 2026-09-15)
+
+**`egress.go:162` — the manifest read runs ONLY in EGRESSING.** Its own
+comment says "asserted by mechanism, not by the current call graph",
+which is exactly why it survived: every caller today seals first, so the
+guard is unreachable through the public surface. It exists so a future
+caller that forgets cannot read a workspace still being written to — a
+manifest built over a moving tree describes something that never existed
+at any instant. Reached directly, the only way it can be.
+
+**`egress.go:291` — `ls-tree` must name a blob.** `pinnedBlobHash` asks
+what a path's content WAS at the pinned commit, which is how egress
+tells a modification from a creation; it runs for every renamed,
+deleted and modified entry and never for an added one. Two distinct
+faults share the guard: fewer than three fields means the path is not in
+HEAD at all, and a non-blob entry means it is a tree (a directory) or a
+commit (a submodule). Both are covered.
+
+The first is not merely a wrong answer. Mutation-verified, suppressing
+it produces `index out of range [2] with length 0` — **a panic mid-egress,
+with the environment neither sealed nor torn down.** The guard is what
+turns a crash into a typed refusal.
+
+### A standard applied to the tests themselves
+
+Three mutants in this L5 work initially killed by PANIC rather than by
+the assertion the test claimed to make — twice from under-constructed
+`Env` literals (no provider, nil arguments), once legitimately. The
+distinction matters and was fixed in the first two cases:
+
+- **The fixture's fault:** an `Env` with no provider, or `buildManifest`
+  given nil arguments, crashes for reasons unrelated to the control. The
+  test failed, but not by what it claimed to check. Given a real
+  provider and a real provisioned environment, they now fail with
+  "timeout after 0s" and "a manifest was built outside EGRESSING".
+- **The control's point:** `pinnedBlobHash`'s short-slice panic IS the
+  production behaviour the guard prevents. Killing by panic there is
+  the finding, not an artifact.
+
+A test that fails for the wrong reason is the same defect as a guard
+that refuses for the wrong reason. Both were in scope today.
 
 ## Disposition
 

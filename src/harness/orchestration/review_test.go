@@ -619,3 +619,69 @@ func TestGrantAuthorityDigestCoversEveryAuthorityField(t *testing.T) {
 		t.Error("one prefix containing the separator digests as two separate prefixes — the encoding is ambiguous")
 	}
 }
+
+// Final security review H-2, negative half. The positive — stored bytes
+// equal loaded bytes on the wired paths — is proven end-to-end by
+// TestDurableBytesMustMatchWhatWasLoaded. What that test cannot show is
+// what happens when they differ, because producing the divergence needs
+// a write landing between two reads inside one SubmitTask call.
+//
+// The divergence is what the control exists for: an artifact rewritten
+// after its loader hashed it and before L7 captures it for durable
+// storage would give a record claiming durability over bytes that never
+// executed. It must refuse, as an invariant violation — not as an
+// assembly fault, which would read as the submitter's mistake.
+func TestCaptureVerifiedRefusesArtifactChangedAfterLoad(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "workflow.json")
+	loaded := []byte(`{"version":1,"workflow":"analyze-verify"}`)
+	if err := os.WriteFile(path, loaded, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	loaderHash := hashBytes(loaded)
+
+	// Unchanged: the loaded bytes come back verbatim.
+	body, err := captureVerified("workflow", path, loaderHash)
+	if err != nil {
+		t.Fatalf("unchanged artifact must capture: %v", err)
+	}
+	if string(body) != string(loaded) {
+		t.Fatalf("captured bytes are not the loaded bytes: %q", body)
+	}
+
+	// Changed after the load — including a change that preserves length,
+	// which no size or mtime check would catch.
+	for what, after := range map[string][]byte{
+		"content replaced":  []byte(`{"version":1,"workflow":"other-lattice"}`),
+		"one byte flipped":  []byte(`{"version":1,"workflow":"analyze-verifY"}`),
+		"truncated to zero": {},
+	} {
+		if err := os.WriteFile(path, after, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := captureVerified("workflow", path, loaderHash)
+		if err == nil {
+			t.Errorf("%s: an artifact that changed after loading was CAPTURED — the record would name bytes that never executed", what)
+			continue
+		}
+		if !errors.Is(err, ErrInvariant) {
+			t.Errorf("%s: refused as %v, but a post-load change is an invariant violation, not a submitter fault", what, err)
+		}
+		if !strings.Contains(err.Error(), "changed between loading and durable capture") {
+			t.Errorf("%s: refused for the wrong reason: %v", what, err)
+		}
+	}
+
+	// A vanished artifact is an assembly fault, not an invariant
+	// violation: nothing has been misrepresented, the read simply failed.
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	_, err = captureVerified("workflow", path, loaderHash)
+	if err == nil {
+		t.Fatal("a missing artifact was captured")
+	}
+	if !errors.Is(err, ErrAssembly) {
+		t.Errorf("a missing artifact must refuse as an assembly fault, got %v", err)
+	}
+}

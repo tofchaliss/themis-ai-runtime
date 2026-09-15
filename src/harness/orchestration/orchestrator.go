@@ -536,16 +536,9 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 		{"context_contract", env.ContextContractPath, contract.Hash},
 		{"spec", env.SpecPath, spec.Hash},
 	} {
-		body, rerr := os.ReadFile(m.path)
+		body, rerr := captureVerified(m.label, m.path, m.loaderHash)
 		if rerr != nil {
-			return res, fmt.Errorf("%w: %s: %v", ErrAssembly, m.label, rerr)
-		}
-		// The bytes stored as reconstruction evidence must be the bytes
-		// that were loaded, verified, and executed. If the artifact
-		// changed between the loader's read and this one, the record
-		// would misrepresent what ran.
-		if hashBytes(body) != m.loaderHash {
-			return res, fmt.Errorf("%w: %s changed between loading and durable capture", ErrInvariant, m.label)
+			return res, rerr
 		}
 		materialized[m.label] = body
 	}
@@ -985,6 +978,31 @@ func instantiateGrant(raw []byte, wsRoot, stagingRoot string) (*tools.Grant, str
 		return nil, "", err
 	}
 	return g, path, nil
+}
+
+// captureVerified reads the bytes to store as reconstruction evidence
+// and PROVES they are the bytes the loader hashed. If the artifact
+// changed between the loader's read and this one, the record would
+// claim durability over bytes that never executed — identity over A
+// with durability over B, the TOCTOU shape R-L9-2 forbids (final
+// security review H-2).
+//
+// It is a function rather than inline code so the refusal is reachable
+// on its own: the mismatch cannot be produced end-to-end without a
+// second process writing between two reads inside one call, and a
+// production seam admitting that write would be a worse trade than
+// testing the control directly. The positive half — that the stored
+// bytes really are the loaded ones on the wired paths — is established
+// end-to-end by TestDurableBytesMustMatchWhatWasLoaded.
+func captureVerified(label, path, loaderHash string) ([]byte, error) {
+	body, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", ErrAssembly, label, err)
+	}
+	if hashBytes(body) != loaderHash {
+		return nil, fmt.Errorf("%w: %s changed between loading and durable capture", ErrInvariant, label)
+	}
+	return body, nil
 }
 
 // grantAuthorityDigest hashes exactly what a grant PERMITS — tools,

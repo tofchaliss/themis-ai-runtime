@@ -51,7 +51,7 @@ survivor that Phase C does not cover either is genuinely unguarded.
 | Control | Exposure |
 |---|---|
 | ~~`orchestration/orchestrator.go:763`~~ — grant digest changed between attribution and execution | TOCTOU on authority itself. **Resolved 2026-09-15**: equivalent mutant, but its premise was not — the digest omitted `ThemisScope`. See below. |
-| `orchestration/orchestrator.go:547` — artifact changed between loading and durable capture | TOCTOU on the governed record |
+| ~~`orchestration/orchestrator.go:547`~~ — artifact changed between loading and durable capture | TOCTOU on the governed record. **Closed 2026-09-15**: the positive half was proven e2e, the refusal never exercised. See below. |
 | `orchestration/orchestrator.go:215` — supplied ceiling ≠ anchored ceiling **at Open** | G1. The C matrix covers only the SubmitTask side (C13) |
 | `orchestration/orchestrator.go:372` — **L7** constitution pin | C9 exercised the **L6** pin at `:369`; this is a separate line |
 | `state/task.go:211` — a record may reference only already-durable objects | record-before-effect |
@@ -151,6 +151,38 @@ The pattern from `local.go:153` repeats with a twist: there, a passing
 test stood in for a control that never fired. Here, an *unreachable*
 control stood in for a premise nobody had checked. Both were found by a
 mechanical check that refused to agree, not by reading.
+
+### `orchestrator.go:547` — half a control, proven
+
+**CONFIRMED and CLOSED 2026-09-15.** `TestDurableBytesMustMatchWhatWas
+Loaded` proves the positive: for every materialized artifact, the
+durably stored bytes hash to the identity L7 recorded from its own load.
+It cannot prove the negative, because producing the divergence requires
+a write landing between two reads inside a single `SubmitTask` call.
+So the control's *refusal* had never once executed — the test that
+carried its name only ever walked the agreeing path.
+
+The refusal matters on its own terms: an artifact rewritten after its
+loader hashed it and before capture yields a record claiming durability
+over bytes that never ran. That is identity over A with durability over
+B, the exact shape R-L9-2 forbids.
+
+The package's `faultAt` seam was the obvious lever and is the wrong one:
+every fault point is swept by Register C, which asserts a governed
+FAILED with an invariant event, and this code runs before the task
+exists. Adding a production seam that admits a mid-assembly write would
+also be a worse trade than testing the control directly.
+
+Closed by lifting the read-and-prove step into `captureVerified`, which
+`TestCaptureVerifiedRefusesArtifactChangedAfterLoad` exercises directly:
+content replaced, one byte flipped (length-preserving — no size or mtime
+check would catch it), and truncated to zero all refuse as
+`ErrInvariant`, while a vanished artifact refuses as `ErrAssembly`,
+since nothing has been misrepresented there. Mutation-verified: with the
+guard replaced by `if false`, all three change cases fail.
+
+No behavior changed — the same bytes, the same two errors, the same
+order. The control simply became reachable by a test.
 
 ## What this pass does not establish
 

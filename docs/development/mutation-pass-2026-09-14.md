@@ -444,6 +444,20 @@ touched.
   does not mutate arithmetic, boundaries, or control flow, so a clean
   result here would not mean the suite is complete.
 
+## Tier 2 — the G1 anchor pin family (closed 2026-09-15)
+
+`orchestration/orchestrator.go:474`, the anchored tool-registry pin, was
+a survivor and was **not** on the Tier-1 list. Closing it alone would
+have repeated the mistake that produced it: Tier 1 ranked LINES, and the
+deployment anchor is one SURFACE enforced in three places. Swept whole
+instead — eight guards, every one mutation-verified to fail only its own
+subtest. Four of the eight had survived because a neighbour stood in for
+them.
+
+Recorded in `docs/development/g1-anchor-pin-sweep-2026-09-15.md`, with
+the completeness criterion stated so it can be checked rather than
+asserted: every `Anchor` field L7 enforces has a drift test.
+
 ## Disposition
 
 **Tier 1 closed 2026-09-15** — all twelve worked through, one at a time,

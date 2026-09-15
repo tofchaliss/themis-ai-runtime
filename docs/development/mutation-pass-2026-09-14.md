@@ -416,9 +416,38 @@ both, and no evidence for either.**
 
 ## Disposition
 
-Open. The Tier-1 list is a work item, not something to close in one
-sitting; the ~190 error-propagation survivors are a coverage map and
-triaging them wholesale would be poor use of attention.
+**Tier 1 closed 2026-09-15** — all twelve worked through, one at a time,
+each mutation-verified in a disposable worktree per the AGENTS.md
+probe-isolation invariant. The ~190 error-propagation survivors remain a
+recorded coverage map; triaging them wholesale would still be poor use
+of attention.
 
-Recorded rather than fixed, deliberately: which of these deserve tests is
-an owner judgement about where evidence is worth buying.
+### What the twelve actually were
+
+| Disposition | Count | Items |
+|---|---|---|
+| Real coverage gap, closed by a test | 7 | `local.go:153`, `orchestrator.go:547`, `:215`, `:372`, `local.go:243`, `catalog.go:193`, `:85`, `package.go:129`, `contract.go:249/257` |
+| Equivalent mutant, premise **unsound** | 2 | `orchestrator.go:763` (digest blind to `ThemisScope`), `loop.go:474` (two untested assembly gates) |
+| Equivalent mutant, premise sound | 3 | `task.go:211`, `loop.go:382`, and the assembly declaration gate `:474` rests on |
+
+Three findings could not have come from reading:
+
+1. **`grantAuthorityDigest` omitted `ThemisScope`** — a real defect in a
+   shipping control. Two grants with materially different themis-id
+   authority recorded an identical `grant_authority`.
+2. **Mutual cover is the dominant pattern.** Three of the twelve were
+   pairs of adjacent guards with one test tripping both: `local.go:153`,
+   the verification assembly gates, and the provenance checks. In every
+   case the test was green, named the control, and evidenced neither
+   half.
+3. **The Tier-1 ranking itself was incomplete.** The two gates beneath
+   `loop.go:474` were not on the list. They were the premise of an item
+   that was — so a survivor's *dependencies* deserve the same treatment
+   as the survivor.
+
+### The rule this pass earned
+
+An equivalent mutant is not a closed question. The right response is not
+"unreachable, therefore fine" but **"unreachable because of what, and is
+that tested?"** Four of the five equivalents here rested on a premise
+nobody had checked; two of those premises were wrong.

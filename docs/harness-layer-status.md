@@ -272,9 +272,21 @@ is permissions, which root does not have to obey).
 
 **Method note.** Five of these seven surfaced only because CI went
 green on a second platform after eight dark days; the cited-test
-cross-check found two more. Neither method finds a control that is
-both untested and correctly cited — that class needs a systematic
-mutation pass over the whole suite, which has not been run.
+cross-check found two more. Neither method finds a control that is both
+untested and correctly cited.
+
+**That class was measured 2026-09-14** by a systematic refusal-
+suppression mutation pass (`evidence/harness/mutate`, 20m35s, isolated
+worktree): 971 refusal guards, 433 killed, 130 uncompilable, **408
+survived**. Decomposed: 191 I/O error propagation, 60 schema validation,
+157 semantic controls (115 in security-relevant packages). A Tier-1
+shortlist of twelve — including two TOCTOU guards, the Open-side G1
+ceiling check, the L7 constitution pin, and L9 two-way identity — is
+recorded with dispositions in
+`docs/development/mutation-pass-2026-09-14.md`. **Open: which deserve
+tests is an owner judgement.** Note `execution/local.go:153`, where a
+cited and passing test appears not to exercise the line it is cited
+for.
 
 **L5 evidence correction (2026-09-14):** the Linux failure exposed an
 overstated traceability row, not a control defect — the archived

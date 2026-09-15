@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/tofchaliss/themis/deployment"
+	"github.com/tofchaliss/themis/execution"
 	"github.com/tofchaliss/themis/state"
 )
 
@@ -427,6 +428,48 @@ func TestAnchoredOpen(t *testing.T) {
 		_, _, err := Open(anchoredConfig(t, t.TempDir(), p, sha, reg, pCeiling))
 		if err == nil || !strings.Contains(err.Error(), "not the anchored artifact") {
 			t.Fatalf("unanchored instruction root opened: %v", err)
+		}
+	})
+	// The Open-side half of the G1 ceiling pin. The Phase C matrix
+	// covers the SubmitTask side (C13); nothing exercised this one, so
+	// a deployment could have been opened under a ceiling its anchor
+	// does not pin — and every walk in it would then run under bounds
+	// no Governance act ever admitted.
+	//
+	// The substitute here is a VALID, loadable ceiling that differs
+	// only in what it permits. A malformed one would be refused by the
+	// instantiation check two lines below, and the pin would again go
+	// untested while the subtest passed.
+	t.Run("execution ceiling that is not the anchored one refuses Open", func(t *testing.T) {
+		p, sha, reg, pinned := anchorWorld(t, nil)
+		raw, rerr := os.ReadFile(pinned)
+		if rerr != nil {
+			t.Fatal(rerr)
+		}
+		var c map[string]any
+		if uerr := json.Unmarshal(raw, &c); uerr != nil {
+			t.Fatal(uerr)
+		}
+		// Wider bounds, same shape: exactly the substitution the pin
+		// exists to refuse.
+		c["max_wall_deadline_sec"] = 3600
+		c["max_proc_count"] = 4096
+		wb, _ := json.Marshal(c)
+		substitute := filepath.Join(t.TempDir(), "eceiling.json")
+		if werr := os.WriteFile(substitute, wb, 0o644); werr != nil {
+			t.Fatal(werr)
+		}
+		// Premise: the substitute is a ceiling the harness would
+		// otherwise accept, so only the pin can be what refuses it.
+		if _, lerr := execution.LoadCeiling(substitute); lerr != nil {
+			t.Fatalf("the substitute ceiling must be valid, or the pin is not what refuses: %v", lerr)
+		}
+		_, _, err := Open(anchoredConfig(t, t.TempDir(), p, sha, reg, substitute))
+		if err == nil {
+			t.Fatal("a deployment opened under an execution ceiling its anchor does not pin")
+		}
+		if !strings.Contains(err.Error(), "not the one deployment") {
+			t.Fatalf("refused for the wrong reason: %v", err)
 		}
 	})
 	t.Run("anchored deployment requires the themis root configured", func(t *testing.T) {

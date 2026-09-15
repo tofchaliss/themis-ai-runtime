@@ -52,7 +52,7 @@ survivor that Phase C does not cover either is genuinely unguarded.
 |---|---|
 | ~~`orchestration/orchestrator.go:763`~~ — grant digest changed between attribution and execution | TOCTOU on authority itself. **Resolved 2026-09-15**: equivalent mutant, but its premise was not — the digest omitted `ThemisScope`. See below. |
 | ~~`orchestration/orchestrator.go:547`~~ — artifact changed between loading and durable capture | TOCTOU on the governed record. **Closed 2026-09-15**: the positive half was proven e2e, the refusal never exercised. See below. |
-| `orchestration/orchestrator.go:215` — supplied ceiling ≠ anchored ceiling **at Open** | G1. The C matrix covers only the SubmitTask side (C13) |
+| ~~`orchestration/orchestrator.go:215`~~ — supplied ceiling ≠ anchored ceiling **at Open** | G1. The C matrix covers only the SubmitTask side (C13). **Closed 2026-09-15**. See below. |
 | `orchestration/orchestrator.go:372` — **L7** constitution pin | C9 exercised the **L6** pin at `:369`; this is a separate line |
 | `state/task.go:211` — a record may reference only already-durable objects | record-before-effect |
 | `execution/local.go:243` — HEAD ≠ pinned SHA post-condition | workspace could sit at the wrong commit |
@@ -183,6 +183,30 @@ guard replaced by `if false`, all three change cases fail.
 
 No behavior changed — the same bytes, the same two errors, the same
 order. The control simply became reachable by a test.
+
+### `orchestrator.go:215` — the Open side of the G1 ceiling pin
+
+**CONFIRMED and CLOSED 2026-09-15.** The mutation record predicted this
+one exactly: the Phase C matrix exercises the ceiling pin on the
+SubmitTask side (C13) and nothing exercised it at Open. So a deployment
+could be opened under a ceiling its anchor does not pin, and every walk
+in it would run under bounds no Governance act ever admitted — the
+ceiling is frozen at Open and carried forward, so a single unchecked
+Open contaminates the whole deployment rather than one task.
+
+Closed by a subtest under `TestAnchoredOpen` that supplies a
+substitute ceiling differing only in what it PERMITS — the same shape
+and the same mirror root, with `max_wall_deadline_sec` and
+`max_proc_count` raised. That is the substitution the pin exists to
+refuse.
+
+The subtest asserts its own premise first: `execution.LoadCeiling` must
+accept the substitute. A malformed ceiling would be refused two lines
+later by the instantiation check, the pin would stay untested, and the
+subtest would pass anyway — the Phase C row C15 failure mode exactly.
+
+Mutation-verified: with the pin replaced by `if false`, the deployment
+opens and the subtest fails.
 
 ## What this pass does not establish
 

@@ -15,10 +15,19 @@ not own security truth. Model output is advisory at every crossing.
 - **[docs/architecture/harness/execution-chain.md](docs/architecture/harness/execution-chain.md)**
   — the as-built chain, end to end
 
-Status: L1–L11 shipped and archived; G1 (Deployment Authority
+Status: L1–L7 and L9–L11 shipped and archived; **L8 (Subagents) is
+reserved and scaffolded, not implemented** — it requires its own
+architecture grill before any code
+(`openspec/changes/l8-subagents/proposal.md`). G1 (Deployment Authority
 Anchoring) and G2 (Established-Fact Boundary) closed and implemented;
 the legacy ungoverned HTTP surface removed. **The architecture is
 frozen.**
+
+First concrete deployment instance validated 2026-09-14 (`rsys`,
+Phases A–F; `docs/development/deployment-signoff-rsys.md`). That record
+establishes that *that* instance was governed by the intended artifact
+set under real host conditions — it does not grant production wiring,
+which remains runbook Step 12, an open owner decision.
 
 ## The governed chain
 

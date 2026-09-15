@@ -15,12 +15,53 @@ Run on the deployment host, 20m35s, in an isolated worktree.
 
 ## Result
 
-| | |
-|---|---|
-| Refusal guards found | 971 |
-| Killed (a test failed) | 433 |
-| Did not compile | 130 — cannot ship, not a gap |
-| **Survived** | **408** |
+| | 2026-09-14 | 2026-09-15 re-run |
+|---|---|---|
+| Refusal guards found | 971 | 971 |
+| Killed (a test failed) | 433 | **445** |
+| Did not compile | 130 — cannot ship, not a gap | 126 |
+| **Survived** | **408** | **380** |
+| Not mutated (package has no test files) | — | 20 |
+
+**Read the 408 as historical.** It is the figure this document was
+written around and the one every Tier-1 finding below was ranked from,
+but it is not the current state. The 2026-09-15 confirmation re-run is
+the live number, with two qualifications below.
+
+### Reconciling the two runs
+
+The 2026-09-14 columns sum to 971 with no "not mutated" row because that
+run **predates `32b3b58`**, the `hasTests` fix. The ~20 guards in
+packages with no test files of their own were still being counted then:
+four as compile errors (130 → 126) and sixteen as false survivors.
+
+Killed is the only bucket directly comparable across the two runs — a
+guard in a package with no tests can never be killed — and it moved
+**433 → 445, exactly +12**. The survivor list independently confirms all
+twelve Tier-1 lines are absent, so those twelve *are* the +12. Nothing
+is unexplained, and no previously-killed guard became a survivor (that
+would have shown 444). Guard count identical at 971 corroborates it: the
+day's edits added and removed no guards.
+
+### Two qualifications on the 380
+
+1. **It was measured mid-sweep.** The re-run ran at the commit where
+   Tier 1 was complete and nothing else was. The nineteen guards closed
+   afterwards — `themis-ratchet derive` (1), the G1 anchor sweep (8),
+   L7 static boundedness (5), the L9 substitution boundary (5) — are
+   still counted as survivors in it. Expected current figure is
+   therefore **~361, not re-measured.** Do not quote 361 as evidence;
+   quote 380 with this caveat, or re-run.
+2. **"Survived" still does not mean "untested."** The distinction the
+   original run made holds: some survivors are covered externally by
+   the Phase C matrix, and some are equivalent or redundant guards. Of
+   the twelve Tier-1 items worked through, five turned out to be
+   equivalent mutants.
+
+The mutation pass having been RUN closes the "not yet run" qualification
+that stood before 2026-09-14. It does not establish that every surviving
+mutant needs a test, nor that mutation coverage is complete in any
+absolute sense — the operator is deliberately narrow (see below).
 
 ### Survivors by category
 
@@ -493,9 +534,11 @@ all**, with a consistent aggregate, was accepted outright. Partial
 mutual cover: four of five cases were caught by a neighbour and exactly
 one was not.
 
-Recorded totals for the day: 21 controls closed across Tier 1, the G1
-anchor surface, and these two; plus one found during the confirmation
-re-run (`themis-ratchet derive`).
+Recorded totals for the day: **31 guards closed** — Tier 1 (12), the
+confirmation re-run's own find in `themis-ratchet derive` (1), the G1
+anchor surface (8), L7 static boundedness (5), and the L9 substitution
+boundary (5). Each was mutation-verified individually in a disposable
+worktree per the AGENTS.md probe-isolation invariant.
 
 ## Disposition
 

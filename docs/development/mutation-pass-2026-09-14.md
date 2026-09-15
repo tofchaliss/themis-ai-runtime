@@ -58,8 +58,8 @@ survivor that Phase C does not cover either is genuinely unguarded.
 | ~~`execution/local.go:243`~~ — HEAD ≠ pinned SHA post-condition | workspace could sit at the wrong commit. **Closed 2026-09-15**. See below. |
 | ~~`skills/catalog.go:193`~~ — manifest self-declaration ≠ registration | L9 two-way identity. **Closed 2026-09-15**. See below. |
 | ~~`skills/catalog.go:85`~~ — manifest_path traversal (`..`, absolute) | path containment. **Closed 2026-09-15**. See below. |
-| `orchestration/loop.go:474` — verification event undeclared yet produced | L7 invariant |
-| `orchestration/loop.go:382` — verifier-eligible call with no evaluator wired | fail-closed |
+| ~~`orchestration/loop.go:474`~~ — verification event undeclared yet produced | L7 invariant. **Resolved 2026-09-15**: equivalent mutant; two of the three gates it rests on were untested and now are. See below. |
+| ~~`orchestration/loop.go:382`~~ — verifier-eligible call with no evaluator wired | fail-closed. **Resolved 2026-09-15**: equivalent mutant; its assembly gate was already tested. |
 | `ratchet/package.go:129` — criterion bytes ≠ constituent conditioning tuple | L11 binding |
 | `verification/contract.go:249/257` — provenance completeness | "not contract-relaxable" |
 
@@ -309,6 +309,47 @@ catalog containing such a row is not a catalog with one bad entry.
 embedded, and trailing traversal plus empty; mutation-verified, all five
 load with the guard suppressed. It also asserts its premise — the same
 catalog with an in-root path loads.
+
+### `loop.go:382` and `:474` — two invariants, and the gates beneath them
+
+**RESOLVED 2026-09-15.** Both are equivalent mutants: each says so in
+its own comment ("assembly refuses this configuration", "declaration-
+gated exposure makes this unreachable when assembly held"). Taking that
+at face value is the mistake — the question a mutation survivor asks is
+whether the gates the claim rests on are themselves exercised.
+
+`:382` rests on one gate, `o.cfg.Verifier == nil` at assembly. It is
+tested; suppressing it fails `TestVerificationAssemblyRefusals`. That
+one was sound.
+
+`:474` rests on three, and two of them survived:
+
+| Gate | Before |
+|---|---|
+| loader: an edge's event must be declared | tested |
+| assembly: each of the five verification events is declared | **survived** |
+| assembly: each has an edge in the exposing phase | **survived** |
+
+Both survived for the same reason `local.go:153` did: the subtest that
+covers them strips the declarations AND the edges together, so either
+gate alone refuses it and neither is the control under test. Mutual
+cover, and it had hidden the premise of a Tier-1 invariant.
+
+Splitting them exposed something the table above cannot show. The
+reachability gate splits cleanly — declare all five, remove one edge,
+and only it can refuse. The declaration gate does not: an event that is
+not declared can have no edge, because the LOADER refuses that first. So
+the assembly declaration gate is itself redundant, and so, in turn, is
+`loop.go:474`.
+
+The chain is now: loader (tested) → reachability gate (tested) ⇒ no
+undeclared verification event can be produced. The third subtest pins
+the ordering that makes the redundancy hold, so a future change letting
+such a workflow load surfaces as a changed refusal rather than silently
+promoting two dead guards into live ones.
+
+Lesson for the Tier-1 ranking itself: neither surviving gate was ON the
+Tier-1 list. They were the premise of an item that was.
 
 ## What this pass does not establish
 

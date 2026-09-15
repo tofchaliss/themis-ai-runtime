@@ -8,6 +8,7 @@ package orchestration
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -291,6 +292,60 @@ func TestVerificationAssemblyRefusals(t *testing.T) {
 		writeJSON(t, f.envDir, "workflow.json", doctored)
 		if _, err := f.o.SubmitTask(f.verifEnvelope(t, "verif-undeclared")); err == nil {
 			t.Fatal("verifier capability without declared verification events must refuse at assembly")
+		}
+	})
+
+	// The subtest above strips the declarations AND the edges together,
+	// so either of the two assembly gates alone refuses it and neither
+	// is the control under test. Both survived the 2026-09-14 mutation
+	// pass because of that mutual cover — and loop.go:474's "unreachable
+	// when assembly held" rests on exactly these two.
+	//
+	// Each of the two below moves ONE dimension for ONE event.
+	t.Run("declared but no edge in the exposing phase", func(t *testing.T) {
+		f := setupVerif(t, &scriptedModel{}, &scriptedEvaluator{})
+		// Every verification event still DECLARED; one has no edge, so
+		// only the reachability gate can refuse.
+		doctored := strings.Replace(verifWalkWorkflow,
+			`{"on":"verification-inconclusive","to":"@stay","counter":3,"exhausted_to":"@fail"},`, ``, 1)
+		if doctored == verifWalkWorkflow {
+			t.Fatal("the edge to remove was not found — the fixture changed shape")
+		}
+		writeJSON(t, f.envDir, "workflow.json", doctored)
+		_, err := f.o.SubmitTask(f.verifEnvelope(t, "verif-noedge"))
+		if err == nil {
+			t.Fatal("a phase exposing a verifier capability with an unreachable verification event was ACCEPTED")
+		}
+		if !strings.Contains(err.Error(), "no edge for reachable event") {
+			t.Fatalf("refused for the wrong reason — declaration must still hold: %v", err)
+		}
+	})
+
+	// The assembly gate's companion — "exposes a verifier-eligible
+	// capability but the workflow does not declare <ev>" — cannot be
+	// reached with its edge intact, because the LOADER already refuses
+	// an edge on an undeclared event. That ordering is what makes the
+	// assembly declaration gate redundant, and it is also what makes
+	// loop.go:474 ("verification event undeclared yet produced")
+	// unreachable. Pinned here so a future change that let such a
+	// workflow load would surface as a changed refusal rather than
+	// silently promote two dead guards into live ones.
+	t.Run("an edge on an undeclared event never reaches assembly", func(t *testing.T) {
+		f := setupVerif(t, &scriptedModel{}, &scriptedEvaluator{})
+		doctored := strings.Replace(verifWalkWorkflow, `"verification-inconclusive",`, ``, 1)
+		if doctored == verifWalkWorkflow {
+			t.Fatal("the declaration to remove was not found — the fixture changed shape")
+		}
+		writeJSON(t, f.envDir, "workflow.json", doctored)
+		_, err := f.o.SubmitTask(f.verifEnvelope(t, "verif-undeclared-one"))
+		if err == nil {
+			t.Fatal("a workflow with an edge on an undeclared event was ACCEPTED")
+		}
+		if !errors.Is(err, ErrWorkflow) {
+			t.Fatalf("this must be a workflow-definition refusal, not an assembly one: %v", err)
+		}
+		if !strings.Contains(err.Error(), "edge on undeclared event") {
+			t.Fatalf("refused for the wrong reason: %v", err)
 		}
 	})
 

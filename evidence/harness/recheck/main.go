@@ -58,13 +58,17 @@ func main() {
 	fmt.Printf("registry   : %s\n", *registry)
 	fmt.Printf("tasks      : %d\n\n", len(ids))
 
-	var reestablished, unanchored, failed int
+	var reestablished, other, unanchored, failed int
 	for _, id := range ids {
 		verdict, detail := recheck(root, *registry, *expect, id)
 		switch verdict {
 		case "OK":
 			reestablished++
 			fmt.Printf("  \033[32mOK\033[0m        %-24s %s\n", id, detail)
+		case "OTHER":
+			// Re-established, just not the deployment asked about.
+			other++
+			fmt.Printf("  \033[33mOTHER\033[0m     %-24s %s\n", id, detail)
 		case "UNANCHORED":
 			unanchored++
 			fmt.Printf("  UNANCHORED %-24s %s\n", id, detail)
@@ -75,9 +79,18 @@ func main() {
 	}
 
 	fmt.Printf("\n=== RESULT ===\n")
-	fmt.Printf("  re-established : %d\n", reestablished)
+	fmt.Printf("  re-established : %d\n", reestablished+other)
+	if *expect != "" {
+		fmt.Printf("    of which under %s : %d\n", short(*expect), reestablished)
+		fmt.Printf("    under another deployment      : %d\n", other)
+	}
 	fmt.Printf("  unanchored     : %d (declared so in the record — not a failure)\n", unanchored)
 	fmt.Printf("  FAILED         : %d\n", failed)
+
+	// Durability is the question this program asks, and only a genuine
+	// D5/D6/L6 failure answers it badly. Report that separately from
+	// "these tasks belong to a different deployment", which is what a
+	// superseded deployment's record plane is SUPPOSED to look like.
 	if failed > 0 {
 		fmt.Println("\nA past execution is no longer interpretable from its own record.")
 		fmt.Println("That is a finding about record durability across this binary, not")
@@ -86,6 +99,13 @@ func main() {
 	}
 	fmt.Println("\nEvery anchored task still re-establishes its deployment from the")
 	fmt.Println("record and the registry alone, under the binary running now.")
+	if other > 0 {
+		fmt.Printf("\n%d re-established under a deployment other than %s. Each one was\n", other, short(*expect))
+		fmt.Println("fully re-established — identity, durable bytes, registry — so this")
+		fmt.Println("is not a durability finding. A withdrawn anchor still explains the")
+		fmt.Println("executions it governed; that is what append-only registration buys.")
+		os.Exit(3)
+	}
 }
 
 // recheck performs D4/D5/D6 over one already-recorded task, plus the L6
@@ -116,9 +136,13 @@ func recheck(root *state.Root, registry, expect, id string) (string, string) {
 		// (close-review MEDIUM-1). Not a failure — a fact.
 		return "UNANCHORED", "D4: record declares an unanchored run"
 	}
-	if expect != "" && recorded != expect {
-		return "FAILED", fmt.Sprintf("D4: recorded %s != expected %s", short(recorded), short(expect))
-	}
+	// An identity that is not the operator's expectation is NOT a
+	// durability failure. Say so only after D5/D6 have run: the honest
+	// report is "re-established, and it belongs to another deployment",
+	// which is the normal state of a superseded deployment's record
+	// plane. Conflating the two would report a working append-only
+	// registry as a broken one.
+	mismatch := expect != "" && recorded != expect
 	// D5: the anchor BYTES, durable in the record, addressed by their
 	// own hash. Recording the identity is not enough — the bytes are
 	// what make the identity interpretable.
@@ -149,8 +173,12 @@ func recheck(root *state.Root, registry, expect, id string) (string, string) {
 	if err != nil {
 		return "FAILED", fmt.Sprintf("read manifest: %v", err)
 	}
-	return "OK", fmt.Sprintf("%s@%d  %s  %s  events=%d",
+	detail := fmt.Sprintf("%s@%d  %s  %s  events=%d",
 		a.Name, a.Deployment, short(recorded), man.Status, len(events))
+	if mismatch {
+		return "OTHER", detail + fmt.Sprintf("  (not the expected %s)", short(expect))
+	}
+	return "OK", detail
 }
 
 func taskIDs(stateRoot string) ([]string, error) {

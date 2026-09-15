@@ -404,6 +404,36 @@ the verification assembly gates. The pattern is now the most common
 single finding of the pass: **two adjacent guards, one test that trips
 both, and no evidence for either.**
 
+### `cmd/themis-ratchet/main.go:423` — the same control, in the binary Governance runs
+
+**Found and closed 2026-09-15, during the confirmation re-run.** Not on
+the Tier-1 list; it surfaced in the partial output while verifying the
+twelve, which is the point of re-running rather than trusting the
+per-item verifications.
+
+`themis-ratchet derive` reimplements the criterion-to-conditioning-tuple
+binding just closed at `ratchet/package.go:129`. The CLI contract suite
+never invokes `derive` at all, so the copy had no coverage.
+
+It is the more exposed of the two. The library takes the criterion as an
+argument; this one **re-resolves it from the registry** by the package's
+own `CriterionRef`. A registry whose criterion at that ref no longer
+hashes to the conditioning tuple is an operational state, not a caller
+mistake — and `derive` would then report per-field, relation, and
+non-regression against a region the comparison was never computed under.
+
+The new subtest swaps in a criterion at the same ref with a wider region
+and a registry that is internally consistent over the new bytes, so no
+integrity check can be what refuses. Premise asserted first: the
+conditioning registry derives. Mutation-verified — with the binding
+suppressed, `derive` prints a full derivation against the substituted
+criterion.
+
+**This is the argument for the confirmation run.** Twelve items were
+each verified individually and all twelve held; the re-run still found a
+thirteenth, in a different package, reached by a code path no test
+touched.
+
 ## What this pass does not establish
 
 - **It does not say 408 controls are broken.** Every one of them is

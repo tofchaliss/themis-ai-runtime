@@ -233,6 +233,92 @@ func TestCLIContract(t *testing.T) {
 		}
 	})
 
+	// The derive subcommand re-resolves the criterion FROM THE REGISTRY
+	// by the package's own CriterionRef, then requires the resolved
+	// bytes to be the ones the comparison was conditioned on. That is
+	// the same binding as ratchet.DeriveResistantUnderSet, reimplemented
+	// here — and this is the copy Governance actually invokes.
+	//
+	// It matters more here than in the library, because the library
+	// takes the criterion as an argument while this one looks it up. A
+	// registry whose criterion at that ref no longer hashes to the
+	// conditioning tuple is an operational state, not a caller mistake:
+	// derive would then report per-field, relation, and non-regression
+	// against a region the comparison was never computed under.
+	t.Run("derive refuses a registry criterion that did not condition the package", func(t *testing.T) {
+		if pkgID == "" {
+			t.Skip("no package from happy path")
+		}
+		derive := func(reg string) (string, int) {
+			cmd := exec.Command(w.bin, "derive",
+				"--state-root", w.stateRoot, "--package", pkgID,
+				"--criteria-registry", reg)
+			out, err := cmd.CombinedOutput()
+			code := 0
+			if ee, ok := err.(*exec.ExitError); ok {
+				code = ee.ExitCode()
+			} else if err != nil {
+				t.Fatalf("derive: %v", err)
+			}
+			return string(out), code
+		}
+		// Premise: the conditioning registry derives, so the refusal
+		// below is the binding and not a broken fixture.
+		if out, code := derive(w.criteriaReg); code != 0 {
+			t.Fatalf("the conditioning criterion must derive: code=%d out=%s", code, out)
+		}
+
+		// A criterion at the SAME ref with different bytes — wider
+		// region, so it would change what derive reports. The registry
+		// is internally consistent (its own sha over the new file), so
+		// no integrity check can be what refuses.
+		wide := map[string]any{
+			"version": 1, "name": "bench-score-delta", "criterion_version": 1,
+			"families": []any{"skill-revision"},
+			"candidate_selectors": []any{map[string]any{
+				"name": "candidate_score", "source": "benchmark_validated_score",
+				"params": map[string]any{"benchmark": "themis-bench-core"}}},
+			"baseline_selectors": []any{map[string]any{
+				"name": "baseline_score", "source": "benchmark_validated_score",
+				"params": map[string]any{"benchmark": "themis-bench-core"}}},
+			"comparator": map[string]any{"name": "numeric-score-delta", "version": 1},
+			"config": map[string]any{"fields": []any{map[string]any{
+				"delta": "score_delta", "candidate": "candidate_score", "baseline": "baseline_score"}}},
+			"delta_shape": []any{map[string]any{"name": "score_delta", "type": "number"}},
+			"ordering": map[string]any{"kind": "per-metric", "fields": []any{map[string]any{
+				"name": "score_delta", "direction": "maximize",
+				"equal_tolerance": 0.0, "non_regression_min": -1.0}}},
+			"baseline_constraints": []any{"requires-current-active"},
+			"provenance":           []any{"evidence_records", "run_identities", "admission_observation"},
+		}
+		wb, _ := json.Marshal(wide)
+		if err := os.WriteFile(filepath.Join(w.gov, "criterion-wide.json"), wb, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if sha256hex(wb) == sha256hex(readFile(t, w.criterionPath)) {
+			t.Fatal("the substitute hashes to the conditioning criterion — it is not a substitute")
+		}
+		swappedB, _ := json.Marshal(map[string]any{
+			"version": 1, "kind": "criteria",
+			"entries": []any{map[string]any{
+				"name": "bench-score-delta", "version": 1,
+				"artifact_sha256": sha256hex(wb), "artifact_path": "criterion-wide.json",
+				"state": "active"}},
+		})
+		swapped := filepath.Join(w.gov, "criteria-registry-swapped.json")
+		if err := os.WriteFile(swapped, swappedB, 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		out, code := derive(swapped)
+		if code == 0 {
+			t.Fatalf("derive reported against a criterion that did not condition the package:\n%s", out)
+		}
+		if !strings.Contains(out, "conditioning tuple") {
+			t.Fatalf("refused for the wrong reason — the registry is self-consistent, so only the binding can refuse: %s", out)
+		}
+	})
+
 	t.Run("set refuses non-member binding", func(t *testing.T) {
 		setB, _ := json.Marshal(map[string]any{"version": 1, "name": "core-regression",
 			"set_version": 1, "members": []any{"bench-score-delta@1"}})
@@ -265,4 +351,13 @@ func countObjects(t *testing.T, stateRoot string) int {
 		return nil
 	})
 	return n
+}
+
+func readFile(t *testing.T, p string) []byte {
+	t.Helper()
+	b, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
 }

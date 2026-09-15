@@ -551,6 +551,144 @@ func TestAnchoredWorkflowSetEnforced(t *testing.T) {
 	}
 }
 
+// G1 pin sweep (2026-09-15): the anchor's remaining L7-enforced pins.
+// The ceiling, both constitutions, the instruction roots, the policy,
+// the workflow set, the model allowlist, and the skill-catalog hash all
+// have drift tests. These three did not, and each one open is a
+// different way to run under an artifact no Governance act admitted.
+//
+// The tool registry is the widest of them: it decides what every tool
+// IS — its parameters, its target kind, whether it mutates, whether it
+// is verifier-eligible. A deployment running under an unpinned registry
+// has no stable meaning for any capability it grants.
+func TestAnchoredToolRegistryEnforced(t *testing.T) {
+	f := setupVerif(t, happyScript(), &scriptedEvaluator{})
+	fileHash := func(p string) string {
+		h, herr := deployment.HashFile(p)
+		if herr != nil {
+			t.Fatal(herr)
+		}
+		return h
+	}
+	envHash := func(n string) string { return fileHash(filepath.Join(f.envDir, n)) }
+	// Every other pin satisfied EXCEPT the tool registry, so nothing
+	// else can be what refuses.
+	ap, sha, reg, apCeiling := anchorWorld(t, func(m map[string]any) {
+		m["tool_registry"] = strings.Repeat("dd", 32)
+		m["execution_ceiling"] = envHash("eceiling.json")
+		m["workflows"] = []any{map[string]any{
+			"workflow":         envHash("workflow.json"),
+			"workflow_ceiling": envHash("wceiling.json"),
+			"context_contract": envHash("context-contract.json"),
+		}}
+	}, filepath.Join(f.envDir, "eceiling.json"))
+	o, _, err := Open(anchoredConfig(t, t.TempDir(), ap, sha, reg, apCeiling))
+	if err != nil {
+		t.Fatalf("the tool registry is pinned at SubmitTask, not Open — this must open: %v", err)
+	}
+	_, err = o.SubmitTask(f.verifEnvelope(t, "tool-reg"))
+	if err == nil {
+		t.Fatal("a task ran under a tool registry the deployment's anchor does not pin")
+	}
+	if !strings.Contains(err.Error(), "tool registry is not the anchored artifact") {
+		t.Fatalf("refused for the wrong reason: %v", err)
+	}
+}
+
+// The model registry governs what an allowlisted NAME resolves to —
+// runtime, endpoint, credential env. The allowlist and the registry are
+// therefore two different controls, and pinning one does not pin the
+// other: an anchor can name only "scripted" and still have every
+// resolution redirected if the registry is unpinned.
+//
+// The mismatch branch is covered. The two configuration branches were
+// not, and they are the ones that fail OPEN if they are wrong — an
+// anchor that pins a registry while the deployment supplies none would
+// otherwise resolve names by local default, which is exactly what
+// "absent" exists to make explicit rather than implicit.
+func TestAnchoredModelRegistryConfigurationEnforced(t *testing.T) {
+	t.Run("anchor pins a registry but none is configured", func(t *testing.T) {
+		p, sha, reg, pinned := anchorWorld(t, func(m map[string]any) {
+			m["model_registry"] = strings.Repeat("ab", 32)
+		})
+		cfg := anchoredConfig(t, t.TempDir(), p, sha, reg, pinned)
+		cfg.ModelRegistryPath = "" // the deployment ships none
+		_, _, err := Open(cfg)
+		if err == nil {
+			t.Fatal("a deployment opened with no model registry though its anchor pins one — names would resolve by local default")
+		}
+		if !strings.Contains(err.Error(), "pins a model registry but none is configured") {
+			t.Fatalf("refused for the wrong reason: %v", err)
+		}
+	})
+	t.Run("anchor declares absent but one is configured", func(t *testing.T) {
+		p, sha, reg, pinned := anchorWorld(t, nil) // fixture anchors "absent"
+		cfg := anchoredConfig(t, t.TempDir(), p, sha, reg, pinned)
+		cfg.ModelRegistryPath = writeSeamFixture(t, t.TempDir(), "models.json", `{"version":1,"entries":[]}`)
+		_, _, err := Open(cfg)
+		if err == nil {
+			t.Fatal("a deployment opened with a model registry its anchor declares it does not ship")
+		}
+		if !strings.Contains(err.Error(), "declares no model registry but one is configured") {
+			t.Fatalf("refused for the wrong reason: %v", err)
+		}
+	})
+}
+
+// A skill-attributed task under an anchored deployment resolves its
+// composition from the ANCHORED CATALOG. With no catalog configured
+// there is no anchored authority to resolve against — and the failure
+// must be a refusal, not a fallback to the envelope's own claim, which
+// is the substitution the anchored-catalog rule exists to prevent.
+func TestAnchoredSkillRequiresConfiguredCatalog(t *testing.T) {
+	f := setupVerif(t, happyScript(), &scriptedEvaluator{})
+	fileHash := func(p string) string {
+		h, herr := deployment.HashFile(p)
+		if herr != nil {
+			t.Fatal(herr)
+		}
+		return h
+	}
+	envHash := func(n string) string { return fileHash(filepath.Join(f.envDir, n)) }
+	ap, sha, reg, apCeiling := anchorWorld(t, func(m map[string]any) {
+		m["tool_registry"] = fileHash(filepath.Join(repoRoot, "policies/tools/registry-v4.json"))
+		m["execution_ceiling"] = envHash("eceiling.json")
+		m["workflows"] = []any{map[string]any{
+			"workflow":         envHash("workflow.json"),
+			"workflow_ceiling": envHash("wceiling.json"),
+			"context_contract": envHash("context-contract.json"),
+		}}
+	}, filepath.Join(f.envDir, "eceiling.json"))
+	cfg := anchoredConfig(t, t.TempDir(), ap, sha, reg, apCeiling)
+	cfg.SkillCatalogPath = "" // anchored deployment, no governed catalog
+	o, _, err := Open(cfg)
+	if err != nil {
+		t.Fatalf("a catalog is required only for skill-attributed tasks: %v", err)
+	}
+	// An envelope carrying skill attribution — the only case that needs
+	// the catalog. Without attribution there is no identity to resolve.
+	// The commitment must be genuine: the envelope validator refuses
+	// skill_* keys without one, and that refusal would stand in for the
+	// catalog check and prove nothing.
+	env := f.verifEnvelope(t, "skill-nocat")
+	body := readFile(t, env)
+	commit, merr := json.Marshal(genuineCommitment(t, env))
+	if merr != nil {
+		t.Fatal(merr)
+	}
+	writeJSON(t, f.envDir, filepath.Base(env), strings.Replace(body,
+		`"payload":`,
+		`"origin":{"skill":"investigate-cve@1","skill_version":"1"},`+
+			`"composition":`+string(commit)+`,"payload":`, 1))
+	_, err = o.SubmitTask(env)
+	if err == nil {
+		t.Fatal("a skill-attributed task resolved under an anchored deployment with no governed catalog")
+	}
+	if !strings.Contains(err.Error(), "no governed catalog is configured") {
+		t.Fatalf("refused for the wrong reason: %v", err)
+	}
+}
+
 func TestAnchoredInstructionPolicyEnforced(t *testing.T) {
 	ap, sha, reg, apCeiling := anchorWorld(t, func(m map[string]any) {
 		m["instruction_policy"] = strings.Repeat("ee", 32)

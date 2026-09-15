@@ -360,14 +360,72 @@ func TestVerifyAnchorRecord(t *testing.T) {
 			t.Fatal("mismatched bytes accepted")
 		}
 	})
+	// The three entry guards below are adjacent and each catches what
+	// the others do, so asserting only "refused" leaves all three
+	// unevidenced — the 2026-09-14 mutation pass found every one of them
+	// surviving despite these subtests existing. They must therefore
+	// assert WHICH refusal, and the distinction is not cosmetic: "this
+	// run declared itself unanchored", "this record is malformed", and
+	// "the bytes are missing" are three different facts about a record,
+	// and an auditor acts differently on each.
 	t.Run("unanchored record has nothing to verify", func(t *testing.T) {
-		if _, err := VerifyAnchorRecord("unanchored", nil, reg); err == nil {
+		_, err := VerifyAnchorRecord("unanchored", nil, reg)
+		if err == nil {
 			t.Fatal("unanchored record verified as governed")
+		}
+		if !strings.Contains(err.Error(), "declares an unanchored run") {
+			t.Fatalf("an unanchored record must be reported as unanchored, not as malformed: %v", err)
+		}
+	})
+	t.Run("malformed identity is malformed, not unanchored", func(t *testing.T) {
+		// Well-formed bytes, ill-formed recorded identity: only the
+		// syntax guard can fire.
+		_, err := VerifyAnchorRecord("not-a-sha256", ab, reg)
+		if err == nil {
+			t.Fatal("a record carrying an ill-formed anchor identity verified")
+		}
+		if !strings.Contains(err.Error(), "no well-formed deployment-anchor identity") {
+			t.Fatalf("refused for the wrong reason: %v", err)
 		}
 	})
 	t.Run("missing bytes refuse", func(t *testing.T) {
-		if _, err := VerifyAnchorRecord(hashBytes(ab), nil, reg); err == nil {
+		_, err := VerifyAnchorRecord(hashBytes(ab), nil, reg)
+		if err == nil {
 			t.Fatal("absent anchor bytes accepted")
+		}
+		if !strings.Contains(err.Error(), "not available in the record") {
+			t.Fatalf("absent bytes must be reported as absent, not as a hash mismatch: %v", err)
+		}
+	})
+	// G1 two-way identity, the same shape as L9's manifest-vs-
+	// registration check. The registry says which anchor it admitted by
+	// ARTIFACT HASH; the anchor says what it is. A registration whose
+	// name or version disagrees with the bytes it admits means the
+	// record cannot say which deployment governed the task — the
+	// registry would name one deployment and the bytes another.
+	t.Run("registration disagreeing with the anchor's self-declaration refuses", func(t *testing.T) {
+		for what, entry := range map[string]map[string]any{
+			"name disagrees": {
+				"name": "some-other-deployment", "version": 1,
+				"artifact_sha256": hashBytes(ab), "state": "active"},
+			"version disagrees": {
+				"name": "local-dev", "version": 7,
+				"artifact_sha256": hashBytes(ab), "state": "active"},
+		} {
+			b, _ := json.Marshal(map[string]any{
+				"version": 1, "kind": "deployment-anchors", "entries": []any{entry}})
+			p := filepath.Join(dir, "disagree-"+strings.ReplaceAll(what, " ", "-")+".json")
+			if err := os.WriteFile(p, b, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			_, err := VerifyAnchorRecord(hashBytes(ab), ab, p)
+			if err == nil {
+				t.Errorf("%s: a registration naming a different deployment than the bytes it admits VERIFIED", what)
+				continue
+			}
+			if !strings.Contains(err.Error(), "self-declaration disagrees with its registration") {
+				t.Errorf("%s: refused for the wrong reason: %v", what, err)
+			}
 		}
 	})
 	t.Run("deregistered anchor makes the deployment uninterpretable", func(t *testing.T) {

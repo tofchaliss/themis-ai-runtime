@@ -55,7 +55,7 @@ survivor that Phase C does not cover either is genuinely unguarded.
 | ~~`orchestration/orchestrator.go:215`~~ — supplied ceiling ≠ anchored ceiling **at Open** | G1. The C matrix covers only the SubmitTask side (C13). **Closed 2026-09-15**. See below. |
 | ~~`orchestration/orchestrator.go:372`~~ — **L7** constitution pin | C9 exercised the **L6** pin at `:369`; this is a separate line. **Closed 2026-09-15**, both pins. See below. |
 | ~~`state/task.go:211`~~ — a record may reference only already-durable objects | record-before-effect. **Resolved 2026-09-15**: equivalent mutant; the sink enforces it and IS covered. The test naming it was overstated. See below. |
-| `execution/local.go:243` — HEAD ≠ pinned SHA post-condition | workspace could sit at the wrong commit |
+| ~~`execution/local.go:243`~~ — HEAD ≠ pinned SHA post-condition | workspace could sit at the wrong commit. **Closed 2026-09-15**. See below. |
 | `skills/catalog.go:193` — manifest self-declaration ≠ registration | L9 two-way identity |
 | `skills/catalog.go:85` — manifest_path traversal (`..`, absolute) | path containment |
 | `orchestration/loop.go:474` — verification event undeclared yet produced | L7 invariant |
@@ -254,6 +254,32 @@ say what it establishes and what it does not.
 Fourth instance of one guard standing in for another, after the L10
 tamper test, Phase C row C15, and `local.go:153` — and the first where
 the redundancy is exact rather than accidental.
+
+### `execution/local.go:243` — the post-condition that had never fired
+
+**CONFIRMED and CLOSED 2026-09-15.** Q-L5-3 asserts rather than assumes:
+after `checkout --detach <pin>` reports success, `rev-parse HEAD` must
+return the pin. `TestProvisionFailurePaths` covers a checkout that
+FAILS (unknown SHA) — a different branch, several lines up. The
+post-condition itself had never executed, so "the workspace is at the
+pinned commit" rested on git's behavior rather than on a check anyone
+had watched work.
+
+The reachable instance needs no fault injection: git resolves object
+names case-insensitively, so `checkout --detach <UPPERCASE 40-hex>`
+succeeds while `rev-parse` reports the canonical lowercase. That is a
+genuine "checkout succeeded, HEAD != pin".
+
+Stated plainly in the test: it exercises the predicate, not a hostile
+mirror. A governed spec cannot carry an uppercase pin (`parseSpec`
+requires `^[0-9a-f]{40}$`), so the spec is constructed in-package the
+same way the existing traversal case constructs `s.Repo`. The test also
+asserts its premise — the canonical pin provisions cleanly — so nothing
+but the post-condition can explain the refusal, and asserts the failed
+provision tears down to `StateDestroyed` with its trace.
+
+Mutation-verified: with the post-condition replaced by `if false`,
+provisioning returns success with HEAD not at the pinned string.
 
 ## What this pass does not establish
 

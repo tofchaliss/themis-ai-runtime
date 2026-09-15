@@ -837,3 +837,56 @@ func TestTeardownAnomalous(t *testing.T) {
 		assertAnomalous(t, env)
 	})
 }
+
+// Q-L5-3 post-condition: after `checkout --detach <pin>` reports
+// success, the workspace IS at the pin — asserted by rev-parse, never
+// assumed. TestProvisionFailurePaths covers a checkout that FAILS
+// (unknown SHA); it cannot reach this branch, which is the case where
+// the checkout succeeded and HEAD still is not the pin. Suppressing the
+// post-condition left the whole package green.
+//
+// The reachable instance is an uppercase pin. Git resolves object names
+// case-insensitively, so `checkout --detach <UPPERCASE>` succeeds while
+// rev-parse reports the canonical lowercase — a genuine "checkout
+// succeeded, HEAD != pin" that needs no fault injection.
+//
+// What it stands for and what it does not: it exercises the predicate,
+// not a hostile mirror. A governed spec cannot carry an uppercase pin
+// (parseSpec requires ^[0-9a-f]{40}$), so this is constructed in-package
+// the same way the traversal case below constructs s.Repo. The value is
+// that the post-condition is now known to fire and to tear down, rather
+// than assumed to.
+func TestProvisionPostConditionRefusesHeadNotAtPin(t *testing.T) {
+	mirrorRoot, _, sha := mkMirror(t)
+	ceiling := testCeiling(t, mirrorRoot)
+	p, err := NewLocalProvider(gitBin(t), t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Premise: the same pin in canonical form provisions cleanly, so
+	// nothing but the post-condition can explain a refusal below.
+	ok, err := p.Provision(ceiling, testSpec(t, "themis-demo", sha, ""))
+	if err != nil {
+		t.Fatalf("the canonical pin must provision, or this proves nothing: %v", err)
+	}
+	ok.Teardown()
+
+	s := testSpec(t, "themis-demo", sha, "")
+	s.PinnedSHA = strings.ToUpper(sha)
+	env, err := p.Provision(ceiling, s)
+	if err == nil {
+		t.Fatal("provisioning returned success with HEAD not at the pinned string")
+	}
+	if !errors.Is(err, ErrProvision) {
+		t.Errorf("a failed post-condition is a provisioning failure, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "post-condition failed") {
+		t.Fatalf("refused for the wrong reason — the checkout itself must have succeeded: %v", err)
+	}
+	if env == nil {
+		t.Fatal("post-resource provision failure must return the env with its trace")
+	}
+	if st := env.State(); st != StateDestroyed {
+		t.Fatalf("a failed post-condition must tear down: %s", st)
+	}
+}

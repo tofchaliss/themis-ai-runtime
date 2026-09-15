@@ -523,3 +523,99 @@ func TestToolDefsIntersectGrant(t *testing.T) {
 		}
 	}
 }
+
+// The grant-authority digest answers "same authority?" from the record
+// alone (L9 test review HIGH), and the assembly invariant at SubmitTask
+// compares it across recording and use. Both rest on one premise: the
+// digest moves when authority moves. Every field authorization actually
+// consults must therefore be inside it.
+//
+// ThemisScope is such a field — tools/authorize.go refuses a themis-id
+// target outside the granted prefixes — so a widened scope is a widened
+// authority. A digest blind to it would let a grant reaching every
+// FIND-* record the same authority as one reaching FIND-1 alone, and
+// the invariant guarding it would compare two values that already agree.
+func TestGrantAuthorityDigestCoversEveryAuthorityField(t *testing.T) {
+	base := func() *tools.Grant {
+		return &tools.Grant{
+			Version: 1, TaskID: "T", TotalMaxCalls: 9,
+			Entries: []tools.GrantEntry{{
+				Tool: "get_finding", MaxCalls: 3,
+				ThemisScope: []string{"FIND-1:"},
+			}, {
+				Tool: "read_file", MaxCalls: 4, Workspace: "/w",
+			}},
+		}
+	}
+	ref := grantAuthorityDigest(base())
+
+	widen := map[string]func(*tools.Grant){
+		"themis scope widened to a whole family": func(g *tools.Grant) {
+			g.Entries[0].ThemisScope = []string{"FIND-"}
+		},
+		"themis scope gained a second prefix": func(g *tools.Grant) {
+			g.Entries[0].ThemisScope = []string{"FIND-1:", "PROD-"}
+		},
+		"themis scope emptied": func(g *tools.Grant) {
+			g.Entries[0].ThemisScope = nil
+		},
+		"per-tool cap raised": func(g *tools.Grant) { g.Entries[0].MaxCalls = 4 },
+		"aggregate raised":    func(g *tools.Grant) { g.TotalMaxCalls = 10 },
+		"mutating set":        func(g *tools.Grant) { g.Entries[1].Mutating = true },
+		"workspace binding dropped": func(g *tools.Grant) {
+			g.Entries[1].Workspace = ""
+		},
+		"tool substituted": func(g *tools.Grant) { g.Entries[0].Tool = "get_product" },
+		"tool added": func(g *tools.Grant) {
+			g.Entries = append(g.Entries, tools.GrantEntry{Tool: "write_file", MaxCalls: 1, Mutating: true})
+		},
+	}
+	for what, mutate := range widen {
+		g := base()
+		mutate(g)
+		if grantAuthorityDigest(g) == ref {
+			t.Errorf("%s: authority changed but the digest did not — the record cannot answer \"same authority?\"", what)
+		}
+	}
+
+	// Scope is a SET: order and repetition change nothing about what a
+	// grant permits, so they must not read as an authority change.
+	same := map[string]func(*tools.Grant){
+		"scope reordered": func(g *tools.Grant) {
+			g.Entries[0].ThemisScope = []string{"B-", "A-"}
+		},
+		"scope repeated": func(g *tools.Grant) {
+			g.Entries[0].ThemisScope = []string{"A-", "B-", "A-"}
+		},
+	}
+	var seen string
+	for what, mutate := range same {
+		g := base()
+		g.Entries[0].ThemisScope = []string{"A-", "B-"}
+		want := grantAuthorityDigest(g)
+		if seen == "" {
+			seen = want
+		}
+		mutate(g)
+		if got := grantAuthorityDigest(g); got != want {
+			t.Errorf("%s: authority is unchanged but the digest moved — a spurious invariant violation", what)
+		}
+	}
+
+	// Task identity legitimately differs between two otherwise identical
+	// tasks; it is not authority.
+	g := base()
+	g.TaskID = "some-other-task"
+	if grantAuthorityDigest(g) != ref {
+		t.Error("task identity moved the digest — two identical authorities must compare equal")
+	}
+
+	// Prefixes are author-supplied text. Without unambiguous encoding a
+	// scope could be widened while the digest stands still.
+	a, b := base(), base()
+	a.Entries[0].ThemisScope = []string{"FIND-1:,FIND-2:"}
+	b.Entries[0].ThemisScope = []string{"FIND-1:", "FIND-2:"}
+	if grantAuthorityDigest(a) == grantAuthorityDigest(b) {
+		t.Error("one prefix containing the separator digests as two separate prefixes — the encoding is ambiguous")
+	}
+}

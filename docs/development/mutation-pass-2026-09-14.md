@@ -50,7 +50,7 @@ survivor that Phase C does not cover either is genuinely unguarded.
 
 | Control | Exposure |
 |---|---|
-| `orchestration/orchestrator.go:763` — grant digest changed between attribution and execution | TOCTOU on authority itself |
+| ~~`orchestration/orchestrator.go:763`~~ — grant digest changed between attribution and execution | TOCTOU on authority itself. **Resolved 2026-09-15**: equivalent mutant, but its premise was not — the digest omitted `ThemisScope`. See below. |
 | `orchestration/orchestrator.go:547` — artifact changed between loading and durable capture | TOCTOU on the governed record |
 | `orchestration/orchestrator.go:215` — supplied ceiling ≠ anchored ceiling **at Open** | G1. The C matrix covers only the SubmitTask side (C13) |
 | `orchestration/orchestrator.go:372` — **L7** constitution pin | C9 exercised the **L6** pin at `:369`; this is a separate line |
@@ -96,6 +96,61 @@ before and green after; only the new cases distinguish them.
 This is the third instance that day of a passing test standing in for a
 control that never fired, after the never-executed L10 tamper test and
 Phase C row C15.
+
+### `orchestrator.go:763` — the guard is equivalent; its premise was not
+
+**RESOLVED 2026-09-15, with a real defect found underneath.**
+
+The mutant survives and will keep surviving: it is an equivalent mutant.
+Between `governed["grant_authority"] = grantAuthorityDigest(grant)` at
+`:723` and the comparison at `:763`, the only intervening statement is
+`CreateTask`, which never sees `grant`. Nothing in-process can move
+either operand, so no test can reach the branch. It is a fail-closed
+assertion against a *future* edit inserting grant-mutating code between
+recording and use — which is a legitimate thing to keep, and not a thing
+a test can pre-empt. Adding a production seam solely to make it
+reachable would buy nothing and widen the surface.
+
+What the survivor did surface is the guard's premise, and that turned
+out to be false on two counts.
+
+**1. The digest was blind to `ThemisScope` (fixed).** The digest hashes
+"exactly what a grant PERMITS", but omitted the per-entry themis-id
+scope — the prefix list `tools/authorize.go:158-167` consults to decide
+which Themis identifiers a `themis-id` tool may reach. A grant scoped to
+`FIND-1:` and one scoped to the whole `FIND-` family are materially
+different authorities that recorded an **identical** `grant_authority`.
+That defeats exactly the L9 test-review HIGH the digest was added for:
+"same authority?" was unanswerable in the one dimension a reviewer is
+least likely to eyeball. The comparison at `:763` compounded it — it
+would compare two values that already agree on a field neither covers.
+
+Fixed by folding the scope into the digest as a *set* (order and
+repetition do not change what a scope permits, so they must not move the
+digest) with length-prefixed encoding, since prefixes are author-supplied
+text and `["a;b"]` would otherwise encode identically to `["a","b"]`.
+
+**2. `CreateTask` aliases the caller's attribution map (pinned).** The
+manifest retains `opts.GovernedHashes` by reference rather than copying
+it. Today nothing writes through that alias, so the comparison is sound
+— but a future normalization or annotation written in place would
+rewrite L7's attribution *after* L7 recorded it, and `:763` would
+compare against a value it did not produce. `TestCreateTaskDoesNotMutate
+CallerAttribution` now pins it; probe-verified by inserting one in-place
+write into `CreateTask`, which the test catches.
+
+Evidence: `TestGrantAuthorityDigestCoversEveryAuthorityField`
+(`orchestration/review_test.go`) asserts the digest moves for every
+field authorization consults and stands still for task identity and
+scope reordering. Verified against the pre-fix digest in a worktree: the
+three scope assertions and the encoding-ambiguity assertion fail, the
+six pre-existing fields pass — so the test distinguishes the fix rather
+than restating it.
+
+The pattern from `local.go:153` repeats with a twist: there, a passing
+test stood in for a control that never fired. Here, an *unreachable*
+control stood in for a premise nobody had checked. Both were found by a
+mechanical check that refused to agree, not by reading.
 
 ## What this pass does not establish
 

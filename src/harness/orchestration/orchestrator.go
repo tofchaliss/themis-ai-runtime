@@ -988,10 +988,17 @@ func instantiateGrant(raw []byte, wsRoot, stagingRoot string) (*tools.Grant, str
 }
 
 // grantAuthorityDigest hashes exactly what a grant PERMITS — tools,
-// per-tool caps, workspace bindings, mutating flags, and the aggregate
-// — excluding the task identity that legitimately differs between two
-// otherwise identical tasks. Recording it makes "same authority?" a
-// question the record can answer directly.
+// per-tool caps, workspace bindings, themis-id scopes, mutating flags,
+// and the aggregate — excluding the task identity that legitimately
+// differs between two otherwise identical tasks. Recording it makes
+// "same authority?" a question the record can answer directly.
+//
+// Every field that gates a tool call at authorization time belongs
+// here. ThemisScope decides which Themis identifiers a themis-id tool
+// may reach (tools/authorize.go), so two grants differing only in
+// their scope prefixes confer materially different authority; omitting
+// it would let a widened scope record an unchanged digest, which is
+// precisely the substitution this digest exists to expose.
 func grantAuthorityDigest(g *tools.Grant) string {
 	entries := append([]tools.GrantEntry(nil), g.Entries...)
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Tool < entries[j].Tool })
@@ -1001,7 +1008,32 @@ func grantAuthorityDigest(g *tools.Grant) string {
 		// The workspace path is per-task by construction (L7 binds it to
 		// the provisioned root), so the digest records only WHETHER an
 		// entry is workspace-scoped, not which instance.
-		fmt.Fprintf(&b, "%s:%d:%t:%t;", e.Tool, e.MaxCalls, e.Workspace != "", e.Mutating)
+		fmt.Fprintf(&b, "%s:%d:%t:%t:%s;", e.Tool, e.MaxCalls, e.Workspace != "", e.Mutating, scopeDigest(e.ThemisScope))
+	}
+	return hashBytes([]byte(b.String()))
+}
+
+// scopeDigest encodes a themis-id scope as the SET of prefixes it
+// permits. Order and repetition do not change what a scope authorizes,
+// so they must not change the digest — otherwise two authority-identical
+// grants would read as a change. Each prefix is length-prefixed because
+// prefixes are author-supplied text: without it, ["a;b"] and ["a","b"]
+// would encode alike and a scope could be widened without moving the
+// digest.
+func scopeDigest(scope []string) string {
+	if len(scope) == 0 {
+		return "-"
+	}
+	uniq := append([]string(nil), scope...)
+	sort.Strings(uniq)
+	var b strings.Builder
+	var prev string
+	for i, p := range uniq {
+		if i > 0 && p == prev {
+			continue
+		}
+		prev = p
+		fmt.Fprintf(&b, "%d|%s,", len(p), p)
 	}
 	return hashBytes([]byte(b.String()))
 }

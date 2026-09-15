@@ -501,3 +501,47 @@ func TestRecoveryCrashWindows(t *testing.T) {
 		})
 	}
 }
+
+// L7 records the governed hashes, then compares them against the live
+// values before handing authority to the walk ("the grant changed
+// between attribution and execution"). That comparison is only
+// meaningful while CreateTask treats the map as the caller's: the
+// manifest aliases it rather than copying, so a future normalization or
+// annotation written in place would rewrite L7's attribution after L7
+// recorded it — and the comparison would agree with a value it did not
+// produce.
+func TestCreateTaskDoesNotMutateCallerAttribution(t *testing.T) {
+	r := testRoot(t)
+	governed := map[string]string{
+		"grant_authority": "abc", "registry": "def", "deployment_anchor": "unanchored",
+	}
+	before := make(map[string]string, len(governed))
+	for k, v := range governed {
+		before[k] = v
+	}
+	tr, err := r.CreateTask("t-alias", TaskOptions{GovernedHashes: governed})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := tr.Transition(StatusRunning, "walk"); err != nil {
+		t.Fatal(err)
+	}
+	tr.Close()
+	if len(governed) != len(before) {
+		t.Fatalf("the caller's attribution map gained or lost keys: %v (was %v)", governed, before)
+	}
+	for k, v := range before {
+		if governed[k] != v {
+			t.Errorf("attribution key %q was rewritten under the caller: %q -> %q", k, v, governed[k])
+		}
+	}
+	man, err := r.ReadManifest("t-alias")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for k, v := range before {
+		if man.GovernedHashes[k] != v {
+			t.Errorf("recorded %q is %q, not the %q the caller supplied", k, man.GovernedHashes[k], v)
+		}
+	}
+}

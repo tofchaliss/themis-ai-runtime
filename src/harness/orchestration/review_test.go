@@ -685,3 +685,106 @@ func TestCaptureVerifiedRefusesArtifactChangedAfterLoad(t *testing.T) {
 		t.Errorf("a missing artifact must refuse as an assembly fault, got %v", err)
 	}
 }
+
+// Q-L7-4 static boundedness — the rules that make "every walk
+// terminates" true, enforced entirely at LOAD so no walk needs a
+// runtime escape hatch.
+//
+// TestWorkflowLoaderFailsClosed covers the event vocabulary and one
+// member of this family (counter-free cycles). The rest survived the
+// 2026-09-14 mutation pass: the guarantee rested on guards nobody had
+// watched fire, and the one tested member had been standing in for its
+// siblings.
+//
+// Each case below violates EXACTLY ONE rule and asserts the refusal
+// names that rule — a lattice that broke two would be caught by either
+// guard and evidence neither.
+func TestStaticBoundednessRulesAreSeparate(t *testing.T) {
+	ceiling, err := LoadWorkflowCeiling(writeJSON(t, t.TempDir(), "c.json", defaultCeiling))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Premise: the untouched lattice loads, so each refusal below is
+	// the doctored rule and not a defect in the fixture.
+	if _, err := LoadWorkflow(writeJSON(t, t.TempDir(), "base.json", defaultWorkflow), ceiling); err != nil {
+		t.Fatalf("the fixture lattice must load: %v", err)
+	}
+
+	// Anchors within defaultWorkflow. The turn-no-action edge appears in
+	// both phases, so n=1 patches ANALYZE's; every patch is checked for
+	// having actually applied.
+	const (
+		analyzeExhausted = `{"on":"turns-exhausted","to":"@fail"}]},`
+		analyzeNoAction  = `{"on":"turn-no-action","to":"@stay","counter":2,"exhausted_to":"@fail"},`
+		verifyHead       = `{"name":"VERIFY","capabilities":["declare_done"],"max_model_turns":3,"edges":[`
+		verifyToolError  = `{"on":"tool-error","to":"@fail"},`
+	)
+	for _, tc := range []struct{ name, from, to, want string }{
+		{
+			// A gate does not exempt an edge from reachability: gated or
+			// not, it must go forward, terminate, or stay.
+			name: "gated edge targeting a backward phase",
+			from: verifyHead,
+			to: verifyHead + `{"on":"signal:phase-completion-requested",` +
+				`"gate":{"contract":"report-valid@1","outcome":"PASS"},"to":"ANALYZE"},`,
+			want: "must be forward, terminal, or @stay",
+		},
+		{
+			// The budget is spent, so a stay target is statically
+			// verified yet unexecutable (security review MED-4).
+			name: "turns-exhausted staying put",
+			from: analyzeExhausted,
+			to:   `{"on":"turns-exhausted","to":"@stay","counter":2,"exhausted_to":"@fail"}]},`,
+			want: "cannot target @stay",
+		},
+		{
+			// Same rule, its other disjunct: the exhaustion target is
+			// the unexecutable one.
+			name: "turns-exhausted exhausting to stay",
+			from: analyzeExhausted,
+			to:   `{"on":"turns-exhausted","to":"@fail","counter":2,"exhausted_to":"@stay"}]},`,
+			want: "cannot target @stay",
+		},
+		{
+			// A counter bounds repetition; without a forward exit at
+			// exhaustion it bounds nothing.
+			name: "counter with no exhaustion edge",
+			from: analyzeNoAction,
+			to:   `{"on":"turn-no-action","to":"@stay","counter":2},`,
+			want: "lacks its exhaustion edge",
+		},
+		{
+			// Exhaustion that goes backward reopens the cycle the
+			// counter was there to close.
+			name: "exhaustion target not strictly forward",
+			from: verifyToolError,
+			to:   `{"on":"tool-error","to":"@stay","counter":2,"exhausted_to":"ANALYZE"},`,
+			want: "must be strictly forward or terminal",
+		},
+		{
+			// Exhaustion without a counter never fires — a declared
+			// path that cannot be taken.
+			name: "exhaustion declared without a counter",
+			from: verifyToolError,
+			to:   `{"on":"tool-error","to":"@fail","exhausted_to":"@complete"},`,
+			want: "declares exhaustion without a counter",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			body := strings.Replace(defaultWorkflow, tc.from, tc.to, 1)
+			if body == defaultWorkflow {
+				t.Fatal("the patch anchor was not found — the fixture lattice changed shape")
+			}
+			_, err := LoadWorkflow(writeJSON(t, t.TempDir(), "w.json", body), ceiling)
+			if err == nil {
+				t.Fatal("an unbounded lattice LOADED — every walk under it would be statically unbounded")
+			}
+			if !errors.Is(err, ErrWorkflow) {
+				t.Errorf("refused as %v, want a workflow-definition refusal", err)
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Errorf("refused for the wrong reason — another rule must have caught it first: %v", err)
+			}
+		})
+	}
+}

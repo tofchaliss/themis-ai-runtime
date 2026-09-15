@@ -890,3 +890,145 @@ func TestProvisionPostConditionRefusesHeadNotAtPin(t *testing.T) {
 		t.Fatalf("a failed post-condition must tear down: %s", st)
 	}
 }
+
+// Q-L5-6 non-elevation floor. The harness refuses to construct a
+// provider when its effective identity differs from its real one —
+// setuid or setgid — because every execution it launches would inherit
+// that context. The guard survived the 2026-09-14 mutation pass: a
+// process cannot lower and restore its own euid to exercise this in
+// place, and a seam that let it would be a seam into the privilege
+// floor itself.
+//
+// Both halves are independent. setuid raises the effective USER,
+// setgid the effective GROUP, and a binary may carry either alone — a
+// check comparing only uids would wave a setgid-elevated process
+// straight through.
+func TestNonElevationFloor(t *testing.T) {
+	for what, id := range map[string][4]int{
+		"setuid — effective user raised":  {0, 1000, 1000, 1000},
+		"setgid — effective group raised": {1000, 1000, 0, 1000},
+		"both raised":                     {0, 1000, 0, 1000},
+		"dropped below real user":         {1000, 0, 1000, 1000},
+	} {
+		err := refuseElevation(id[0], id[1], id[2], id[3])
+		if err == nil {
+			t.Errorf("%s: an elevated execution context was ACCEPTED (euid=%d uid=%d egid=%d gid=%d)",
+				what, id[0], id[1], id[2], id[3])
+			continue
+		}
+		if !errors.Is(err, ErrAttestation) {
+			t.Errorf("%s: refused as %v, want an attestation refusal", what, err)
+		}
+		if !strings.Contains(err.Error(), "refusing elevated execution context") {
+			t.Errorf("%s: refused for the wrong reason: %v", what, err)
+		}
+	}
+	// Premise: matching identities pass, or the floor refuses every
+	// process and the cases above prove nothing.
+	for what, id := range map[string][4]int{
+		"ordinary user": {1000, 1000, 1000, 1000},
+		"root as root":  {0, 0, 0, 0},
+	} {
+		if err := refuseElevation(id[0], id[1], id[2], id[3]); err != nil {
+			t.Errorf("%s: a non-elevated context was refused: %v", what, err)
+		}
+	}
+	// And the floor is actually wired: the running process is
+	// non-elevated (the test suite would not be runnable otherwise), so
+	// construction must reach past it.
+	if _, err := NewLocalProvider(gitBin(t), t.TempDir()); err != nil {
+		t.Fatalf("a non-elevated process must construct a provider: %v", err)
+	}
+}
+
+// Attestation covers symlink, setuid/setgid, world-writable file and
+// world-writable directory. The "regular file" guard is separate and
+// was untested: a directory, FIFO or device node is not a symlink and
+// carries none of those modes, so every other check waves it through
+// and only this one speaks. Pinning a directory as the git binary is an
+// operator error that must fail at construction, not at the first exec.
+func TestAttestationRefusesNonRegularFile(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "not-a-binary")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_, err := attestBinary(sub)
+	if err == nil {
+		t.Fatal("a directory attested as the pinned executable")
+	}
+	if !errors.Is(err, ErrAttestation) {
+		t.Errorf("refused as %v, want an attestation refusal", err)
+	}
+	if !strings.Contains(err.Error(), "not a regular file") {
+		t.Fatalf("refused for the wrong reason — no other attestation check applies to a directory: %v", err)
+	}
+	// The same refusal must reach the provider constructor.
+	if _, perr := NewLocalProvider(sub, t.TempDir()); perr == nil ||
+		!strings.Contains(perr.Error(), "not a regular file") {
+		t.Fatalf("a provider was constructed over a non-regular git path: %v", perr)
+	}
+}
+
+// Budget exhaustion is refused TWICE with the same words — once at the
+// ExecGit envelope, once inside runGit after the remaining budget caps
+// the caller's deadline. TestBudgetExhaustionSeals covers the envelope,
+// and with that guard suppressed the inner one produces an identical
+// message, so neither was evidenced. Both survived the mutation pass.
+//
+// They are not redundant, and their side effects are what separate
+// them: the envelope check SEALS the environment with the typed
+// deadline reason, while the inner check records a budget-exhausted op
+// in the trace and leaves the state alone. An environment that ran out
+// mid-operation is in a different condition from one asked to start
+// work it could never finish.
+func TestBudgetExhaustionAtBothDoors(t *testing.T) {
+	t.Run("envelope: no budget to begin with — seals", func(t *testing.T) {
+		e := &Env{state: StateActive, remaining: 0}
+		_, err := e.ExecGit(time.Second, "status")
+		if err == nil || !strings.Contains(err.Error(), "budget exhausted") {
+			t.Fatalf("exhausted budget must refuse typed: %v", err)
+		}
+		if e.State() != StateSealed || e.Trace().SealReason != SealDeadline {
+			t.Fatalf("the envelope check must seal with env-deadline: %s %q", e.State(), e.Trace().SealReason)
+		}
+		// Nothing was attempted, so nothing is recorded as an op.
+		for _, op := range e.Trace().Ops {
+			if op.Outcome == "budget-exhausted" {
+				t.Error("the envelope refusal recorded an op — no execution was attempted")
+			}
+		}
+	})
+
+	t.Run("inner: budget vanishes before spawn — records, does not seal", func(t *testing.T) {
+		// A positive remaining budget passes the envelope, then the
+		// caller's deadline is capped to it. Driving the remaining
+		// budget to zero between the two is what the inner guard is
+		// for; here it is set directly, which is the same state.
+		//
+		// The provider is real so that suppressing the guard produces a
+		// FAILED ASSERTION rather than a nil-pointer panic: a test must
+		// fail by the thing it claims to check.
+		p, perr := NewLocalProvider(gitBin(t), t.TempDir())
+		if perr != nil {
+			t.Fatal(perr)
+		}
+		e := &Env{state: StateActive, remaining: 0, provider: p}
+		_, err := e.runGit("active", time.Second, t.TempDir(), "status")
+		if err == nil || !strings.Contains(err.Error(), "budget exhausted") {
+			t.Fatalf("a non-positive effective deadline must refuse typed: %v", err)
+		}
+		if e.State() == StateSealed {
+			t.Error("the inner check must not seal — sealing is the envelope's act")
+		}
+		found := false
+		for _, op := range e.Trace().Ops {
+			if op.Outcome == "budget-exhausted" && op.Exit == -1 {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("the inner refusal must be recorded as a budget-exhausted op: %+v", e.Trace().Ops)
+		}
+	})
+}

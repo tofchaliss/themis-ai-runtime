@@ -68,8 +68,8 @@ func NewLocalProvider(gitPath, baseDir string) (*LocalProvider, error) {
 	// Non-elevation floor (Q-L5-6): the harness must not be running
 	// with effective privilege above its real identity, and must never
 	// launch executions through an elevated context.
-	if os.Geteuid() != os.Getuid() || os.Getegid() != os.Getgid() {
-		return nil, fmt.Errorf("%w: effective identity differs from real identity — refusing elevated execution context", ErrAttestation)
+	if err := refuseElevation(os.Geteuid(), os.Getuid(), os.Getegid(), os.Getgid()); err != nil {
+		return nil, err
 	}
 	if !filepath.IsAbs(gitPath) || !filepath.IsAbs(baseDir) {
 		return nil, fmt.Errorf("%w: git path and base dir must be absolute", ErrProvision)
@@ -89,6 +89,24 @@ func (p *LocalProvider) Declaration() ProviderDeclaration {
 	d := p.decl
 	d.Limits = copyLimits(p.decl.Limits)
 	return d
+}
+
+// refuseElevation is the non-elevation floor's predicate (Q-L5-6),
+// separated from the identity syscalls so the control is reachable by a
+// test. A process cannot change its own effective uid downward and back
+// to exercise this in place, and a seam that let it would be a seam
+// into the privilege floor itself — worse than the gap it closed. The
+// caller supplies the four identities; this decides.
+//
+// Both halves matter independently. setuid raises the effective USER
+// and setgid the effective GROUP, and a binary may carry either alone,
+// so a check that only compared uids would pass a setgid-elevated
+// process straight through.
+func refuseElevation(euid, uid, egid, gid int) error {
+	if euid != uid || egid != gid {
+		return fmt.Errorf("%w: effective identity differs from real identity — refusing elevated execution context", ErrAttestation)
+	}
+	return nil
 }
 
 // attestBinary records the executable's identity and refuses

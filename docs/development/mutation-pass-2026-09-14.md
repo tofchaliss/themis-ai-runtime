@@ -540,6 +540,54 @@ anchor surface (8), L7 static boundedness (5), and the L9 substitution
 boundary (5). Each was mutation-verified individually in a disposable
 worktree per the AGENTS.md probe-isolation invariant.
 
+## Tier 4 — L5 execution-environment floors (closed 2026-09-15)
+
+Found the way `orchestrator.go:474` was: by reading the survivor list
+rather than the Tier-1 shortlist. **`execution/local.go:71` is the
+non-elevation floor (Q-L5-6)** — a security control, untested, and not
+on any tier list because the ranking was done by reading.
+
+The claim: *the execution environment refuses to exist in an unsafe
+configuration.* Four guards, each now killed by its own test.
+
+**The elevation floor could not be tested in place.** A process cannot
+lower and restore its own effective uid to exercise it, and a seam that
+let it would be a seam into the privilege floor itself — worse than the
+gap. Extracted the predicate to `refuseElevation(euid, uid, egid, gid)`,
+the same move `captureVerified` used that morning: make the control
+reachable without making the system more permissive. Both halves are
+tested independently, because setuid raises the effective USER and
+setgid the effective GROUP and a binary may carry either alone — a
+check comparing only uids would wave a setgid-elevated process through.
+
+**The regular-file guard** was the one member of `attestBinary`'s family
+without a test; symlink, setuid, world-writable file and world-writable
+directory all had one. A directory is none of those, so every other
+check waves it through. With the guard suppressed the refusal still
+happens — but from `io.Copy` as *"is a directory"*, a different control
+entirely. The message assertion is what caught it.
+
+**Budget exhaustion is refused at two doors with identical words**, and
+that identity is why both survived: `TestBudgetExhaustionSeals` covers
+the envelope, and suppressing it lets the inner door produce the same
+string. Their *side effects* separate them — the envelope SEALS with
+`SealDeadline` and records no op, the inner door records a
+`budget-exhausted` op and leaves the state alone. An environment that
+ran out mid-operation is in a different condition from one asked to
+start work it could never finish, and the record must say which.
+
+One detail worth keeping: the inner-door test initially killed its
+mutant by **nil-pointer panic**, because its `Env` literal had no
+provider. A panic is a kill, but the test was not failing by the thing
+it claimed to check. Given a real provider, it now fails with
+*"timeout after 0s"* — the execution genuinely attempted rather than
+refused. Same principle as everything else here: the check must
+establish what its message says.
+
+Remaining on this surface, not taken: `egress.go:162` (egress permitted
+only from the egressing state) and `:291` (`cat-file` output shape).
+Those belong to egress discipline rather than the environment floor.
+
 ## Disposition
 
 **Tier 1 closed 2026-09-15** — all twelve worked through, one at a time,

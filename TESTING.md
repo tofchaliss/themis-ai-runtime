@@ -1,7 +1,9 @@
 # Testing
 
-Status: current as of 2026-09-14, verified against the tree at that
-date (L1–L11 + G1 + G2 frozen).
+Status: current as of 2026-09-15, verified against the tree at that
+date. L1–L7 and L9–L11 implemented and frozen, plus G1 and G2; **L8
+(Subagents) is reserved and scaffolded, not implemented**, so no row
+below covers it.
 
 Two different things are tested here, and conflating them is a mistake:
 
@@ -176,6 +178,68 @@ control, not the test's opinion.
 
 ---
 
+## Mutation testing: the class the suite cannot measure
+
+A green suite says every test passed. It does not say a **control** was
+exercised — a guard can be correct, cited in a traceability record, and
+never once executed by any test. The archive sweep finds dead citations;
+a deployment finds controls that fire. Neither finds a guard that is
+correct, referenced, and silent.
+
+`evidence/harness/mutate` measures exactly that class. The operator is
+deliberately narrow: for every `if <cond> { … return <error> … }`,
+replace the condition with `false` and run that package's tests. If
+nothing fails, that control is not covered by its own package's tests.
+
+```bash
+git worktree add /tmp/themis-mutate HEAD        # isolation is ENFORCED
+cd evidence/harness
+GOWORK=off go run ./mutate -worktree /tmp/themis-mutate -timeout 90s
+```
+
+It **refuses to run anywhere but a linked git worktree** — it rewrites
+source in place, and the AGENTS.md probe-isolation invariant is not
+advice there.
+
+Read the results carefully:
+
+- **A survivor is a finding, not a failure.** Some are equivalent
+  mutants (unreachable, or redundant with an adjacent guard). Each needs
+  a judgement recorded; none should be dismissed unexamined.
+- **"Survived" is narrower than "untested"** — several survivors are
+  proven by the Phase C matrix, which lives outside the module.
+- **An equivalent mutant is not a closed question.** Ask "unreachable
+  because of *what*, and is that tested?" Four of five equivalents in
+  the 2026-09-14 pass rested on a premise nobody had checked, and two of
+  those premises were false.
+
+The dominant defect it finds is **mutual cover**: two adjacent guards
+and one test that trips both, green, named for the control, evidencing
+neither half. When a control is untestable in place (a privilege floor,
+a TOCTOU window), the remedy is to extract the predicate to a pure
+function — never to add a seam that makes the system more permissive in
+order to observe it.
+
+Results and dispositions:
+[`docs/development/mutation-pass-2026-09-14.md`](docs/development/mutation-pass-2026-09-14.md).
+
+### The same standard applies to the tests
+
+A test that fails for the wrong reason is the same defect as a guard
+that refuses for the wrong reason. Two rules follow, both learned by
+violating them:
+
+1. **Assert which refusal, not merely that one happened.** When adjacent
+   guards share a message, assert the distinguishing detail — the error
+   class, the side effect, the wording only one of them produces.
+2. **A mutant killed by panic is not evidence.** If suppressing a guard
+   crashes the test through an under-constructed fixture, the test
+   failed for its own reasons. Give it a real fixture so it fails by its
+   assertion — unless the panic IS the behaviour the guard prevents,
+   which is itself worth stating.
+
+---
+
 ## The end-to-end pipeline test (benchmarks)
 
 `benchmarks/internal/benchmark/e2e_test.go` drives run → evaluate →
@@ -200,8 +264,11 @@ package's internals.
 
 `.github/workflows/ci.yml` runs on every push to `main` and every pull
 request, from `src/harness`: gofmt (fails on any unformatted file),
-`go vet ./...`, `go test ./...`, and release builds of `themis-bench`
-and `themis-ratchet`.
+`go vet ./...`, `go test ./...`, and release builds of `themis-bench`,
+`themis-ratchet`, and `themis-run` (the production invocation surface).
+CI runs on `ubuntu-latest`, and the harness is developed on darwin —
+so every push is a dual-platform check, which is how the 2026-09-14
+host-timing defect in the L5 group-kill test was caught.
 
 CI has no model endpoint, so every live proof skips there. **The live
 proofs are therefore never evidence CI produced** — the
@@ -226,6 +293,26 @@ Most of the negative space is already automated here
 (`orchestration/verification_seam_test.go`, `deployment/anchor_test.go`);
 on a real host those rows are re-run against the **real** anchor rather
 than a test-minted one.
+
+**After any binary change, re-ask the old records.** Phase D proves a
+record is re-establishable at the moment it is written; it cannot prove
+the record still means something once the binary is different. That is
+the G1 claim applied over time, and `evidence/harness/recheck` asks it:
+
+```bash
+GOWORK=off go build -o <bin> ./recheck/
+<bin> -deploy "$DEPLOY" -anchors-registry <anchors.json>
+```
+
+Read-only and authority-free — it creates no task, writes no object,
+registers nothing. For every recorded task it re-runs D4 (the identity
+the record carries), D5 (the anchor bytes, recovered by their own hash)
+and D6 (registry re-establishment), plus the L6 verdict. Tasks governed
+by a **withdrawn** anchor must still re-establish: withdrawal stops new
+opens without rewriting history. Optional `-anchor-sha256` asserts which
+deployment you expect; a task under another one reports `OTHER`, not a
+failure, and exits 3 rather than 1 — belonging to a different deployment
+is not a durability fault.
 
 ---
 

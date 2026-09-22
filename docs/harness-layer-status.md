@@ -245,14 +245,14 @@ Failure of L1/L2/L3 can garble or starve model input; it can never bypass author
 
 **L1–L11 integration audit COMPLETE** (charter → three parallel seam
 audits S1–S10+X1–X3 → synthesis → remediation → Phase C):
-openspec/changes/l1-l11-integration-audit/. Result: the intra-layer
+openspec/changes/archive/2026-09-13-l1-l11-integration-audit/. Result: the intra-layer
 walls held essentially everywhere; every serious leak was an entry or
 consumption boundary trusting its caller. Two genuine cross-layer
 gaps were surfaced, grilled, closed, implemented, reviewed, and
 re-remediated.
 
 **G1 — Deployment Authority Anchoring: CLOSED and IMPLEMENTED**
-(openspec/changes/g1-deployment-authority/). D-G1-1 + owner
+(openspec/changes/archive/2026-09-13-g1-deployment-authority/). D-G1-1 + owner
 amendment D-G1-1A: a caller-supplied anchor path/hash IDENTIFIES a
 requested deployment; only resolution against the Governance-active
 anchors registry ADMITS it. Implemented in src/harness/deployment/

@@ -186,7 +186,7 @@ go.work                  workspace root
 2. [`docs/architecture/harness/execution-chain.md`](docs/architecture/harness/execution-chain.md) — how the pieces connect as built
 3. [`docs/harness-layer-status.md`](docs/harness-layer-status.md) — what shipped, when, with residuals
 4. `openspec/changes/archive/<layer>/design.md` — why each layer is shaped the way it is
-5. `openspec/changes/g1-deployment-authority/design.md` and `g2-established-fact-boundary/design.md` — the two cross-layer boundaries
+5. `openspec/changes/archive/2026-09-13-g1-deployment-authority/design.md` and `g2-established-fact-boundary/design.md` — the two cross-layer boundaries
 
 ## License
 

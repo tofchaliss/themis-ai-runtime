@@ -7,7 +7,7 @@ ungoverned legacy HTTP surface) removed. This document DESCRIBES the
 locked state; it does not define it. Authoritative sources:
 `ARCHITECTURE.md`, `.claude/policy/DAY-0.md`, the per-layer archives
 under `openspec/changes/archive/`, and
-`openspec/changes/g{1,2}-*/design.md`.
+`openspec/changes/archive/2026-09-13-g{1,2}-*/design.md`.
 
 The older `harness-in-themis-sketch.md` predates L9–L11 and G1/G2 and
 is retained as history.
@@ -196,6 +196,6 @@ that deployment lives. See `policies/deployment/README.md`.
 3. `docs/harness-layer-status.md` — what shipped, when, with residuals.
 4. `openspec/changes/archive/<layer>/design.md` — why each layer is
    shaped the way it is (the locked decisions).
-5. `openspec/changes/g1-deployment-authority/design.md` and
-   `openspec/changes/g2-established-fact-boundary/design.md` — the
+5. `openspec/changes/archive/2026-09-13-g1-deployment-authority/design.md` and
+   `openspec/changes/archive/2026-09-13-g2-established-fact-boundary/design.md` — the
    two cross-layer boundaries.

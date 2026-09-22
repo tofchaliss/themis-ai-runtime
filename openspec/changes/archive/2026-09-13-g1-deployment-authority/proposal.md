@@ -1,7 +1,7 @@
 # Proposal: G1 — Deployment Authority Anchoring
 
 Status: **GRILL CLOSED 2026-09-13 — D-G1-1 LOCKED with owner amendment D-G1-1A (anchor admission).** See design.md. Source: L1–L11 integration audit
-(openspec/changes/l1-l11-integration-audit/synthesis.md, G1;
+(openspec/changes/archive/2026-09-13-l1-l11-integration-audit/synthesis.md, G1;
 owner-classified genuine cross-layer gap, grill-first). No
 production wiring of the governed chain before this closes.
 

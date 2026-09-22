@@ -353,7 +353,7 @@ Anchored Open verifies instruction roots/policy against the admitted
 anchor and freezes it; anchored SubmitTask refuses any bundle
 artifact, workflow, or model outside the anchored set; the task
 record carries the anchor identity. Governance-activated
-local-dev@1. Full detail: openspec/changes/g1-deployment-authority/
+local-dev@1. Full detail: openspec/changes/archive/2026-09-13-g1-deployment-authority/
 design.md §Implementation record.
 
 Remaining: Class-3 pass over the G1 implementation, then the

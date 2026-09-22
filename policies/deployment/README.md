@@ -2,7 +2,7 @@
 
 An anchor is the Governance-owned, content-addressed declaration of
 the exact artifact set under which a deployment may execute
-(openspec/changes/g1-deployment-authority/design.md). Admission is a
+(openspec/changes/archive/2026-09-13-g1-deployment-authority/design.md). Admission is a
 two-step: caller-supplied bytes/hash IDENTIFY a requested
 deployment; only `anchors.json` ADMITS it.
 

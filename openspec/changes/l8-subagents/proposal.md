@@ -1,6 +1,8 @@
 # Proposal: Layer 8 — Subagents
 
-Status: **GRILL CLOSED 2026-09-22 — D-L8-1..21 LOCKED, Gate 0 PASS.**
+Status: **ARCHITECTURE LOCKED 2026-09-22 — D-L8-1..21 LOCKED, C-L8-1..21
+complete, Gate 0 PASS (owner closure: `design.md` §7). Implementation
+NOT STARTED; production NOT authorized.**
 The decisions live in `design.md`; the milestone plan in `tasks.md`.
 Outcome in one line: L8 v1 is a deterministic delegation mechanism for
 isolated, tool-less, single-call model inference, requested through the

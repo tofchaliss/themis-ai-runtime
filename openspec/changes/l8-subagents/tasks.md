@@ -47,6 +47,22 @@ at `runtime/model/ollama.go:138` and `openai.go:155`.
       from the provider payload (inside the adapter); test: reported ≠
       requested is observable (C-L8-10)
 
+## 1b. L8-M0b — Supporting-layer prerequisites (owner closure §35; NOT L8)
+
+Must be complete before L8 implementation is declared safe. None
+reopens D-L8-1..21.
+
+- [ ] **F-L8-2 (L7):** `model-turn` body gains `Identity{WireModel,
+      Runtime}` + `Endpoint` (additive; no constitution change)
+- [ ] **F-L8-3 (L10):** verifier-seam pre-instance refusal text
+      reconstructable from the record (mirror the C-L8-12 mechanism or
+      an equivalent L10-owned fix)
+- [ ] **F-L8-4 (L7):** parent turn context deadline =
+      `min(turn_timeout_sec, remaining deadline)`
+- [ ] **Q-SA-6 (L9/L7, issue #1):** admission correspondence treats
+      `template_scope` as fixed-by-skill, equality-checked; blocks
+      Register B's anchored positive path
+
 ## 2. L8-M1 — Governance artifacts + loaders (Class 3)
 
 - [ ] `policies/delegation/registry.json` (append-only; `name, version,
@@ -252,30 +268,20 @@ at `runtime/model/ollama.go:138` and `openai.go:155`.
       `docs/harness-layer-status.md` and `execution-chain.md` updated
       (L8 row, G2 fact table row `l8_delegation_record`)
 
-## Residuals carried (each with its own gate; none implemented here)
+## Residuals carried (each with its own gate; none implemented here — owner closure §36)
 
 - Tool-capable L8 (reopens the depth-1 proof; a new architecture
   decision)
 - δ-declarable delegation event (new workflow vocabulary + proofs)
 - Parallel fan-out (explicit deterministic ordering key required)
-- **Dependency on `l9-l7-skill-admission-identity` (Q-SA-6):** the
-  locked correspondence rule must treat `template_scope` as
-  fixed-by-skill and equality-checked; until then forged scopes are
-  digest-visible, not refused (C-L8-16 G)
 - Per-target quotas in the grant vocabulary (per-template `max_calls`)
   — generic L4 residual (C-L8-16 D)
 - Caller-narrowed `template_scope` — L9 instantiation-surface
   extension, safe in principle (C-L8-16 F)
 - Phase-level capability parameters (per-phase template binding);
   grants are task-level for every tool in v1 (C-L8-15 F)
-- F-L8-4: parent model turns bound the call by `turn_timeout_sec`
-  without `min(…, remaining deadline)` — overrun window ≤ one timeout;
-  L7 tightening (C-L8-19 H)
 - Parent-loop handling of provider-reported model mismatch (L7
   decision; P-L8-2 makes it observable)
 - Provider version/digest governance beyond the registry's
   runtime+endpoint pin
-- F-L8-3: L10 verifier-seam pre-instance refusal text is not
-  reconstructable from the record (same hole C-L8-12 closes for L8) —
-  L10 residual
 - Approval channel; anything touching the dissolved OPEN-2

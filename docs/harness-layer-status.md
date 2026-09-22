@@ -661,5 +661,16 @@ F-L8-4 (parent turn timeout not bounded by remaining deadline).
 `template_scope` as fixed-by-skill, equality-checked; the anchored
 positive-path proof (Register B) cannot run until issue #1 closes.
 
+**Authoritative L8 statement (owner, design.md §7):** L8 is a bounded,
+isolated, tool-less delegated reasoning mechanism subordinate to the
+parent governed execution; no independent governance, capability,
+workflow, durable execution state, verification authority,
+security-truth authority, or recursive delegation authority;
+establishment is witness-based through `l8-delegation`; inputs derive
+through L1/L2 and explicit parent-owned evidence references; outputs
+remain `external-untrusted` until a separate governed door establishes
+a stronger meaning. Six prerequisites before implementation is declared
+safe: P-L8-1, P-L8-2, F-L8-2, F-L8-3, F-L8-4, Q-SA-6.
+
 Skill-admission identity (issue #1) remains the blocking defect for
 live-COMPLETED work; unchanged today.

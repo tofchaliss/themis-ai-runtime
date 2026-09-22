@@ -887,6 +887,20 @@ decision.*
   `max_output_bytes` is the delegation admissibility/delivery bound.
   L8 does not own provider capture policy.
 
+- **F-L8-2 — L7:** parent `model-turn` body records execution identity
+  (`Identity` + `Endpoint`) so delegations and parent turns are
+  comparable at reconstruction (C-L8-10).
+- **F-L8-3 — L10:** verifier-seam pre-instance refusal text made
+  reconstructable (the hole C-L8-12 closes for L8) (C-L8-12).
+- **F-L8-4 — L7:** parent turn context deadline = `min(turn_timeout_sec,
+  remaining deadline)` (C-L8-19).
+- **Q-SA-6 dependency — L9/L7 skill admission:** `template_scope`
+  treated as fixed-by-skill, equality-checked (C-L8-16). Blocks the
+  anchored positive-path proof (Register B) until issue #1 closes.
+
+Per owner closure (§7): these six must be complete before L8
+implementation is declared safe; none reopens D-L8-1..21.
+
 ### 5.4 Explicitly prohibited / absent
 
 roles · scheduler · parallel executor · retry or delivery state ·
@@ -1946,3 +1960,148 @@ F-L8-3, F-L8-4); prerequisites P-L8-1, P-L8-2, F-L8-2; dependency on
 Q-SA-6 (`template_scope` fixed-by-skill, equality-checked) — and note
 the anchored positive-path proof in Register B cannot run until issue
 #1 closes. "L8 closed" ≠ "a delegation can execute in production".
+
+## 7. Closure record (owner judgment, 2026-09-22)
+
+**Final disposition: LOCK — L8 Subagents / Delegation Architecture.**
+Taking the entire grill (not only Q21) as the authoritative review
+record:
+
+```
+D-L8-1 .. D-L8-21    LOCK
+C-L8-1  .. C-L8-21   COMPLETE
+Gate 0               PASS
+Q21 composed walk    PASS
+Architecture gaps    NONE IDENTIFIED
+Implementation       NOT STARTED
+Production           NOT AUTHORIZED
+```
+
+**Authoritative architectural statement (owner):**
+
+> L8 is a bounded, isolated, tool-less delegated reasoning mechanism
+> subordinate to the parent governed execution. It has no independent
+> governance, capability, workflow, durable execution state,
+> verification authority, security-truth authority, or recursive
+> delegation authority. Delegation establishment is witness-based
+> through `l8-delegation`; all delegated inputs are derived through
+> L1/L2 and explicit parent-owned evidence references; all outputs
+> remain `external-untrusted` until a separate governed door establishes
+> a stronger meaning.
+
+**The distinction that governs everything after this line:** *the L8
+architecture is closed, but the L8 implementation is not complete.*
+Architecture is not reopened because implementation work remains or
+because implementation prerequisites are discovered. "L8 has no
+architectural gap" does not mean "all supporting layers are
+implementation-complete": Q-SA-6 is a real integrity weakness in the
+existing L9/L7 admission implementation (a forged `template_scope` is
+digest-visible, not deterministically rejected) and does not show L8
+needs another authority mechanism; P-L8-1/P-L8-2 are implementation
+safeguards derived from the L8 architecture, not gaps in it.
+
+**Core of the review (owner's 37 points, compressed to what governs
+implementation):**
+
+1. *Purpose (D-L8-1):* L8 may create delegation/isolation structure,
+   never governance structure — no workflow semantics, authority,
+   security truth, Enterprise Positions, capabilities, L1–L7 bypass,
+   independent durable execution state, or subagent hierarchy.
+2. *Execution model (D-L8-2):* exactly 1 model call, 0 tools, 0 L5
+   workspace, 0 independent workflow/ceiling/task/event stream/model
+   identity, 1 advisory result. Not an agent with authority.
+3. *Invocation (D-L8-3):* one path, Model → L7 → L4 `Authorize` → L8
+   executor. No Model→L8, L8→L8, L8→L4, L8→L5, L8→workflow,
+   L8→scheduler.
+4. *Model-specifiable inputs (D-L8-4):* exact admitted template
+   `name@version`, explicit evidence references, bounded brief —
+   nothing else. The harness composes via L1/L2, invoked at admission
+   by the executor and re-derived by the post-hook; the model does not
+   compose its own authority.
+5. *Template (D-L8-5/6):* distinct Governance family; may contain
+   contract, optional instruction, `eis_carry_scopes[]`, brief slot,
+   `max_output_bytes`; never workflow, ceiling, grant, tools, another
+   template, security truth, Enterprise Position, model selection.
+   Establishes admissibility, not truth. `name@version` immutable; any
+   change = new version, even "non-semantic"; sharing by content hash.
+6. *Substitution:* closed by L4 (`DenialTargetRefused`); the executor
+   never runs.
+7. *L1/L2 boundary:* templates narrow the instruction frontier, never
+   widen; mandatory roots unconditional; optional scopes = carry filter
+   ∩ parent activated sources.
+8. *Evidence identity:* `(parent task, referencing event seq,
+   ObjectID)`, never ObjectID alone; the reference must name an event
+   in the parent's own stream, before the parent call, whose `Refs`
+   contain the object, of a selectable class. L6 object existence ≠
+   evidence authority.
+9. *Classification:* `class(item) = f(witnessing event)`; bytes cannot
+   choose their class — the anti-laundering mechanism.
+10. *Brief claims / foreign objects / ordering:* the brief is data
+    (cannot touch `Source.Authority`); foreign objects are unreachable;
+    evidence is an unordered set canonicalized by seq, exact
+    duplicates refused, same object via different events = distinct
+    evidence.
+11. *Conversation isolation (C-L8-17):* five entry paths and no sixth;
+    "use my previous reasoning" / "inspect the file I mentioned"
+    retrieve nothing.
+12. *Output authority (D-L8-1/18):* model-authored bytes,
+    `external-untrusted`; repetition does not upgrade provenance.
+13. *Establishment (D-L8-8/15):* execution machinery ≠ established
+    fact; only the `l8-delegation` commit establishes; composition,
+    output, and capture are machinery artifacts that may orphan.
+14. *Instantiation capture (C-L8-12/13):* L4 authorization → executor
+    instantiation → L1/L2 → capture → `l4-audit` → model execution →
+    post-hook re-derivation → `l8-delegation`; capture = identity-level
+    admission evidence, establishes no delegation; P1 ≠ P2 → L7
+    invariant, fatal path ("we authorized one context but executed
+    another" is impossible).
+15. *Identity (C-L8-20):* `(parent task_id, l8-delegation seq)`; no
+    `delegation_id`; same object ≠ same delegation.
+16. *Resources (D-L8-16, C-L8-19):* subdivision, never multiplication;
+    proposed calls are the quota unit (denied, refused, provider-
+    failed, over-bound all count); executions ≤ W + M; deadline =
+    min(turn timeout, remaining); no second timeout authority.
+17. *Model identity (C-L8-10):* governed by registry + anchor; neither
+    template nor parent selects it. (Owner summary names the
+    model-interface `Identity{Name, WireModel, Runtime}` and provenance
+    `{Endpoint, Options, Raw}`; the event body keeps the C-L8-10 split
+    `governed{name, registry_hash}` / `execution{wire_model, runtime,
+    endpoint, reported, options_hash}` — consistent, not competing.)
+18. *Failure model (D-L8-15):* A denial · B `l4-audit{error}` · C
+    `l8-delegation{provider-error}` · D invariant → FAILED · E orphans,
+    no fact · F fact exists, FAILED_PARTIAL. No scheduler, queue,
+    delivery/retry state, lifecycle, independent task, or resume.
+19. *Hierarchy (D-L8-20):* depth exactly one; siblings only.
+20. *L10 (D-L8-18):* not verifier-eligible; observed, never evaluated;
+    verification via ordinary materialization.
+21. *Reconstruction (C-L8-9):* durable closure of the witness; live
+    Governance governs new executions, captured state governs history;
+    UNREPRODUCIBLE-FOR-MISSING-INPUTS / L6 corruption / DISCREPANCY
+    kept distinct, never normalized.
+22. *Six structural properties (C-L8-21):* P1 one gate · P2 pure
+    instantiation · P3 witness-derived classification · P4
+    establishment = witness · P5 no resume state · P6 zero capability
+    interface. The reviewer's checklist.
+
+**Must be completed before L8 implementation is declared safe (owner
+§35 — prerequisites, not reasons to reopen D-L8-1..21):**
+P-L8-1 provider response hard ceiling ≤ 256 KiB · P-L8-2 adapter-
+surfaced provider-reported model identity · F-L8-2 parent `model-turn`
+execution identity/provenance · F-L8-3 L10 seam refusal
+reconstructability · F-L8-4 parent turn deadline `min()` tightening ·
+Q-SA-6 skill admission enforces `template_scope` as fixed-by-skill /
+equality-checked.
+
+**Explicitly deferred (not gaps; each a separate architecture decision
+if introduced):** tool-capable delegated agents · parallel fan-out and
+its deterministic ordering key · per-target quotas · phase-level
+capability parameters · caller-narrowed `template_scope` · provider
+version/digest governance · declarable delegation workflow events ·
+L10 direct verification of delegation output · persistent subagent
+identity · recursive subagents · L8 scheduler · delegation retry/
+delivery state.
+
+**Owner closing:** this is the point at which architecture questions
+for L8 stop and implementation planning begins, with the six
+prerequisites/dependency tracked explicitly rather than silently
+treated as solved.

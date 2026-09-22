@@ -301,41 +301,63 @@ func Open(cfg Config) (*Orchestrator, *StartupReport, error) {
 // hash-comparing — it learns nothing about skills — but the identity
 // it compares against now comes from governed bytes rather than from
 // the submitter.
-func (o *Orchestrator) verifyAnchoredSkill(a *deployment.Anchor, env *Envelope) error {
-	ref := ""
-	for k, v := range env.Origin {
-		if k == "skill" {
-			ref = v
-		}
-	}
+func (o *Orchestrator) verifyAnchoredSkill(a *deployment.Anchor, env *Envelope) (*skills.Catalog, *skills.Manifest, error) {
+	// The selector is the load-bearing skill field (D-SA-5) — never
+	// origin, which is attribution the validator has already required
+	// to agree with it. Origin is read by nobody here.
+	ref := env.Skill
 	if ref == "" {
-		// No skill attribution: the envelope validator already
-		// refuses skill_* keys without a commitment, so there is no
-		// skill identity to resolve.
-		return nil
+		// No Skill claim: the envelope validator already refuses
+		// skill-attributing origin keys without the field, so there
+		// is no skill identity to resolve.
+		return nil, nil, nil
 	}
 	if o.cfg.SkillCatalogPath == "" {
-		return fmt.Errorf("%w: skill-attributed task under an anchored deployment but no governed catalog is configured", ErrAssembly)
+		return nil, nil, fmt.Errorf("%w: skill-attributed task under an anchored deployment but no governed catalog is configured", ErrAssembly)
 	}
 	catalogHash, herr := deployment.HashFile(o.cfg.SkillCatalogPath)
 	if herr != nil || catalogHash != a.SkillCatalog {
-		return fmt.Errorf("%w: skill catalog is not the anchored artifact (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
+		return nil, nil, fmt.Errorf("%w: skill catalog is not the anchored artifact (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
 	}
 	cat, cerr := skills.LoadCatalog(o.cfg.SkillCatalogPath)
 	if cerr != nil {
-		return fmt.Errorf("%w: anchored skill catalog unreadable: %v", ErrAssembly, cerr)
+		return nil, nil, fmt.Errorf("%w: anchored skill catalog unreadable: %v", ErrAssembly, cerr)
 	}
-	entry, _, rerr := cat.Resolve(ref)
+	// Resolution establishes: registered, ACTIVE (withdrawn refuses
+	// typed — D-SA-8), manifest bytes two-way against the registered
+	// composition hash. What it does NOT establish is that the
+	// SUBMITTED composition is that one — that is the correspondence
+	// below (D-SA-2).
+	_, m, rerr := cat.Resolve(ref)
 	if rerr != nil {
-		return fmt.Errorf("%w: %v", ErrAssembly, rerr)
+		return nil, nil, fmt.Errorf("%w: %v", ErrAssembly, rerr)
 	}
-	if env.Composition == nil {
-		return fmt.Errorf("%w: skill attribution without a composition commitment", ErrInvariant)
+	c := env.Composition
+	if c == nil {
+		return nil, nil, fmt.Errorf("%w: skill attribution without a composition commitment", ErrInvariant)
 	}
-	if env.Composition.Seal != entry.Composition {
-		return fmt.Errorf("%w: the submitted composition is not the composition %s registers — a submitter selects an anchored skill, never its constituent hashes", ErrAssembly, ref)
+	// D-SA-2 (v): every Skill-fixed member of the submitted commitment
+	// must EQUAL the manifest's pin for that member — per member, with
+	// its own refusal, never one derived hash (D-SA-2/Q-SA-5). The
+	// manifest's pins are Governance's; the commitment's fields are the
+	// submitter's claims; the seal is consulted by nothing here (D-SA-6:
+	// two consumers only, never a Governance comparison). Effective
+	// grant and spec are per-task and are judged by the instantiation
+	// relation (D-SA-4), not by equality.
+	for _, member := range []struct{ label, claimed, pinned string }{
+		{"workflow", c.Workflow, m.Workflow.SHA256},
+		{"workflow_ceiling", c.WorkflowCeiling, m.WorkflowCeiling.SHA256},
+		{"context_contract", c.ContextContract, m.ContextContract.SHA256},
+		{"grant_template", c.GrantTemplate, m.GrantTemplate.SHA256},
+		{"spec_template", c.SpecTemplate, m.SpecTemplate.SHA256},
+		{"input_schema", c.InputSchema, m.InputSchema.SHA256},
+		{"procedure", c.Procedure, m.Procedure.SHA256},
+	} {
+		if member.claimed != member.pinned {
+			return nil, nil, fmt.Errorf("%w: the submitted composition's %s is not the %s that %s registers — a submitter selects an anchored skill, never its constituent hashes", ErrAssembly, member.label, member.label, ref)
+		}
 	}
-	return nil
+	return cat, m, nil
 }
 
 // verifyAnchoredInstructionPlane checks the instruction roots, the
@@ -434,6 +456,12 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 		return TaskResult{}, err
 	}
 	res := TaskResult{TaskID: env.TaskID}
+	// Under an anchored, skill-attributed submission these hold the
+	// catalog state and manifest admission resolved (D-SA-2) — the
+	// reference for instantiation (D-SA-4) and the exact bytes the
+	// record retains (Claim 2 evidence). Nil otherwise.
+	var skillCatalog *skills.Catalog
+	var skillManifest *skills.Manifest
 
 	// Governed artifacts, fail closed.
 	wfCeiling, err := LoadWorkflowCeiling(env.WorkflowCeilingPath)
@@ -471,6 +499,24 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 		if verr := verifyAnchoredInstructionPlane(o.cfg, a); verr != nil {
 			return res, verr
 		}
+		// D-SA-9: deployment-level Skill admissibility — the anchor's
+		// exact allowlist, checked BEFORE any catalog resolution and
+		// independently of the bundle gate below. Catalog membership
+		// says the identity exists; only this pin says this deployment
+		// may run it. Mirrors the model allowlist: a skill enters a
+		// deployment only by Governance act.
+		if env.Skill != "" {
+			admitted := false
+			for _, s := range a.Skills {
+				if s == env.Skill {
+					admitted = true
+					break
+				}
+			}
+			if !admitted {
+				return res, fmt.Errorf("%w: skill %q is not in the anchored skill allowlist (deployment %s@%d) — a skill enters a deployment only by Governance act", ErrAssembly, env.Skill, a.Name, a.Deployment)
+			}
+		}
 		if reg.Hash != a.ToolRegistry {
 			return res, fmt.Errorf("%w: tool registry is not the anchored artifact (deployment %s@%d) — a mutually consistent bundle is not a governed bundle", ErrAssembly, a.Name, a.Deployment)
 		}
@@ -503,13 +549,24 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 				return res, fmt.Errorf("%w: %s is not the artifact this anchored workflow bundles (deployment %s@%d)", ErrAssembly, check.label, a.Name, a.Deployment)
 			}
 		}
+		// D-SA-3: under an anchored deployment a skill-scope instruction
+		// artifact enters only through a Skill-attributed envelope whose
+		// composition corresponds. An unattributed procedure would be a
+		// submitter-authored trusted-scope instruction source verified
+		// only against the submitter's own hash — hash integrity is not
+		// Governance provenance (finding F-SA-1).
+		if env.Skill == "" && env.SkillProcedurePath != "" {
+			return res, fmt.Errorf("%w: a procedure is a Skill artifact — an anchored deployment (%s@%d) delivers skill-scope instructions only through a corresponding Skill composition, never from an unattributed envelope", ErrAssembly, a.Name, a.Deployment)
+		}
 		// Skill composition resolves from the ANCHORED CATALOG, never
 		// from the submitter's own hash (owner finding 1): the
 		// submitter selects an anchored skill identity; the catalog
 		// says what that identity is composed of.
-		if serr := o.verifyAnchoredSkill(a, env); serr != nil {
+		cat, man, serr := o.verifyAnchoredSkill(a, env)
+		if serr != nil {
 			return res, serr
 		}
+		skillCatalog, skillManifest = cat, man
 		allowedModel := false
 		for _, m := range a.Models {
 			if env.Model == m {
@@ -648,6 +705,29 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 			return res, err
 		}
 	}
+	// D-SA-4: under an anchored, skill-attributed submission the
+	// effective grant and spec must be legitimate INSTANTIATIONS of the
+	// registered templates. The reference templates are resolved from
+	// the manifest's pins — never from the commitment's claimed hashes
+	// (reference-source rule): the claim was consumed only by the seal
+	// and by D-SA-2's equality. The relation is L4/L5 vocabulary
+	// applied mechanically; L7 decides no grant policy.
+	if skillManifest != nil {
+		_, grantTpl, terr := skillManifest.ResolvePin("grant_template")
+		if terr != nil {
+			return res, fmt.Errorf("%w: %v", ErrAssembly, terr)
+		}
+		if err := tools.Instantiates(rawGrant, grantTpl, env.TaskID); err != nil {
+			return res, fmt.Errorf("%w: %v", ErrAssembly, err)
+		}
+		_, specTpl, terr := skillManifest.ResolvePin("spec_template")
+		if terr != nil {
+			return res, fmt.Errorf("%w: %v", ErrAssembly, terr)
+		}
+		if err := execution.SpecInstantiates(spec, specTpl); err != nil {
+			return res, fmt.Errorf("%w: %v", ErrAssembly, err)
+		}
+	}
 	// Cross-artifact identity binding (security review MED-1): a
 	// grant or spec minted for another task is refused, not accepted
 	// on faith.
@@ -730,6 +810,12 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	for k, v := range env.Origin {
 		governed["origin:"+k] = v
 	}
+	// The load-bearing selector admission actually used (D-SA-5) —
+	// recorded beside the attribution so the two independently derived
+	// values stay comparable in the record.
+	if env.Skill != "" {
+		governed["skill"] = env.Skill
+	}
 	if o.anchor != nil {
 		// Q-G1-7: the assembly record proves "executed under this
 		// ADMITTED deployment anchor", re-verifiable at replay.
@@ -772,6 +858,15 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	materialized["grant_submitted"] = rawGrant
 	if len(procedureBytes) > 0 {
 		materialized["procedure"] = procedureBytes
+	}
+	// Claim 2 evidence (A-SA-11): the exact Governance bytes an anchored
+	// skill admission consumed — catalog and manifest — join the durable
+	// closure, content-addressed and deduplicated across tasks, so
+	// "this task ran the registered composition" reconstructs from the
+	// record alone and never from today's catalog (D-SA-8).
+	if skillCatalog != nil && skillManifest != nil {
+		materialized["skill_catalog"] = skillCatalog.Raw
+		materialized["skill_manifest"] = skillManifest.Raw
 	}
 	if err := recordMaterializedArtifacts(task, materialized); err != nil {
 		// Post-CreateTask failures must still tear the environment down;
@@ -1026,7 +1121,11 @@ func grantAuthorityDigest(g *tools.Grant) string {
 		// The workspace path is per-task by construction (L7 binds it to
 		// the provisioned root), so the digest records only WHETHER an
 		// entry is workspace-scoped, not which instance.
-		fmt.Fprintf(&b, "%s:%d:%t:%t:%s;", e.Tool, e.MaxCalls, e.Workspace != "", e.Mutating, scopeDigest(e.ThemisScope))
+		// TemplateScope is authority over WHICH delegation templates a
+		// delegate entry may name (D-SA-4 / L8 M2): the 2026-09-15 class
+		// of defect was a digest blind to a scope field, so it joins the
+		// digest the day the field exists.
+		fmt.Fprintf(&b, "%s:%d:%t:%t:%s:%s;", e.Tool, e.MaxCalls, e.Workspace != "", e.Mutating, scopeDigest(e.ThemisScope), scopeDigest(e.TemplateScope))
 	}
 	return hashBytes([]byte(b.String()))
 }

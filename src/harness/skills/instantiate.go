@@ -21,6 +21,7 @@ import (
 	"github.com/tofchaliss/themis/confine"
 	"github.com/tofchaliss/themis/execution"
 	"github.com/tofchaliss/themis/state"
+	"github.com/tofchaliss/themis/tools"
 )
 
 // sealedComposition builds the commitment L7 verifies against: the
@@ -294,6 +295,15 @@ func Instantiate(catalogPath, ref string, req Request) (string, error) {
 	if err := checkGrantShape(effGrant, req.TaskID); err != nil {
 		return "", err
 	}
+	// D-SA-4 mirrored at instantiation, after the shape check so a
+	// malformed substitution still refuses at the substitution site:
+	// L9 constructs instances by construction and proves it against
+	// the same L4-owned relation L7 applies authoritatively at anchored
+	// assembly — L9 can never emit an envelope the admission relation
+	// refuses.
+	if err := tools.Instantiates(effGrant, grantRaw, req.TaskID); err != nil {
+		return "", fmt.Errorf("%w: %v", ErrResolve, err)
+	}
 
 	abs := func(p string) string {
 		a, aerr := filepath.Abs(p)
@@ -308,6 +318,13 @@ func Instantiate(catalogPath, ref string, req Request) (string, error) {
 		"model":            d.Model,
 		"turn_timeout_sec": d.TurnTimeoutSec,
 		"payload":          string(payloadBytes),
+
+		// The load-bearing Skill selector (D-SA-5): the ONLY field
+		// admission reads to choose which registered manifest the
+		// correspondence check runs against. Origin below repeats it
+		// as attribution; the two are independently derived values in
+		// the record, so an inconsistency between them is detectable.
+		"skill": fmt.Sprintf("%s@%d", entry.Name, entry.Version),
 
 		"workflow_path":         abs(wfPath),
 		"workflow_ceiling_path": abs(wcPath),

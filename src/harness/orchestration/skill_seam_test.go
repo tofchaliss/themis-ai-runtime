@@ -60,6 +60,7 @@ func TestSkillProvenanceDoesNotChangeTheWalk(t *testing.T) {
 	f.o.cfg.Model = happyScript()
 	base := f.envelope(t, "t-skill")
 	attributed := withEnvelopeFields(t, base, map[string]any{
+		"skill": "investigate-cve@1", // D-SA-5: the selector; origin agrees
 		"origin": map[string]string{
 			"skill":             "investigate-cve@1",
 			"skill_composition": strings.Repeat("a", 64),
@@ -143,6 +144,7 @@ func TestSkillProvenanceDoesNotChangeASaturatingWalk(t *testing.T) {
 	f.o.cfg.Model = script()
 	base := f.envelope(t, "t-sat-skill")
 	attributed := withEnvelopeFields(t, base, map[string]any{
+		"skill":       "investigate-cve@1",
 		"origin":      map[string]string{"skill": "investigate-cve@1", "skill_composition": strings.Repeat("a", 64)},
 		"composition": genuineCommitment(t, base),
 	}, "envelope-t-sat-attributed.json")
@@ -167,6 +169,9 @@ func TestSkillProvenancePreservedIntoAttribution(t *testing.T) {
 	f := setup(t, happyScript(), "")
 	base := f.envelope(t, "t-attr")
 	env := withEnvelopeFields(t, base, map[string]any{
+		// D-SA-5: the load-bearing selector; origin repeats it as
+		// attribution.
+		"skill": "investigate-cve@1",
 		"origin": map[string]string{
 			"skill":             "investigate-cve@1",
 			"skill_composition": strings.Repeat("c", 64),
@@ -198,6 +203,7 @@ func TestProvenanceSwapDoesNotRedirectExecution(t *testing.T) {
 	// Claim a skill that does not exist anywhere, with a composition
 	// hash matching nothing.
 	swapped := withEnvelopeFields(t, base, map[string]any{
+		"skill": "some-other-skill@99",
 		"origin": map[string]string{
 			"skill":             "some-other-skill@99",
 			"skill_composition": strings.Repeat("f", 64),
@@ -335,6 +341,7 @@ func TestSkillProvenanceDoesNotChangeATurnSaturatingWalk(t *testing.T) {
 	f.o.cfg.Model = script()
 	base := f.envelope(t, "t-turnsat-skill")
 	attributed := withEnvelopeFields(t, base, map[string]any{
+		"skill":       "investigate-cve@1",
 		"origin":      map[string]string{"skill": "investigate-cve@1", "skill_composition": strings.Repeat("a", 64)},
 		"composition": genuineCommitment(t, base),
 	}, "envelope-t-turnsat-attributed.json")

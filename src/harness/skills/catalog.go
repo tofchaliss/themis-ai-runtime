@@ -41,7 +41,10 @@ type Catalog struct {
 	Entries []Entry `json:"entries"`
 
 	Hash string `json:"-"`
-	dir  string
+	// Raw: the exact catalog bytes this state was loaded from — the
+	// bytes an anchored admission consumed (Claim 2 evidence).
+	Raw []byte `json:"-"`
+	dir string
 }
 
 // LoadCatalog reads the governed catalog fail-closed. One load is one
@@ -90,6 +93,7 @@ func LoadCatalog(path string) (*Catalog, error) {
 		}
 	}
 	c.Hash = hashBytes(raw)
+	c.Raw = raw
 	c.dir = filepath.Dir(path)
 	return &c, nil
 }

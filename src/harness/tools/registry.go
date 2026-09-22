@@ -231,6 +231,12 @@ type GrantEntry struct {
 	// reviewer reading the grant sees every write capability at a
 	// glance.
 	Mutating bool `json:"mutating,omitempty"`
+	// TemplateScope: the exact delegation templates (name@version) a
+	// `delegate` entry may name (L8 D-L8-5/6; C-L8-15 G: exact
+	// equality at Authorize). Skill-fixed structure: set-equal between
+	// an effective grant and its template (D-SA-4), digested into
+	// grant_authority, never narrowed by a caller.
+	TemplateScope []string `json:"template_scope,omitempty"`
 }
 
 // Grant is the execution-scoped allowlist: ExecutionGrant ⊆
@@ -282,6 +288,9 @@ func LoadGrant(path string) (*Grant, error) {
 		// invocations (security review F6).
 		if e.Workspace != "" && !filepath.IsAbs(e.Workspace) {
 			return nil, fmt.Errorf("%w: grant %q workspace must be absolute", ErrGrantInvalid, e.Tool)
+		}
+		if err := checkTemplateScope(e.TemplateScope); err != nil {
+			return nil, fmt.Errorf("%w: grant %q: %v", ErrGrantInvalid, e.Tool, err)
 		}
 	}
 	sum := sha256.Sum256(raw)

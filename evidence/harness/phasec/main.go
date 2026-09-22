@@ -468,6 +468,17 @@ func matrix() []row {
 				if h == nil || h["workflow"] == "" {
 					return fmt.Errorf("row setup: skill.json unreadable")
 				}
+				// D-SA-9: the allowlist gate precedes correspondence, so
+				// the row's anchor must admit the skill for the
+				// correspondence gate to be the one that refuses.
+				p, sha, err := c.mintAnchor(func(a map[string]any) {
+					a["skills"] = []string{"remediate-dependency@1"}
+				})
+				if err != nil {
+					return fmt.Errorf("row setup: %w", err)
+				}
+				c.anchorOverride, c.shaOverride = p, sha
+				defer func() { c.anchorOverride, c.shaOverride = "", "" }()
 				return c.openThenSubmit(func(e map[string]any) {
 					h["grant"] = fileSHA(e["grant_path"].(string))
 					h["spec"] = fileSHA(e["spec_path"].(string))
@@ -489,6 +500,9 @@ func matrix() []row {
 					// empty procedure identity in that case.
 					h["procedure"] = ""
 					comp["composition_sha256"] = sealComposition(h)
+					// D-SA-5: the load-bearing selector; origin is
+					// attribution and must agree with it.
+					e["skill"] = "remediate-dependency@1"
 					e["origin"] = map[string]any{"skill": "remediate-dependency@1"}
 					e["composition"] = comp
 				})

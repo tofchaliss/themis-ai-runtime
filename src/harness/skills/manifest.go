@@ -63,6 +63,11 @@ type Manifest struct {
 
 	CompositionHash string `json:"-"`
 	Dir             string `json:"-"` // manifest directory, for pin resolution
+	// Raw: the exact manifest bytes the composition hash names — the
+	// bytes an anchored admission consumed, retained by the task record
+	// (Claim 2 evidence, A-SA-11) so reconstruction never depends on
+	// today's catalog representation.
+	Raw []byte `json:"-"`
 }
 
 // LoadManifest reads and validates a skill manifest fail-closed. It
@@ -120,7 +125,27 @@ func LoadManifest(path string) (*Manifest, error) {
 	sum := sha256.Sum256(raw)
 	m.CompositionHash = hex.EncodeToString(sum[:])
 	m.Dir = filepath.Dir(path)
+	m.Raw = raw
 	return &m, nil
+}
+
+// ResolvePin reads one named member of the composition through the
+// confined resolver and verifies its bytes against the pin. Exported
+// for L7's anchored admission (D-SA-4): the reference template is
+// resolved from the MANIFEST PIN, never from a claim the envelope
+// carries. Unknown member names refuse — the composition is closed.
+func (m *Manifest) ResolvePin(name string) (string, []byte, error) {
+	pins := map[string]Pin{
+		"workflow": m.Workflow, "workflow_ceiling": m.WorkflowCeiling,
+		"context_contract": m.ContextContract, "grant_template": m.GrantTemplate,
+		"spec_template": m.SpecTemplate, "input_schema": m.InputSchema,
+		"procedure": m.Procedure,
+	}
+	p, ok := pins[name]
+	if !ok {
+		return "", nil, fmt.Errorf("%w: %q is not a member of a skill composition", ErrResolve, name)
+	}
+	return m.resolvePin(name, p)
 }
 
 // resolvePin reads a pinned artifact and verifies its bytes against

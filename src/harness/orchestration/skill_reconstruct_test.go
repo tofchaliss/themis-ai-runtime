@@ -293,6 +293,7 @@ func TestGovernanceIdentityIsNotEstablishedBySelfDeclaredAttribution(t *testing.
 		t.Fatal(err)
 	}
 	forged := withEnvelopeFields(t, base, map[string]any{
+		"skill":       "investigate-cve@1", // D-SA-5: the selector; origin agrees
 		"composition": genuineCommitment(t, base),
 		"origin": map[string]string{
 			"skill":             "investigate-cve@1",
@@ -340,6 +341,7 @@ func TestAttributionInconsistencyIsDetectable(t *testing.T) {
 		t.Fatal(err)
 	}
 	lying := withEnvelopeFields(t, base, map[string]any{
+		"skill": "investigate-cve@1", // D-SA-5: the selector; origin agrees
 		"origin": map[string]string{
 			"skill":             "investigate-cve@1",
 			"skill_composition": entry.Composition,

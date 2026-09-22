@@ -658,6 +658,10 @@ func TestAnchoredSkillRequiresConfiguredCatalog(t *testing.T) {
 			"workflow_ceiling": envHash("wceiling.json"),
 			"context_contract": envHash("context-contract.json"),
 		}}
+		// D-SA-9: the allowlist gate precedes catalog resolution, so the
+		// skill must be admitted here for the catalog check to be the
+		// one that refuses.
+		m["skills"] = []any{"investigate-cve@1"}
 	}, filepath.Join(f.envDir, "eceiling.json"))
 	cfg := anchoredConfig(t, t.TempDir(), ap, sha, reg, apCeiling)
 	cfg.SkillCatalogPath = "" // anchored deployment, no governed catalog
@@ -678,7 +682,7 @@ func TestAnchoredSkillRequiresConfiguredCatalog(t *testing.T) {
 	}
 	writeJSON(t, f.envDir, filepath.Base(env), strings.Replace(body,
 		`"payload":`,
-		`"origin":{"skill":"investigate-cve@1","skill_version":"1"},`+
+		`"skill":"investigate-cve@1","origin":{"skill":"investigate-cve@1","skill_version":"1"},`+
 			`"composition":`+string(commit)+`,"payload":`, 1))
 	_, err = o.SubmitTask(env)
 	if err == nil {

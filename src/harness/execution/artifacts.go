@@ -263,3 +263,72 @@ func (s *ProvisionSpec) ValidateAgainst(c *WorkspaceExecutionCeiling) error {
 	}
 	return nil
 }
+
+// ErrNotInstantiation is the typed refusal for an effective spec that
+// is not a legitimate instantiation of its template (D-SA-4).
+var ErrNotInstantiation = fmt.Errorf("%w: effective spec is not an instantiation of its template", ErrSpecInvalid)
+
+// SpecInstantiates reports whether an effective spec ⊑ its spec
+// template under D-SA-4: the Class-3 subject fields (@task_id, @repo,
+// @pinned_sha) are substituted, wall_deadline_s may only narrow, and
+// every other declared limit (dimension, strength, value) is equal.
+// The template is read as bytes because it carries placeholders the
+// governed loader refuses by design; nothing here provisions anything.
+func SpecInstantiates(eff *ProvisionSpec, templateRaw []byte) error {
+	var tpl struct {
+		Version   int        `json:"version"`
+		TaskID    string     `json:"task_id"`
+		Repo      string     `json:"repo"`
+		PinnedSHA string     `json:"pinned_sha"`
+		Limits    []LimitReq `json:"limits"`
+	}
+	dec := json.NewDecoder(strings.NewReader(string(templateRaw)))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&tpl); err != nil {
+		return fmt.Errorf("%w: spec template: %v", ErrSpecInvalid, err)
+	}
+	if dec.More() {
+		return fmt.Errorf("%w: spec template: trailing content", ErrSpecInvalid)
+	}
+	for field, want := range map[string]string{"task_id": tpl.TaskID, "repo": tpl.Repo, "pinned_sha": tpl.PinnedSHA} {
+		if want != "@"+field {
+			return fmt.Errorf("%w: the template's %s must be the @%s placeholder", ErrNotInstantiation, field, field)
+		}
+	}
+	if eff.Version != tpl.Version {
+		return fmt.Errorf("%w: version %d differs from the template's %d", ErrNotInstantiation, eff.Version, tpl.Version)
+	}
+	if len(eff.Limits) != len(tpl.Limits) {
+		return fmt.Errorf("%w: %d limits declared, template declares %d — limits are Skill-fixed", ErrNotInstantiation, len(eff.Limits), len(tpl.Limits))
+	}
+	tplLimits := map[string]LimitReq{}
+	for _, l := range tpl.Limits {
+		// The governed loader normalizes an absent strength to the
+		// default (Q-L5-9); the template is raw bytes, so the same
+		// normalization applies before comparing — a template that
+		// omits strength means enforced, exactly as its instance does.
+		if l.Strength == "" {
+			l.Strength = StrengthEnforced
+		}
+		tplLimits[l.Dimension] = l
+	}
+	for _, l := range eff.Limits {
+		t, ok := tplLimits[l.Dimension]
+		if !ok {
+			return fmt.Errorf("%w: limit %q is not in the template — limits are Skill-fixed", ErrNotInstantiation, l.Dimension)
+		}
+		if l.Strength != t.Strength {
+			return fmt.Errorf("%w: limit %q strength differs from the template", ErrNotInstantiation, l.Dimension)
+		}
+		if l.Dimension == DimWallDeadlineS {
+			if l.Value < 1 || l.Value > t.Value {
+				return fmt.Errorf("%w: wall_deadline_s %d must be within [1, %d] — the deadline only narrows", ErrNotInstantiation, l.Value, t.Value)
+			}
+			continue
+		}
+		if l.Value != t.Value {
+			return fmt.Errorf("%w: limit %q value %d differs from the template's %d — only the wall deadline narrows", ErrNotInstantiation, l.Dimension, l.Value, t.Value)
+		}
+	}
+	return nil
+}

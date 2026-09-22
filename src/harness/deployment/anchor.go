@@ -38,6 +38,8 @@ var (
 var (
 	shaSyntax  = regexp.MustCompile(`^[0-9a-f]{64}$`)
 	nameSyntax = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
+	// skillRefSyntax: an exact skill reference, name@version.
+	skillRefSyntax = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*@[1-9][0-9]*$`)
 )
 
 // Anchor is the closed deployment-definition schema (Q-G1-2). Every
@@ -102,6 +104,15 @@ type Anchor struct {
 	// skill identity, never one of its constituent hashes (owner
 	// disposition, finding 1).
 	SkillCatalog string `json:"skill_catalog"`
+	// Skills is the deployment's Skill allowlist (D-SA-9): the exact
+	// name@version set THIS deployment may run, checked at anchored
+	// SubmitTask before catalog resolution — the finer-grained gate
+	// beside the bundle-level Workflows gate, mirroring Models. Catalog
+	// membership establishes identity; this pin establishes deployment
+	// admissibility; neither implies the other. Absent or empty admits
+	// no skill-attributed task: a skill enters a deployment only by
+	// Governance act, never by existing in the global catalog.
+	Skills []string `json:"skills,omitempty"`
 	// Consumption pins for planes consumed outside L7 (each verified
 	// by that plane's own consumer; see the residual record):
 	ContractRegistry      string `json:"contract_registry"`
@@ -207,6 +218,22 @@ func ParseAnchor(raw []byte, origin string) (*Anchor, error) {
 			return nil, fmt.Errorf("%w: %s: empty or duplicate model allowlist entry", ErrAnchor, origin)
 		}
 		seenM[m] = true
+	}
+	// The Skill allowlist is a closed, exact set: name@version only (no
+	// "latest", no ranges — the same discipline as the catalog), no
+	// duplicates, bounded like the workflow set.
+	if len(a.Skills) > maxWorkflowBundles {
+		return nil, fmt.Errorf("%w: %s: the skill allowlist exceeds %d entries — an anchor is a closed, reviewable declaration", ErrAnchor, origin, maxWorkflowBundles)
+	}
+	seenS := map[string]bool{}
+	for _, s := range a.Skills {
+		if !skillRefSyntax.MatchString(s) {
+			return nil, fmt.Errorf("%w: %s: skill allowlist entry %q must be an exact name@version", ErrAnchor, origin, s)
+		}
+		if seenS[s] {
+			return nil, fmt.Errorf("%w: %s: duplicate skill allowlist entry %q", ErrAnchor, origin, s)
+		}
+		seenS[s] = true
 	}
 	a.SHA256 = hashBytes(raw)
 	a.Raw = raw

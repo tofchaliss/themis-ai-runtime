@@ -39,6 +39,17 @@ type Envelope struct {
 	// 2026-09-07: the payload travels through the full L2 pipeline).
 	ContextContractPath string `json:"context_contract_path"`
 
+	// Skill: the claimed Skill identity, "name@version" — the SOLE
+	// admission selector for Skill correspondence under an anchored
+	// deployment (D-SA-5). It is load-bearing and schema-validated,
+	// unlike Origin, which is attribution only. A false claim can only
+	// cause refusal (the catalog's pins will not match) or be true; it
+	// has selection authority, never composition authority (D-SA-2).
+	// Present ⇒ a composition commitment is required (D-L9-11d
+	// extended). L7 reads it for exactly one thing: choosing which
+	// registered manifest the correspondence check runs against.
+	Skill string `json:"skill,omitempty"`
+
 	// SkillProcedurePath/SHA: OPTIONAL activated skill-instruction
 	// artifact (L9). When present the loop activates it as the L1
 	// ScopeSkill source with byte verification against the pin; when
@@ -75,6 +86,14 @@ type Envelope struct {
 
 // sha256Syntax: a committed identity is a full hex digest, nothing else.
 var sha256Syntax = regexp.MustCompile(`^[0-9a-f]{64}$`)
+
+// skillRefSyntax: an exact "name@version" reference — the same name
+// rule the catalog enforces and an exact positive integer version. No
+// "latest", no ranges: a floating reference is a mutable lookup
+// policy, not an identity (D-L9-10). Defined here rather than
+// imported so L7 stays free of skill SEMANTICS; it recognizes the
+// shape of a selector and nothing more.
+var skillRefSyntax = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*@[1-9][0-9]*$`)
 
 // CompositionCommitment names the expected SHA-256 of each artifact a
 // submitted composition covers. Every field is a plain identity; the
@@ -261,6 +280,27 @@ func LoadEnvelope(path string) (*Envelope, error) {
 		}
 		if e.Composition == nil {
 			return nil, fmt.Errorf("%w: origin key %q attributes a skill, so the envelope must carry the composition commitment that attribution refers to", ErrInvariant, k)
+		}
+		// D-SA-5 coherence: attribution names a skill, so the
+		// load-bearing selector must be present — attribution without
+		// the selector is governance-looking provenance with no
+		// admission path, and a selector that disagrees with the
+		// attribution is an incoherent envelope, not a choice.
+		if e.Skill == "" {
+			return nil, fmt.Errorf("%w: origin key %q attributes a skill, so the envelope must name that skill in its load-bearing skill field", ErrInvariant, k)
+		}
+	}
+	if e.Skill != "" {
+		if len(e.Skill) > 256 || !skillRefSyntax.MatchString(e.Skill) {
+			return nil, fmt.Errorf("%w: skill must be an exact name@version reference — nothing is defaulted", ErrEnvelope)
+		}
+		// D-L9-11d, applied to the selector: a Skill claim without the
+		// composition it claims is submitter-elective attribution.
+		if e.Composition == nil {
+			return nil, fmt.Errorf("%w: skill %q is claimed, so the envelope must carry the composition commitment that claim refers to", ErrInvariant, e.Skill)
+		}
+		if attributed, ok := e.Origin["skill"]; ok && attributed != e.Skill {
+			return nil, fmt.Errorf("%w: skill field %q and origin attribution %q disagree — attribution is incoherent", ErrInvariant, e.Skill, attributed)
 		}
 	}
 	if c := e.Composition; c != nil {

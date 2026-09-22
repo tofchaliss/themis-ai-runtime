@@ -1032,3 +1032,39 @@ func TestBudgetExhaustionAtBothDoors(t *testing.T) {
 		}
 	})
 }
+
+// D-SA-4 spec relation: subject fields substituted, wall deadline
+// narrows, every other limit equal; an absent template strength means
+// the loader's default (enforced).
+func TestSpecInstantiates(t *testing.T) {
+	tpl := []byte(`{"version":1,"task_id":"@task_id","repo":"@repo","pinned_sha":"@pinned_sha","limits":[{"dimension":"wall_deadline_s","value":600}]}`)
+	mk := func(wall int64, extra string) *ProvisionSpec {
+		s := &ProvisionSpec{Version: 1, TaskID: "T", Repo: "demo", PinnedSHA: strings.Repeat("a", 40),
+			Limits: []LimitReq{{Dimension: DimWallDeadlineS, Value: wall, Strength: StrengthEnforced}}}
+		if extra != "" {
+			s.Limits = append(s.Limits, LimitReq{Dimension: extra, Value: 1, Strength: StrengthEnforced})
+		}
+		return s
+	}
+	if err := SpecInstantiates(mk(90, ""), tpl); err != nil {
+		t.Fatalf("narrowed deadline must instantiate: %v", err)
+	}
+	if err := SpecInstantiates(mk(600, ""), tpl); err != nil {
+		t.Fatalf("equal deadline must instantiate: %v", err)
+	}
+	for name, c := range map[string]struct {
+		spec *ProvisionSpec
+		want string
+	}{
+		"deadline widened": {mk(601, ""), "only narrows"},
+		"limit added":      {mk(90, DimFileBytes), "limits are Skill-fixed"},
+	} {
+		if err := SpecInstantiates(c.spec, tpl); err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Fatalf("%s: refused for the wrong reason (want %q): %v", name, c.want, err)
+		}
+	}
+	literal := []byte(`{"version":1,"task_id":"T","repo":"demo","pinned_sha":"` + strings.Repeat("a", 40) + `","limits":[{"dimension":"wall_deadline_s","value":600}]}`)
+	if err := SpecInstantiates(mk(90, ""), literal); err == nil || !strings.Contains(err.Error(), "placeholder") {
+		t.Fatalf("a literal template must refuse: %v", err)
+	}
+}

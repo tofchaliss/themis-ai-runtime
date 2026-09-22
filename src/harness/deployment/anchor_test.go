@@ -496,3 +496,42 @@ func TestRegistryAppendOnly(t *testing.T) {
 		}
 	})
 }
+
+// D-SA-9: the Skill allowlist is a closed, exact set. Absent is legal
+// (it admits no skill-attributed task — enforced at L7); a floating
+// reference or a duplicate is an anchor defect.
+func TestSkillAllowlistRules(t *testing.T) {
+	cases := []struct {
+		name   string
+		skills any
+		want   string
+	}{
+		{"absent is legal", nil, ""},
+		{"exact refs", []any{"investigate-cve@1", "remediate-dependency@1"}, ""},
+		{"floating ref refused", []any{"investigate-cve@latest"}, "exact name@version"},
+		{"name-only refused", []any{"investigate-cve"}, "exact name@version"},
+		{"duplicate refused", []any{"investigate-cve@1", "investigate-cve@1"}, "duplicate skill allowlist entry"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			m := validAnchorMap()
+			if c.skills != nil {
+				m["skills"] = c.skills
+			}
+			raw, _ := json.Marshal(m)
+			a, err := ParseAnchor(raw, "test")
+			if c.want == "" {
+				if err != nil {
+					t.Fatalf("must parse: %v", err)
+				}
+				if c.skills != nil && len(a.Skills) != len(c.skills.([]any)) {
+					t.Fatalf("skills not carried: %v", a.Skills)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), c.want) {
+				t.Fatalf("refused for the wrong reason (want %q): %v", c.want, err)
+			}
+		})
+	}
+}

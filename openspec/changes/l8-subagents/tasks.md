@@ -1,0 +1,281 @@
+# Tasks: Layer 8 — Subagents (Delegation)
+
+Grill closed 2026-09-22 (Q-L8-1..20 all disposed; design.md §2 holds
+D-L8-1..21, §5 the Gate 0 inventory and five proof registers). Gate 0
+PASS 2026-09-22 (D-L8-21). Architecture CLOSED 2026-09-22 (owner LOCK at
+C-L8-21); challenge record C-L8-1..21 in design.md §6. Three-state verdicts per milestone:
+architecture-conformant · test-evidenced · operationally-proven. An
+editing command or commit message is never evidence. The C17 lesson is
+part of L8 proof discipline: the positive path is proven before any
+negative is trusted.
+
+**Standing rule for every milestone (D-L8-21):** if implementation
+requires an artifact, package, registry, runtime path, event class,
+authority field, or control mechanism not present in design.md §5,
+implementation STOPS and the surface is classified (implementation
+detail / residual / architectural decision) before work continues.
+
+## 0. Gate
+
+- [x] Grill held; Q-L8-1..20 disposed; D-L8-1..21 locked (owner-led,
+      2026-09-22)
+- [x] Gate 0 PASS (owner, 2026-09-22): inventory = implementation
+      whitelist; five registers judged sufficient
+- [ ] Gate 1: implementation design reviewed against §5 before M1 code
+      (registry schema, template schema, grant digest, L4 target
+      validation, L7 post-hook, L2 composition, L6 event construction)
+
+## 1. L8-M0 — P-L8-1 prerequisite: provider-response hard ceiling (Class 3, NOT L8)
+
+Parent runtime hardening; blocks M4+. Closes the unbounded `io.ReadAll`
+at `runtime/model/ollama.go:138` and `openai.go:155`.
+
+- [ ] Governed hard byte ceiling on the provider response body at both
+      adapters (`io.LimitReader` + typed over-limit termination, never a
+      silent truncation; a truncated body is a failed turn, not a turn)
+- [ ] Ceiling is a deployment-supplied governed input (execution
+      ceiling dimension or model-registry field — decide at Gate 1; it
+      must be anchor-pinned either way); value ≤ L2 `MaxItemBytes` (256 KiB) so every
+      referenceable object is bounded at production by what L2 accepts
+      per item (C-L8-7)
+- [ ] Tests: over-limit body → typed termination, nothing stored as a
+      turn; at-limit body → ordinary turn; mutation: remove the limiter
+      → test fails
+- [ ] Recorded as an amendment to the model-interface seam (not an L8
+      artifact)
+- [ ] **P-L8-2:** adapters populate provider-neutral `Identity.Reported`
+      from the provider payload (inside the adapter); test: reported ≠
+      requested is observable (C-L8-10)
+
+## 2. L8-M1 — Governance artifacts + loaders (Class 3)
+
+- [ ] `policies/delegation/registry.json` (append-only; `name, version,
+      template_sha256, manifest_path, state, steward`) — mirrors
+      `policies/verification/contracts.json`
+- [ ] `policies/delegation/<name>/template.json` loader: closed schema,
+      DisallowUnknownFields, duplicate-key refusal, trailing-content
+      refusal, sha256 pins for `context_contract` and optional
+      `instruction`, `eis_carry_scopes[]` ⊆ {repository, directory,
+      skill} (mandatory roots carried unconditionally by L7 code, never
+      filterable; `task` never carries — C-L8-4), `brief {slot, max_bytes}`,
+      `max_output_bytes`; **disjointness enforced at load**: any
+      workflow / ceiling / grant / spec / input_schema / template
+      reference → refusal (D-L8-5/6)
+- [ ] Registry loader: `Resolve(name@version)` exact only, no
+      `latest`/ranges; `CheckAppendOnly` (deletion / rebind /
+      un-withdrawal detected); two-way identity agreement; confined
+      paths; no write API — AST write-wall (the L9/L10 wall pattern)
+- [ ] First registered template (PROPOSED → Governance act): one
+      template for `remediate-dependency@1`'s triage need; contract is
+      an ordinary L2 contract with a `brief` slot of class
+      `external-untrusted`
+- [ ] Loader cross-checks: brief slot exists in the pinned contract and
+      permits only `external-untrusted`; permitted classes ∈ L2's closed
+      vocabulary; no requiredness/slot semantics in `template.json`
+      (C-L8-14 D)
+- [ ] `policies/delegation/README.md` with the registration-review
+      checklist (C-L8-14): no directive to disregard a higher scope; no
+      factual claims in instruction files; classes/sensitivity/bounds
+      justified
+- [ ] `themis-preflight` verifies every registered template's bytes
+      against its registry pin (C-L8-14 F)
+- [ ] Register A proofs + mutation probes (wall, closed world,
+      disjointness, exact resolution)
+- [ ] Package `src/harness/subagents/delegation/`; **delete `roles/`,
+      `runtime/`, `isolation/`** in the same change
+
+## 3. L8-M2 — L4 amendment: `delegate` capability (Class 3; L4 archived-layer amendment)
+
+- [ ] Tool registry v5: `delegate`, target class `delegation-template`,
+      `verifier_eligible: false`, `trust: external-untrusted`, params
+      `template` / `evidence` / `brief` (string; `evidence` = list of
+      `<seq>:<objectID>` references into the parent's stream,
+      shape-checked by regex at L4; existence, task reachability, hash
+      integrity, and class derivation re-established in the seam from
+      the record — C-L8-5; D-L8-15 stage A/B)
+- [ ] `template_scope` is a fixed member of the Skill's `grant_template`,
+      copied verbatim at instantiation; `instantiateGrantTemplate`
+      accepts no override for it (C-L8-16 F/G)
+- [ ] `GrantEntry.TemplateScope []string`; `Authorize` checks target ∈
+      scope by **exact `name@version` equality** (no prefix matching;
+      loader refuses non-exact entries) — the single authoritative
+      substitution gate (C-L8-15 G)
+- [ ] **`grantAuthorityDigest` includes `TemplateScope`** (set
+      semantics via `scopeDigest`); test: two grants differing only in
+      scope → different digests (the 2026-09-15 defect class, asserted
+      positively)
+- [ ] `execDelegate` executor = **instantiation** (C-L8-12 Am. 1,
+      LOCKED at C-L8-21): resolve template, validate evidence against
+      the record, `Resolve`, `Gather`/`Compose` in memory, bound checks —
+      pure reads under registry `timeout_sec`; failure → `ErrClass:
+      delegation-refused:<class>` (reconstructable via `l4-audit`);
+      success → deterministic **instantiation capture** (identities only,
+      fact kind `l6_execution_record`) as the audited evidence;
+      composition/model call/output/witness stay in the post-hook,
+      which **re-derives** the composition without reading the capture;
+      runtime re-derivation ≠ capture → stage D invariant; at
+      reconstruction any pairwise mismatch → typed DISCREPANCY (C-L8-13)
+- [ ] Delegation error classes added to the closed `ErrorClass`
+      vocabulary (C-L8-11)
+- [ ] Amendment record under
+      `openspec/changes/archive/2026-09-06-layer-04-tool-interface/amendments/l8-delegate/`
+
+## 4. L8-M3 — L6 constitution amendment: `l8-delegation` (Class 3/4 — constitution hash changes)
+
+- [ ] `EvL8Delegation = "l8-delegation"` in `eventClasses` (caller
+      class, not primitive-only); closed-vocabulary tests updated
+      (`TestClosedVocabularies` grows by exactly one)
+- [ ] Event body per D-L8-8 (parent_call_seq / template / composition /
+      evidence_refs / model_identity / output_object_ref / outcome /
+      termination — **no `delegation_id`**; identity = `(task_id,
+      seq)`, C-L8-20); L6 validates the envelope, never the content;
+      Register C: event body reproducible from inputs (no random field)
+- [ ] Amendment record under
+      `openspec/changes/archive/2026-09-07-layer-06-durable-state/amendments/l8-delegation-event/`
+- [ ] Anchor consequence recorded: `constitution.state` re-pin → M6
+
+## 5. L8-M4 — Delegator seam + L7 wiring (Class 3; L7 archived-layer amendment)
+
+- [ ] `orchestration.Config.Delegator` one-way interface (one method):
+      inputs `{task id, model identity, call id, args, parent_call_seq}`
+      + a read handle on the task record; **no conversation, response,
+      or system-message type in the signature** (C-L8-17; wall test by
+      AST)
+- [ ] Assembly: a phase exposing `delegate` with nil delegator →
+      `ErrAssembly` (mirror of the verifier check); `delegate` must be
+      in ceiling `allowed_tools`; every grant `template_scope` entry
+      must resolve in the template registry (grant validation, not
+      call authorization — C-L8-15 G)
+- [ ] Loop post-hook `isDelegation` (registry classification, never an
+      authorization branch) → seam → paired tool-result re-entry via
+      the existing `frameToolResult` path with the `delegate` entry's
+      `trust` (`authority: external-untrusted`, `hash:` = output object
+      id); non-completed outcomes as unframed typed errors from the
+      closed class set; the branch never calls `w.step` (C-L8-11);
+      sequential in request order (D-L8-16 §6)
+- [ ] Seam: resolve template (stage B refusals typed, no event, no
+      objects) → L1 `Resolve` over parent-subset sources + optional
+      template instruction (a new resolution epoch, hashed) → L2
+      `Gather`/`Compose` — the brief as its own `external-untrusted`
+      source in its slot (author = delegating model, origin = task +
+      call seq; fenced; not pattern-scanned, like the task payload —
+      C-L8-17 B/C) — with evidence refs resolved per C-L8-5 (event
+      at seq in the parent stream → `Refs` contains id →
+      `GetObject` re-hash → class from the event under a matching
+      registry hash; selectable event classes `{l4-audit, model-turn,
+      l8-delegation}`);
+      every reference's seq strictly < `parent_call_seq` (the
+      authorizing `l4-audit`) else stage B refusal — C-L8-8;
+      each reference assigned to the unique non-withheld contract slot
+      whose `kind` matches the item's event-derived kind (kinds:
+      `tool:<name>` for `l4-audit`, `model-turn`, `delegation-output`
+      for `l8-delegation` — C-L8-17 F); zero or >1
+      → `delegation-refused:evidence-slot-ambiguous` (C-L8-14 C);
+      references canonicalized by ascending seq before source
+      construction, exact duplicates refused (stage B), one `Source`
+      per reference, no L8 dedup — C-L8-6; sources are **lazy L6-object
+      sources** (new L2 source kind, `collect()` = `GetObject` + hash
+      verify) so L2 Gather pulls bytes under its own caps and the seam
+      reads no evidence bytes — C-L8-7 and the brief in its slot →
+      store the composition object = the exact model input bytes
+      (system + user messages, canonical) + template manifest/contract/
+      instruction bytes (R-L9-2, C-L8-9) → deadline/floor
+      check → one `Model.Execute` under parent `turn_timeout_sec` →
+      store output → `l8-delegation` → envelope; the model call's context
+      deadline = `min(turn_timeout_sec, remaining to parent deadline)`
+      after the pre-invocation floor check (C-L8-19 H); `output-over-bound`
+      path per D-L8-16 §5 (full storage, typed failure re-entry, no
+      truncation)
+- [ ] `faultAt` points: `delegation.pre-composition-store`,
+      `delegation.pre-output-store`, `delegation.pre-event-commit`
+- [ ] Not-a-second-L7 wall test (D-L8-21 §3): imports, single
+      `Execute` whose `Model:` is the L7-supplied identity (mutation:
+      constant → fails), no model-name literal, no registry access,
+      single call site, no goroutines, single event literal,
+      `controlVerbs`/`verificationEvents` unchanged
+- [ ] **F-L8-2:** parent `model-turn` body gains `Identity` + `Endpoint`
+      (additive; no constitution change); `l8-delegation.model_identity`
+      = `{governed{name, registry_hash}, execution{...}}`; stage C
+      outcome `model-identity-mismatch` when reported ≠ requested
+      (C-L8-10)
+- [ ] Amendment record under
+      `openspec/changes/archive/2026-09-07-layer-07-orchestration/amendments/l8-delegation-seam/`
+
+## 6. L8-M5 — Record, reconstruction, observation (Class 2/3)
+
+- [ ] Register C: byte-exact reconstruction of what the delegated model
+      saw and produced; reconstruction from L6 alone after (i) template
+      withdrawal, (ii) template/contract file deletion, (iii) root file
+      change → CONFIRMED; missing object → typed UNREPRODUCIBLE; doctored
+      identity → typed DISCREPANCY; registry rebind → load refusal
+      (C-L8-9); window purity — every event between
+      `parent_call_seq` and the `l8-delegation` seq is delegation-owned,
+      and `evidence.seq < parent_call_seq` holds for every ref (C-L8-8); evidence-order permutation → identical
+      composition hashes (mutation: remove the seam sort → fails on two
+      equal-hash items — C-L8-6); two-way template identity (registry hash vs
+      stored bytes); fault sweep at every new point (stage E orphan
+      object retained, reported by reachability, **not a fact**;
+      recovery infers no execution)
+- [ ] L10 history/reconstruction views include `l8-delegation`
+      (read-only; no evidence kind, contract, or outcome)
+- [ ] Register D: static boundedness proof extended by the delegate
+      term (loader-time computation + test): executions ≤ V·T +
+      min(D,G) ≤ W + M; output ≤ min(D,G)·P captured, ·B admitted;
+      wall ≤ Δ (C-L8-19 I); quota-attempt semantics pinned (denied and
+      refused calls count)
+- [ ] Register C: the class derivation function `f` is total over
+      event classes and maps every L7/L8-writable class to the floor or
+      a registry-derived value; mutation: a branch reading a referenced
+      object's prior class → fails (C-L8-18); conversation projection
+      after a delegation (framed result, refusal error) re-derives
+      byte-exactly from `l8-delegation`/`l4-audit` + objects (C-L8-18 A)
+
+## 7. L8-M6 — Anchor, positive path, live proof, close (Class 3/4)
+
+- [ ] Deployment anchor: `delegation_template_registry` pin +
+      `constitution.state` re-pin → `rsys@4` PROPOSED → Governance act;
+      `themis-status` / `themis-preflight` print the pin
+- [ ] **Register B, positive path FIRST:** anchored `rsys@4` accepts and
+      executes a genuine `delegate` call from `remediate-dependency@1`
+      through `themis-run`; THEN each negative (scope, closed world,
+      withdrawn template, unreachable evidence, over-bound brief,
+      over-bound output, nil delegator) with both-ways mutation:
+      suppress the check → negative fails; refuse unconditionally →
+      positive fails
+- [ ] Register E: live proof vs local model through the UNMODIFIED L7
+      loop; the delegation's result visibly consumed by the parent's
+      next turn; cold reconstruction of the whole task afterwards
+- [ ] Three Class-3 close reviews (architecture / security / test) in
+      isolated worktrees, CRITICAL/HIGH remediated and mutation-verified
+- [ ] `traceability.md`; archive under
+      `openspec/changes/archive/<date>-layer-08-subagents/`;
+      `docs/harness-layer-status.md` and `execution-chain.md` updated
+      (L8 row, G2 fact table row `l8_delegation_record`)
+
+## Residuals carried (each with its own gate; none implemented here)
+
+- Tool-capable L8 (reopens the depth-1 proof; a new architecture
+  decision)
+- δ-declarable delegation event (new workflow vocabulary + proofs)
+- Parallel fan-out (explicit deterministic ordering key required)
+- **Dependency on `l9-l7-skill-admission-identity` (Q-SA-6):** the
+  locked correspondence rule must treat `template_scope` as
+  fixed-by-skill and equality-checked; until then forged scopes are
+  digest-visible, not refused (C-L8-16 G)
+- Per-target quotas in the grant vocabulary (per-template `max_calls`)
+  — generic L4 residual (C-L8-16 D)
+- Caller-narrowed `template_scope` — L9 instantiation-surface
+  extension, safe in principle (C-L8-16 F)
+- Phase-level capability parameters (per-phase template binding);
+  grants are task-level for every tool in v1 (C-L8-15 F)
+- F-L8-4: parent model turns bound the call by `turn_timeout_sec`
+  without `min(…, remaining deadline)` — overrun window ≤ one timeout;
+  L7 tightening (C-L8-19 H)
+- Parent-loop handling of provider-reported model mismatch (L7
+  decision; P-L8-2 makes it observable)
+- Provider version/digest governance beyond the registry's
+  runtime+endpoint pin
+- F-L8-3: L10 verifier-seam pre-instance refusal text is not
+  reconstructable from the record (same hole C-L8-12 closes for L8) —
+  L10 residual
+- Approval channel; anything touching the dissolved OPEN-2

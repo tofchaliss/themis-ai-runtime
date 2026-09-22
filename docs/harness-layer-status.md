@@ -12,7 +12,7 @@ long status paragraph above, which is cumulative history.
 | Area | State |
 |---|---|
 | L1–L7, L9–L11 | implemented, archived, frozen |
-| **L8 Subagents** | **UNIMPLEMENTED** — scaffold only; grill starts **2026-09-16** |
+| **L8 Subagents** | **ARCHITECTURE CLOSED 2026-09-22 (owner LOCK), Gate 0 PASS, UNIMPLEMENTED** — D-L8-1..21 + challenge record C-L8-1..21 (`openspec/changes/l8-subagents/design.md`); milestone plan `tasks.md`; scaffold collapses to `subagents/delegation/` at M1; production authorization not implied |
 | G1, G2 | closed and implemented |
 | Deployment `rsys@3` | **ACTIVE** (`b5f551ab7076`); `rsys@2`, `rsys@1`, `local-dev@1` withdrawn and interpretable |
 | Model allowlist | `qwen2.5:7b`, `gpt-oss:20b`, `cyberpal20b-v3` — three admitted, **none selected** |
@@ -66,9 +66,10 @@ refused — and an unconditional refusal satisfies that. It established
 
 ### Two grills queued, both owner-led
 
-1. **L8 Subagents** — `openspec/changes/l8-subagents/proposal.md`.
-   Starting 2026-09-16. Nothing locked; the four directories under
-   `src/harness/subagents/` stay scaffold-only until it closes.
+1. **L8 Subagents** — grill CLOSED 2026-09-22, Gate 0 PASS (see the
+   2026-09-22 checkpoint below). Implementation not started; M0
+   prerequisite P-L8-1 (provider-response hard ceiling) precedes L8
+   code.
 2. **L9/L7 skill-admission identity** —
    `openspec/changes/l9-l7-skill-admission-identity/proposal.md`.
    Blocks the live-COMPLETED work.
@@ -614,3 +615,51 @@ owner decision — the evidence harness is deliberately not it.
   `docs/operations/deployment-runbook.md`
 - Build and install: `INSTALLATION.md`
 - Verification (suite, live proofs, per-layer evidence): `TESTING.md`
+
+---
+
+## Checkpoint — 2026-09-22
+
+**L8 Subagents grill CLOSED, Gate 0 PASS, ARCHITECTURE LOCKED (owner-led,
+one session; 21 decisions + 21 adversarial challenges C-L8-1..21).**
+Record: `openspec/changes/l8-subagents/design.md` (D-L8-1..21, §5
+inventory + five registers), `tasks.md` (M0–M6). The shape in one
+paragraph: L8 v1 is *a deterministic delegation mechanism for isolated
+model inference* — one tool-less, single-call model execution over a
+parent-supplied L2 composition, requested by the parent model through
+the existing L4 gate as a `delegate` capability (verifier-seam
+precedent), composed by L7 from a Governance-registered **delegation
+template** (a new artifact family with its own append-only registry,
+disjoint from Skills, linked only through the grant's `template_scope`,
+anchor-pinned), charged entirely to the parent's budget, recorded as a
+new `l8-delegation` event in the parent's L6 stream (constitution
+amendment → `rsys@4`), and returned as untrusted data with no fact
+kind. Failure is stage-indexed on the instance boundary
+(composition durably stored); no delegation event reaches δ; L10
+observes delegations through the record and never evaluates them;
+depth is exactly one by reachability. All eleven prohibitions in
+force; `roles/`, `runtime/`, `isolation/` have no referent and are
+deleted at M1.
+
+**Finding (codebase, 2026-09-22):** no hard capture ceiling exists for
+any model response — both adapters `io.ReadAll` the provider body and
+the object store has no size cap. Pre-existing parent-side gap,
+recorded as prerequisite **P-L8-1** (M0) rather than L8 scope.
+
+**Grill-found corrections folded (C-L8-12/13/20):** stage B
+instantiation runs inside the `delegate` executor so refusals are
+reconstructable `l4-audit{error}` and the audited evidence is an
+identities-only *instantiation capture*; the post-hook re-derives and
+never reads the capture; establishment is strictly the `l8-delegation`
+witness; identity is `(task_id, l8-delegation seq)`, no
+`delegation_id`. Findings: P-L8-1 (no provider-response ceiling; both
+adapters `io.ReadAll`), P-L8-2 (adapters echo the requested model, never
+the reported one), F-L8-2 (parent `model-turn` records name only),
+F-L8-3 (L10 seam pre-instance refusal text not reconstructable),
+F-L8-4 (parent turn timeout not bounded by remaining deadline).
+**Dependency:** Q-SA-6 in the skill-admission grill must treat
+`template_scope` as fixed-by-skill, equality-checked; the anchored
+positive-path proof (Register B) cannot run until issue #1 closes.
+
+Skill-admission identity (issue #1) remains the blocking defect for
+live-COMPLETED work; unchanged today.

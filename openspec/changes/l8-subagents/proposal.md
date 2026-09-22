@@ -1,10 +1,15 @@
 # Proposal: Layer 8 — Subagents
 
-Status: **GRILL NOT STARTED.** Decision questions set, nothing locked.
-No implementation before the grill closes and Gate 0 passes. The four
-directories under `src/harness/subagents/` (`delegation/`, `isolation/`,
-`roles/`, `runtime/`) remain scaffold only — created 2026-09-04, empty
-since, and they stay empty until the questions below are answered.
+Status: **GRILL CLOSED 2026-09-22 — D-L8-1..21 LOCKED, Gate 0 PASS.**
+The decisions live in `design.md`; the milestone plan in `tasks.md`.
+Outcome in one line: L8 v1 is a deterministic delegation mechanism for
+isolated, tool-less, single-call model inference, requested through the
+existing L4 gate, composed by L7 from a Governance-registered delegation
+template, recorded as `l8-delegation` in the parent's L6 stream, and
+returned to the parent as untrusted data. The scaffold collapses to one
+package (`subagents/delegation/`); `roles/`, `runtime/`, `isolation/`
+are deleted at implementation. The text below is the pre-grill agenda,
+retained as history.
 
 L8 is the only unimplemented layer of the eleven. L1–L7, L9, L10, L11
 are closed and archived; G1 and G2 are closed.

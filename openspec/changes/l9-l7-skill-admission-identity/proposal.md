@@ -1,9 +1,14 @@
 # Proposal: skill identity vs instantiated composition identity (L9/L7 admission)
 
-Status: **GRILL NOT STARTED.** Decision questions set, nothing locked.
-No implementation before the grill closes and Gate 0 passes — the
-existing implementation is provably wrong, and an obvious correction
-must not become an architecture decision by being written.
+Status: **GRILL CLOSED 2026-09-22 — D-SA-1..10 LOCKED, Q-SA-1..12 CLOSED,
+attack record A-SA-1..11 (`design.md` §6), owner closure §7.
+Architecture CLOSED; implementation NOT CONFORMANT (`tasks.md`).**
+Outcome in one line: caller-supplied identities establish
+self-consistency only; Governance-pinned identities establish
+authority; deterministic relations (`D-SA-2` per-member equality,
+`D-SA-4` `Instantiates`) establish whether caller-shaped artifacts are
+legitimate instantiations. The text below is the pre-grill agenda,
+retained as history.
 
 Raised by: `docs/development/finding-anchored-skill-admission-2026-09-15.md`,
 GitHub issue #1 (`needs-triage`).

@@ -17,7 +17,7 @@ long status paragraph above, which is cumulative history.
 | Deployment `rsys@3` | **ACTIVE** (`b5f551ab7076`); `rsys@2`, `rsys@1`, `local-dev@1` withdrawn and interpretable |
 | Model allowlist | `qwen2.5:7b`, `gpt-oss:20b`, `cyberpal20b-v3` — three admitted, **none selected** |
 | Model selection | **OPEN**. Admitting is not selecting; selection is per-task in the envelope |
-| **L9 skills under G1** | **BLOCKED — see below** |
+| **L9 skills under G1** | **DECIDED, NOT FIXED** — skill-admission grill CLOSED 2026-09-22 (D-SA-1..10, `openspec/changes/l9-l7-skill-admission-identity/design.md`); implementation SA-M1..M6 pending; still unreachable in production until then |
 | Live-model COMPLETED | **not achieved**; blocked behind the skill-admission defect, not behind the model |
 | Mutation Tier 1–4 | closed, 37 controls; ~190 error-propagation survivors deliberately untriaged |
 | CI | green, dual-platform (ubuntu CI + darwin development) |
@@ -674,3 +674,28 @@ safe: P-L8-1, P-L8-2, F-L8-2, F-L8-3, F-L8-4, Q-SA-6.
 
 Skill-admission identity (issue #1) remains the blocking defect for
 live-COMPLETED work; unchanged today.
+
+---
+
+## Checkpoint — 2026-09-22 (second entry): skill-admission grill CLOSED
+
+**`l9-l7-skill-admission-identity` — D-SA-1..10 LOCKED, Q-SA-1..12
+CLOSED, drill record A-SA-1..11, owner closure.** Architecture CLOSED;
+implementation NOT CONFORMANT. The finding of 2026-09-15 (issue #1) is
+now decided: `verifyAnchoredSkill` compared two identity domains; the
+locked correspondence is per-member equality of the seven Skill-fixed
+identities against the anchor-pinned catalog manifest (D-SA-2), plus
+`Instantiates(effective, template)` for grant and spec with
+`template_scope` **equality** (D-SA-4, reference template always from
+the manifest pin, never the caller's claim). New: first-class `skill`
+envelope field, `origin` returned to attribution (D-SA-5); anchored
+refusal of unattributed `skill_procedure_path` (D-SA-3 — closes finding
+F-SA-1, a submitter could author a skill-scope instruction source under
+an anchored deployment); seal has exactly two consumers (D-SA-6);
+unanchored = a different admission contract, Claim 1 only (D-SA-7);
+withdrawal forward-only on the identity (D-SA-8); anchor `skills[]`
+allowlist as an additive G1 pin (D-SA-9); the anchor selects, never
+composes (D-SA-10). Deferred: F-SA-2 → L11 (witness must carry
+`deployment_anchor`; consumption must classify `unanchored`).
+Discharges L8's Q-SA-6 dependency. Implementation plan: SA-M1..M6;
+acceptance = the C17 twin suite naming the responsible gate.

@@ -895,8 +895,9 @@ decision.*
 - **F-L8-4 — L7:** parent turn context deadline = `min(turn_timeout_sec,
   remaining deadline)` (C-L8-19).
 - **Q-SA-6 dependency — L9/L7 skill admission:** `template_scope`
-  treated as fixed-by-skill, equality-checked (C-L8-16). Blocks the
-  anchored positive-path proof (Register B) until issue #1 closes.
+  treated as fixed-by-skill, equality-checked (C-L8-16). **DISCHARGED
+  architecturally 2026-09-22 by D-SA-4** (`l9-l7-skill-admission-identity`);
+  Register B still waits on its implementation (SA-M1..M6).
 
 Per owner closure (§7): these six must be complete before L8
 implementation is declared safe; none reopens D-L8-1..21.

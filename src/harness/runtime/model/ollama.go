@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/tofchaliss/themis/internal/llm"
@@ -15,13 +14,18 @@ import (
 type OllamaChat struct {
 	Endpoint string
 	Client   *http.Client
+	// MaxResponseBytes: the governed response ceiling (P-L8-1). Set by
+	// the constructor to DefaultMaxResponseBytes; Resolve may narrow
+	// it from the model registry, never widen it.
+	MaxResponseBytes int64
 }
 
 // NewOllamaChat returns an Ollama chat runtime for the given endpoint.
 func NewOllamaChat(endpoint string) *OllamaChat {
 	return &OllamaChat{
-		Endpoint: endpoint,
-		Client:   &http.Client{Timeout: llm.DefaultTimeout},
+		Endpoint:         endpoint,
+		Client:           &http.Client{Timeout: llm.DefaultTimeout},
+		MaxResponseBytes: DefaultMaxResponseBytes,
 	}
 }
 
@@ -135,9 +139,9 @@ func (o *OllamaChat) Execute(ctx context.Context, req ExecutionRequest) (*Execut
 	}
 	defer resp.Body.Close()
 
-	raw, err := io.ReadAll(resp.Body)
+	raw, err := readBounded(resp.Body, o.MaxResponseBytes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ollama chat: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("ollama chat: status %d: %s", resp.StatusCode, truncate(raw, 512))
@@ -168,7 +172,7 @@ func (o *OllamaChat) Execute(ctx context.Context, req ExecutionRequest) (*Execut
 			GenerationTimeMS: float64(r.EvalDuration) / nsToMS,
 			TotalTimeMS:      float64(r.TotalDuration) / nsToMS,
 		},
-		Identity: Identity{WireModel: req.Model, Runtime: o.Name()},
+		Identity: Identity{WireModel: req.Model, Runtime: o.Name(), Reported: r.Model},
 		Provenance: Provenance{
 			Endpoint: o.Endpoint,
 			Options:  req.Options,

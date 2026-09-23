@@ -260,3 +260,35 @@ func TestWithdrawnContractRefuses(t *testing.T) {
 		t.Fatalf("withdrawn contract must refuse: %v %+v", err, vo)
 	}
 }
+
+// F-L8-3: PreResolve and EvaluateCall share one pre-instance stage, so
+// the refusal L7 records before the audit commits is the refusal the
+// evaluation would have produced.
+func TestPreResolveMirrorsStageOne(t *testing.T) {
+	e := proposedEvaluator(t)
+	for name, call := range map[string]model.ToolCall{
+		"no contract":    {Name: "verify_report", Arguments: []byte(`{"path":"r.json"}`)},
+		"unregistered":   verifyCall("other-contract@1", "r.json"),
+		"floating":       verifyCall("report-valid", "r.json"),
+		"wrong registry": verifyCall("report-valid@1", "r.json"),
+	} {
+		t.Run(name, func(t *testing.T) {
+			auth := e.L4.Hash
+			if name == "wrong registry" {
+				auth = "0000"
+			}
+			pre, err := e.PreResolve("t", call, auth)
+			if err != nil || pre == "" {
+				t.Fatalf("PreResolve must refuse: %q %v", pre, err)
+			}
+			vo, err := e.EvaluateCall("t", call, []byte(goodReport), "l4:1", auth)
+			if err != nil || !vo.Refused || vo.RefusalReason != pre {
+				t.Fatalf("EvaluateCall must refuse with the same text: %+v %v (pre %q)", vo, err, pre)
+			}
+		})
+	}
+	// The positive half: a resolvable call passes PreResolve.
+	if pre, err := e.PreResolve("t", verifyCall("report-valid@1", "r.json"), e.L4.Hash); err != nil || pre != "" {
+		t.Fatalf("a registered contract must pass pre-resolution: %q %v", pre, err)
+	}
+}

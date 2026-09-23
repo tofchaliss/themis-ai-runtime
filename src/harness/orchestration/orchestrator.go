@@ -96,6 +96,15 @@ type Config struct {
 // verification package (the skill-blind pattern, applied to
 // contracts).
 type VerificationEvaluator interface {
+	// PreResolve runs the pre-instance stage of the L10 pipeline
+	// (D-L10-8 "before an evaluation instance exists") for one
+	// AUTHORIZED verifier-eligible call, BEFORE L7 commits the call's
+	// l4-audit: a non-empty refusal is recorded in that audit body so
+	// the text the model sees is reconstructable from the record
+	// (F-L8-3 — the C-L8-12 mechanism applied to the L10 seam). No
+	// evidence, no instance, no outcome, no event. An error return is
+	// machinery failure (invariant path).
+	PreResolve(taskID string, call model.ToolCall, authRegistrySHA256 string) (refusal string, err error)
 	// EvaluateCall runs the L10 pipeline for one executed
 	// verifier-eligible capability call. An error return is an
 	// evaluator machinery failure and follows the harness

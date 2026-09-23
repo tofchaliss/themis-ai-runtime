@@ -145,7 +145,16 @@ func (w *walk) runPhase() (string, error) {
 		if err := faultAt("loop.pre-model-turn"); err != nil {
 			return "", err
 		}
-		ctx, cancel := stdctx.WithTimeout(stdctx.Background(), time.Duration(w.env.TurnTimeoutSec)*time.Second)
+		// F-L8-4 (C-L8-19): the turn's context deadline is the SMALLER of
+		// the turn timeout and what remains of the wall-clock budget, so
+		// a provider call can never outlive the floor it runs under.
+		turnBudget := time.Duration(w.env.TurnTimeoutSec) * time.Second
+		if !w.deadline.IsZero() {
+			if rem := time.Until(w.deadline); rem < turnBudget {
+				turnBudget = rem
+			}
+		}
+		ctx, cancel := stdctx.WithTimeout(stdctx.Background(), turnBudget)
 		resp, mErr := w.o.cfg.Model.Execute(ctx, model.ExecutionRequest{
 			Model: w.env.Model, Messages: conversation,
 			Tools: w.toolDefs(p), Options: model.DefaultOptions()})
@@ -154,7 +163,7 @@ func (w *walk) runPhase() (string, error) {
 
 		if mErr != nil {
 			// Structural turn fact: provider error (harness-observed).
-			if err := w.recordTurn("provider-error", nil, ""); err != nil {
+			if err := w.recordTurn("provider-error", nil, nil); err != nil {
 				return "", err
 			}
 			return w.step(EvTurnProviderError)
@@ -170,7 +179,7 @@ func (w *walk) runPhase() (string, error) {
 		if resp.Termination != model.TerminationToolCalls || len(resp.ToolCalls) == 0 {
 			fact = "no-action"
 		}
-		if err := w.recordTurn(fact, &outObj, resp.Content); err != nil {
+		if err := w.recordTurn(fact, &outObj, resp); err != nil {
 			return "", err
 		}
 
@@ -205,7 +214,30 @@ func (w *walk) runPhase() (string, error) {
 				}
 				refs = append(refs, state.Ref{ID: id, Class: state.ObjEvidencePayload})
 			}
+			// F-L8-3: an authorized verifier-eligible call's PRE-INSTANCE
+			// refusal is decided before its audit commits and rides in
+			// the audit body — the only place the model-visible refusal
+			// text is otherwise unrecorded (D-L7-11 byte-exact
+			// reconstruction; the C-L8-12 mechanism). No instance, no
+			// outcome, no event of its own (D-L10-8).
+			verifRefusal := ""
+			if audit.Decision == "authorized" && w.isVerifier(call.Name) {
+				if w.o.cfg.Verifier == nil {
+					return "", fmt.Errorf("%w: verifier-eligible call %q with no evaluator wired", ErrInvariant, call.Name)
+				}
+				r, perr := w.o.cfg.Verifier.PreResolve(w.env.TaskID, call, w.reg.Hash)
+				if perr != nil {
+					return "", fmt.Errorf("%w: L10 pre-resolution failure: %v", ErrInvariant, perr)
+				}
+				verifRefusal = r
+			}
 			ab, _ := json.Marshal(audit)
+			if verifRefusal != "" {
+				var am map[string]any
+				_ = json.Unmarshal(ab, &am)
+				am["VerificationRefusal"] = verifRefusal
+				ab, _ = json.Marshal(am)
+			}
 			aev, aerr := w.task.AppendEvent(state.EvL4Audit, "l4", ab, refs...)
 			if aerr != nil {
 				return "", aerr
@@ -229,6 +261,12 @@ func (w *walk) runPhase() (string, error) {
 			// and the five events are declared whenever such a
 			// capability is granted.
 			if audit.Decision == "authorized" && w.isVerifier(call.Name) {
+				if verifRefusal != "" {
+					// The recorded refusal, verbatim, as the model's data.
+					conversation = append(conversation, model.Message{
+						Role: model.RoleTool, ToolCallID: call.ID, Content: "verification refused: " + verifRefusal})
+					continue
+				}
 				var evidence []byte
 				if ev != nil {
 					evidence = ev.Evidence
@@ -629,10 +667,20 @@ func (w *walk) granted(tool string) bool {
 	return false
 }
 
-func (w *walk) recordTurn(fact string, outObj *string, content string) error {
+func (w *walk) recordTurn(fact string, outObj *string, resp *model.ExecutionResponse) error {
 	w.turnSeq++
 	// Model provenance preserved per turn (architecture review 4.2).
-	body, _ := json.Marshal(map[string]any{"fact": fact, "turn": w.turnSeq, "model": w.env.Model})
+	tb := map[string]any{"fact": fact, "turn": w.turnSeq, "model": w.env.Model}
+	if resp != nil {
+		// F-L8-2 (C-L8-10): execution identity — what the provider ran
+		// and where — recorded beside the governed name so a parent
+		// turn and a delegation are comparable at reconstruction.
+		// Additive body fields; L6 validates the envelope, never the
+		// content (no constitution change).
+		tb["identity"] = resp.Identity
+		tb["endpoint"] = resp.Provenance.Endpoint
+	}
+	body, _ := json.Marshal(tb)
 	var refs []state.Ref
 	if outObj != nil {
 		refs = append(refs, state.Ref{ID: *outObj, Class: state.ObjEvidencePayload})

@@ -27,6 +27,10 @@ type scriptedEvaluator struct {
 	i        int
 }
 
+func (s *scriptedEvaluator) PreResolve(taskID string, call model.ToolCall, authRegistrySHA256 string) (string, error) {
+	return "", nil
+}
+
 func (s *scriptedEvaluator) EvaluateCall(taskID string, call model.ToolCall, evidence []byte, execRef, authRegistrySHA256 string) (*VerificationOutcome, error) {
 	if s.i >= len(s.outcomes) {
 		return &VerificationOutcome{Refused: true, RefusalReason: "script exhausted"}, nil
@@ -230,7 +234,9 @@ func TestDowngradeClosesGate(t *testing.T) {
 // continues under its budgets.
 func TestVerificationRefusalIsNotAnOutcome(t *testing.T) {
 	m := &scriptedModel{steps: []model.ExecutionResponse{
-		toolCall("verify_report", `{"path":"parser.go"}`), // no contract -> refusal
+		// An AUTHORIZED call (contract named, so L4 admits it) whose
+		// contract the seam cannot resolve: the pre-instance refusal.
+		toolCall("verify_report", `{"path":"parser.go","contract":"nope@1"}`),
 		toolCall("declare_done", `{}`),
 		toolCall("declare_done", `{}`),
 		toolCall("declare_done", `{}`),
@@ -246,23 +252,48 @@ func TestVerificationRefusalIsNotAnOutcome(t *testing.T) {
 		t.Fatalf("status = %s, want FAILED via fallback exhaustion", res.Status)
 	}
 	evs, _ := f.o.root.ReadEvents("verif-refusal")
+	recorded := ""
 	for _, e := range evs {
 		if e.Class == state.EvVerification {
 			t.Fatal("a refusal must never produce a verification event")
 		}
+		// F-L8-3: the pre-instance refusal text the model saw rides in
+		// the call's own l4-audit, committed before the result
+		// re-entered — reconstructable, no event of its own.
+		if e.Class == state.EvL4Audit {
+			var body struct {
+				Tool                string
+				Decision            string
+				VerificationRefusal string
+			}
+			if json.Unmarshal(e.Body, &body) == nil && body.Tool == "verify_report" {
+				if body.Decision != "authorized" {
+					t.Fatalf("the verifier call must have been authorized: %s", e.Body)
+				}
+				recorded = body.VerificationRefusal
+			}
+		}
+	}
+	if recorded != "unregistered" {
+		t.Fatalf("the refusal text must be recorded verbatim in the l4-audit body: %q", recorded)
 	}
 	replayAndVerify(t, f, "verif-refusal")
 }
 
 type realRefusalEvaluator struct{}
 
-func (realRefusalEvaluator) EvaluateCall(taskID string, call model.ToolCall, evidence []byte, execRef, authRegistrySHA256 string) (*VerificationOutcome, error) {
+func (realRefusalEvaluator) PreResolve(taskID string, call model.ToolCall, authRegistrySHA256 string) (string, error) {
 	var args map[string]any
 	_ = json.Unmarshal(call.Arguments, &args)
 	if c, _ := args["contract"].(string); c == "" {
-		return &VerificationOutcome{Refused: true, RefusalReason: "no contract named"}, nil
+		return "no contract named", nil
 	}
-	return &VerificationOutcome{Refused: true, RefusalReason: "unregistered"}, nil
+	return "unregistered", nil
+}
+
+func (r realRefusalEvaluator) EvaluateCall(taskID string, call model.ToolCall, evidence []byte, execRef, authRegistrySHA256 string) (*VerificationOutcome, error) {
+	refusal, _ := r.PreResolve(taskID, call, authRegistrySHA256)
+	return &VerificationOutcome{Refused: true, RefusalReason: refusal}, nil
 }
 
 // TestVerificationAssemblyRefusals pins the declaration-gated

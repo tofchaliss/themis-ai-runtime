@@ -31,6 +31,12 @@ type Entry struct {
 	// Temperature and Seed override the deterministic defaults when set.
 	Temperature *float64 `json:"temperature"`
 	Seed        *int     `json:"seed"`
+
+	// MaxResponseBytes narrows the provider-response ceiling for this
+	// entry (P-L8-1): 0 = the compiled default; a value above the
+	// default is refused at resolution — the registry narrows, never
+	// widens. Governed: the anchor pins the registry bytes.
+	MaxResponseBytes int64 `json:"max_response_bytes,omitempty"`
 }
 
 // Registry maps model names to runtime configuration.

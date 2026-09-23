@@ -106,6 +106,76 @@ func (e *Evaluator) VerifierEligible(capability, registrySHA string) (bool, erro
 	return false, nil
 }
 
+// resolveCall is the pre-instance stage (D-L10-6 stage 1, D-L10-8
+// "before an evaluation instance exists"): argument shape, contract
+// naming, authorizing-registry agreement, atomic registry resolution,
+// capability binding, and the v1 single-slot constraint. It returns a
+// typed refusal text or the resolved contract. Shared by PreResolve
+// (recorded into the call's l4-audit before commit, F-L8-3) and
+// EvaluateCall, so the two cannot disagree on what refuses.
+func (e *Evaluator) resolveCall(call model.ToolCall, authRegistrySHA256 string) (*verification.Contract, string, error) {
+	var args map[string]any
+	if err := json.Unmarshal(call.Arguments, &args); err != nil {
+		return nil, "unparseable verification arguments", nil
+	}
+	ref, _ := args["contract"].(string)
+	if ref == "" {
+		return nil, "no contract named — a verification proposal must reference an exact registered contract", nil
+	}
+
+	// The registry that AUTHORIZED this call must be the registry this
+	// evaluator holds — drift between the two leaves an evaluation
+	// unattributable to its authorization (security review L-1).
+	if e.L4 == nil || authRegistrySHA256 == "" || authRegistrySHA256 != e.L4.Hash {
+		return nil, "authorizing registry does not match the evaluator's registry-in-force", nil
+	}
+
+	// Stage 1 — atomic resolution from ONE registry load (D-L10-2 /
+	// D-L9-10 TOCTOU rule). Every resolution failure is a typed
+	// refusal: no evaluation instance exists yet.
+	reg, err := verification.LoadRegistry(e.RegistryPath)
+	if err != nil {
+		return nil, "contract registry unreadable: " + sanitizeDetail(err.Error()), nil
+	}
+	// Live append-only verification (security review M-2): the prior
+	// observed registry state is held for the evaluator's lifetime;
+	// deletion, rebinding, or un-withdrawal between loads is TAMPER —
+	// a machinery error (invariant path), never a graded refusal.
+	e.mu.Lock()
+	if aerr := reg.CheckAppendOnly(e.prior); aerr != nil {
+		e.mu.Unlock()
+		return nil, "", fmt.Errorf("contract registry integrity: %v", aerr)
+	}
+	e.prior = reg
+	e.mu.Unlock()
+	_, contract, err := reg.Resolve(ref, e)
+	if err != nil {
+		return nil, sanitizeDetail(err.Error()), nil
+	}
+
+	// The proposal's capability must BE the contract's bound verifier:
+	// invoking capability X under a contract that binds Y is a
+	// proposal defect, refused pre-instance.
+	if contract.Verifier.Capability != call.Name {
+		return nil, fmt.Sprintf("contract %s binds capability %q, not %q", ref, contract.Verifier.Capability, call.Name), nil
+	}
+
+	// v1 seam constraint, refused typed rather than degrading to a
+	// misleading INVALID (close architecture review L-2): this seam
+	// fills exactly one evidence slot (the captured artifact).
+	if len(contract.Evidence) != 1 {
+		return nil, fmt.Sprintf("contract %s declares %d evidence slots; this seam supports exactly one in v1", ref, len(contract.Evidence)), nil
+	}
+	return contract, "", nil
+}
+
+// PreResolve is the pre-instance stage on its own, for L7 to record a
+// refusal into the call's l4-audit before commit (F-L8-3).
+func (e *Evaluator) PreResolve(taskID string, call model.ToolCall, authRegistrySHA256 string) (string, error) {
+	_, refusal, err := e.resolveCall(call, authRegistrySHA256)
+	return refusal, err
+}
+
 // EvaluateCall runs the D-L10-6 pipeline stages 1 and 4 around the
 // already-completed stage 2-3 (the L4-authorized, executor-captured
 // call): atomic contract resolution, canonicalization through the
@@ -116,61 +186,13 @@ func (e *Evaluator) EvaluateCall(taskID string, call model.ToolCall, resultEvide
 	refuse := func(reason string) *orchestration.VerificationOutcome {
 		return &orchestration.VerificationOutcome{Refused: true, RefusalReason: reason}
 	}
-
-	var args map[string]any
-	if err := json.Unmarshal(call.Arguments, &args); err != nil {
-		return refuse("unparseable verification arguments"), nil
-	}
-	ref, _ := args["contract"].(string)
-	if ref == "" {
-		return refuse("no contract named — a verification proposal must reference an exact registered contract"), nil
-	}
-
-	// The registry that AUTHORIZED this call must be the registry this
-	// evaluator holds — drift between the two leaves an evaluation
-	// unattributable to its authorization (security review L-1).
-	if e.L4 == nil || authRegistrySHA256 == "" || authRegistrySHA256 != e.L4.Hash {
-		return refuse("authorizing registry does not match the evaluator's registry-in-force"), nil
-	}
-
-	// Stage 1 — atomic resolution from ONE registry load (D-L10-2 /
-	// D-L9-10 TOCTOU rule). Every resolution failure is a typed
-	// refusal: no evaluation instance exists yet.
-	reg, err := verification.LoadRegistry(e.RegistryPath)
+	contract, refusal, err := e.resolveCall(call, authRegistrySHA256)
 	if err != nil {
-		return refuse("contract registry unreadable: " + sanitizeDetail(err.Error())), nil
+		return nil, err
 	}
-	// Live append-only verification (security review M-2): the prior
-	// observed registry state is held for the evaluator's lifetime;
-	// deletion, rebinding, or un-withdrawal between loads is TAMPER —
-	// a machinery error (invariant path), never a graded refusal.
-	e.mu.Lock()
-	if aerr := reg.CheckAppendOnly(e.prior); aerr != nil {
-		e.mu.Unlock()
-		return nil, fmt.Errorf("contract registry integrity: %v", aerr)
+	if refusal != "" {
+		return refuse(refusal), nil
 	}
-	e.prior = reg
-	e.mu.Unlock()
-	entry, contract, err := reg.Resolve(ref, e)
-	if err != nil {
-		return refuse(sanitizeDetail(err.Error())), nil
-	}
-	_ = entry
-
-	// The proposal's capability must BE the contract's bound verifier:
-	// invoking capability X under a contract that binds Y is a
-	// proposal defect, refused pre-instance.
-	if contract.Verifier.Capability != call.Name {
-		return refuse(fmt.Sprintf("contract %s binds capability %q, not %q", ref, contract.Verifier.Capability, call.Name)), nil
-	}
-
-	// v1 seam constraint, refused typed rather than degrading to a
-	// misleading INVALID (close architecture review L-2): this seam
-	// fills exactly one evidence slot (the captured artifact).
-	if len(contract.Evidence) != 1 {
-		return refuse(fmt.Sprintf("contract %s declares %d evidence slots; this seam supports exactly one in v1", ref, len(contract.Evidence))), nil
-	}
-
 	// The evaluation instance now exists. Canonicalization through the
 	// registered mechanism; absence of a canonicalizer for an eligible
 	// capability is machinery breakage, not a graded outcome.

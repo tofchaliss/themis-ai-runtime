@@ -25,7 +25,11 @@ func Resolve(reg *llm.Registry, name string) (Interface, string, llm.Options, er
 		if endpoint == "" {
 			endpoint = llm.DefaultOllamaEndpoint
 		}
-		return NewOllamaChat(endpoint), wireModel, options, nil
+		rt := NewOllamaChat(endpoint)
+		if rt.MaxResponseBytes, err = ceilingFor(name, entry.MaxResponseBytes); err != nil {
+			return nil, "", options, err
+		}
+		return rt, wireModel, options, nil
 
 	case "openai":
 		if entry.Endpoint == "" {
@@ -33,11 +37,29 @@ func Resolve(reg *llm.Registry, name string) (Interface, string, llm.Options, er
 				"model %s: openai runtime requires an endpoint", name,
 			)
 		}
-		return NewOpenAIChat(entry.Endpoint, apiKey), wireModel, options, nil
+		rt := NewOpenAIChat(entry.Endpoint, apiKey)
+		if rt.MaxResponseBytes, err = ceilingFor(name, entry.MaxResponseBytes); err != nil {
+			return nil, "", options, err
+		}
+		return rt, wireModel, options, nil
 
 	default:
 		return nil, "", options, fmt.Errorf(
 			"model %s: unsupported runtime %q", name, entry.Runtime,
 		)
+	}
+}
+
+// ceilingFor applies a registry entry's response ceiling: absent (0)
+// keeps the compiled default; a narrower value applies; a wider one is
+// refused — a governed input narrows a hard bound, never lifts it.
+func ceilingFor(name string, entryMax int64) (int64, error) {
+	switch {
+	case entryMax == 0:
+		return DefaultMaxResponseBytes, nil
+	case entryMax < 0 || entryMax > DefaultMaxResponseBytes:
+		return 0, fmt.Errorf("model %s: max_response_bytes %d must be within [1, %d] — the registry narrows the response ceiling, never widens it", name, entryMax, DefaultMaxResponseBytes)
+	default:
+		return entryMax, nil
 	}
 }

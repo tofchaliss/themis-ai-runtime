@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -19,14 +18,18 @@ type OpenAIChat struct {
 	Endpoint string
 	APIKey   string `json:"-"` // secret: never serialized
 	Client   *http.Client
+	// MaxResponseBytes: the governed response ceiling (P-L8-1); see
+	// OllamaChat.
+	MaxResponseBytes int64
 }
 
 // NewOpenAIChat returns an OpenAI-compatible chat runtime.
 func NewOpenAIChat(endpoint, apiKey string) *OpenAIChat {
 	return &OpenAIChat{
-		Endpoint: endpoint,
-		APIKey:   apiKey,
-		Client:   &http.Client{Timeout: llm.DefaultTimeout},
+		Endpoint:         endpoint,
+		APIKey:           apiKey,
+		Client:           &http.Client{Timeout: llm.DefaultTimeout},
+		MaxResponseBytes: DefaultMaxResponseBytes,
 	}
 }
 
@@ -65,6 +68,7 @@ type openAIToolDeclared struct {
 }
 
 type openAIChatResponse struct {
+	Model   string `json:"model"`
 	Choices []struct {
 		Message      openAIMessage `json:"message"`
 		FinishReason string        `json:"finish_reason"`
@@ -152,9 +156,9 @@ func (o *OpenAIChat) Execute(ctx context.Context, req ExecutionRequest) (*Execut
 	}
 	defer resp.Body.Close()
 
-	raw, err := io.ReadAll(resp.Body)
+	raw, err := readBounded(resp.Body, o.MaxResponseBytes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("openai chat: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("openai chat: status %d: %s", resp.StatusCode, truncate(raw, 512))
@@ -183,7 +187,7 @@ func (o *OpenAIChat) Execute(ctx context.Context, req ExecutionRequest) (*Execut
 			GenerationTimeMS: wallMS,
 			TotalTimeMS:      wallMS,
 		},
-		Identity: Identity{WireModel: req.Model, Runtime: o.Name()},
+		Identity: Identity{WireModel: req.Model, Runtime: o.Name(), Reported: r.Model},
 		Provenance: Provenance{
 			Endpoint: o.Endpoint,
 			Options:  req.Options,

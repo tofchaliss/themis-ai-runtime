@@ -14,6 +14,9 @@ package model
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
 
 	"github.com/tofchaliss/themis/internal/llm"
 )
@@ -86,6 +89,12 @@ const (
 type Identity struct {
 	Name      string `json:"name,omitempty"`
 	WireModel string `json:"wire_model"` // identifier sent to the provider
+	// Reported is the model identifier the PROVIDER reported in its
+	// response payload, provider-neutral (P-L8-2; parsed inside the
+	// adapter, DEC-05). Reported ≠ WireModel is observable upstream —
+	// L8 stage C `model-identity-mismatch`; the parent loop's handling
+	// is an L7 residual. Empty when the provider reported none.
+	Reported string `json:"reported,omitempty"`
 
 	// Runtime names the provider implementation — audit metadata only;
 	// per DEC-05 no layer above this seam may branch on it.
@@ -113,6 +122,36 @@ type ExecutionResponse struct {
 	Identity    Identity    `json:"identity"`
 	Provenance  Provenance  `json:"provenance"`
 	Termination Termination `json:"termination"`
+}
+
+// DefaultMaxResponseBytes is the compiled hard ceiling on a provider
+// response body (P-L8-1). It is the resource-safety bound, not a
+// capture policy: a body over the ceiling is a FAILED turn, never a
+// truncated one. A model registry entry may narrow it, never widen it,
+// so the effective ceiling is always ≤ this value — which is ≤ L2's
+// per-item cap (checked by test), so every object a turn could
+// produce is bounded by what L2 accepts per item (C-L8-7).
+const DefaultMaxResponseBytes int64 = 256 * 1024
+
+// ErrResponseOverCeiling: the provider body exceeded the response
+// ceiling. Typed so no layer can mistake it for content.
+var ErrResponseOverCeiling = errors.New("provider response exceeds the response ceiling")
+
+// readBounded reads at most max bytes from a provider body and refuses
+// typed when the body is longer — the bytes are discarded, not
+// truncated into a partial turn.
+func readBounded(r io.Reader, max int64) ([]byte, error) {
+	if max <= 0 || max > DefaultMaxResponseBytes {
+		return nil, fmt.Errorf("%w: adapter ceiling %d is not within (0, %d]", ErrResponseOverCeiling, max, DefaultMaxResponseBytes)
+	}
+	raw, err := io.ReadAll(io.LimitReader(r, max+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(raw)) > max {
+		return nil, fmt.Errorf("%w: body exceeds %d bytes", ErrResponseOverCeiling, max)
+	}
+	return raw, nil
 }
 
 // Interface is the Model Interface. Implementations translate the

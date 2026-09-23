@@ -255,3 +255,10 @@ changed. @1's procedure uses `## ` headings the renderer refuses —
    fail-closed and correct per C-L8-10, but L8 is unusable on such a
    runtime until governance decides how a reported id maps to the
    requested one (residual).
+21. **Live rerun after MED-5:** qwen2.5:7b still declares done in
+   ANALYZE without reading or delegating (1m27s, FAILED via
+   turn-no-action exhaustion in REMEDIATE). Model behaviour; the
+   anchored scripted positive path is the Register B evidence.
+22. **Reviewer worktree branches remain** (`worktree-agent-*`): the
+   worktrees were pruned from the index and ignored, but branch
+   deletion is a topology change the git-guard blocks — owner act.

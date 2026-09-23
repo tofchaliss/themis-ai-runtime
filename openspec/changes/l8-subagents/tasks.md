@@ -32,35 +32,42 @@ detail / residual / architectural decision) before work continues.
 Parent runtime hardening; blocks M4+. Closes the unbounded `io.ReadAll`
 at `runtime/model/ollama.go:138` and `openai.go:155`.
 
-- [ ] Governed hard byte ceiling on the provider response body at both
+- [x] Governed hard byte ceiling on the provider response body at both
       adapters (`io.LimitReader` + typed over-limit termination, never a
       silent truncation; a truncated body is a failed turn, not a turn)
-- [ ] Ceiling is a deployment-supplied governed input (execution
-      ceiling dimension or model-registry field — decide at Gate 1; it
-      must be anchor-pinned either way); value ≤ L2 `MaxItemBytes` (256 KiB) so every
-      referenceable object is bounded at production by what L2 accepts
-      per item (C-L8-7)
-- [ ] Tests: over-limit body → typed termination, nothing stored as a
+      — `runtime/model.readBounded`, `ErrResponseOverCeiling` (2026-09-23)
+- [x] Ceiling is a deployment-supplied governed input — Gate 1 decision:
+      compiled hard bound `DefaultMaxResponseBytes` (256 KiB) that the
+      anchor-pinned model registry (`max_response_bytes`) may NARROW,
+      never widen; the `absent`-registry path keeps the compiled bound
+      (`themis-run` builds the adapter directly); ≤ L2 `MaxItemBytes`
+      pinned by test (C-L8-7)
+- [x] Tests: over-limit body → typed termination, nothing stored as a
       turn; at-limit body → ordinary turn; mutation: remove the limiter
-      → test fails
-- [ ] Recorded as an amendment to the model-interface seam (not an L8
-      artifact)
-- [ ] **P-L8-2:** adapters populate provider-neutral `Identity.Reported`
+      → test fails (`runtime/model/ceiling_test.go`, probed 2026-09-23)
+- [x] Recorded as an amendment to the model-interface seam (not an L8
+      artifact): L4 archive `amendments/p-l8-model-seam/`
+- [x] **P-L8-2:** adapters populate provider-neutral `Identity.Reported`
       from the provider payload (inside the adapter); test: reported ≠
-      requested is observable (C-L8-10)
+      requested is observable (C-L8-10) — both adapters, 2026-09-23
 
 ## 1b. L8-M0b — Supporting-layer prerequisites (owner closure §35; NOT L8)
 
 Must be complete before L8 implementation is declared safe. None
 reopens D-L8-1..21.
 
-- [ ] **F-L8-2 (L7):** `model-turn` body gains `Identity{WireModel,
-      Runtime}` + `Endpoint` (additive; no constitution change)
-- [ ] **F-L8-3 (L10):** verifier-seam pre-instance refusal text
-      reconstructable from the record (mirror the C-L8-12 mechanism or
-      an equivalent L10-owned fix)
-- [ ] **F-L8-4 (L7):** parent turn context deadline =
-      `min(turn_timeout_sec, remaining deadline)`
+- [x] **F-L8-2 (L7):** `model-turn` body gains `Identity{WireModel,
+      Runtime, Reported}` + `Endpoint` (additive; no constitution change)
+      — `TestModelTurnRecordsExecutionIdentity`; L7 archive
+      `amendments/l8-prerequisites/`
+- [x] **F-L8-3 (L10):** verifier-seam pre-instance refusal text
+      reconstructable from the record — `VerificationEvaluator.PreResolve`
+      before the `l4-audit` commit, refusal in the audit body
+      (`VerificationRefusal`); L10 archive
+      `amendments/f-l8-3-refusal-record/` (residual: second-load window)
+- [x] **F-L8-4 (L7):** parent turn context deadline =
+      `min(turn_timeout_sec, remaining deadline)` —
+      `TestParentTurnDeadlineIsMinOfTurnAndWall`, mutation-probed
 - [x] **Q-SA-6 (L9/L7, issue #1):** DISCHARGED 2026-09-23 — D-SA-4
       `template_scope` equality built (`tools.Instantiates`), anchored
       positive twin + live anchored walk green; record archived at

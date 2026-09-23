@@ -8,7 +8,6 @@ package orchestration
 import (
 	stdctx "context"
 	"encoding/json"
-	"strings"
 	"testing"
 	"time"
 

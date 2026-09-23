@@ -3,7 +3,10 @@
 Updated at every green milestone. If context was compacted, start here.
 
 ## One-line status
-2026-09-23: M1 LANDED (package, loaders, first template PROPOSED,
+2026-09-23 (later): M0 + M0b LANDED (provider ceiling, Reported
+identity, F-L8-2/3/4; amendment records in the L4/L7/L10 archives).
+Next: M2 (L4 `delegate` capability) after its Gate 1 section here.
+Earlier: M1 LANDED (package, loaders, first template PROPOSED,
 README checklist, preflight check, Register A + 13/13 probes killed).
 Next: M0 (provider ceiling, P-L8-2) and M0b (F-L8-2/3/4) — they gate
 M4+, not M2; M2 (L4 `delegate` capability) needs its Gate 1 section
@@ -75,6 +78,8 @@ class, anchor pin — M2+. Scaffold dirs `roles/`, `runtime/`,
 `isolation/` deleted with M1 (§5.1).
 
 ## Milestone log
+- [x] M0 — green 2026-09-23 (ceiling at both adapters; registry narrows; mutation-probed)
+- [x] M0b — green 2026-09-23 (F-L8-2/3/4; F-L8-3 residual: second-load window)
 - [x] M1 — green 2026-09-23 (full hermetic suite green; owner
   registration act for `dependency-triage@1` and three Class-3 reviews
   still owed before M1 is called closed)
@@ -103,3 +108,16 @@ class, anchor pin — M2+. Scaffold dirs `roles/`, `runtime/`,
    counts (exit code would have been 0 on a FAIL). Fixed with a
    here-string before commit; the class — a check whose report cannot
    affect the verdict — is the recurring one.
+6. **F-L8-3 first attempt tested nothing:** the existing refusal test
+   named no contract, which L4 DENIES (required param) — the seam's
+   pre-instance path was never reached and the test passed anyway.
+   Fixed by naming an unregistered contract (authorized, then refused).
+   The check-claims-more-than-it-establishes class again.
+7. **F-L8-4 terminal race:** with a 2 s wall budget the cut turn may
+   terminate via δ's turn-provider-error edge before the loop's floor
+   check runs; the test asserts the cut (seconds, not minutes), not
+   which of the two terminals fired.
+8. **Commit 6f08824 carried a non-compiling test** (unused import) —
+   a chained command's `&&` broke before the vet step and the commit
+   still ran. Fixed in the follow-up commit; lesson: never chain a
+   commit behind steps whose failure the chain can skip past.

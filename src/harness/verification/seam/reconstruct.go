@@ -172,7 +172,22 @@ func TaskVerificationHistory(root *state.Root, taskID string) (verification.Hist
 		return verification.HistoryView{}, err
 	}
 	var views []verification.VerificationEventView
+	var delegations []verification.DelegationObservation
 	for _, ev := range events {
+		if ev.Class == state.EvL8Delegation {
+			var body struct {
+				ParentCallSeq int64 `json:"parent_call_seq"`
+				Template      struct {
+					Ref string `json:"ref"`
+				} `json:"template"`
+				Outcome string `json:"outcome"`
+			}
+			if json.Unmarshal(ev.Body, &body) == nil {
+				delegations = append(delegations, verification.DelegationObservation{
+					Seq: ev.Seq, ParentCallSeq: body.ParentCallSeq, Template: body.Template.Ref, Outcome: body.Outcome})
+			}
+			continue
+		}
 		if ev.Class != state.EvVerification {
 			continue
 		}
@@ -186,5 +201,7 @@ func TaskVerificationHistory(root *state.Root, taskID string) (verification.Hist
 		views = append(views, verification.VerificationEventView{
 			Seq: ev.Seq, Contract: body.Contract, Outcome: body.Outcome})
 	}
-	return verification.VerificationHistory(views), nil
+	view := verification.VerificationHistory(views)
+	view.Delegations = delegations
+	return view, nil
 }

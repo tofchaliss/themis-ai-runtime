@@ -756,6 +756,7 @@ func TestExportedAPIClosure(t *testing.T) {
 		// only in the governed result-processing path.
 		"Delegator": true, "InstantiationRequest": true, "DelegationRequest": true,
 		"DelegationResult": true, "DelegationRefusal": true, "EvidenceRef": true,
+		"ExecutionBound": true,
 	}
 	allowFuncs := map[string]bool{
 		"Open": true, "LoadEnvelope": true, "LoadWorkflow": true, "LoadWorkflowCeiling": true,
@@ -763,6 +764,9 @@ func TestExportedAPIClosure(t *testing.T) {
 		// Register C fault injection for the seam's three points; SetFault
 		// is test wiring (production never installs a fault).
 		"FaultAt": true, "SetFault": true,
+		// Read-only projections of the record (C-L8-18 A): no walk
+		// effect, no query channel into a running task.
+		"ProjectDelegationMessage": true, "ProjectRefusalMessage": true,
 	}
 	allowMethods := map[string]bool{
 		"Orchestrator.SubmitTask": true, "Orchestrator.ReadStatus": true,

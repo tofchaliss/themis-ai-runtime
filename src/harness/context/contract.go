@@ -56,6 +56,15 @@ func LoadContract(path string) (*Contract, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s: %v", ErrContractInvalid, path, err)
 	}
+	return parseContract(raw, path)
+}
+
+// ParseContract validates contract BYTES (the L8 reconstruction path,
+// C-L8-9: a delegation's contract is re-verified from the stored
+// object, never from a file). Identical rules to LoadContract.
+func ParseContract(raw []byte) (*Contract, error) { return parseContract(raw, "<bytes>") }
+
+func parseContract(raw []byte, path string) (*Contract, error) {
 	dec := json.NewDecoder(strings.NewReader(string(raw)))
 	dec.DisallowUnknownFields()
 	var c Contract

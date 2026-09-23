@@ -46,7 +46,24 @@ func Compose(set *instructions.EffectiveSet, policy *instructions.Policy, g *Gat
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCompose, err)
 	}
+	return composeRendered(sysMsg, set.Hash, renderHash, g)
+}
 
+// ComposeWithSystem composes over an ALREADY-RENDERED system message —
+// the L8 reconstruction path (C-L8-9): the delegated EIS render is a
+// stored object, so a reconstruction re-derives the user message and
+// payload hash from stored template bytes and stored evidence without
+// today's instruction roots. It is the same composition function with
+// the L1 step replaced by its recorded result; nothing here resolves
+// or renders instructions.
+func ComposeWithSystem(system model.Message, eisHash, renderHash string, g *Gathered) (*Payload, error) {
+	if system.Role != model.RoleSystem || eisHash == "" || renderHash == "" {
+		return nil, fmt.Errorf("%w: a rendered system message with its identities is required", ErrCompose)
+	}
+	return composeRendered(system, eisHash, renderHash, g)
+}
+
+func composeRendered(sysMsg model.Message, eisHash, renderHash string, g *Gathered) (*Payload, error) {
 	if !g.validated {
 		// A Gathered that did not come out of Gather carries no
 		// Plan ⊆ Contract guarantee — refuse (security review LOW-1).
@@ -108,7 +125,7 @@ func Compose(set *instructions.EffectiveSet, policy *instructions.Policy, g *Gat
 	p := &Payload{
 		Messages:     []model.Message{sysMsg, userMsg},
 		ContractHash: g.Contract.Hash,
-		EISHash:      set.Hash,
+		EISHash:      eisHash,
 		RenderHash:   renderHash,
 		Slots:        slots,
 	}

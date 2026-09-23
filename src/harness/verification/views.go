@@ -35,6 +35,19 @@ type HistoryView struct {
 	Derived DerivedFrom             `json:"derived_from"`
 	History []VerificationEventView `json:"history"`
 	Latest  map[string]string       `json:"latest_per_contract"`
+	// Delegations observes l8-delegation witnesses read-only (L8
+	// D-L8-18): no evidence kind, contract, outcome vocabulary, or
+	// authority — history only.
+	Delegations []DelegationObservation `json:"delegations,omitempty"`
+}
+
+// DelegationObservation is what L10 sees of a delegation: that one
+// occurred, when, under which template, with which recorded outcome.
+type DelegationObservation struct {
+	Seq           int64  `json:"seq"`
+	ParentCallSeq int64  `json:"parent_call_seq"`
+	Template      string `json:"template"`
+	Outcome       string `json:"outcome"`
 }
 
 const historyViewVersion = "verification-history-v1"

@@ -24,6 +24,7 @@ import (
 	"github.com/tofchaliss/themis/runtime/model"
 	"github.com/tofchaliss/themis/state"
 	"github.com/tofchaliss/themis/subagents/delegation"
+	vseam "github.com/tofchaliss/themis/verification/seam"
 )
 
 func repoRoot(t *testing.T) string {
@@ -790,5 +791,28 @@ func TestDelegatedEISCarryFilter(t *testing.T) {
 				t.Fatal("fixture: the parent EIS must contain the procedure")
 			}
 		})
+	}
+}
+
+// D-L8-18: L10's history view observes the delegation read-only — no
+// evidence kind, no contract, no outcome vocabulary of its own.
+func TestL10HistoryObservesDelegation(t *testing.T) {
+	m := &dynModel{delegated: okDelegated}
+	w := newWorld(t, m, "", true)
+	const task = "t-l10-view"
+	m.parent = triageParent(w, task, func(seq int64, id string) string { return ref(seq, id) }, "triage")
+	if res, err := w.o.SubmitTask(w.envelope(t, task)); err != nil || res.Status != state.StatusCompleted {
+		t.Fatalf("%+v %v", res, err)
+	}
+	view, err := vseam.TaskVerificationHistory(w.sroot, task)
+	if err != nil {
+		t.Fatal(err)
+	}
+	l8, _ := delegationEvent(t, events(t, w, task))
+	if len(view.Delegations) != 1 || view.Delegations[0].Seq != l8.Seq || view.Delegations[0].Template != "dependency-triage@1" || view.Delegations[0].Outcome != "completed" {
+		t.Fatalf("%+v", view.Delegations)
+	}
+	if len(view.History) != 0 || len(view.Latest) != 0 {
+		t.Fatal("a delegation is not a verification instance")
 	}
 }

@@ -29,3 +29,18 @@ either order → identical items; duplicate source refused; class and
 kind outside the slot refused; missing object hard error; address
 mismatch refused). Mutation: removing the address verification → the
 mismatch case reads through and fails (probed 2026-09-23).
+
+## Addendum (L8 M5, reconstruction)
+
+4. `ParseContract(raw)` — the same validation as `LoadContract` over
+   bytes (a delegation's contract is re-verified from the stored
+   object, never a file).
+5. `ComposeWithSystem(system, eisHash, renderHash, g)` — composition
+   over an already-rendered system message: the delegated EIS render is
+   a stored object, so a reconstruction re-derives the user message and
+   payload hash from stored template bytes and stored evidence without
+   today's instruction roots. The same composition function with the
+   L1 step replaced by its recorded result; it resolves and renders
+   nothing. Evidence: `TestReconstructionConfirmedFromRecordAlone`
+   (CONFIRMED after template withdrawal, template/contract deletion,
+   and a safety-root file change).

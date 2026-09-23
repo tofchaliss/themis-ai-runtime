@@ -85,12 +85,63 @@ var disjointKeys = map[string]bool{
 	"tools": true, "model": true, "scope": true, "procedure": true,
 }
 
-// LoadTemplate reads and verifies one manifest fail-closed.
+// LoadTemplate reads and verifies one manifest fail-closed, resolving
+// its pins under the manifest directory.
 func LoadTemplate(path string) (*Template, error) {
 	raw, err := readGoverned(path, maxTemplateBytes, ErrTemplate)
 	if err != nil {
 		return nil, err
 	}
+	t, err := parseManifest(raw, path)
+	if err != nil {
+		return nil, err
+	}
+	t.Dir = filepath.Dir(path)
+	// Pins: confined, regular, bytes verified against the sha.
+	_, contractRaw, err := t.resolvePin("context_contract", t.ContextContract)
+	if err != nil {
+		return nil, err
+	}
+	var instRaw []byte
+	if t.Instruction != nil {
+		_, instRaw, err = t.resolvePin("instruction", *t.Instruction)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if err := t.bind(path, contractRaw, instRaw); err != nil {
+		return nil, err
+	}
+	return t, nil
+}
+
+// ParseTemplate verifies a manifest and its members from BYTES — the
+// reconstruction path (D-L8-17, C-L8-9): the registry and the files
+// are never the historical source of truth; the stored objects are.
+// Identical rules to LoadTemplate minus the filesystem confinement,
+// which does not apply to content-addressed bytes.
+func ParseTemplate(manifestRaw, contractRaw, instructionRaw []byte) (*Template, error) {
+	t, err := parseManifest(manifestRaw, "<bytes>")
+	if err != nil {
+		return nil, err
+	}
+	if !shaSyntax.MatchString(t.ContextContract.SHA256) || hashBytes(contractRaw) != t.ContextContract.SHA256 {
+		return nil, fmt.Errorf("%w: context_contract bytes do not match the pinned hash", ErrTemplate)
+	}
+	if t.Instruction != nil {
+		if !shaSyntax.MatchString(t.Instruction.SHA256) || hashBytes(instructionRaw) != t.Instruction.SHA256 {
+			return nil, fmt.Errorf("%w: instruction bytes do not match the pinned hash", ErrTemplate)
+		}
+	} else {
+		instructionRaw = nil
+	}
+	if err := t.bind("<bytes>", contractRaw, instructionRaw); err != nil {
+		return nil, err
+	}
+	return t, nil
+}
+
+func parseManifest(raw []byte, path string) (*Template, error) {
 	if err := strictjson.Check(raw); err != nil {
 		return nil, fmt.Errorf("%w: %s: %v", ErrTemplate, path, err)
 	}
@@ -142,25 +193,20 @@ func LoadTemplate(path string) (*Template, error) {
 	}
 	t.Hash = hashBytes(raw)
 	t.Raw = raw
-	t.Dir = filepath.Dir(path)
+	return &t, nil
+}
 
-	// Pins: confined, regular, bytes verified against the sha.
-	contractPath, contractRaw, err := t.resolvePin("context_contract", t.ContextContract)
+// bind attaches verified member bytes and runs the contract
+// cross-checks (C-L8-14 D).
+func (t *Template) bind(path string, contractRaw, instRaw []byte) error {
+	c, err := hctx.ParseContract(contractRaw)
 	if err != nil {
-		return nil, err
-	}
-	c, err := hctx.LoadContract(contractPath)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s: context_contract: %v", ErrTemplate, path, err)
+		return fmt.Errorf("%w: %s: context_contract: %v", ErrTemplate, path, err)
 	}
 	t.Contract, t.ContractRaw = c, contractRaw
 	if t.Instruction != nil {
-		_, instRaw, err := t.resolvePin("instruction", *t.Instruction)
-		if err != nil {
-			return nil, err
-		}
 		if len(instRaw) == 0 {
-			return nil, fmt.Errorf("%w: %s: instruction pin resolves to an empty file", ErrTemplate, path)
+			return fmt.Errorf("%w: %s: instruction pin resolves to an empty file", ErrTemplate, path)
 		}
 		t.InstructionRaw = instRaw
 	}
@@ -174,15 +220,15 @@ func LoadTemplate(path string) (*Template, error) {
 		}
 	}
 	if slot == nil {
-		return nil, fmt.Errorf("%w: %s: brief.slot %q is not a slot of the pinned contract", ErrTemplate, path, t.Brief.Slot)
+		return fmt.Errorf("%w: %s: brief.slot %q is not a slot of the pinned contract", ErrTemplate, path, t.Brief.Slot)
 	}
 	if slot.Withhold {
-		return nil, fmt.Errorf("%w: %s: brief.slot %q is withheld by the pinned contract — a withheld slot cannot carry the brief", ErrTemplate, path, t.Brief.Slot)
+		return fmt.Errorf("%w: %s: brief.slot %q is withheld by the pinned contract — a withheld slot cannot carry the brief", ErrTemplate, path, t.Brief.Slot)
 	}
 	if len(slot.Classes) != 1 || slot.Classes[0] != hctx.AuthorityExternalUntrusted {
-		return nil, fmt.Errorf("%w: %s: brief.slot %q must permit exactly [external-untrusted] — the brief is untrusted content, never a governed class (D-L8-4)", ErrTemplate, path, t.Brief.Slot)
+		return fmt.Errorf("%w: %s: brief.slot %q must permit exactly [external-untrusted] — the brief is untrusted content, never a governed class (D-L8-4)", ErrTemplate, path, t.Brief.Slot)
 	}
-	return &t, nil
+	return nil
 }
 
 // resolvePin reads a pinned artifact confined to the manifest

@@ -3,7 +3,14 @@
 Updated at every green milestone. If context was compacted, start here.
 
 ## One-line status
-2026-09-23 (M4): seam + L7 wiring LANDED — positive walk, stage A/B,
+2026-09-23 (M5): record/reconstruction/observation LANDED (Register C
+verdicts from L6 alone, projection, static bound, L10 observation).
+Next: M6 — anchor pin `delegation_template_registry` + `rsys@4`
+PROPOSED, themis-run wiring (registry-v5 + seam), Register B anchored
+positive path, live proof, reviews, archive. OPEN at M6: the model
+cannot see event seqs today, so it cannot form `<seq>:<id>` from a
+framed result alone (gap 13) — decide the furniture before the live
+proof. Earlier (M4): seam + L7 wiring LANDED — positive walk, stage A/B,
 assembly, post-instance outcomes, fault points, carry filter, walls;
 17/17 probes killed. Next: M5 (record/reconstruction/observation,
 Register C/D) then M6 (anchor `rsys@4`, live proof, reviews, archive).
@@ -131,6 +138,7 @@ had occurred; (5) `derived_sensitivity` = floor rank (residual).
 ## Milestone log
 - [x] M0 — green 2026-09-23 (ceiling at both adapters; registry narrows; mutation-probed)
 - [x] M0b — green 2026-09-23 (F-L8-2/3/4; F-L8-3 residual: second-load window)
+- [x] M5 — green 2026-09-23 (reconstruct.go, projection.go, L10 view; probes killed)
 - [x] M4 — green 2026-09-23 (subagents/delegation/seam e2e + walls; L2/L1 amendments)
 - [x] M3 — green 2026-09-23 (state vocabulary 16; delegation event tests)
 - [x] M2 — green 2026-09-23 (tools/delegate_test.go; digest cases; skills surface test)
@@ -192,3 +200,11 @@ had occurred; (5) `derived_sensitivity` = floor rank (residual).
    saw (the framed hash equals the object hash; the seq is not shown
    to the model today — the live proof at M6 will tell whether a model
    can form a reference without it; likely an L7 furniture gap).
+14. **Reconstruction without the registry:** an l4-audit-witnessed
+   reference's class needs the registry at the audit's hash; when the
+   caller cannot serve it, the class is taken from the witness and the
+   registry is reported as a missing input (UNREPRODUCIBLE) — never
+   assumed CONFIRMED.
+15. **Verdict precedence:** a discrepancy and a missing input can both
+   occur; DISCREPANCY wins (a defect signal must not be hidden by an
+   availability fact). First draft let the missing input win.

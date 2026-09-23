@@ -796,6 +796,14 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 		envn.Teardown()
 		return res, err
 	}
+	// Register D (C-L8-19 I): the static execution bound, computed
+	// from the loaded artifacts and recorded — an invariant the two
+	// checks above already imply, stated so the record carries it.
+	bound := executionBound(wf, wfCeiling, grant, reg)
+	if bound.Executions > bound.WalkCeiling+bound.CallCeiling {
+		envn.Teardown()
+		return res, fmt.Errorf("%w: model executions %d exceed the static bound %d", ErrInvariant, bound.Executions, bound.WalkCeiling+bound.CallCeiling)
+	}
 	// Grant validation, not call authorization (C-L8-15 G): every
 	// template_scope entry must resolve in the delegation registry in
 	// force, as unregistered phase capabilities are refused. Without a
@@ -848,6 +856,8 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 		// that dropped material (L9 security MED-2).
 		"l1_status":       string(eis.Status),
 		"l6_constitution": state.ConstitutionHash(), "l7_constitution": ConstitutionHash(),
+		// Register D: the static bound this task ran under.
+		"l8_execution_bound": fmt.Sprintf("turns<=%d;delegations<=%d;executions<=%d", bound.Turns, bound.Delegations, bound.Executions),
 	}
 	// Opaque attribution: recorded verbatim, interpreted by nobody
 	// (D-L9-13). L7 does not know what a skill is; it only preserves

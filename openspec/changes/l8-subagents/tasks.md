@@ -255,7 +255,7 @@ reopens D-L8-1..21.
 
 ## 6. L8-M5 — Record, reconstruction, observation (Class 2/3)
 
-- [ ] Register C: byte-exact reconstruction of what the delegated model
+- [x] Register C: byte-exact reconstruction of what the delegated model
       saw and produced; reconstruction from L6 alone after (i) template
       withdrawal, (ii) template/contract file deletion, (iii) root file
       change → CONFIRMED; missing object → typed UNREPRODUCIBLE; doctored
@@ -268,19 +268,35 @@ reopens D-L8-1..21.
       stored bytes); fault sweep at every new point (stage E orphan
       object retained, reported by reachability, **not a fact**;
       recovery infers no execution)
-- [ ] L10 history/reconstruction views include `l8-delegation`
+- [x] L10 history/reconstruction views include `l8-delegation`
       (read-only; no evidence kind, contract, or outcome)
-- [ ] Register D: static boundedness proof extended by the delegate
+- [x] Register D: static boundedness proof extended by the delegate
       term (loader-time computation + test): executions ≤ V·T +
       min(D,G) ≤ W + M; output ≤ min(D,G)·P captured, ·B admitted;
       wall ≤ Δ (C-L8-19 I); quota-attempt semantics pinned (denied and
       refused calls count)
-- [ ] Register C: the class derivation function `f` is total over
+- [x] Register C: the class derivation function `f` is total over
       event classes and maps every L7/L8-writable class to the floor or
       a registry-derived value; mutation: a branch reading a referenced
       object's prior class → fails (C-L8-18); conversation projection
       after a delegation (framed result, refusal error) re-derives
       byte-exactly from `l8-delegation`/`l4-audit` + objects (C-L8-18 A)
+- [x] Landed 2026-09-23 — `subagents/delegation/seam/reconstruct.go`
+      (`ReconstructDelegation`/`ReconstructTask`: CONFIRMED /
+      UNREPRODUCIBLE-FOR-MISSING-INPUTS / DISCREPANCY naming the pair;
+      discrepancy outranks missing input), `orchestration/projection.go`
+      (`ProjectDelegationMessage`, `ProjectRefusalMessage`,
+      `executionBound` recorded as `l8_execution_bound`), L10
+      `HistoryView.Delegations`; tests in `reconstruct_test.go`
+      (record-alone CONFIRMED after withdrawal/deletion/root change,
+      typed failures, permutation invariance on equal-hash items,
+      quota-attempt semantics, f totality + AST wall, byte-exact
+      projection); probes: seam sort, window purity, payload compare,
+      template two-way identity — all killed. Residuals: registry-less
+      reconstruction takes an l4-audit class from the witness and
+      reports the registry as a missing input; fault sweep at the
+      three points is in `TestDelegationFaultPoints` (M4), orphan
+      reachability reporting not separately asserted.
 
 ## 7. L8-M6 — Anchor, positive path, live proof, close (Class 3/4)
 

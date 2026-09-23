@@ -305,10 +305,16 @@ reopens D-L8-1..21.
 
 - [x] Deployment anchor: `delegation_template_registry` pin +
       `constitution.state` re-pin → `rsys@4` PROPOSED
-      (`policies/deployment/rsys4.proposed.json`, 2026-09-23; with it
-      PROPOSED: registry-v5, `report-valid@2`, `remediate-dependency@2`,
-      `dependency-triage@1`) — the Governance act is the owner's;
-      `themis-status` / `themis-preflight` print the pin
+      (`policies/deployment/rsys4.proposed.json`, 2026-09-23).
+      **Governance act 2026-09-23 (owner, Q3):** registry-v5,
+      `report-valid@2`, `remediate-dependency@2`, `dependency-triage@1`
+      are RATIFIED as they stand (files unchanged; the decision is the
+      act). `rsys@4` is to be minted on the host from the tree plus
+      rsys@3's `execution_ceiling` and `models`, skills retained as
+      `remediate-dependency@1..2`; sequence prepared in
+      `docs/operations/rsys4-host-sequence.md`, stopping before the
+      activation commit; `themis-status` / `themis-preflight` print
+      the pin
 - [x] **Register B, positive path FIRST:** a TEST-HARNESS anchor with
       the `rsys@4` pin set accepts and executes a genuine `delegate`
       call from `remediate-dependency@2` (L9-instantiated), the model's

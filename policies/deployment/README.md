@@ -12,9 +12,12 @@ deployment; only `anchors.json` ADMITS it.
 re-pins the constitution, moves to registry-v5, and adds
 `delegation_template_registry` (see the G1 amendment
 `delegation-template-registry-pin`); it lists `remediate-dependency@1..2`.
-Its companions are also PROPOSED: `report-valid@2`,
-`remediate-dependency@2`, `dependency-triage@1`. Committing them is
-the owner's act; nothing is ACTIVE.
+Its companions — `report-valid@2`, `remediate-dependency@2`,
+`dependency-triage@1`, registry-v5 — were Governance-ratified as they
+stand on 2026-09-23. `rsys@4` itself is minted on the host from the
+tree plus rsys@3's execution ceiling and model allowlist
+(`docs/operations/rsys4-host-sequence.md`); nothing is ACTIVE until
+that act.
 
 **Constitution pin note (2026-09-23):** L8 M3 added the `l8-delegation`
 event class, so `state.ConstitutionHash()` changed; the proposed

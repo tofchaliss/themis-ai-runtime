@@ -63,4 +63,4 @@ cannot read prose. Before registering, a reviewer confirms:
 
 | Template | Purpose | Steward | State |
 | --- | --- | --- | --- |
-| `dependency-triage@1` | one triage pass over recorded evidence for `remediate-dependency@1` (PROPOSED — awaiting the owner's registration act) | security-engineering | active |
+| `dependency-triage@1` | one triage pass over recorded evidence for `remediate-dependency@2` (Governance-ratified 2026-09-23) | security-engineering | active |

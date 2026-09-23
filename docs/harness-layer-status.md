@@ -12,7 +12,7 @@ long status paragraph above, which is cumulative history.
 | Area | State |
 |---|---|
 | L1–L7, L9–L11 | implemented, archived, frozen |
-| **L8 Subagents** | **SHIPPED (test harness) and ARCHIVED 2026-09-23** (`openspec/changes/archive/2026-09-23-layer-08-subagents`, `traceability.md`); three Class-3 reviews remediated, 12/12 named survivors killed; two owner decisions open (arch MED-2, MED-3) — D-L8-1..21 + C-L8-1..21 (`openspec/changes/archive/2026-09-23-layer-08-subagents/design.md`); built: `subagents/delegation` (registry, template, event), `subagents/delegation/seam` (compose/execute/witness/reconstruct), L4 `delegate` (registry-v5), L6 `l8-delegation`, L7 seam wiring + record-ref furniture, L2 record-object sources, G1 pin; Registers A–D green, 40+ mutation probes killed; anchored positive path in the test harness; live walk admitted (model did not delegate). PROPOSED, owner acts: `rsys@4`, registry-v5, `report-valid@2`, `remediate-dependency@2`, `dependency-triage@1`. Production authorization not implied |
+| **L8 Subagents** | **SHIPPED (test harness) and ARCHIVED 2026-09-23** (`openspec/changes/archive/2026-09-23-layer-08-subagents`, `traceability.md`); three Class-3 reviews remediated, 12/12 named survivors killed; both review decisions LOCKED 2026-09-23 — D-L8-1..21 + C-L8-1..21 (`openspec/changes/archive/2026-09-23-layer-08-subagents/design.md`); built: `subagents/delegation` (registry, template, event), `subagents/delegation/seam` (compose/execute/witness/reconstruct), L4 `delegate` (registry-v5), L6 `l8-delegation`, L7 seam wiring + record-ref furniture, L2 record-object sources, G1 pin; Registers A–D green, 40+ mutation probes killed; anchored positive path in the test harness; live walk admitted (model did not delegate). PROPOSED, owner acts: `rsys@4`, registry-v5, `report-valid@2`, `remediate-dependency@2`, `dependency-triage@1`. Production authorization not implied |
 | G1, G2 | closed and implemented |
 | Deployment `rsys@3` | **ACTIVE** (`b5f551ab7076`); `rsys@2`, `rsys@1`, `local-dev@1` withdrawn and interpretable |
 | Model allowlist | `qwen2.5:7b`, `gpt-oss:20b`, `cyberpal20b-v3` — three admitted, **none selected** |
@@ -66,10 +66,9 @@ refused — and an unconditional refusal satisfies that. It established
 
 ### Two grills queued, both owner-led
 
-1. **L8 Subagents** — ARCHIVED 2026-09-23 with traceability. Open for
-   the owner: two review decisions (`tasks.md` §7: withdrawn template in
-   a Skill's scope refuses at assembly; D-L8-21 §3 "one method" text),
-   the Governance acts (`rsys@4` and its four companion proposals), a
+1. **L8 Subagents** — ARCHIVED 2026-09-23 with traceability; both
+   review decisions LOCKED (C-L8-14 G conformance in code; §3 text
+   amended). Open for the owner: the Governance acts (`rsys@4` and its four companion proposals), a
    production `themis-run`, deletion of the reviewer worktree branches.
 2. **L9/L7 skill-admission identity** —
    `openspec/changes/archive/2026-09-23-l9-l7-skill-admission-identity/proposal.md`.

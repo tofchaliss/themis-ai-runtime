@@ -309,7 +309,7 @@ func TestAnchoredDelegationRefusals(t *testing.T) {
 			t.Fatalf("%v", err)
 		}
 	})
-	t.Run("pinned registry withdraws the template", func(t *testing.T) {
+	t.Run("pinned registry withdraws the template: Skill still runs, delegate refuses stage B", func(t *testing.T) {
 		reg := delegationRegistry(t, func(tpl, entry map[string]any) { entry["state"] = "withdrawn" })
 		m := &dynModel{delegated: okDelegated}
 		w, err := newAnchoredWorld(t, m, "dyn", reg, nil, true)
@@ -318,8 +318,22 @@ func TestAnchoredDelegationRefusals(t *testing.T) {
 		}
 		parent, _ := remediateParent(t)
 		m.parent = parent
-		if _, err := w.o.SubmitTask(w.instantiate(t, "rsys-withdrawn", "dyn")); !errors.Is(err, orchestration.ErrAssembly) || !strings.Contains(err.Error(), "withdrawn") {
-			t.Fatalf("a withdrawn template in the Skill's scope must refuse at assembly: %v", err)
+		const task = "rsys-withdrawn"
+		res, err := w.o.SubmitTask(w.instantiate(t, task, "dyn"))
+		if err != nil || res.Status != state.StatusCompleted {
+			t.Fatalf("withdrawal must not invalidate the referencing Skill (C-L8-14 G): %+v %v", res, err)
+		}
+		witnessed, refused := false, false
+		for _, e := range w.events(t, task) {
+			if e.Class == state.EvL8Delegation {
+				witnessed = true
+			}
+			if e.Class == state.EvL4Audit && strings.Contains(string(e.Body), `"delegation-refused:template-withdrawn"`) {
+				refused = true
+			}
+		}
+		if witnessed || !refused || m.delegCall != 0 {
+			t.Fatalf("expected a stage-B refusal in the audit and no witness: witnessed=%v refused=%v calls=%d", witnessed, refused, m.delegCall)
 		}
 	})
 }
@@ -389,4 +403,13 @@ func summarize(root *state.Root, task string) string {
 		b.WriteString(itoa(e.Seq) + " " + e.Class + " " + body + "\n")
 	}
 	return b.String()
+}
+
+func (w *anchoredWorld) events(t *testing.T, task string) []state.Event {
+	t.Helper()
+	evs, err := w.sroot.ReadEvents(task)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return evs
 }

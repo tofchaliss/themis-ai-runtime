@@ -159,6 +159,25 @@ func ParseRef(ref string) (string, int, error) {
 	return name, v, nil
 }
 
+// Entry returns the registration for an exact reference regardless of
+// its lifecycle state — historical registration, not current
+// usability (C-L8-14 G, owner LOCK 2026-09-23). Assembly uses it to
+// validate a Skill's template_scope: a reference to something that was
+// never registered is refused; a withdrawn registration is admissible
+// and stage B decides usability at the delegate boundary.
+func (r *Registry) Entry(ref string) (*Entry, error) {
+	name, version, err := ParseRef(ref)
+	if err != nil {
+		return nil, err
+	}
+	for i := range r.Entries {
+		if r.Entries[i].Name == name && r.Entries[i].Version == version {
+			return &r.Entries[i], nil
+		}
+	}
+	return nil, fmt.Errorf("%w: %s@%d is not registered — unregistered template-shaped artifacts are data", ErrResolve, name, version)
+}
+
 // Resolve returns the entry and the loaded template for an exact
 // reference from THIS loaded registry state. Withdrawn entries refuse
 // typed (forward-only availability, C-L8-14 G). The manifest bytes

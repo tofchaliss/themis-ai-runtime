@@ -579,12 +579,38 @@ func TestDelegationAssemblyRefusals(t *testing.T) {
 			t.Fatalf("unregistered scope entry must refuse at assembly: %v", err)
 		}
 	})
-	t.Run("scope entry withdrawn", func(t *testing.T) {
+	t.Run("scope entry withdrawn is admissible; delegate refuses stage B (C-L8-14 G)", func(t *testing.T) {
 		reg := delegationRegistry(t, func(tpl, entry map[string]any) { entry["state"] = "withdrawn" })
 		m := &dynModel{delegated: okDelegated}
 		w := newWorld(t, m, reg, true)
-		if _, err := w.o.SubmitTask(w.envelope(t, "t-withdrawn")); !errors.Is(err, orchestration.ErrAssembly) || !strings.Contains(err.Error(), "withdrawn") {
-			t.Fatalf("withdrawn template in scope must refuse: %v", err)
+		const task = "t-withdrawn"
+		m.parent = triageParent(w, task, func(seq int64, id string) string { return ref(seq, id) }, "triage")
+		res, err := w.o.SubmitTask(w.envelope(t, task))
+		if err != nil || res.Status != state.StatusCompleted {
+			t.Fatalf("a Skill referencing a withdrawn template must assemble and run: %+v %v", res, err)
+		}
+		evs := events(t, w, task)
+		_, ab := delegateAudit(t, evs)
+		if ab["Decision"] != "error" || ab["ErrClass"] != "delegation-refused:template-withdrawn" {
+			t.Fatalf("the delegate call must refuse stage B, witnessed: %v", ab)
+		}
+		if l8, _ := delegationEvent(t, evs); l8 != nil || m.delegCall != 0 {
+			t.Fatal("withdrawal blocks new delegations")
+		}
+	})
+	t.Run("scope entry withdrawn, delegate never requested", func(t *testing.T) {
+		reg := delegationRegistry(t, func(tpl, entry map[string]any) { entry["state"] = "withdrawn" })
+		m := &dynModel{delegated: okDelegated}
+		w := newWorld(t, m, reg, true)
+		m.parent = func(turn int, conv []model.Message) model.ExecutionResponse {
+			if turn == 1 {
+				return call("c1", "read_file", `{"path":"go.mod"}`)
+			}
+			return call("c2", "declare_done", `{}`)
+		}
+		res, err := w.o.SubmitTask(w.envelope(t, "t-withdrawn-unused"))
+		if err != nil || res.Status != state.StatusCompleted {
+			t.Fatalf("withdrawal must not poison a walk that never delegates: %+v %v", res, err)
 		}
 	})
 	t.Run("scope named without a delegator", func(t *testing.T) {

@@ -831,9 +831,11 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	// not a runtime check that could fire.
 	bound := executionBound(wf, wfCeiling, grant, reg, spec)
 	// Grant validation, not call authorization (C-L8-15 G): every
-	// template_scope entry must resolve in the delegation registry in
-	// force, as unregistered phase capabilities are refused. Without a
-	// delegator no entry can be validated, so entries refuse.
+	// template_scope entry must EXIST in the delegation registry in
+	// force, as unregistered phase capabilities are refused. Existence,
+	// not usability: a withdrawn template stays admissible here and is
+	// refused at the delegate boundary (C-L8-14 G). Without a delegator
+	// no entry can be validated, so entries refuse.
 	for _, e := range grant.Entries {
 		for _, ref := range e.TemplateScope {
 			if o.cfg.Delegator == nil {

@@ -119,3 +119,9 @@ the parent's ceiling, C-L8-7 §5).
   read handle and a wider forbidden-call wall (LOW-9); declared-absence
   sources at the floor with no class check (LOW-7); `delegate`
   registrations are floor-trust by loader rule (LOW-3).
+- **C-L8-14 G conformance (owner LOCK 2026-09-23):** assembly's
+  template_scope validation is EXISTENCE (`Registry.Entry`), not
+  usability; a withdrawn template stays assembly-admissible and the
+  delegate call refuses stage B with `template-withdrawn`. "Registered
+  establishes historical registration, not current usability; current
+  usability is decided at the delegate admission boundary."

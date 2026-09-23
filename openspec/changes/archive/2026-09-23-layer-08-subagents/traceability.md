@@ -30,7 +30,7 @@ boundedness · E live). Gate 1 classifications and gaps in
 | C-L8-10 — governed vs execution model identity; `Reported` | `Identity.Reported` (P-L8-2); `model_identity{governed, execution}`; stage C `model-identity-mismatch` | B, C | `TestResponseCeiling` (reported ≠ requested observable), `TestDelegationPostInstanceOutcomes/model identity mismatch`, `TestModelTurnRecordsExecutionIdentity` |
 | C-L8-11 — re-entry framed under registry trust / closed typed errors, unframed | `walk.delegate`; `tools.KnownErrorClass`; `DelegationRefused` cannot mint an open class | B | `TestDelegationErrorVocabularyClosed`, `TestDelegateExecutorIsInstantiation`, `TestConversationProjectionAfterDelegation` |
 | C-L8-12/13 — instantiation in the executor; capture vs re-derivation; refusals reconstructable | `execDelegate` → capture; seam `Delegate` re-derives and refuses a disagreeing capture; F-L8-3 `PreResolve` for the L10 seam | B, C | `TestDelegateRefusesDoctoredCapture`, `TestDelegationPositivePath` (capture = witness), `TestVerificationRefusalIsNotAnOutcome`, `TestPreResolveMirrorsStageOne` |
-| C-L8-14 — registration establishes admissibility only; review checklist; brief slot rules | `policies/delegation/README.md`; loader cross-checks; `themis-preflight` template verification | A | `TestTemplateRefusals` (brief slot missing/withheld/class), preflight PASS on the bundle |
+| C-L8-14 — registration establishes admissibility only; review checklist; brief slot rules; **G: withdrawal blocks new delegations, never the referencing Skill** (owner LOCK 2026-09-23) | `policies/delegation/README.md`; loader cross-checks; `themis-preflight` template verification; `Registry.Entry` (existence) at assembly vs `Resolve` (usability) at stage B | A, B | `TestTemplateRefusals` (brief slot missing/withheld/class), preflight PASS on the bundle; `TestEntryIsExistenceNotUsability`, `TestDelegationAssemblyRefusals` (unregistered refuses; withdrawn admits + stage-B refusal witnessed; withdrawn never requested completes), anchored "pinned registry withdraws the template" |
 | C-L8-15/16 — exact `name@version` scope at L4; `template_scope` fixed-by-skill, digested | `Authorize` exact equality; `grantAuthorityDigest` includes `TemplateScope`; assembly validates entries resolve | A | `TestAuthorizeDelegate` (`@2 ∉ scope`; well-formed `@10` vs scope `@1` — the exact-equality gate, prefix mutant killed; `@1x` and floating refs at the shape gate), `TestGrantAuthorityDigestCoversEveryAuthorityField` (scope gained/swapped/emptied), `TestDelegationAssemblyRefusals` |
 | C-L8-17 — nothing enters by existing; the seam never sees the conversation | interface carries no `model.Message`/`ExecutionResponse` (reflection wall); brief inline as `external-untrusted` | A, B | `TestDelegatorInterfaceCarriesNoConversation`, `TestDelegationPositivePath` (brief in its slot), `TestDelegatedEISCarryFilter` |
 | C-L8-18 — laundering impossible: class = f(witnessing event) | `deriveClass` total; every L7/L8-written class maps to the floor or a registry-derived value | C | `TestClassDerivationIsTotalAndFloorBound` |
@@ -49,10 +49,10 @@ floor) + 5 LOW; test: 2 HIGH (the "prefix" case exercised the shape
 gate; seam-hash-vs-pin check untested) + 5 MED + 7 LOW, 12 survivors
 named. Every CRITICAL/HIGH/MED remediated with a killing test or the
 claim narrowed to what is established; every named survivor now
-killed; two items are owner decisions (arch MED-2: a withdrawn template
-in a Skill's `template_scope` refuses the whole Skill at assembly —
-stricter than C-L8-14 G; arch MED-3: D-L8-21 §3 "one method" text vs
-three entry points). Dispositions in `tasks.md` §7.
+killed; arch MED-2 was LOCKED by the owner 2026-09-23 as a code-level
+conformance correction to C-L8-14 G (existence at assembly, usability
+at stage B); arch MED-3 (D-L8-21 §3 "one method" text vs three entry
+points) remains an owner text decision. Dispositions in `tasks.md` §7.
 
 Verdicts (for owner acceptance): architecture-conformant — YES after
 remediation, subject to the two owner decisions above · test-evidenced

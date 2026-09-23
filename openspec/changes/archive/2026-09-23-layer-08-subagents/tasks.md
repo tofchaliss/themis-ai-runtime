@@ -333,9 +333,18 @@ reopens D-L8-1..21.
       - architecture HIGH-1 (machinery failure in instantiation
         downgraded to a tool error) → invariant channel in the loop,
         `TestCorruptionDuringInstantiationIsStageD`, probe killed;
-        MED-2 (withdrawn template in `template_scope` refuses the whole
-        Skill at assembly, stricter than C-L8-14 G) → **owner
-        decision**, left as built and recorded; MED-3 (`Delegator` has
+        MED-2 (withdrawn template in `template_scope` refused the whole
+        Skill at assembly, stricter than C-L8-14 G) → **owner LOCK
+        2026-09-23: amend the code, C-L8-14 G governs.** `Registered`
+        distinguishes existence from lifecycle usability
+        (`Registry.Entry`): a withdrawn template remains
+        assembly-admissible when referenced by a governed Skill; the
+        delegate call refuses stage B with `template-withdrawn`,
+        witnessed in the audit; unregistered still refuses at assembly.
+        Proofs: unregistered → assembly refuses; withdrawn → assembly
+        admits, stage-B refusal witnessed, walk completes (unanchored +
+        anchored); withdrawn and never requested → walk completes;
+        active → positive path. Mutant (usability at assembly) killed; MED-3 (`Delegator` has
         three entry points vs D-L8-21 §3 "one method") → **owner
         amendment of §3 text**, code unchanged; MED-4 (record-ref
         furniture changes every task's tool-result bytes) → recorded in

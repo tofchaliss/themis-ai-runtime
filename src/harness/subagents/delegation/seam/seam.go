@@ -63,9 +63,14 @@ func (s *Seam) CheckDisjoint(taskWritableRoots ...string) error {
 	return state.CheckDisjointRoots(append([]string{s.registry.Root()}, taskWritableRoots...)...)
 }
 
-// Registered: assembly-time grant validation (C-L8-15 G).
+// Registered: assembly-time grant validation (C-L8-15 G) — existence
+// in the governed registry, NOT current usability (C-L8-14 G, owner
+// LOCK 2026-09-23): a withdrawn template remains assembly-admissible
+// when a governed Skill references it; the delegate call refuses stage
+// B with template-withdrawn, witnessed in the audit. Withdrawal blocks
+// new delegations without invalidating the referencing Skill.
 func (s *Seam) Registered(ref string) error {
-	_, _, err := s.registry.Resolve(ref)
+	_, err := s.registry.Entry(ref)
 	return err
 }
 

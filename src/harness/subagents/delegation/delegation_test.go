@@ -517,3 +517,28 @@ func TestWallCatchesFunctionValueBinding(t *testing.T) {
 		t.Fatal("the AST walk missed an aliased, newline-split function-value binding — the wall does not hold")
 	}
 }
+
+// C-L8-14 G (owner LOCK 2026-09-23): Entry is historical registration,
+// Resolve is current usability — a withdrawn registration exists and
+// does not resolve; an unregistered reference does neither.
+func TestEntryIsExistenceNotUsability(t *testing.T) {
+	root, b := registryWorld(t)
+	reg := filepath.Join(root, "registry.json")
+	writeRegistry(t, root, b, "withdrawn")
+	r, err := LoadRegistry(reg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e, err := r.Entry("triage@1"); err != nil || e.State != StateWithdrawn {
+		t.Fatalf("withdrawn must still exist: %v %+v", err, e)
+	}
+	if _, _, err := r.Resolve("triage@1"); !errors.Is(err, ErrWithdrawn) {
+		t.Fatalf("withdrawn must not resolve: %v", err)
+	}
+	if _, err := r.Entry("triage@2"); !errors.Is(err, ErrResolve) {
+		t.Fatalf("unregistered: %v", err)
+	}
+	if _, err := r.Entry("triage@latest"); !errors.Is(err, ErrResolve) {
+		t.Fatalf("floating: %v", err)
+	}
+}

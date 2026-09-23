@@ -963,8 +963,14 @@ into an exception:**
   `execution`; no state machine, cursor, or transition type (AST wall,
   `ratchet/wall_test.go` pattern).
 - Exactly one `Model.Execute` call site, not inside any loop.
-- `Delegator` interface: one method, one call site (the loop
-  post-hook).
+- `Delegator` interface: three one-way entry points — `Registered`
+  (assembly), `Instantiate` (stage B, called only by the `delegate`
+  executor), and `Delegate` (called only by the loop post-hook, with
+  one call site); no method carries the parent conversation.
+  *(AMENDED 2026-09-23, owner LOCK — editorial reconciliation with
+  C-L8-12 Am. 1 / C-L8-13; originally "one method, one call site";
+  code unchanged, `TestDelegatorInterfaceCarriesNoConversation` is the
+  normative structural proof.)*
 - `controlVerbs`, `verificationEvents`, and the declarable workflow
   event set byte-unchanged; `eventClasses` grows by exactly one.
 - The only `AppendEvent` class literal in the package is

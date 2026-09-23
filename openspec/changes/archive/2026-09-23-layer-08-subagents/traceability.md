@@ -51,11 +51,12 @@ named. Every CRITICAL/HIGH/MED remediated with a killing test or the
 claim narrowed to what is established; every named survivor now
 killed; arch MED-2 was LOCKED by the owner 2026-09-23 as a code-level
 conformance correction to C-L8-14 G (existence at assembly, usability
-at stage B); arch MED-3 (D-L8-21 §3 "one method" text vs three entry
-points) remains an owner text decision. Dispositions in `tasks.md` §7.
+at stage B); arch MED-3 was LOCKED by the owner 2026-09-23 as an editorial
+amendment of D-L8-21 §3 (three one-way entry points; no method carries
+the parent conversation); code unchanged. Dispositions in `tasks.md` §7.
 
 Verdicts (for owner acceptance): architecture-conformant — YES after
-remediation, subject to the two owner decisions above · test-evidenced
+remediation (both review decisions LOCKED 2026-09-23) · test-evidenced
 — YES after remediation (Registers A–D; E admitted-not-delegated) ·
 operationally-proven — TEST HARNESS ONLY
 (anchored positive path under a test-harness anchor with the real

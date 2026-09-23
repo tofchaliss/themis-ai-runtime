@@ -345,8 +345,10 @@ reopens D-L8-1..21.
         admits, stage-B refusal witnessed, walk completes (unanchored +
         anchored); withdrawn and never requested → walk completes;
         active → positive path. Mutant (usability at assembly) killed; MED-3 (`Delegator` has
-        three entry points vs D-L8-21 §3 "one method") → **owner
-        amendment of §3 text**, code unchanged; MED-4 (record-ref
+        three entry points vs D-L8-21 §3 "one method") → **owner LOCK
+        2026-09-23: §3 text amended** (three one-way entry points; no
+        method carries the parent conversation), code unchanged, no
+        architecture reopened; MED-4 (record-ref
         furniture changes every task's tool-result bytes) → recorded in
         the L7 amendment addendum; MED-5 (@2 procedure named
         `report-valid@1`) → fixed, re-pinned; MED-6 (seam registry not

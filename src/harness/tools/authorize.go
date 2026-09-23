@@ -165,6 +165,32 @@ func Authorize(reg *Registry, grant *Grant, toolName string, rawArgs json.RawMes
 		if !inScope {
 			return deny(DenialTargetRefused, bound(target), "themis-id-outside-grant-scope")
 		}
+	case TargetDelegationTemplate:
+		// Stage A of a delegation (D-L8-15): exact reference, exact
+		// scope membership. The template itself participates only
+		// post-authorization, in the executor, over the composition.
+		if !delegationRefSyntax.MatchString(target) {
+			return deny(DenialTargetRefused, bound(target), "template-ref-shape: an exact name@version is required")
+		}
+		inScope := false
+		for _, s := range entry.TemplateScope {
+			if s == target {
+				inScope = true
+				break
+			}
+		}
+		if !inScope {
+			return deny(DenialTargetRefused, bound(target), "template-outside-grant-scope")
+		}
+		// Evidence references are shape-checked here only (L4 has no
+		// state root); existence, task reachability, hash integrity,
+		// and class derivation are re-established from the record in
+		// the seam (C-L8-5, stage B).
+		if ev, ok := args["evidence"].(string); ok {
+			if _, err := ParseEvidenceRefs(ev); err != nil {
+				return deny(DenialInvalidArgs, "evidence", "evidence-ref-shape: "+err.Error())
+			}
+		}
 	case TargetNone:
 	}
 

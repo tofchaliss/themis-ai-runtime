@@ -3,7 +3,11 @@
 Updated at every green milestone. If context was compacted, start here.
 
 ## One-line status
-2026-09-23 (later): M0 + M0b LANDED (provider ceiling, Reported
+2026-09-23 (later still): M2 LANDED (L4 `delegate`: target class,
+exact-scope gate, evidence shape, closed error classes, instantiation
+executor over an injected compose half, registry-v5). Next: M3 (L6
+`l8-delegation` event class) then M4 (seam + L7 wiring) after their
+Gate 1 sections here. Earlier: M0 + M0b LANDED (provider ceiling, Reported
 identity, F-L8-2/3/4; amendment records in the L4/L7/L10 archives).
 Next: M2 (L4 `delegate` capability) after its Gate 1 section here.
 Earlier: M1 LANDED (package, loaders, first template PROPOSED,
@@ -77,9 +81,26 @@ manifest pin's bytes against its sha (read-only, python3 + shasum).
 class, anchor pin — M2+. Scaffold dirs `roles/`, `runtime/`,
 `isolation/` deleted with M1 (§5.1).
 
+## Gate 1 — M2 (L4 `delegate`) design against §5.2
+
+`TargetDelegationTemplate` + exact-scope gate in `Authorize`;
+`ParseEvidenceRefs` shape (`<seq>:sha256:<hex>`, comma-separated, ≤256);
+closed error classes with `DelegationRefused(reason)` constructor and
+`KnownErrorClass` predicate; `DelegationInstantiator` interface
+(`Instantiate(template, refs, brief) (capture, error)`) injected per
+task through `NewExecutorTableWith`; `execDelegate` returns the capture
+as evidence, `*ErrDelegationRefusal` → stage-B class, other errors →
+seam-unavailable, nil → `delegation-refused:seam-unavailable`.
+Registry-v5 = v4 + `delegate`. **Seq rule at instantiation:** every
+reference's seq must already exist in the parent's stream when the
+executor runs — which is strictly before the authorizing `l4-audit`
+commits, so `seq < parent_call_seq` holds by construction (C-L8-8).
+`themis-run` stays on v4 until `rsys@4`.
+
 ## Milestone log
 - [x] M0 — green 2026-09-23 (ceiling at both adapters; registry narrows; mutation-probed)
 - [x] M0b — green 2026-09-23 (F-L8-2/3/4; F-L8-3 residual: second-load window)
+- [x] M2 — green 2026-09-23 (tools/delegate_test.go; digest cases; skills surface test)
 - [x] M1 — green 2026-09-23 (full hermetic suite green; owner
   registration act for `dependency-triage@1` and three Class-3 reviews
   still owed before M1 is called closed)

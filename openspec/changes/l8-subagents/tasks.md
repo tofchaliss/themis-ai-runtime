@@ -121,27 +121,29 @@ reopens D-L8-1..21.
 
 ## 3. L8-M2 — L4 amendment: `delegate` capability (Class 3; L4 archived-layer amendment)
 
-- [ ] Tool registry v5: `delegate`, target class `delegation-template`,
+- [x] Tool registry v5: `delegate`, target class `delegation-template`,
       `verifier_eligible: false`, `trust: external-untrusted`, params
       `template` / `evidence` / `brief` (string; `evidence` = list of
       `<seq>:<objectID>` references into the parent's stream,
       shape-checked by regex at L4; existence, task reachability, hash
       integrity, and class derivation re-established in the seam from
       the record — C-L8-5; D-L8-15 stage A/B)
-- [ ] `template_scope` is a fixed member of the Skill's `grant_template`,
+- [x] `template_scope` is a fixed member of the Skill's `grant_template`,
       copied verbatim at instantiation; `instantiateGrantTemplate`
-      accepts no override for it (C-L8-16 F/G)
+      accepts no override for it (C-L8-16 F/G) —
+      `skills.TestInstantiationSurfaceHasNoTemplateScope` (2026-09-23)
 - [x] `GrantEntry.TemplateScope []string` — LANDED with skill-admission
       SA-M4 (commit dc8034c; exact-ref validation at `LoadGrant`,
       set-equality in `tools.Instantiates`, digested in
       `grantAuthorityDigest`); inert at `Authorize` until `delegate`
       exists. Do not re-add.
-- [ ] `Authorize` checks target ∈ scope by **exact `name@version` equality** (no prefix matching;
+- [x] `Authorize` checks target ∈ scope by **exact `name@version` equality** (no prefix matching;
       loader refuses non-exact entries) — the single authoritative
       substitution gate (C-L8-15 G)
 - [x] **`grantAuthorityDigest` includes `TemplateScope`** — LANDED with
-      SA-M4 (dc8034c); the differing-digest test is still owed here
-- [ ] `execDelegate` executor = **instantiation** (C-L8-12 Am. 1,
+      SA-M4 (dc8034c); differing-digest cases (gained / swapped /
+      emptied) added 2026-09-23
+- [x] `execDelegate` executor = **instantiation** (C-L8-12 Am. 1,
       LOCKED at C-L8-21): resolve template, validate evidence against
       the record, `Resolve`, `Gather`/`Compose` in memory, bound checks —
       pure reads under registry `timeout_sec`; failure → `ErrClass:
@@ -152,10 +154,11 @@ reopens D-L8-1..21.
       which **re-derives** the composition without reading the capture;
       runtime re-derivation ≠ capture → stage D invariant; at
       reconstruction any pairwise mismatch → typed DISCREPANCY (C-L8-13)
-- [ ] Delegation error classes added to the closed `ErrorClass`
-      vocabulary (C-L8-11)
-- [ ] Amendment record under
+- [x] Delegation error classes added to the closed `ErrorClass`
+      vocabulary (C-L8-11) — `tools/delegate.go`, `KnownErrorClass`
+- [x] Amendment record under
       `openspec/changes/archive/2026-09-06-layer-04-tool-interface/amendments/l8-delegate/`
+      (L4 side landed 2026-09-23; the seam's compose half lands at M4)
 
 ## 4. L8-M3 — L6 constitution amendment: `l8-delegation` (Class 3/4 — constitution hash changes)
 

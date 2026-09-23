@@ -63,6 +63,14 @@ type ThemisSeam interface {
 // registry tool lacks an executor — phantom registry entries cannot
 // exist (startup completeness check).
 func NewExecutorTable(reg *Registry, seam ThemisSeam) (map[string]Executor, error) {
+	return NewExecutorTableWith(reg, seam, nil)
+}
+
+// NewExecutorTableWith additionally binds the per-task delegation
+// instantiator (registry-v5 era, L8 amendment); nil is fail-closed at
+// the call, never at construction, so a registry without `delegate`
+// needs no seam.
+func NewExecutorTableWith(reg *Registry, seam ThemisSeam, inst DelegationInstantiator) (map[string]Executor, error) {
 	table := map[string]Executor{
 		"read_file":      execReadFile,
 		"list_directory": execListDirectory,
@@ -87,6 +95,10 @@ func NewExecutorTable(reg *Registry, seam ThemisSeam) (map[string]Executor, erro
 		// verifier classes (run_go_build/run_go_tests) are blocked on
 		// an L5 process-exec amendment and remain unregistrable.
 		"verify_report": execVerifyReport,
+		// Delegation executor (registry-v5 era, L8 amendment, C-L8-13):
+		// deterministic instantiation through the injected compose
+		// half; the capture is its evidence. No model is executed here.
+		"delegate": execDelegate(inst),
 	}
 	for _, t := range reg.Tools {
 		if _, ok := table[t.Name]; !ok {

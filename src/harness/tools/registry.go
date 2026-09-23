@@ -40,6 +40,12 @@ const (
 	TargetWorkspacePath TargetClass = "workspace-path"
 	TargetThemisID      TargetClass = "themis-id"
 	TargetNone          TargetClass = "none"
+	// TargetDelegationTemplate (registry-v5 / L8 amendment, D-L8-4,
+	// C-L8-15 G): the target is an exact delegation-template reference
+	// name@version that must be a member of the grant entry's
+	// template_scope by exact equality — the single authoritative
+	// substitution gate. No prefixes, no ranges, no latest.
+	TargetDelegationTemplate TargetClass = "delegation-template"
 )
 
 // ParamType is the closed argument type vocabulary.
@@ -157,7 +163,7 @@ func LoadRegistry(path string) (*Registry, error) {
 			return nil, fmt.Errorf("%w: tool %q needs description and positive timeout", ErrRegistryInvalid, t.Name)
 		}
 		switch t.Target {
-		case TargetWorkspacePath, TargetThemisID, TargetNone:
+		case TargetWorkspacePath, TargetThemisID, TargetNone, TargetDelegationTemplate:
 		default:
 			return nil, fmt.Errorf("%w: tool %q has unknown target class %q", ErrRegistryInvalid, t.Name, t.Target)
 		}

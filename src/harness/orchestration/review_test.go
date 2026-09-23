@@ -608,6 +608,8 @@ func TestGrantAuthorityDigestCoversEveryAuthorityField(t *testing.T) {
 				ThemisScope: []string{"FIND-1:"},
 			}, {
 				Tool: "read_file", MaxCalls: 4, Workspace: "/w",
+			}, {
+				Tool: "delegate", MaxCalls: 1, TemplateScope: []string{"dependency-triage@1"},
 			}},
 		}
 	}
@@ -632,6 +634,17 @@ func TestGrantAuthorityDigestCoversEveryAuthorityField(t *testing.T) {
 		"tool substituted": func(g *tools.Grant) { g.Entries[0].Tool = "get_product" },
 		"tool added": func(g *tools.Grant) {
 			g.Entries = append(g.Entries, tools.GrantEntry{Tool: "write_file", MaxCalls: 1, Mutating: true})
+		},
+		// L8 M2 (§5.2, mandatory after the 2026-09-15 digest-omission
+		// finding): template_scope is authority.
+		"template scope gained a template": func(g *tools.Grant) {
+			g.Entries[2].TemplateScope = []string{"dependency-triage@1", "cve-analysis@1"}
+		},
+		"template scope swapped": func(g *tools.Grant) {
+			g.Entries[2].TemplateScope = []string{"cve-analysis@1"}
+		},
+		"template scope emptied": func(g *tools.Grant) {
+			g.Entries[2].TemplateScope = nil
 		},
 	}
 	for what, mutate := range widen {

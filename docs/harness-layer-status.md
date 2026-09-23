@@ -39,7 +39,7 @@ refused — and an unconditional refusal satisfies that. It established
 
 - Evidence: `docs/development/finding-anchored-skill-admission-2026-09-15.md`
 - Tracked: GitHub issue #1 (`needs-triage`)
-- Decision: `openspec/changes/l9-l7-skill-admission-identity/proposal.md`
+- Decision: `openspec/changes/archive/2026-09-23-l9-l7-skill-admission-identity/proposal.md`
 - **Not fixed.** The correspondence between registered skill identity and
   instantiated composition identity is an owner decision spanning L9 and
   L7 with G1 as context. Phase C row C17 is **unproven** pending a
@@ -71,7 +71,7 @@ refused — and an unconditional refusal satisfies that. It established
    prerequisite P-L8-1 (provider-response hard ceiling) precedes L8
    code.
 2. **L9/L7 skill-admission identity** —
-   `openspec/changes/l9-l7-skill-admission-identity/proposal.md`.
+   `openspec/changes/archive/2026-09-23-l9-l7-skill-admission-identity/proposal.md`.
    Built 2026-09-22/23 (see the table); remaining: `rsys@4` act and a
    production `themis-run` (owner), traceability + archive, issue #1.
 
@@ -677,6 +677,25 @@ Skill-admission identity (issue #1) remains the blocking defect for
 live-COMPLETED work; unchanged today.
 
 ---
+
+## Checkpoint — 2026-09-23: skill-admission identity BUILT and ARCHIVED
+
+**`l9-l7-skill-admission-identity` — SA-M1..M6 implemented (`dc8034c`,
+`7be7116`), three Class-3 reviews remediated, archived at
+`openspec/changes/archive/2026-09-23-l9-l7-skill-admission-identity/`
+with `traceability.md`.** The first anchored skill execution passed
+(`TestLiveAnchoredSkillWalk`, qwen2.5:7b, COMPLETED/VERIFIED) under a
+test-harness anchor pinning the real catalog. The security review of
+`dc8034c` found a CRITICAL the twins had not: a case-variant
+`"Workspace"` grant key passed L7's exact-key `@workspace` guard and
+bound a literal host path through the case-insensitive decoder — the
+recurring shape again (a guard reading something other than what the
+decoder binds). Closed by `src/harness/internal/strictjson` (exact
+lowercase keys, no duplicates) before every grant/spec decode at L4,
+L5, L7, L9, plus a post-load bound-root assertion. L8 dependency Q-SA-6
+discharged. Still the owner's: `rsys@4` listing `skills[]`, a
+production `themis-run`, issue #1 closure. Residuals in the archived
+`traceability.md`.
 
 ## Checkpoint — 2026-09-22 (second entry): skill-admission grill CLOSED
 

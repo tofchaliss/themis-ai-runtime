@@ -59,10 +59,11 @@ reopens D-L8-1..21.
       an equivalent L10-owned fix)
 - [ ] **F-L8-4 (L7):** parent turn context deadline =
       `min(turn_timeout_sec, remaining deadline)`
-- [ ] **Q-SA-6 (L9/L7, issue #1):** decided — D-SA-4 locks
-      `template_scope` equality (2026-09-22); implementation SA-M1..M6
-      in `openspec/changes/l9-l7-skill-admission-identity/tasks.md`
-      blocks Register B's anchored positive path
+- [x] **Q-SA-6 (L9/L7, issue #1):** DISCHARGED 2026-09-23 — D-SA-4
+      `template_scope` equality built (`tools.Instantiates`), anchored
+      positive twin + live anchored walk green; record archived at
+      `openspec/changes/archive/2026-09-23-l9-l7-skill-admission-identity/`
+      (production `rsys@4` act still the owner's)
 
 ## 2. L8-M1 — Governance artifacts + loaders (Class 3)
 

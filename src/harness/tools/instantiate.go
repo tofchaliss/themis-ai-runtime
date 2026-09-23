@@ -1,6 +1,6 @@
 package tools
 
-// Grant instantiation (D-SA-4, openspec/changes/l9-l7-skill-admission-
+// Grant instantiation (D-SA-4, openspec/changes/archive/2026-09-23-l9-l7-skill-admission-
 // identity): the deterministic relation between an EFFECTIVE grant and
 // the Governance-approved grant TEMPLATE it claims to instantiate. L4
 // owns the grant vocabulary, so it owns this relation; L7 applies it at

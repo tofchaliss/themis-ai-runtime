@@ -1,7 +1,7 @@
 # L9 Amendment: skill admission identity (2026-09-22)
 
 Authorized by: D-SA-1..10 (LOCKED, owner, 2026-09-22 —
-`openspec/changes/l9-l7-skill-admission-identity/design.md`), D-L10-17
+`openspec/changes/archive/2026-09-23-l9-l7-skill-admission-identity/design.md`), D-L10-17
 (the amendment protocol). Raised by the 2026-09-15 finding (issue #1):
 `verifyAnchoredSkill` compared the envelope's composition seal against
 the catalog's manifest hash — two identity domains, equal for no

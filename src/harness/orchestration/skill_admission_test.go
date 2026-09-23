@@ -1,6 +1,6 @@
 package orchestration
 
-// Skill admission (openspec/changes/l9-l7-skill-admission-identity):
+// Skill admission (openspec/changes/archive/2026-09-23-l9-l7-skill-admission-identity):
 // the twin suite. Every negative names the gate that refused it; the
 // positive path is asserted first (the C17 lesson: "refuse
 // everything" must fail some test here).

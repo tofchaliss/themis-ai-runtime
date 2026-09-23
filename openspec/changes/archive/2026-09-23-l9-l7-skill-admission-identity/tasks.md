@@ -130,11 +130,11 @@ Owner-mandated sequence (finding → decision → amendment → implementation
 - [x] Amendment records: L9 archive (D-L9-13 amendment; D-L9-11d matrix
       extension), G1 design (`skills[]`), L7 archive (assembly
       sequence)
-- [ ] `traceability.md`; archive under
-      `openspec/changes/archive/<date>-l9-l7-skill-admission-identity/`
-- [ ] Close issue #1; update `docs/harness-layer-status.md`,
-      `execution-chain.md` (admission ladder); L8 dependency line
-      marked discharged
+- [x] `traceability.md`; archived 2026-09-23 under
+      `openspec/changes/archive/2026-09-23-l9-l7-skill-admission-identity/`
+- [x] `docs/harness-layer-status.md` and `execution-chain.md` updated;
+      L8 dependency line marked discharged
+- [ ] Close issue #1 — owner act (comments posted; label untouched)
 
 ## Deferred / residual
 

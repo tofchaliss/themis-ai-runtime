@@ -181,7 +181,7 @@ func (r *Registry) Resolve(ref string) (*Entry, *Template, error) {
 		return nil, nil, fmt.Errorf("%w: %s@%d is not registered — unregistered template-shaped artifacts are data", ErrResolve, name, version)
 	}
 	if entry.State == StateWithdrawn {
-		return nil, nil, fmt.Errorf("%w: %s@%d is withdrawn — new delegation is refused; historical records remain interpretable", ErrResolve, name, version)
+		return nil, nil, fmt.Errorf("%w: %w: %s@%d — new delegation is refused; historical records remain interpretable", ErrResolve, ErrWithdrawn, name, version)
 	}
 	manifestPath, err := confine.ResolvePath(r.dir, entry.ManifestPath)
 	if err != nil {
@@ -195,7 +195,7 @@ func (r *Registry) Resolve(ref string) (*Entry, *Template, error) {
 		return nil, nil, err
 	}
 	if t.Hash != entry.Template {
-		return nil, nil, fmt.Errorf("%w: %s@%d: template bytes do not match the registered hash (template-hash-mismatch)", ErrResolve, name, version)
+		return nil, nil, fmt.Errorf("%w: %w: %s@%d: template bytes do not match the registered hash", ErrResolve, ErrHashMismatch, name, version)
 	}
 	if t.Name != name || t.TemplateVersion != version {
 		return nil, nil, fmt.Errorf("%w: %s@%d: template self-declaration (%s@%d) disagrees with the registration — two-way identity check", ErrResolve, name, version, t.Name, t.TemplateVersion)

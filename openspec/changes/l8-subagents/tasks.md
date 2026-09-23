@@ -323,8 +323,29 @@ reopens D-L8-1..21.
       turn" is NOT evidenced live (model behaviour, the live-register
       discipline); reconstruction of any live delegation is asserted
       CONFIRMED when one exists
-- [ ] Three Class-3 close reviews (architecture / security / test) in
-      isolated worktrees, CRITICAL/HIGH remediated and mutation-verified
+- [~] Three Class-3 close reviews in isolated worktrees against
+      `71a7188` (2026-09-23): architecture and security complete; test
+      review interrupted (session rate limit) — relaunched against the
+      remediated commit. Dispositions:
+      - architecture HIGH-1 (machinery failure in instantiation
+        downgraded to a tool error) → invariant channel in the loop,
+        `TestCorruptionDuringInstantiationIsStageD`, probe killed;
+        MED-2 (withdrawn template in `template_scope` refuses the whole
+        Skill at assembly, stricter than C-L8-14 G) → **owner
+        decision**, left as built and recorded; MED-3 (`Delegator` has
+        three entry points vs D-L8-21 §3 "one method") → **owner
+        amendment of §3 text**, code unchanged; MED-4 (record-ref
+        furniture changes every task's tool-result bytes) → recorded in
+        the L7 amendment addendum; MED-5 (@2 procedure named
+        `report-valid@1`) → fixed, re-pinned; MED-6 (seam registry not
+        bound to the pin) → Open compares `RegistryHash()`; LOW-7/8/9 →
+        fixed
+      - security: no CRITICAL/HIGH; MED-1 (delegated EIS re-read from
+        disk) → parent-set subset check, stage D on divergence, probe
+        killed; MED-2 (sensitivity floor) → parent contract ceiling,
+        probe killed; LOW-1..5 → fixed (LOW-1 = arch MED-6); note:
+        providers reporting dated model ids will mint
+        `model-identity-mismatch` on every delegation — residual
 - [ ] `traceability.md`; archive under
       `openspec/changes/archive/<date>-layer-08-subagents/`;
       `docs/harness-layer-status.md` and `execution-chain.md` updated

@@ -83,7 +83,7 @@ func TestSeamIsNotASecondL7(t *testing.T) {
 								t.Errorf("%s: AppendEvent with a class other than l8-delegation at %s", name, fset.Position(x.Pos()))
 							}
 						}
-					case "Authorize", "Handle", "Transition", "Seal", "Teardown":
+					case "Authorize", "Handle", "Transition", "Seal", "Teardown", "SubmitTask", "Open", "CreateTask", "Recover", "BindArtifact":
 						t.Errorf("%s: %s at %s — no authorization, lifecycle, or environment act in the seam", name, sel.Sel.Name, fset.Position(x.Pos()))
 					}
 				}

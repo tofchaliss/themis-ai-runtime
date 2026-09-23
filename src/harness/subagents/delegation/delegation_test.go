@@ -364,14 +364,14 @@ func TestResolveRefusals(t *testing.T) {
 	// Withdrawn: the binding stays; new delegation refuses.
 	writeRegistry(t, root, b, "withdrawn")
 	rw, _ := LoadRegistry(reg)
-	if _, _, err := rw.Resolve("triage@1"); err == nil || !strings.Contains(err.Error(), "is withdrawn") {
+	if _, _, err := rw.Resolve("triage@1"); !errors.Is(err, ErrWithdrawn) || !errors.Is(err, ErrResolve) {
 		t.Fatalf("withdrawn: %v", err)
 	}
 	// Bytes drift under a fixed pin: unavailable, not "changed".
 	writeRegistry(t, root, b, "active")
 	r, _ = LoadRegistry(reg)
 	b.set(func(m map[string]any) { m["max_output_bytes"] = 8192 })
-	if _, _, err := r.Resolve("triage@1"); err == nil || !strings.Contains(err.Error(), "template-hash-mismatch") {
+	if _, _, err := r.Resolve("triage@1"); !errors.Is(err, ErrHashMismatch) || !errors.Is(err, ErrResolve) {
 		t.Fatalf("drift: %v", err)
 	}
 	// Self-declaration disagreement: registry pins bytes that call

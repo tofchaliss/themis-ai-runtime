@@ -756,7 +756,7 @@ func TestExportedAPIClosure(t *testing.T) {
 		// only in the governed result-processing path.
 		"Delegator": true, "InstantiationRequest": true, "DelegationRequest": true,
 		"DelegationResult": true, "DelegationRefusal": true, "EvidenceRef": true,
-		"ExecutionBound": true,
+		"ExecutionBound": true, "RecordReader": true,
 	}
 	allowFuncs := map[string]bool{
 		"Open": true, "LoadEnvelope": true, "LoadWorkflow": true, "LoadWorkflowCeiling": true,

@@ -452,6 +452,12 @@ func verifyAnchoredInstructionPlane(cfg Config, a *deployment.Anchor) error {
 		if herr != nil || got != a.DelegationTemplateRegistry {
 			return fmt.Errorf("%w: delegation-template registry is not the anchored artifact (deployment %s@%d) — a template enters a deployment only by Governance act", ErrAssembly, a.Name, a.Deployment)
 		}
+		// The seam that will serve delegations must hold THOSE bytes,
+		// not a registry it loaded earlier from the same path
+		// (architecture review MED-6).
+		if h, ok := cfg.Delegator.(interface{ RegistryHash() string }); ok && h.RegistryHash() != a.DelegationTemplateRegistry {
+			return fmt.Errorf("%w: the wired delegation seam holds a registry that is not the anchored artifact (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
+		}
 	}
 	return nil
 }
@@ -967,7 +973,8 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	// executor fails closed at the call; assembly already refused any
 	// phase that could reach it.
 	instBase := InstantiationRequest{
-		TaskID: env.TaskID, Root: o.root, ParentSources: parentSources, RegistryHash: reg.Hash,
+		TaskID: env.TaskID, Record: o.root, ParentSources: parentSources, RegistryHash: reg.Hash,
+		ParentEIS: eis, ParentSensitivityCeiling: contract.SensitivityCeiling,
 		ToolTrust: func(tool string) (l2.AuthorityClass, bool) {
 			for i := range reg.Tools {
 				if reg.Tools[i].Name == tool {
@@ -977,11 +984,13 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 			return "", false
 		},
 	}
-	var inst tools.DelegationInstantiator
+	var inst *delegationInstantiator
+	var instIface tools.DelegationInstantiator
 	if o.cfg.Delegator != nil {
-		inst = delegationInstantiator{d: o.cfg.Delegator, base: instBase}
+		inst = &delegationInstantiator{d: o.cfg.Delegator, base: instBase}
+		instIface = inst
 	}
-	table, err := tools.NewExecutorTableWith(reg, nil, inst)
+	table, err := tools.NewExecutorTableWith(reg, nil, instIface)
 	if err != nil {
 		envn.Teardown()
 		return res, err
@@ -989,7 +998,7 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	w := &walk{
 		o: o, env: env, wf: wf, reg: reg, grant: grant, table: table,
 		task: task, l5: envn, execCeiling: execCeiling, spec: spec,
-		contract: contract, eis: eis, instBase: instBase,
+		contract: contract, eis: eis, instBase: instBase, inst: inst,
 	}
 	return w.run()
 }

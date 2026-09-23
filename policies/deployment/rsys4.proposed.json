@@ -28,7 +28,7 @@
   "qwen2.5:7b"
  ],
  "model_registry": "absent",
- "skill_catalog": "f22c2a2596c9b3efaa190e813989b4bf39163cb66d9d90c2096916c4e6cbaf47",
+ "skill_catalog": "44e1a1014981b0708d5dc39a2bf5cee33810210c78bf2a8b393328e53123b5ab",
  "skills": [
   "remediate-dependency@1",
   "remediate-dependency@2"

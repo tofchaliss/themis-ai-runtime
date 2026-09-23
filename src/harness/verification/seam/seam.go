@@ -71,6 +71,15 @@ type Evaluator struct {
 
 	mu    sync.Mutex
 	prior *verification.Registry // last observed state (append-only wall, M-2)
+	// prepared carries a PreResolve'd contract to the EvaluateCall of
+	// the same call (keyed by task + argument hash) so the two stages
+	// see ONE registry state — a registry change between them cannot
+	// reopen the unrecorded-refusal window (F-L8-3; security LOW-5).
+	prepared map[string]*verification.Contract
+}
+
+func prepKey(taskID string, call model.ToolCall) string {
+	return taskID + "\x00" + call.Name + "\x00" + hashBytes(call.Arguments)
 }
 
 // CheckDisjoint enforces the registry/workspace wall (security review
@@ -172,7 +181,15 @@ func (e *Evaluator) resolveCall(call model.ToolCall, authRegistrySHA256 string) 
 // PreResolve is the pre-instance stage on its own, for L7 to record a
 // refusal into the call's l4-audit before commit (F-L8-3).
 func (e *Evaluator) PreResolve(taskID string, call model.ToolCall, authRegistrySHA256 string) (string, error) {
-	_, refusal, err := e.resolveCall(call, authRegistrySHA256)
+	contract, refusal, err := e.resolveCall(call, authRegistrySHA256)
+	if err == nil && refusal == "" && contract != nil {
+		e.mu.Lock()
+		if e.prepared == nil {
+			e.prepared = map[string]*verification.Contract{}
+		}
+		e.prepared[prepKey(taskID, call)] = contract
+		e.mu.Unlock()
+	}
 	return refusal, err
 }
 
@@ -186,12 +203,24 @@ func (e *Evaluator) EvaluateCall(taskID string, call model.ToolCall, resultEvide
 	refuse := func(reason string) *orchestration.VerificationOutcome {
 		return &orchestration.VerificationOutcome{Refused: true, RefusalReason: reason}
 	}
-	contract, refusal, err := e.resolveCall(call, authRegistrySHA256)
-	if err != nil {
-		return nil, err
+	// The contract PreResolve'd for this exact call, when one exists:
+	// the refusal L7 recorded (or did not) was decided on that state.
+	e.mu.Lock()
+	contract, prepped := e.prepared[prepKey(taskID, call)]
+	if prepped {
+		delete(e.prepared, prepKey(taskID, call))
 	}
-	if refusal != "" {
-		return refuse(refusal), nil
+	e.mu.Unlock()
+	if !prepped {
+		var refusal string
+		var err error
+		contract, refusal, err = e.resolveCall(call, authRegistrySHA256)
+		if err != nil {
+			return nil, err
+		}
+		if refusal != "" {
+			return refuse(refusal), nil
+		}
 	}
 	// The evaluation instance now exists. Canonicalization through the
 	// registered mechanism; absence of a canonicalizer for an eligible

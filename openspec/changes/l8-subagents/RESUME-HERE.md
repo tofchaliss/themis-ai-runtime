@@ -3,7 +3,11 @@
 Updated at every green milestone. If context was compacted, start here.
 
 ## One-line status
-2026-09-23 (M6 code): anchor pin, `rsys@4` PROPOSED with its four
+2026-09-23 (reviews): architecture + security reviews remediated (see
+tasks.md §7 dispositions); owner decisions pending on arch MED-2
+(withdrawn-in-scope at assembly) and MED-3 (§3 "one method" text);
+test review relaunched. Then: traceability finalize, archive.
+Earlier (M6 code): anchor pin, `rsys@4` PROPOSED with its four
 companion proposals, themis-run wiring, record-ref furniture, anchored
 Register B green, live walk admitted (model did not delegate). Next:
 three Class-3 reviews in worktrees → remediate → traceability →
@@ -242,3 +246,12 @@ changed. @1's procedure uses `## ` headings the renderer refuses —
 18. **Anchor field is mandatory:** pre-amendment anchors (`rsys2.json`)
    no longer load — by the "declaration, never a default" rule; the
    loader test worlds gained the field.
+19. **Test hermeticity:** the seam suite mutated a repository safety
+   file in one test; the unanchored world now runs on a private copy
+   of the safety root (anchored worlds still hash the real roots and
+   never mutate them).
+20. **Reported ≠ WireModel on providers that report dated ids**
+   (OpenAI-style) mints `model-identity-mismatch` on every delegation —
+   fail-closed and correct per C-L8-10, but L8 is unusable on such a
+   runtime until governance decides how a reported id maps to the
+   requested one (residual).

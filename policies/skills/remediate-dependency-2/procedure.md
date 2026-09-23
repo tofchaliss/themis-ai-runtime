@@ -22,9 +22,9 @@ workspace, under the governed remediate-dependency workflow.
   "remediation" (what you changed), "evidence" (where the change is
   visible). Non-empty strings; plain facts, no security conclusions.
 - Request verification of the report under the registered contract
-  report-valid@1 (verify_report with path and contract).
+  report-valid@2 (verify_report with path and contract).
 - The workflow's completion gate requires the latest verification of
-  report-valid@1 to be PASS. If verification fails, fix the report or
+  report-valid@2 to be PASS. If verification fails, fix the report or
   the work, verify again, then declare done.
 
 The verification outcome is a mechanical fact about the report under a

@@ -72,12 +72,11 @@ func TestReconstructionConfirmedFromRecordAlone(t *testing.T) {
 	if err := os.RemoveAll(filepath.Dir(reg)); err != nil {
 		t.Fatal(err)
 	}
-	safety := filepath.Join(w.root, "instructions/global/safety/advisory-only.md")
+	safety := filepath.Join(w.safety, "advisory-only.md")
 	orig, _ := os.ReadFile(safety)
 	if err := os.WriteFile(safety, append(orig, []byte("\nAdded line for the reconstruction test.\n")...), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = os.WriteFile(safety, orig, 0o644) })
 	r, err = ReconstructDelegation(w.sroot, task, seq, cfg)
 	if err != nil || r.Verdict != VerdictConfirmed {
 		t.Fatalf("after withdrawal, deletion, and root change the record alone must still CONFIRM: %v %+v", err, r)

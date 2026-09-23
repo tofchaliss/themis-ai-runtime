@@ -90,7 +90,6 @@ const (
 	RefusalTemplateHashMismatch  DelegationRefusalReason = "template-hash-mismatch"
 	RefusalRegistryUnreadable    DelegationRefusalReason = "registry-unreadable"
 	RefusalEvidenceUnreachable   DelegationRefusalReason = "evidence-unreachable"
-	RefusalEvidenceNotPrior      DelegationRefusalReason = "evidence-not-prior"
 	RefusalEvidenceDuplicate     DelegationRefusalReason = "evidence-duplicate"
 	RefusalEvidenceRegistryDrift DelegationRefusalReason = "evidence-registry-drift"
 	RefusalEvidenceSlotAmbiguous DelegationRefusalReason = "evidence-slot-ambiguous"
@@ -103,8 +102,7 @@ const (
 var delegationRefusalReasons = map[DelegationRefusalReason]bool{
 	RefusalTemplateUnresolvable: true, RefusalTemplateWithdrawn: true,
 	RefusalTemplateHashMismatch: true, RefusalRegistryUnreadable: true,
-	RefusalEvidenceUnreachable: true, RefusalEvidenceNotPrior: true,
-	RefusalEvidenceDuplicate: true, RefusalEvidenceRegistryDrift: true,
+	RefusalEvidenceUnreachable: true, RefusalEvidenceDuplicate: true, RefusalEvidenceRegistryDrift: true,
 	RefusalEvidenceSlotAmbiguous: true, RefusalResolveFailed: true,
 	RefusalComposeRefused: true, RefusalBriefOverBound: true,
 	RefusalSeamUnavailable: true,

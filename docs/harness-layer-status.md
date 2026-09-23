@@ -12,7 +12,7 @@ long status paragraph above, which is cumulative history.
 | Area | State |
 |---|---|
 | L1–L7, L9–L11 | implemented, archived, frozen |
-| **L8 Subagents** | **ARCHITECTURE CLOSED 2026-09-22 (owner LOCK), Gate 0 PASS; M1 LANDED 2026-09-23** — D-L8-1..21 + C-L8-1..21 (`openspec/changes/l8-subagents/design.md`); M1: `src/harness/subagents/delegation/` (registry + template loaders, no write API, Register A green, 13/13 mutation probes killed), `policies/delegation/` with `dependency-triage@1` PROPOSED (owner registration act pending), preflight verifies template pins; scaffold `roles/ runtime/ isolation/` deleted; M0/M0b prerequisites and M2+ not started; production authorization not implied |
+| **L8 Subagents** | **ARCHITECTURE CLOSED 2026-09-22 (owner LOCK); M0–M6 CODE LANDED 2026-09-23, reviews in flight** — D-L8-1..21 + C-L8-1..21 (`openspec/changes/l8-subagents/design.md`); built: `subagents/delegation` (registry, template, event), `subagents/delegation/seam` (compose/execute/witness/reconstruct), L4 `delegate` (registry-v5), L6 `l8-delegation`, L7 seam wiring + record-ref furniture, L2 record-object sources, G1 pin; Registers A–D green, 40+ mutation probes killed; anchored positive path in the test harness; live walk admitted (model did not delegate). PROPOSED, owner acts: `rsys@4`, registry-v5, `report-valid@2`, `remediate-dependency@2`, `dependency-triage@1`. Production authorization not implied |
 | G1, G2 | closed and implemented |
 | Deployment `rsys@3` | **ACTIVE** (`b5f551ab7076`); `rsys@2`, `rsys@1`, `local-dev@1` withdrawn and interpretable |
 | Model allowlist | `qwen2.5:7b`, `gpt-oss:20b`, `cyberpal20b-v3` — three admitted, **none selected** |
@@ -66,11 +66,12 @@ refused — and an unconditional refusal satisfies that. It established
 
 ### Two grills queued, both owner-led
 
-1. **L8 Subagents** — grill CLOSED 2026-09-22, Gate 0 PASS; M1
-   (governance artifacts + loaders) LANDED 2026-09-23 with the first
-   template PROPOSED. Next: M0 (P-L8-1 provider-response hard ceiling,
-   P-L8-2) and M0b, which gate M4+; M2 (L4 `delegate`) after its Gate 1
-   section in `openspec/changes/l8-subagents/RESUME-HERE.md`.
+1. **L8 Subagents** — grill CLOSED 2026-09-22; M0–M6 code LANDED
+   2026-09-23 (`openspec/changes/l8-subagents/RESUME-HERE.md` holds the
+   Gate 1 classifications and gaps 1–18). Next: three Class-3 reviews,
+   remediation, traceability, archive; then the owner's Governance acts
+   (`rsys@4` and its four companion proposals) and a production
+   `themis-run`.
 2. **L9/L7 skill-admission identity** —
    `openspec/changes/archive/2026-09-23-l9-l7-skill-admission-identity/proposal.md`.
    Built 2026-09-22/23 (see the table); remaining: `rsys@4` act and a

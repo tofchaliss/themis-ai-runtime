@@ -8,6 +8,9 @@ package tools
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -237,4 +240,34 @@ func TestDelegateSeamIsComposeOnly(t *testing.T) {
 			t.Fatalf("the compose half must not take a model or conversation: %s", m.Type.In(i))
 		}
 	}
+}
+
+// Security review LOW-3: the registration cannot lift a delegation's
+// output above the floor — the loader refuses, not the file.
+func TestDelegationToolFloorTrustAtLoad(t *testing.T) {
+	base := `{"version":5,"tools":[{"name":"delegate","description":"d","target":"delegation-template","timeout_sec":5,"trust":"%s","params":[{"name":"template","type":"string","required":true,"description":"t","target":true}]%s}]}`
+	for _, c := range []struct{ trust, extra, want string }{
+		{"external-untrusted", "", ""},
+		{"governed-record", "", "must be external-untrusted"},
+		{"external-untrusted", `,"verifier_eligible":true`, "not verifier-eligible"},
+		{"external-untrusted", `,"mutating":true`, "not mutating"},
+	} {
+		body := fmt.Sprintf(base, c.trust, c.extra)
+		_, err := loadRegistryBodyErr(t, body)
+		if c.want == "" && err != nil {
+			t.Fatalf("floor registration must load: %v", err)
+		}
+		if c.want != "" && (err == nil || !strings.Contains(err.Error(), c.want)) {
+			t.Fatalf("want %q: %v", c.want, err)
+		}
+	}
+}
+
+func loadRegistryBodyErr(t *testing.T, body string) (*Registry, error) {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "r.json")
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return LoadRegistry(path)
 }

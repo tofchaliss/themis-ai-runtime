@@ -141,7 +141,8 @@ minting class names it.
 | Fact kind | Established by | Witness |
 |---|---|---|
 | l10_evaluation_record | the L10 evaluator | `l10-verification` event naming the record in its body |
-| l6_execution_record | an L4/L5 executor under a registered capability | `l4-audit` event referencing the object (tool pinnable) |
+| l6_execution_record | an L4/L5 executor under a registered capability | `l4-audit` event referencing the object (tool pinnable) — the `delegate` executor's instantiation capture is one (identities only; establishes nothing about any model input) |
+| l8_delegation_record | the L8 delegator (one isolated, tool-less model execution under a registered template) | `l8-delegation` event naming the composition and output objects (D-L8-19). Establishes that the delegated execution occurred under that governed composition and outcome — never that its content is true; the output object is model-authored bytes |
 | benchmark_validated_score / gate_verdict | the benchmark plane | verdict + digest + canonical location (gate discipline) |
 | model-authored bytes | **nothing** | not a fact kind — `model-turn` witnesses authorship, which is advisory |
 | L11 packages | **nothing** | no witnessing event exists by construction — terminal output |

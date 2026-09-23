@@ -292,3 +292,46 @@ func TestPreResolveMirrorsStageOne(t *testing.T) {
 		t.Fatalf("a registered contract must pass pre-resolution: %q %v", pre, err)
 	}
 }
+
+// Security review LOW-5 (F-L8-3): the contract PreResolve'd for a call
+// is the contract EvaluateCall uses — a registry change between the two
+// stages cannot produce an unrecorded refusal.
+func TestPreResolvedContractCarriesIntoEvaluation(t *testing.T) {
+	// A PRIVATE copy of the registry: the test withdraws a registration
+	// and must never touch the repository's governed file.
+	root := repoRoot(t)
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "report-valid"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []string{"contracts.json", "report-valid/contract.json"} {
+		b, err := os.ReadFile(filepath.Join(root, "policies/verification", f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, f), b, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	e := proposedEvaluator(t)
+	e.RegistryPath = filepath.Join(dir, "contracts.json")
+	call := verifyCall("report-valid@1", "r.json")
+	if pre, err := e.PreResolve("t", call, e.L4.Hash); err != nil || pre != "" {
+		t.Fatalf("%q %v", pre, err)
+	}
+	// Withdraw the registration between the stages (append-only: a
+	// legitimate state advance, not tamper).
+	raw, _ := os.ReadFile(e.RegistryPath)
+	if err := os.WriteFile(e.RegistryPath, []byte(strings.Replace(string(raw), `"state": "active"`, `"state": "withdrawn"`, 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	vo, err := e.EvaluateCall("t", call, []byte(goodReport), "l4:1", e.L4.Hash)
+	if err != nil || vo.Refused {
+		t.Fatalf("the pre-resolved contract must carry into evaluation: %v %+v", err, vo)
+	}
+	// Without a PreResolve the second load is authoritative and refuses.
+	vo, err = e.EvaluateCall("t", verifyCall("report-valid@1", "r2.json"), []byte(goodReport), "l4:2", e.L4.Hash)
+	if err != nil || !vo.Refused {
+		t.Fatalf("a fresh evaluation sees the withdrawal: %v %+v", err, vo)
+	}
+}

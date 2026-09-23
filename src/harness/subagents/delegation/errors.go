@@ -26,4 +26,10 @@ var (
 	ErrResolve = errors.New("delegation template resolution refused")
 	// ErrEvent: an l8-delegation body that violates its own closure.
 	ErrEvent = errors.New("invalid l8-delegation record")
+	// ErrWithdrawn: the reference names a withdrawn registration
+	// (wraps ErrResolve). ErrHashMismatch: the manifest bytes are not
+	// the registered bytes (wraps ErrResolve). Typed so consumers
+	// classify without reading messages.
+	ErrWithdrawn    = errors.New("template withdrawn")
+	ErrHashMismatch = errors.New("template-hash-mismatch")
 )

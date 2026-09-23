@@ -111,3 +111,17 @@ func TestRegistryNarrowsResponseCeiling(t *testing.T) {
 		t.Fatalf("negative must refuse: %v", err)
 	}
 }
+
+// Security review LOW-4: endpoints persist as scheme://host only.
+func TestRedactEndpoint(t *testing.T) {
+	for in, want := range map[string]string{
+		"http://localhost:11434":                           "http://localhost:11434",
+		"https://user:secret@api.example.com/v1?key=abc#x": "https://api.example.com",
+		"not a url": "",
+		"":          "",
+	} {
+		if got := RedactEndpoint(in); got != want {
+			t.Fatalf("%q → %q, want %q", in, got, want)
+		}
+	}
+}

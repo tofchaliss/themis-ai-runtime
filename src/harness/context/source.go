@@ -44,6 +44,21 @@ const (
 	KindRecordObject SourceKind = "record-object"
 )
 
+// AbsentSource declares a slot empty (L8 seam usage): no reader, no
+// object, no items, floor class. Gather treats it as unavailable and
+// lets the slot's requirement decide; it never carries authority, so
+// the slot's permitted-class check does not apply to it (C-L8-2: a
+// permitted class is never assigned by naming it).
+func AbsentSource(slot string) Source {
+	return Source{Name: "absent:" + slot, Kind: KindRecordObject, Authority: AuthorityExternalUntrusted,
+		Sensitivity: SensitivityPublic, Author: "seam"}
+}
+
+// IsAbsence reports a declared-absence source.
+func (s Source) IsAbsence() bool {
+	return s.Kind == KindRecordObject && s.ObjectID == "" && len(s.Items) == 0
+}
+
 // ObjectReader is the typed read seam to the content-addressed store
 // (L6). L2 never learns where objects live; a read failure is a hard
 // error (a named reference that cannot be read is a refusal, never a

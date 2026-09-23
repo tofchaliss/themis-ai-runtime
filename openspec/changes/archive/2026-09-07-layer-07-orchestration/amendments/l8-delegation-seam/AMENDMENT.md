@@ -84,3 +84,38 @@ Residual (recorded): per-item sensitivity derivation — l4-audit and
 model-turn record no sensitivity, so `derived_sensitivity` is the
 floor rank for every reference (every referenced item already passed
 the parent's ceiling, C-L8-7 §5).
+
+## Addendum (2026-09-23, after the Class-3 reviews)
+
+- **Record-ref furniture (M6; architecture review MED-4):** after the
+  frame of every AUTHORIZED evidence-bearing tool result — in every
+  task, not only delegating ones — L7 appends
+  `record-ref: <seq>:<objectID>` (the committed audit's seq and the
+  evidence object's address), and after a completed delegation's frame
+  the witness seq + output id. Deterministic, record-derived, outside
+  the content-derived fence; part of the D-L7-11 projection
+  (`ProjectDelegationMessage` renders it). It exists so a model can
+  form a `<seq>:<id>` evidence reference from what it saw (C-L8-5).
+- **Stage D inside instantiation (architecture review HIGH-1):** a
+  non-refusal error from the delegate executor's compose half (record
+  corruption, seam defect) is stashed by the per-task adapter and read
+  by the loop immediately after `Handle`, BEFORE any audit commits →
+  `ErrInvariant`, task FAILED, CORRUPT preserved. L4's `Outcome` has no
+  invariant channel; this is the channel. `TestCorruptionDuringInstantiationIsStageD`.
+- **Delegated EIS ⊆ parent's resolved set (security review MED-1):**
+  the seam's `Resolve` re-reads the roots; every carried instruction
+  must be byte-identical (`SourceHashes`) to the parent's set resolved
+  at assembly, else stage D ("a governed root changed under the
+  running task", C-L8-14 F). `TestRootChangeUnderRunningTaskIsStageD`.
+- **Derived sensitivity = parent contract ceiling (security review
+  MED-2):** a template whose contract ceiling is lower refuses at
+  Gather (`compose-refused`); the template narrows, never widens.
+  `TestTemplateCeilingNarrowsEvidence`.
+- **Seam ≠ anchor (architecture MED-6 / security LOW-1):** Open
+  requires the wired seam's `RegistryHash()` to equal the pin.
+- Endpoints persist redacted to scheme://host (security LOW-4); the
+  L10 seam carries a `PreResolve`'d contract into `EvaluateCall`
+  (security LOW-5); typed registry sentinels (LOW-2); `RecordReader`
+  read handle and a wider forbidden-call wall (LOW-9); declared-absence
+  sources at the floor with no class check (LOW-7); `delegate`
+  registrations are floor-trust by loader rule (LOW-3).

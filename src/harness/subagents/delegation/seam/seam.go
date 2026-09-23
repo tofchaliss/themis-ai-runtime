@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	hctx "github.com/tofchaliss/themis/context"
@@ -110,7 +109,7 @@ func (s *Seam) Instantiate(req orchestration.InstantiationRequest) ([]byte, erro
 }
 
 func (s *Seam) compose(req orchestration.InstantiationRequest) (*composition, error) {
-	if req.Root == nil || req.TaskID == "" {
+	if req.Record == nil || req.TaskID == "" {
 		return nil, fmt.Errorf("delegation seam: no record handle")
 	}
 	// 1. Template: the registry consulted exactly once, pre-instance
@@ -118,9 +117,9 @@ func (s *Seam) compose(req orchestration.InstantiationRequest) (*composition, er
 	entry, tpl, err := s.registry.Resolve(req.Template)
 	if err != nil {
 		switch {
-		case errors.Is(err, delegation.ErrResolve) && strings.Contains(err.Error(), "withdrawn"):
+		case errors.Is(err, delegation.ErrWithdrawn):
 			return nil, refuse("template-withdrawn", err.Error())
-		case errors.Is(err, delegation.ErrResolve) && strings.Contains(err.Error(), "template-hash-mismatch"):
+		case errors.Is(err, delegation.ErrHashMismatch):
 			return nil, refuse("template-hash-mismatch", err.Error())
 		case errors.Is(err, delegation.ErrResolve), errors.Is(err, delegation.ErrTemplate):
 			return nil, refuse("template-unresolvable", err.Error())
@@ -134,7 +133,7 @@ func (s *Seam) compose(req orchestration.InstantiationRequest) (*composition, er
 	// reference against the parent's own stream (C-L8-5): event at
 	// seq exists, its Refs carry the object as evidence-payload, class
 	// derives from the event, kind from the event. No bytes are read.
-	events, err := req.Root.ReadEvents(req.TaskID)
+	events, err := req.Record.ReadEvents(req.TaskID)
 	if err != nil {
 		return nil, fmt.Errorf("delegation seam: read record: %w", err)
 	}
@@ -174,11 +173,15 @@ func (s *Seam) compose(req orchestration.InstantiationRequest) (*composition, er
 			return nil, err
 		}
 		refs[i].DerivedClass = string(class)
-		// v1: no per-item sensitivity is recorded on l4-audit or
-		// model-turn events; every referenced item already passed the
-		// parent's contract ceiling (the frontier property, C-L8-7 §5).
-		// Recorded as the floor rank; a per-item derivation is a gap.
-		refs[i].DerivedSensitivity = string(hctx.SensitivityPublic)
+		// No per-item sensitivity is recorded on l4-audit or model-turn
+		// events; every referenced item passed the PARENT contract's
+		// ceiling, which is therefore the conservative sensitivity of
+		// each reference (C-L8-7 §5). A template ceiling below it
+		// refuses at Gather — the template narrows, never widens.
+		if req.ParentSensitivityCeiling == "" {
+			return nil, fmt.Errorf("delegation seam: no parent sensitivity ceiling")
+		}
+		refs[i].DerivedSensitivity = string(req.ParentSensitivityCeiling)
 		items = append(items, resolved{ref: refs[i], kind: kind})
 	}
 
@@ -204,7 +207,7 @@ func (s *Seam) compose(req orchestration.InstantiationRequest) (*composition, er
 		Sensitivity: hctx.SensitivityPublic, Author: "delegating-model", Items: briefItems,
 	}}}
 	filled := map[string]bool{tpl.Brief.Slot: true}
-	objects := req.Root.Store()
+	objects := req.Record.Store()
 	for _, it := range items {
 		var target *hctx.Slot
 		matches := 0
@@ -234,10 +237,7 @@ func (s *Seam) compose(req orchestration.InstantiationRequest) (*composition, er
 		if sl.Withhold || filled[sl.Name] {
 			continue
 		}
-		assignments = append(assignments, hctx.Assignment{Slot: sl.Name, Source: hctx.Source{
-			Name: "absent:" + sl.Name, Kind: hctx.KindRecordObject, Authority: sl.Classes[0],
-			Sensitivity: hctx.SensitivityPublic, Author: "seam",
-		}})
+		assignments = append(assignments, hctx.Assignment{Slot: sl.Name, Source: hctx.AbsentSource(sl.Name)})
 	}
 
 	// 4. L1: the mandatory roots unconditionally, the optional scopes
@@ -270,6 +270,23 @@ func (s *Seam) compose(req orchestration.InstantiationRequest) (*composition, er
 	eis, err := instructions.Resolve(instructions.Config{Policy: s.policy, TaskID: req.TaskID}, sources...)
 	if err != nil {
 		return nil, refuse("resolve-failed", err.Error())
+	}
+	// D-L9-11 / C-L8-4: the delegated set is a SUBSET of the parent's
+	// resolved set plus the template's own instruction. Resolve reads
+	// the roots again; if any carried instruction is not byte-identical
+	// to what the parent resolved at assembly, a governed root changed
+	// under the running task — stage D (C-L8-14 F), never a silent
+	// re-read (security review MED-1).
+	if req.ParentEIS == nil {
+		return nil, fmt.Errorf("delegation seam: no parent instruction set")
+	}
+	for id, h := range eis.SourceHashes {
+		if id == "skill.delegation" {
+			continue
+		}
+		if ph, ok := req.ParentEIS.SourceHashes[id]; !ok || ph != h {
+			return nil, fmt.Errorf("delegation seam: carried instruction %q is not the parent's resolved instruction — a governed root changed under the running task", id)
+		}
 	}
 
 	// 5. L2: Gather under L2's caps (bytes fetched lazily and
@@ -414,7 +431,7 @@ func (s *Seam) Delegate(req orchestration.DelegationRequest) (*orchestration.Del
 		} else {
 			output = []byte(resp.Content)
 			identity = resp.Identity
-			endpoint = resp.Provenance.Endpoint
+			endpoint = model.RedactEndpoint(resp.Provenance.Endpoint)
 			termination = string(resp.Termination)
 		}
 	}

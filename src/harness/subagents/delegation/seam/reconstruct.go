@@ -330,9 +330,7 @@ func reconstructOne(root *state.Root, taskID string, ev state.Event, events []st
 			if sl.Withhold || filled[sl.Name] {
 				continue
 			}
-			all = append(all, hctx.Assignment{Slot: sl.Name, Source: hctx.Source{
-				Name: "absent:" + sl.Name, Kind: hctx.KindRecordObject, Authority: sl.Classes[0],
-				Sensitivity: hctx.SensitivityPublic, Author: "seam"}})
+			all = append(all, hctx.Assignment{Slot: sl.Name, Source: hctx.AbsentSource(sl.Name)})
 		}
 		g, err := hctx.Gather(tpl.Contract, all)
 		if err != nil {

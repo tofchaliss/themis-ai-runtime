@@ -121,6 +121,9 @@ type world struct {
 	sha      string
 	scope    string // template_scope JSON array
 	seam     *Seam
+	// safety is this world's PRIVATE copy of the safety root, so tests
+	// that change a root file never touch the repository.
+	safety string
 	// procedure, when set, is an activated parent skill-scope source
 	// (envelope skill_procedure_path/sha256) — for the carry tests.
 	procedure string
@@ -171,6 +174,18 @@ func newWorld(t *testing.T, m model.Interface, registryPath string, wire bool) *
 	mirror, sha := mkMirror(t)
 	w.sha = sha
 	policyPath := filepath.Join(root, "policies/security/instruction-directive-patterns.json")
+	w.safety = filepath.Join(t.TempDir(), "safety")
+	if err := os.MkdirAll(w.safety, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	ents, err := os.ReadDir(filepath.Join(root, "instructions/global/safety"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range ents {
+		b, _ := os.ReadFile(filepath.Join(root, "instructions/global/safety", e.Name()))
+		wj(t, w.safety, e.Name(), string(b))
+	}
 	var d orchestration.Delegator
 	if wire {
 		policy, err := instructions.LoadPolicy(policyPath)
@@ -191,7 +206,7 @@ func newWorld(t *testing.T, m model.Interface, registryPath string, wire bool) *
 		Unanchored: true,
 		StateRoot:  w.stateDir, ArtifactDir: filepath.Join(t.TempDir(), "artifacts"),
 		GitPath: gitBin(t), ProviderDir: t.TempDir(),
-		SafetyRoot: filepath.Join(root, "instructions/global/safety"),
+		SafetyRoot: w.safety,
 		SystemRoot: filepath.Join(root, "instructions/global/system"),
 		ThemisRoot: filepath.Join(root, "instructions/themis"),
 		PolicyPath: policyPath,
@@ -701,10 +716,11 @@ func TestDelegateRefusesDoctoredCapture(t *testing.T) {
 	}
 	seq, id := w.readRef(t, task)
 	base := orchestration.InstantiationRequest{
-		TaskID: task, Root: w.sroot, Template: "dependency-triage@1",
+		TaskID: task, Record: w.sroot, Template: "dependency-triage@1",
 		Evidence: []orchestration.EvidenceRef{{Seq: seq, ObjectID: id}}, Brief: "triage",
-		ParentSources: []instructions.Source{{Kind: instructions.ScopeHarnessSafety, Root: filepath.Join(w.root, "instructions/global/safety")},
+		ParentSources: []instructions.Source{{Kind: instructions.ScopeHarnessSafety, Root: w.safety},
 			{Kind: instructions.ScopeHarnessSystem, Root: filepath.Join(w.root, "instructions/global/system")}},
+		ParentEIS: parentEIS(t, w), ParentSensitivityCeiling: hctx.SensitivityPublic,
 		RegistryHash: registryHashOf(t, w), ToolTrust: func(string) (hctx.AuthorityClass, bool) { return hctx.AuthorityExternalUntrusted, true },
 	}
 	good, err := w.seam.Instantiate(base)
@@ -814,5 +830,123 @@ func TestL10HistoryObservesDelegation(t *testing.T) {
 	}
 	if len(view.History) != 0 || len(view.Latest) != 0 {
 		t.Fatal("a delegation is not a verification instance")
+	}
+}
+
+// Stage D inside instantiation (D-L8-15, C-L8-5 A; architecture review
+// HIGH-1): record corruption discovered while the delegate executor
+// instantiates is an invariant, never a tool error the walk continues
+// past — no audit claiming "seam-unavailable" commits, the task FAILS.
+func TestCorruptionDuringInstantiationIsStageD(t *testing.T) {
+	m := &dynModel{delegated: okDelegated}
+	w := newWorld(t, m, "", true)
+	const task = "t-corrupt"
+	m.parent = func(turn int, conv []model.Message) model.ExecutionResponse {
+		switch turn {
+		case 1:
+			return call("c1", "read_file", `{"path":"go.mod"}`)
+		case 2:
+			seq, id := w.readRef(nil, task)
+			// Corrupt the referenced object on disk between the read and
+			// the delegation: the store's re-hash must catch it.
+			hex := strings.TrimPrefix(id, "sha256:")
+			_ = filepath.WalkDir(w.stateDir, func(p string, de os.DirEntry, err error) error {
+				if err == nil && !de.IsDir() && strings.Contains(p, hex) {
+					_ = os.WriteFile(p, []byte("tampered\n"), 0o644)
+				}
+				return nil
+			})
+			args, _ := json.Marshal(map[string]string{"template": "dependency-triage@1", "evidence": ref(seq, id), "brief": "triage"})
+			return call("c2", "delegate", string(args))
+		}
+		return call("c3", "declare_done", `{}`)
+	}
+	res, err := w.o.SubmitTask(w.envelope(t, task))
+	if err == nil || !errors.Is(err, orchestration.ErrInvariant) || res.Status != state.StatusFailed {
+		t.Fatalf("corruption at instantiation must be stage D: %+v %v", res, err)
+	}
+	for _, e := range events(t, w, task) {
+		if e.Class == state.EvL4Audit && strings.Contains(string(e.Body), `"Tool":"delegate"`) {
+			t.Fatalf("no audit may claim a tool error for a machinery failure: %s", e.Body)
+		}
+		if e.Class == state.EvL8Delegation {
+			t.Fatal("no witness")
+		}
+	}
+	if m.delegCall != 0 {
+		t.Fatal("no model call")
+	}
+}
+
+// parentEIS resolves the world's roots exactly as the parent does, for
+// direct seam calls.
+func parentEIS(t *testing.T, w *world) *instructions.EffectiveSet {
+	t.Helper()
+	policy, err := instructions.LoadPolicy(filepath.Join(w.root, "policies/security/instruction-directive-patterns.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	eis, err := instructions.Resolve(instructions.Config{Policy: policy, TaskID: "x"},
+		instructions.Source{Kind: instructions.ScopeHarnessSafety, Root: w.safety},
+		instructions.Source{Kind: instructions.ScopeHarnessSystem, Root: filepath.Join(w.root, "instructions/global/system")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return eis
+}
+
+// Security review MED-1 (D-L9-11, C-L8-14 F): the delegated resolution
+// re-reads the roots; a root file that changed under the running task
+// is stage D, never a silent re-read into the delegated context.
+func TestRootChangeUnderRunningTaskIsStageD(t *testing.T) {
+	m := &dynModel{delegated: okDelegated}
+	w := newWorld(t, m, "", true)
+	const task = "t-root-change"
+	m.parent = func(turn int, conv []model.Message) model.ExecutionResponse {
+		switch turn {
+		case 1:
+			return call("c1", "read_file", `{"path":"go.mod"}`)
+		case 2:
+			p := filepath.Join(w.safety, "advisory-only.md")
+			b, _ := os.ReadFile(p)
+			_ = os.WriteFile(p, append(b, []byte("\nChanged under the running task.\n")...), 0o644)
+			seq, id := w.readRef(nil, task)
+			args, _ := json.Marshal(map[string]string{"template": "dependency-triage@1", "evidence": ref(seq, id), "brief": "triage"})
+			return call("c2", "delegate", string(args))
+		}
+		return call("c3", "declare_done", `{}`)
+	}
+	res, err := w.o.SubmitTask(w.envelope(t, task))
+	if err == nil || !errors.Is(err, orchestration.ErrInvariant) || res.Status != state.StatusFailed || !strings.Contains(err.Error(), "governed root changed") {
+		t.Fatalf("a changed root must be stage D: %+v %v", res, err)
+	}
+	if m.delegCall != 0 {
+		t.Fatal("no model call")
+	}
+}
+
+// Security review MED-2 (C-L8-7 §5): every reference carries the parent
+// contract's ceiling; a template whose contract ceiling is lower
+// refuses at Gather — the template narrows, it never widens.
+func TestTemplateCeilingNarrowsEvidence(t *testing.T) {
+	m := &dynModel{delegated: okDelegated}
+	w := newWorld(t, m, "", true)
+	// The parent contract ceiling is "internal" for this world.
+	wj(t, w.envDir, "context-contract.json",
+		`{"version":1,"workflow":"triage-walk","slots":[
+		  {"name":"task-payload","kind":"task-brief","requirement":"required","classes":["external-untrusted"]}],
+		  "sensitivity_ceiling":"internal"}`)
+	const task = "t-ceiling"
+	m.parent = triageParent(w, task, func(seq int64, id string) string { return ref(seq, id) }, "triage")
+	res, err := w.o.SubmitTask(w.envelope(t, task))
+	if err != nil || res.Status != state.StatusCompleted {
+		t.Fatalf("%+v %v", res, err)
+	}
+	_, ab := delegateAudit(t, events(t, w, task))
+	if ab["Decision"] != "error" || ab["ErrClass"] != "delegation-refused:compose-refused" {
+		t.Fatalf("an internal-ceiling reference must not enter a public-ceiling template: %v", ab)
+	}
+	if m.delegCall != 0 {
+		t.Fatal("no model call")
 	}
 }

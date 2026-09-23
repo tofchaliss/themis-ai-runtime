@@ -20,7 +20,7 @@
   {
    "name": "remediate-dependency",
    "version": 2,
-   "composition_sha256": "55b1ba44221ef5f24e5ac66d77588de791d30650400223e650e94101eb7545df",
+   "composition_sha256": "c9afaeaad051c39ff1bcfe825aba8b910f9fdb8546b79d7b4040515346ac1c99",
    "manifest_path": "remediate-dependency-2/skill.json",
    "state": "active",
    "steward": "security-engineering"

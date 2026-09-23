@@ -53,9 +53,17 @@ type EvidenceRef struct {
 // the authorized selection plus a READ handle on the record and the
 // parent's already-activated instruction sources. Nothing of the
 // parent's conversation.
+// RecordReader is the READ handle a delegation instantiation receives:
+// the parent's events and the content-addressed store — nothing that
+// creates, transitions, or recovers a task.
+type RecordReader interface {
+	ReadEvents(taskID string) ([]state.Event, error)
+	Store() *state.ObjectStore
+}
+
 type InstantiationRequest struct {
 	TaskID   string
-	Root     *state.Root // read handle: events + objects
+	Record   RecordReader
 	Template string
 	Evidence []EvidenceRef
 	Brief    string
@@ -63,6 +71,17 @@ type InstantiationRequest struct {
 	// carries the mandatory roots unconditionally and the optional
 	// scopes only where the template's filter names them (C-L8-4).
 	ParentSources []instructions.Source
+	// ParentEIS is the parent's instruction set as resolved ONCE at
+	// assembly (D-L9-11): every carried instruction the delegated
+	// resolution admits must be byte-identical to the parent's; a
+	// divergence means a governed root changed under the running task
+	// — stage D, never a silent re-read (security review MED-1).
+	ParentEIS *instructions.EffectiveSet
+	// ParentSensitivityCeiling is the parent contract's ceiling: the
+	// conservative sensitivity every referenced item is recorded at,
+	// so a template with a lower ceiling refuses at Gather (C-L8-7 §5;
+	// security review MED-2).
+	ParentSensitivityCeiling hctx.Sensitivity
 	// RegistryHash and ToolTrust derive an l4-audit item's class: the
 	// registered trust of the recorded tool under a still-matching
 	// registry hash (C-L8-5 §4). A function value, not the registry.
@@ -130,23 +149,41 @@ func FaultAt(point string) error { return faultAt(point) }
 type delegationInstantiator struct {
 	d    Delegator
 	base InstantiationRequest
+	// machinery holds a non-refusal error from the last instantiation
+	// (stage D, D-L8-15: a seam defect or record corruption inside the
+	// executor). L4's Outcome has no invariant channel, so the loop
+	// reads it right after Handle and takes the invariant path before
+	// any audit that would claim "seam-unavailable" commits.
+	machinery error
 }
 
-func (a delegationInstantiator) Instantiate(template string, evidence []tools.EvidenceRef, brief string) ([]byte, error) {
+func (a *delegationInstantiator) Instantiate(template string, evidence []tools.EvidenceRef, brief string) ([]byte, error) {
 	req := a.base
 	req.Template, req.Brief = template, brief
 	for _, e := range evidence {
 		req.Evidence = append(req.Evidence, EvidenceRef{Seq: e.Seq, ObjectID: e.ObjectID})
 	}
+	a.machinery = nil
 	capture, err := a.d.Instantiate(req)
 	if err != nil {
 		var r *DelegationRefusal
 		if errors.As(err, &r) {
 			return nil, &tools.ErrDelegationRefusal{Reason: tools.DelegationRefusalReason(r.Reason), Detail: r.Detail}
 		}
+		a.machinery = err
 		return nil, fmt.Errorf("delegation instantiation: %w", err)
 	}
 	return capture, nil
+}
+
+// takeMachineryError returns and clears the stashed stage-D error.
+func (a *delegationInstantiator) takeMachineryError() error {
+	if a == nil {
+		return nil
+	}
+	err := a.machinery
+	a.machinery = nil
+	return err
 }
 
 // isDelegation is a registry classification, never an authorization

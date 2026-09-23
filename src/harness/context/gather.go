@@ -102,10 +102,12 @@ func Gather(contract *Contract, assignments []Assignment) (*Gathered, error) {
 		if err := checkSource(a.Source); err != nil {
 			return nil, wrap(a.Source, err)
 		}
-		if !slot.classPermitted(a.Source.Authority) {
+		// A declared absence delivers nothing, so it carries no class
+		// into the slot; only a source that can deliver is class-checked.
+		if !a.Source.IsAbsence() && !slot.classPermitted(a.Source.Authority) {
 			return nil, fmt.Errorf("%w: slot %q does not permit class %q", ErrPlanOutsideContract, a.Slot, a.Source.Authority)
 		}
-		if sensitivityRank[a.Source.Sensitivity] > sensitivityRank[contract.SensitivityCeiling] {
+		if !a.Source.IsAbsence() && sensitivityRank[a.Source.Sensitivity] > sensitivityRank[contract.SensitivityCeiling] {
 			return nil, fmt.Errorf("%w: source %s (%s) exceeds ceiling %s", ErrSensitivityCeiling, a.Source.Name, a.Source.Sensitivity, contract.SensitivityCeiling)
 		}
 

@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 
 	"github.com/tofchaliss/themis/internal/llm"
 )
@@ -152,6 +153,17 @@ func readBounded(r io.Reader, max int64) ([]byte, error) {
 		return nil, fmt.Errorf("%w: body exceeds %d bytes", ErrResponseOverCeiling, max)
 	}
 	return raw, nil
+}
+
+// RedactEndpoint reduces a provider endpoint to scheme://host[:port]
+// for durable records: userinfo, path, query, and fragment never
+// persist (security review LOW-4). An unparsable value yields "".
+func RedactEndpoint(endpoint string) string {
+	u, err := url.Parse(endpoint)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return ""
+	}
+	return u.Scheme + "://" + u.Host
 }
 
 // Interface is the Model Interface. Implementations translate the

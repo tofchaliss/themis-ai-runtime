@@ -202,6 +202,14 @@ func LoadRegistry(path string) (*Registry, error) {
 		if t.Target == TargetNone && targets != 0 {
 			return nil, fmt.Errorf("%w: tool %q declares a target param but no target class", ErrRegistryInvalid, t.Name)
 		}
+		if t.Target == TargetDelegationTemplate {
+			// L8 D-L8-1/18: a delegation's output is untrusted advisory
+			// content by definition — the registration cannot lift it
+			// above the floor, make it verifier-eligible, or mutate.
+			if t.Trust != hctx.AuthorityExternalUntrusted || t.VerifierEligible || t.Mutating || t.Control {
+				return nil, fmt.Errorf("%w: delegation tool %q must be external-untrusted, not verifier-eligible, not mutating, not control — a delegation is a delegated reasoning execution, never a delegated authority", ErrRegistryInvalid, t.Name)
+			}
+		}
 		if t.Control {
 			if len(t.Params) != 0 || t.Target != TargetNone || t.Mutating {
 				return nil, fmt.Errorf("%w: control tool %q must have zero params, no target, and no mutation — distinct signals are distinct verbs", ErrRegistryInvalid, t.Name)

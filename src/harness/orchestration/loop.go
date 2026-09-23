@@ -50,6 +50,9 @@ type walk struct {
 	// instBase is the per-task base of every delegation instantiation
 	// request (L8 M4): read handle, parent sources, registry-in-force.
 	instBase InstantiationRequest
+	// inst is the bound instantiator (nil without a delegator) — read
+	// after each Handle for a stage-D machinery error.
+	inst *delegationInstantiator
 	// eis is the task's instruction set, resolved ONCE at assembly
 	// (D-L9-11): the walk holds instruction bytes, never a path it
 	// would re-read per phase.
@@ -207,6 +210,14 @@ func (w *walk) runPhase() (string, error) {
 		phaseGrant := w.phaseGrant(p)
 		for _, call := range resp.ToolCalls {
 			msg, ev, audit := tools.Handle(w.reg, phaseGrant, w.table, call, w.callState)
+			// Stage D inside instantiation (D-L8-15; architecture review
+			// HIGH-1): a seam defect or record corruption while the
+			// delegate executor instantiated is NOT a tool error the
+			// model adapts to — no audit claiming "seam-unavailable"
+			// commits; the invariant path fails the task.
+			if merr := w.inst.takeMachineryError(); merr != nil {
+				return "", fmt.Errorf("%w: delegation instantiation machinery: %v", ErrInvariant, merr)
+			}
 			// Record-before-effect: evidence object + audit event
 			// committed before the result re-enters the loop.
 			var refs []state.Ref
@@ -715,7 +726,7 @@ func (w *walk) recordTurn(fact string, outObj *string, resp *model.ExecutionResp
 		// Additive body fields; L6 validates the envelope, never the
 		// content (no constitution change).
 		tb["identity"] = resp.Identity
-		tb["endpoint"] = resp.Provenance.Endpoint
+		tb["endpoint"] = model.RedactEndpoint(resp.Provenance.Endpoint)
 	}
 	body, _ := json.Marshal(tb)
 	var refs []state.Ref

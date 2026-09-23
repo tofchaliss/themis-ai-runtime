@@ -267,3 +267,8 @@ changed. @1's procedure uses `## ` headings the renderer refuses —
 23. **LOW-14 mutual cover, recorded:** the seam's post-hook
    `seq >= ParentCallSeq` guard duplicates `Event.Validate`; kept as
    defence in depth, not claimed as an independently tested control.
+24. **Probe harness defect:** a mutation probe run with `-run <subtest
+   name>` ran zero tests (Go matches the pattern per name level) and
+   reported SURVIVED; the same mutant is killed under the parent test
+   names. Lesson for the probe script: assert that the run executed at
+   least one test (`-v` + count) before trusting a verdict.

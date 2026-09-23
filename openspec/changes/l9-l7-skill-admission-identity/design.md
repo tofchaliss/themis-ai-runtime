@@ -598,7 +598,11 @@ D-SA-3 → **AMEND: D-SA-4 proposed.** Nothing refuses it today; the
   equal (no add/remove; Class 1) · `max_calls` per tool `1 ≤ eff ≤
   tpl` (Class 2) · `total_max_calls` `1 ≤ eff ≤ tpl` (Class 2) ·
   `workspace` present iff template has `@workspace`, value = per-task
-  binding (Class 3) · `mutating` equal (Class 1) · `themis_scope`
+  binding (Class 3; *as built:* the relation is checked on the
+  SUBMITTED bytes before assembly binds, so both sides must carry
+  exactly `@workspace` or nothing — a literal path is refused at parse,
+  and assembly asserts post-load that every bound workspace is its own
+  root; security review CRITICAL-1, 2026-09-23) · `mutating` equal (Class 1) · `themis_scope`
   set-equal (Class 1) · **`template_scope` set-EQUAL (Class 1; C-L8-16
   as locked in L8 — caller narrowing is a residual, not a
   permission)** · `task_id` = the task id where the template has
@@ -1033,16 +1037,18 @@ work under a locked decision.
 | 4 | D-SA-2 seven members | anchored block after the bundle check; equality per member; `ErrAssembly` | MISSING (`Seal != entry.Composition` refuses everything) |
 | 5 | D-SA-4 template source | manifest `grant_template`/`spec_template` pins read from the catalog root (confined, hash-verified) → `tools.Instantiates` | MISSING (envelope has no template path; only the catalog route exists) |
 | 6 | narrow vs equal | quotas/total/deadline ≤; tool set, `mutating`, `themis_scope`, `template_scope` equal; `workspace`/`task_id` governed bindings | defined (D-SA-4), MISSING with 5 |
-| 7 | `skills[]` | first anchored gate after instruction plane + registry; exact; allowlist message | MISSING (no anchor field) |
+| 7 | `skills[]` | first anchored gate after the instruction plane, before the registry pin and bundle checks (as built; arch review LOW-2); exact; allowlist message | IMPLEMENTED (SA-M2, dc8034c) |
 | 8 | `workflows[]` | existing bundle gate + C15 | EXISTS |
 | 9 | materialization condition | all gates passed AND Claim 1 per artifact (workflow/ceiling/contract/spec at assembly; grant at binding; procedure at activation) → exact bytes stored, record created | EXISTS (orchestrator.go:574, 647, 859) |
 | 10 | final evidence | governed hashes (`envelope`, artifacts, `grant_envelope/effective/authority`, `origin:*`, `deployment_anchor`) + stored artifact and anchor bytes | EXISTS; **Claim 2 byte gap**: consumed catalog + manifest bytes not stored |
 
-**Refusal ordering (each negative fails for its intended reason):**
-seal (`ErrInvariant`) → instruction plane + registry → `skills[]` →
-`workflows[]` → catalog hash → resolve/ACTIVE/manifest integrity →
-D-SA-2 members → template read + D-SA-4 → `grantWithinCeiling` →
-Claim 1 per artifact (`ErrInvariant`) → record. Twin suite asserts
+**Refusal ordering (each negative fails for its intended reason; as
+built, SA-M1..M5):** seal (`ErrInvariant`) → instruction plane →
+`skills[]` → registry pin → `workflows[]` → D-SA-3 → catalog hash →
+resolve/ACTIVE/manifest integrity → D-SA-2 members → model allowlist →
+Claim 1 per artifact (workflow, ceiling, contract, spec; `ErrInvariant`)
+→ grant Claim 1 → D-SA-4 (grant, spec) → `grantWithinCeiling` →
+provision/EIS → record. Twin suite asserts
 message class, not mere refusal (C17 lesson).
 
 **Claim 2 evidence completeness (implementation, per R-L9-2 /

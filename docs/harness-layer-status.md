@@ -17,8 +17,8 @@ long status paragraph above, which is cumulative history.
 | Deployment `rsys@3` | **ACTIVE** (`b5f551ab7076`); `rsys@2`, `rsys@1`, `local-dev@1` withdrawn and interpretable |
 | Model allowlist | `qwen2.5:7b`, `gpt-oss:20b`, `cyberpal20b-v3` — three admitted, **none selected** |
 | Model selection | **OPEN**. Admitting is not selecting; selection is per-task in the envelope |
-| **L9 skills under G1** | **DECIDED, NOT FIXED** — skill-admission grill CLOSED 2026-09-22 (D-SA-1..10, `openspec/changes/l9-l7-skill-admission-identity/design.md`); implementation SA-M1..M6 pending; still unreachable in production until then |
-| Live-model COMPLETED | **not achieved**; blocked behind the skill-admission defect, not behind the model |
+| **L9 skills under G1** | **IMPLEMENTED IN CODE, NOT YET IN PRODUCTION** — D-SA-1..10 built as SA-M1..M5 (`dc8034c`, 2026-09-22) + review remediation (2026-09-23: `internal/strictjson` key wall after security CRITICAL-1); positive twin + A-SA-1..10 negatives green; first anchored skill execution PASSED under a test-harness anchor (`TestLiveAnchoredSkillWalk`, qwen2.5:7b). Production still unreachable until the owner's `rsys@4` Governance act lists `skills[]` |
+| Live-model COMPLETED | **achieved in the test harness only** (anchored `investigate-cve@1`, COMPLETED/VERIFIED); not under a production anchor |
 | Mutation Tier 1–4 | closed, 37 controls; ~190 error-propagation survivors deliberately untriaged |
 | CI | green, dual-platform (ubuntu CI + darwin development) |
 
@@ -72,7 +72,8 @@ refused — and an unconditional refusal satisfies that. It established
    code.
 2. **L9/L7 skill-admission identity** —
    `openspec/changes/l9-l7-skill-admission-identity/proposal.md`.
-   Blocks the live-COMPLETED work.
+   Built 2026-09-22/23 (see the table); remaining: `rsys@4` act and a
+   production `themis-run` (owner), traceability + archive, issue #1.
 
 ### The session's recurring finding
 

@@ -58,8 +58,9 @@ Owner-mandated sequence (finding → decision → amendment → implementation
 - [x] Seal has exactly two consumers (`checkSeal`, record); it is never
       compared with catalog/manifest/anchor values (D-SA-6) — AST wall
 - [x] Twins: exact composition → ACCEPT; each single substituted member
-      → REFUSE naming that member; mixed-bundle (A-SA-2) → REFUSE;
-      withdrawn → REFUSE with the withdrawal message
+      → REFUSE naming that member; mixed-bundle (A-SA-2, all of X's
+      members under Y's name) → REFUSE naming `workflow`; withdrawn →
+      REFUSE with the withdrawal message
 
 ## 4. SA-M4 — Instantiation: D-SA-4 `tools.Instantiates` (Class 3; L4 vocabulary, L7 application, L9 mirror)
 
@@ -79,7 +80,9 @@ Owner-mandated sequence (finding → decision → amendment → implementation
 - [x] Twins: narrowed quotas + equal scope → ACCEPT; scope +1, scope
       −1, tool added, tool removed, `mutating` flipped, `max_calls`
       > bound, `total` > bound → REFUSE, each coupled to one clause;
-      reference resolved from the claim (mutant) → fails A-SA-4's test
+      A-SA-4 reference-source rule holds STRUCTURALLY — `ResolvePin` is
+      keyed by member name and no hash-keyed template resolver exists
+      in the package (wall assertion, not a mutant; arch review MED-2)
 
 ## 5. SA-M5 — Claim-2 evidence completeness (Class 2/3; L6/L7)
 
@@ -95,18 +98,39 @@ Owner-mandated sequence (finding → decision → amendment → implementation
 
 ## 6. SA-M6 — Positive-path proof, live run, reviews, close (Class 3/4)
 
-- [x] **Register B first (test harness):** the exact positive envelope admitted under
-      `rsys@4` via `themis-run`; every A-SA-1..10 negative refused with
-      its intended message; every clause mutation-coupled both ways
+- [x] **Register B first (test harness):** the exact positive envelope
+      admitted under a TEST-HARNESS anchor (`anchoredSkillWorld`, not
+      `rsys@4`, not `themis-run`); every A-SA-1..10 negative refused with
+      its intended message; every D-SA-4 clause mutation-coupled both
+      ways (`tools/instantiate_test.go`, `TestAnchoredSkillNegativeTwins`)
 - [x] Phase C row C17 retained (selector + admitting anchor) + positive
       counterpart recorded as C17+; deployment test plan updated
 - [ ] Live anchored run on `rsys@4` submitting `remediate-dependency@1`
       — the first anchored skill execution (owner sequence, final step)
-- [ ] Three Class-3 close reviews in isolated worktrees; CRITICAL/HIGH
-      remediated and mutation-verified
-- [ ] Amendment records: L9 archive (D-L9-13 amendment; D-L9-11d matrix
+- [x] Three Class-3 close reviews in isolated worktrees against
+      `dc8034c` (2026-09-22/23); findings and dispositions:
+      - architecture MED-1 (catalog double-read) → single load + hash
+        compare; MED-2 (task wording) → reworded + A-SA-2 tuple-swap
+        test; LOW-1 (L9 spec mirror) → added; LOW-3 (C17 asserts a
+        member) → done; LOW-4 (template bytes retention) → owner
+      - security CRITICAL-1 (case-variant `"Workspace"` key passed the
+        exact-key placeholder guard and bound a literal host path via
+        the case-insensitive decoder) → `internal/strictjson` key wall
+        (exact lowercase keys, no duplicates) before every grant/spec
+        decode at L4, L5, L7, L9; `Instantiates` requires `@workspace`
+        or absent (literal refused at parse); `instantiateGrant` exact
+        entry-key allowlist + post-bind `Workspace == wsRoot` assertion;
+        LOW-1 (`governed["skill"]` only when resolved; unanchored records
+        `skill_claimed`) → done; LOW-2 (duplicate keys) → done
+      - test HIGH (members 2–7, spec clauses, catalog mismatch,
+        themis_scope, per-tool vs total quota) → added; MED (unanchored
+        twins for the key wall, positive twin in-test) → added; live
+        opt-in gating → kept the existing `THEMIS_LIVE_OLLAMA`
+        convention (skip when unreachable), not changed here
+- [x] Amendment records: L9 archive (D-L9-13 amendment; D-L9-11d matrix
       extension), G1 design (`skills[]`), L7 archive (assembly
-      sequence); `traceability.md`; archive under
+      sequence)
+- [ ] `traceability.md`; archive under
       `openspec/changes/archive/<date>-l9-l7-skill-admission-identity/`
 - [ ] Close issue #1; update `docs/harness-layer-status.md`,
       `execution-chain.md` (admission ladder); L8 dependency line

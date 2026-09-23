@@ -285,6 +285,10 @@ func Instantiate(catalogPath, ref string, req Request) (string, error) {
 	if effSpecLoaded.TaskID != req.TaskID {
 		return "", fmt.Errorf("%w: effective spec does not bind to task %q", ErrResolve, req.TaskID)
 	}
+	// D-SA-4 mirrored for the spec as for the grant (arch review LOW-1).
+	if err := execution.SpecInstantiates(effSpecLoaded, specRaw); err != nil {
+		return "", fmt.Errorf("%w: %v", ErrResolve, err)
+	}
 	// The grant deliberately CANNOT be loaded here: it still carries
 	// the "@workspace" placeholder, and a workspace does not exist
 	// until L7 provisions one. Binding it is L7's designed act
@@ -468,6 +472,9 @@ func checkGrantShape(effGrant []byte, taskID string) error {
 			MaxCalls  int    `json:"max_calls"`
 			Workspace string `json:"workspace"`
 		} `json:"entries"`
+	}
+	if err := checkNoDuplicateKeys(effGrant); err != nil {
+		return fmt.Errorf("%w: effective grant is invalid after substitution: %v", ErrResolve, err)
 	}
 	if err := json.Unmarshal(effGrant, &doc); err != nil {
 		return fmt.Errorf("%w: effective grant is invalid after substitution: %v", ErrResolve, err)

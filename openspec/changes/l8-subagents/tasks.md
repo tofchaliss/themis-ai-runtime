@@ -113,14 +113,16 @@ reopens D-L8-1..21.
 - [ ] `template_scope` is a fixed member of the Skill's `grant_template`,
       copied verbatim at instantiation; `instantiateGrantTemplate`
       accepts no override for it (C-L8-16 F/G)
-- [ ] `GrantEntry.TemplateScope []string`; `Authorize` checks target ∈
-      scope by **exact `name@version` equality** (no prefix matching;
+- [x] `GrantEntry.TemplateScope []string` — LANDED with skill-admission
+      SA-M4 (commit dc8034c; exact-ref validation at `LoadGrant`,
+      set-equality in `tools.Instantiates`, digested in
+      `grantAuthorityDigest`); inert at `Authorize` until `delegate`
+      exists. Do not re-add.
+- [ ] `Authorize` checks target ∈ scope by **exact `name@version` equality** (no prefix matching;
       loader refuses non-exact entries) — the single authoritative
       substitution gate (C-L8-15 G)
-- [ ] **`grantAuthorityDigest` includes `TemplateScope`** (set
-      semantics via `scopeDigest`); test: two grants differing only in
-      scope → different digests (the 2026-09-15 defect class, asserted
-      positively)
+- [x] **`grantAuthorityDigest` includes `TemplateScope`** — LANDED with
+      SA-M4 (dc8034c); the differing-digest test is still owed here
 - [ ] `execDelegate` executor = **instantiation** (C-L8-12 Am. 1,
       LOCKED at C-L8-21): resolve template, validate evidence against
       the record, `Resolve`, `Gather`/`Compose` in memory, bound checks —

@@ -461,7 +461,7 @@ func matrix() []row {
 					e["workflow_ceiling_path"] = variant
 				})
 			}},
-		{"C17", "submitter-chosen skill composition differing from the catalog's", "never its constituent hashes",
+		{"C17", "submitter-chosen skill composition differing from the catalog's", "composition's input_schema is not the input_schema",
 			func(c *ctx) error {
 				skill := filepath.Join(c.rowDir, "policies/skills/remediate-dependency")
 				h := skillHashes(skill)

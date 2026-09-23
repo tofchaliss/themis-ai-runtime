@@ -21,9 +21,15 @@ func TestInstantiates(t *testing.T) {
 	mut := func(from, to string) string { return strings.Replace(ok, from, to, 1) }
 	cases := []struct{ name, eff, want string }{
 		{"legitimate narrowing (scope set-equal, order irrelevant)", ok, ""},
-		{"bound workspace is still an instantiation", mut(`"workspace":"@workspace"},
+		{"literal workspace refused (CRITICAL-1)", mut(`"workspace":"@workspace"},
 	 {"tool":"write_file"`, `"workspace":"/abs/ws"},
-	 {"tool":"write_file"`), ""},
+	 {"tool":"write_file"`), "@workspace placeholder or absent"},
+		{"case-variant key refused (CRITICAL-1)", mut(`"workspace":"@workspace"},
+	 {"tool":"write_file"`, `"Workspace":"/abs/ws"},
+	 {"tool":"write_file"`), "not an exact lowercase key"},
+		{"duplicate key refused (LOW-2)", mut(`"max_calls":3,`, `"max_calls":3,"max_calls":9,`), "duplicate key"},
+		{"workspace added where the template has none", mut(`{"tool":"declare_done","max_calls":2}`, `{"tool":"declare_done","max_calls":2,"workspace":"@workspace"}`), "workspace binding differs"},
+		{"themis_scope added", mut(`{"tool":"declare_done","max_calls":2}`, `{"tool":"declare_done","max_calls":2,"themis_scope":["finding:1"]}`), "themis_scope differs"},
 		{"quota widened", mut(`"max_calls":3`, `"max_calls":7`), "quotas only narrow"},
 		{"total widened", mut(`"total_max_calls":8`, `"total_max_calls":11`), "quotas only narrow"},
 		{"tool added", mut(`{"tool":"declare_done"`, `{"tool":"search_code","max_calls":1},{"tool":"declare_done"`), "not in the template"},
@@ -38,7 +44,7 @@ func TestInstantiates(t *testing.T) {
 	// "tool removed": drop declare_done entirely.
 	removed := strings.Replace(ok, `,
 	 {"tool":"declare_done","max_calls":2}`, ``, 1)
-	cases[5].eff, cases[5].want = removed, "in the template but not the effective grant"
+	cases[9].eff, cases[9].want = removed, "in the template but not the effective grant"
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			err := Instantiates([]byte(c.eff), []byte(tpl), "T1")

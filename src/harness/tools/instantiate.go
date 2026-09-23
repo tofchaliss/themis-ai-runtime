@@ -17,10 +17,11 @@ package tools
 import (
 	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/tofchaliss/themis/internal/strictjson"
 )
 
 // skillRefSyntax: an exact delegation-template reference, name@version
@@ -40,6 +41,9 @@ type grantShape struct {
 }
 
 func parseGrantShape(label string, raw []byte) (*grantShape, error) {
+	if err := strictjson.Check(raw); err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", ErrGrantInvalid, label, err)
+	}
 	dec := json.NewDecoder(strings.NewReader(string(raw)))
 	dec.DisallowUnknownFields()
 	var g grantShape
@@ -61,8 +65,13 @@ func parseGrantShape(label string, raw []byte) (*grantShape, error) {
 		if e.MaxCalls <= 0 {
 			return nil, fmt.Errorf("%w: %s: grant %q needs a positive call cap", ErrGrantInvalid, label, e.Tool)
 		}
-		if e.Workspace != "" && e.Workspace != "@workspace" && !filepath.IsAbs(e.Workspace) {
-			return nil, fmt.Errorf("%w: %s: grant %q workspace must be absolute or the @workspace placeholder", ErrGrantInvalid, label, e.Tool)
+		// A shape is compared BEFORE assembly binds the workspace, so
+		// the only values a template or an instance may carry are the
+		// placeholder or nothing. A literal path here is never a
+		// legitimate instance: it is a caller trying to mint a scope
+		// (security review CRITICAL-1).
+		if e.Workspace != "" && e.Workspace != "@workspace" {
+			return nil, fmt.Errorf("%w: %s: grant %q workspace must be the @workspace placeholder or absent — a literal path is never a template or an instance", ErrGrantInvalid, label, e.Tool)
 		}
 		if err := checkTemplateScope(e.TemplateScope); err != nil {
 			return nil, fmt.Errorf("%w: %s: grant %q: %v", ErrGrantInvalid, label, e.Tool, err)
@@ -97,9 +106,10 @@ var ErrNotInstantiation = fmt.Errorf("%w: effective grant is not an instantiatio
 //	tool set                equality (no additions, no removals)
 //	per-tool max_calls      1 ≤ effective ≤ template
 //	total_max_calls         1 ≤ effective ≤ template
-//	workspace               present iff the template has @workspace
-//	                        (the effective value may still be the
-//	                        placeholder, or the per-task binding)
+//	workspace               equality (@workspace or absent, exactly as
+//	                        the template; a literal path is refused at
+//	                        parse — binding is assembly's act, after
+//	                        this relation has been checked)
 //	mutating                equality
 //	themis_scope            set equality
 //	template_scope          set equality
@@ -150,11 +160,8 @@ func Instantiates(effectiveRaw, templateRaw []byte, taskID string) error {
 		if e.MaxCalls > t.MaxCalls {
 			return fmt.Errorf("%w: tool %q max_calls %d exceeds the template's %d — quotas only narrow", ErrNotInstantiation, tool, e.MaxCalls, t.MaxCalls)
 		}
-		if (t.Workspace == "@workspace") != (e.Workspace != "") {
+		if e.Workspace != t.Workspace {
 			return fmt.Errorf("%w: tool %q workspace binding differs from the template — a scope is Skill-fixed", ErrNotInstantiation, tool)
-		}
-		if t.Workspace != "" && t.Workspace != "@workspace" {
-			return fmt.Errorf("%w: the template binds tool %q to a literal workspace — a template carries the @workspace placeholder only", ErrNotInstantiation, tool)
 		}
 		if e.Mutating != t.Mutating {
 			return fmt.Errorf("%w: tool %q mutating flag differs from the template — the review surface is Skill-fixed", ErrNotInstantiation, tool)

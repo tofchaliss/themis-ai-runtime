@@ -3,7 +3,12 @@
 Updated at every green milestone. If context was compacted, start here.
 
 ## One-line status
-2026-09-22: SA-M1..M5 implemented and green in targeted tests
+2026-09-23: three Class-3 reviews of `dc8034c` remediated (security
+CRITICAL-1 → `internal/strictjson` key wall; test HIGH/MED twins);
+full suite green minus live registers; live anchored walk PASS again
+after the fix; second checkpoint committed. Remaining: traceability,
+archive, issue #1, owner acts (`rsys@4`, production run). Earlier —
+2026-09-22: SA-M1..M5 committed as `dc8034c` (full suite green minus live registers; live anchored walk PASS); M6 reviews in flight. Earlier: SA-M1..M5 implemented and green in targeted tests
 (`orchestration/skill_admission_test.go`, `tools/instantiate_test.go`,
 `execution` TestSpecInstantiates); full suite running; M6 (live
 anchored proof, reviews, archive) pending. Baseline had one
@@ -26,8 +31,8 @@ category-4 gap (owner stop rule).
   `env.Skill`. Tests in `orchestration/skill_admission_test.go`.
 - **M2 anchor:** `Anchor.Skills []string` (`json:"skills"`; absent =
   none admitted; entries exact refs, unique, ≤64). `SubmitTask`
-  anchored: `env.Skill != "" ⇒ skill ∈ a.Skills` right after the
-  registry pin check, before the bundle loop (ladder order). `rsys@4`
+  anchored: `env.Skill != "" ⇒ skill ∈ a.Skills` after the instruction
+  plane and before the registry pin and bundle loop (as built). `rsys@4`
   is the owner's Governance act; test anchors via `anchorWorld` mutate.
 - **M3 correspondence:** `verifyAnchoredSkill` compares the manifest's
   seven pins with the commitment's seven fixed fields, per member,
@@ -53,7 +58,8 @@ category-4 gap (owner stop rule).
 
 ## Milestone log
 - [x] M1  - [x] M2  - [x] M3  - [x] M4  - [x] M5 — full suite green minus live registers (2026-09-22)
-- [ ] M6: live anchored walk (running), three Class-3 reviews, mutation probes, amendment records, archive
+- [x] M6 reviews: three Class-3 reviews + remediation committed 2026-09-23 (see tasks.md §6 for the finding list)
+- [ ] M6 close: live anchored walk **PASS 2026-09-22** (re-run PASS 2026-09-23 after CRITICAL-1 fix) (`TestLiveAnchoredSkillWalk`: qwen2.5:7b, COMPLETED, VERIFIED, 50s — first anchored skill execution, test-harness anchor); three Class-3 reviews + mutation probes running against `dc8034c`; amendment records, archive pending
 
 ## Gaps found while testing
 1. **Pre-existing:** `TestLiveWalkProof` fails (not skips) with ollama
@@ -89,3 +95,24 @@ category-4 gap (owner stop rule).
    not re-derivation.
 10. **Evidence module is standalone:** `evidence/harness` is not in
    `go.work`; build/vet it with `GOWORK=off`. C17 patched and builds.
+11. **CRITICAL-1 (security review of dc8034c):** `instantiateGrant`
+   guarded `@workspace` by exact map key while `encoding/json` matches
+   keys case-insensitively, so `"Workspace":"/etc"` bound a literal
+   host path. Closed by `internal/strictjson.Check` (exact lowercase
+   keys, no duplicate keys) before every grant/spec decode (L4 LoadGrant
+   + parseGrantShape, L5 parseSpec + template, L7 instantiateGrant, L9
+   checkGrantShape), plus a post-load `Workspace == wsRoot` assertion.
+   Twins: `TestGrantKeyWallAtAssembly`, `TestInstantiateGrantPostBind-
+   Assertion`, anchored neg-j/neg-k, unit cases.
+12. **Same decoder leniency elsewhere:** registry, execution ceiling,
+   anchor, envelope, catalog/manifest loaders still decode without the
+   exact-case wall (catalog/manifest have the duplicate wall only).
+   None of them carries an exact-key guard upstream, so no known
+   bypass; left out of scope, worth one sweep.
+13. **L9 mirror negative:** `tools.Instantiates` in `skills.Instantiate`
+   is unreachable through the public request (D-L9-5 narrowing already
+   refuses widening), so no L9-level negative exists; the mirror is
+   covered by the tools unit table only.
+14. **Live gating:** live tests default to `localhost:11434` and skip
+   when unreachable (existing convention); the test review asked for
+   an explicit opt-in env — not changed here, owner call.

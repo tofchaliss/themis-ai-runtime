@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	hctx "github.com/tofchaliss/themis/context"
+	"github.com/tofchaliss/themis/internal/strictjson"
 )
 
 var (
@@ -260,6 +261,12 @@ type Grant struct {
 func LoadGrant(path string) (*Grant, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", ErrGrantInvalid, path, err)
+	}
+	// Exact lowercase keys, no duplicates: the decoder alone would
+	// accept "Workspace" as a workspace binding that no exact-key
+	// guard upstream ever saw (security review CRITICAL-1, LOW-2).
+	if err := strictjson.Check(raw); err != nil {
 		return nil, fmt.Errorf("%w: %s: %v", ErrGrantInvalid, path, err)
 	}
 	dec := json.NewDecoder(strings.NewReader(string(raw)))

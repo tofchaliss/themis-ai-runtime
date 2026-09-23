@@ -21,6 +21,7 @@ import (
 	"github.com/tofchaliss/themis/deployment"
 	"github.com/tofchaliss/themis/execution"
 	"github.com/tofchaliss/themis/instructions"
+	"github.com/tofchaliss/themis/internal/strictjson"
 	"github.com/tofchaliss/themis/runtime/model"
 	"github.com/tofchaliss/themis/skills"
 	"github.com/tofchaliss/themis/state"
@@ -315,13 +316,16 @@ func (o *Orchestrator) verifyAnchoredSkill(a *deployment.Anchor, env *Envelope) 
 	if o.cfg.SkillCatalogPath == "" {
 		return nil, nil, fmt.Errorf("%w: skill-attributed task under an anchored deployment but no governed catalog is configured", ErrAssembly)
 	}
-	catalogHash, herr := deployment.HashFile(o.cfg.SkillCatalogPath)
-	if herr != nil || catalogHash != a.SkillCatalog {
-		return nil, nil, fmt.Errorf("%w: skill catalog is not the anchored artifact (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
-	}
+	// ONE read: the bytes the anchor pin is verified against are the
+	// bytes resolution consumes and the record retains (arch review
+	// MED-1 — the captureVerified discipline; a second read would
+	// verify A and use B).
 	cat, cerr := skills.LoadCatalog(o.cfg.SkillCatalogPath)
 	if cerr != nil {
 		return nil, nil, fmt.Errorf("%w: anchored skill catalog unreadable: %v", ErrAssembly, cerr)
+	}
+	if cat.Hash != a.SkillCatalog {
+		return nil, nil, fmt.Errorf("%w: skill catalog is not the anchored artifact (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
 	}
 	// Resolution establishes: registered, ACTIVE (withdrawn refuses
 	// typed — D-SA-8), manifest bytes two-way against the registered
@@ -813,8 +817,13 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	// The load-bearing selector admission actually used (D-SA-5) —
 	// recorded beside the attribution so the two independently derived
 	// values stay comparable in the record.
-	if env.Skill != "" {
+	if skillManifest != nil {
 		governed["skill"] = env.Skill
+	} else if env.Skill != "" {
+		// Unanchored: the selector is a Claim-1 attribution only, and
+		// the record must not read as if a registered composition was
+		// verified (D-SA-7; security review LOW-1).
+		governed["skill_claimed"] = env.Skill
 	}
 	if o.anchor != nil {
 		// Q-G1-7: the assembly record proves "executed under this
@@ -1029,6 +1038,13 @@ func grantWithinCeiling(g *tools.Grant, c *WorkflowCeiling) error {
 // validation) — and loads the effective grant through the normal
 // fail-closed loader.
 func instantiateGrant(raw []byte, wsRoot, stagingRoot string) (*tools.Grant, string, error) {
+	// The placeholder guard below inspects the raw document by EXACT
+	// key, while the loader matches keys case-insensitively: without
+	// this wall a "Workspace" entry would pass the guard unseen and
+	// bind a literal host path (security review CRITICAL-1).
+	if err := strictjson.Check(raw); err != nil {
+		return nil, "", fmt.Errorf("%w: envelope grant: %v", ErrAssembly, err)
+	}
 	var doc map[string]any
 	if err := json.Unmarshal(raw, &doc); err != nil {
 		return nil, "", fmt.Errorf("%w: envelope grant: %v", ErrAssembly, err)
@@ -1036,6 +1052,13 @@ func instantiateGrant(raw []byte, wsRoot, stagingRoot string) (*tools.Grant, str
 	if entries, ok := doc["entries"].([]any); ok {
 		for _, e := range entries {
 			if entry, ok := e.(map[string]any); ok {
+				for k := range entry {
+					switch k {
+					case "tool", "max_calls", "workspace", "themis_scope", "mutating", "template_scope":
+					default:
+						return nil, "", fmt.Errorf("%w: envelope grant: entry key %q is not a grant field", ErrAssembly, k)
+					}
+				}
 				if ws, ok := entry["workspace"].(string); ok {
 					// Placeholder-only workspace bindings (architecture
 					// review 2d): a literal path could bind a read tool
@@ -1071,6 +1094,15 @@ func instantiateGrant(raw []byte, wsRoot, stagingRoot string) (*tools.Grant, str
 	if err != nil {
 		os.Remove(path)
 		return nil, "", err
+	}
+	// Post-bind assertion: the only workspace a loaded effective grant
+	// may carry is the one assembly bound. Whatever route a literal
+	// took past the guard above, it does not reach a tool.
+	for _, e := range g.Entries {
+		if e.Workspace != "" && e.Workspace != wsRoot {
+			os.Remove(path)
+			return nil, "", fmt.Errorf("%w: grant %q carries workspace %q, not the assembly-bound root — a workspace is bound by assembly, never submitted", ErrInvariant, e.Tool, e.Workspace)
+		}
 	}
 	return g, path, nil
 }

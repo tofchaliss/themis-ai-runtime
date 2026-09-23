@@ -6,6 +6,7 @@ package orchestration
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -199,6 +200,69 @@ func TestLiteralWorkspaceRefused(t *testing.T) {
 		  {"tool":"declare_done","max_calls":4}]}`)
 	if _, err := f.o.SubmitTask(f.envelope(t, "t-lit")); !errors.Is(err, ErrAssembly) || !strings.Contains(err.Error(), "@workspace placeholder") {
 		t.Fatalf("literal workspace binding must refuse: %v", err)
+	}
+}
+
+// Security review CRITICAL-1 (dc8034c): the literal-workspace guard
+// above inspected the raw grant by EXACT key while the loader matched
+// keys case-insensitively, so a "Workspace" entry passed the guard
+// unseen and bound a literal host path. Twins: the case variant and a
+// duplicate key refuse at the key wall; the placeholder still binds
+// and the walk completes.
+func TestGrantKeyWallAtAssembly(t *testing.T) {
+	cases := []struct{ name, entry, want string }{
+		{"case-variant key", `{"tool":"read_file","max_calls":8,"Workspace":"` + "%s" + `"}`, "not an exact lowercase key"},
+		{"duplicate key", `{"tool":"read_file","max_calls":8,"max_calls":80,"workspace":"@workspace"}`, "duplicate key"},
+		{"unknown entry key", `{"tool":"read_file","max_calls":8,"workspace":"@workspace","scope":"x"}`, "is not a grant field"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			f := setup(t, happyScript(), "")
+			entry := c.entry
+			if strings.Contains(entry, "%s") {
+				entry = fmt.Sprintf(entry, f.stateDir)
+			}
+			writeJSON(t, f.envDir, "grant.json",
+				`{"version":1,"task_id":"T","total_max_calls":20,"entries":[`+entry+`,
+				  {"tool":"declare_done","max_calls":4}]}`)
+			if _, err := f.o.SubmitTask(f.envelope(t, "t-key")); !errors.Is(err, ErrAssembly) || !strings.Contains(err.Error(), c.want) {
+				t.Fatalf("must refuse at the key wall (want %q): %v", c.want, err)
+			}
+		})
+	}
+	t.Run("placeholder still binds (positive twin)", func(t *testing.T) {
+		f := setup(t, happyScript(), "")
+		writeJSON(t, f.envDir, "grant.json",
+			`{"version":1,"task_id":"T","total_max_calls":20,"entries":[
+			  {"tool":"read_file","max_calls":8,"workspace":"@workspace"},
+			  {"tool":"declare_done","max_calls":4}]}`)
+		res, err := f.o.SubmitTask(f.envelope(t, "t-key-ok"))
+		if err != nil || res.Status != state.StatusCompleted {
+			t.Fatalf("the placeholder grant must still bind and complete: %+v %v", res, err)
+		}
+	})
+}
+
+// The post-bind assertion in instantiateGrant is reachable on its own:
+// a loaded grant whose workspace is not the assembly-bound root is an
+// invariant violation regardless of how the bytes got there.
+func TestInstantiateGrantPostBindAssertion(t *testing.T) {
+	staging := t.TempDir()
+	ws := filepath.Join(t.TempDir(), "ws")
+	raw := []byte(`{"version":1,"task_id":"T","total_max_calls":4,"entries":[{"tool":"read_file","max_calls":2,"workspace":"@workspace"}]}`)
+	g, p, err := instantiateGrant(raw, ws, staging)
+	if err != nil {
+		t.Fatalf("placeholder must bind: %v", err)
+	}
+	defer os.Remove(p)
+	if g.Entries[0].Workspace != ws {
+		t.Fatalf("bound to %q, want %q", g.Entries[0].Workspace, ws)
+	}
+	if _, _, err := instantiateGrant([]byte(strings.Replace(string(raw), "@workspace", "/etc", 1)), ws, staging); !errors.Is(err, ErrAssembly) || !strings.Contains(err.Error(), "@workspace placeholder") {
+		t.Fatalf("literal must refuse at the guard: %v", err)
+	}
+	if _, _, err := instantiateGrant([]byte(strings.Replace(string(raw), `"workspace"`, `"Workspace"`, 1)), ws, staging); !errors.Is(err, ErrAssembly) || !strings.Contains(err.Error(), "not an exact lowercase key") {
+		t.Fatalf("case variant must refuse at the key wall: %v", err)
 	}
 }
 

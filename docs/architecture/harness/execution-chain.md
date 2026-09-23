@@ -55,8 +55,12 @@ is retained as history.
 │   submitter envelope ─► must BE the anchored artifacts:                       │
 │        tool registry · workflow BUNDLE (workflow + its workflow ceiling       │
 │        + its context contract, indivisible) · deployment ceiling ·            │
-│        model ∈ allowlist · skill composition resolved FROM the anchored       │
-│        catalog (never a submitter-supplied constituent hash)                  │
+│        model ∈ allowlist · skill ∈ anchor.skills (D-SA-9) · skill composition │
+│        resolved FROM the anchored catalog — seven pins EQUAL the commitment   │
+│        (D-SA-2); effective grant/spec INSTANTIATE the pinned templates        │
+│        (D-SA-4); selector = the `skill` field (D-SA-5); seal = integrity      │
+│        only (D-SA-6); unattributed procedure refused (D-SA-3); never a        │
+│        submitter-supplied constituent hash                                    │
 │                                                                               │
 │   the submitter chooses a TASK WITHIN the deployment — never the deployment   │
 └───────────────────────────────────┬───────────────────────────────────────────┘

@@ -20,6 +20,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/tofchaliss/themis/internal/strictjson"
 )
 
 var (
@@ -177,6 +179,12 @@ func LoadSpec(path string) (*ProvisionSpec, error) {
 }
 
 func parseSpec(raw []byte, src string) (*ProvisionSpec, error) {
+	// Exact lowercase keys, no duplicates (security review LOW-2): a
+	// spec is authority over resources; its decoded limits must be the
+	// limits a reader of the bytes sees.
+	if err := strictjson.Check(raw); err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", ErrSpecInvalid, src, err)
+	}
 	dec := json.NewDecoder(strings.NewReader(string(raw)))
 	dec.DisallowUnknownFields()
 	var s ProvisionSpec
@@ -281,6 +289,9 @@ func SpecInstantiates(eff *ProvisionSpec, templateRaw []byte) error {
 		Repo      string     `json:"repo"`
 		PinnedSHA string     `json:"pinned_sha"`
 		Limits    []LimitReq `json:"limits"`
+	}
+	if err := strictjson.Check(templateRaw); err != nil {
+		return fmt.Errorf("%w: spec template: %v", ErrSpecInvalid, err)
 	}
 	dec := json.NewDecoder(strings.NewReader(string(templateRaw)))
 	dec.DisallowUnknownFields()

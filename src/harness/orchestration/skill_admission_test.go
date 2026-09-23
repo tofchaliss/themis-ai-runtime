@@ -397,8 +397,16 @@ func resealed(t *testing.T, envPath, field, value string) map[string]string {
 	switch field {
 	case "workflow":
 		c.Workflow = value
+	case "workflow_ceiling":
+		c.WorkflowCeiling = value
+	case "context_contract":
+		c.ContextContract = value
 	case "grant_template":
 		c.GrantTemplate = value
+	case "spec_template":
+		c.SpecTemplate = value
+	case "input_schema":
+		c.InputSchema = value
 	case "procedure":
 		c.Procedure = value
 	default:
@@ -449,6 +457,36 @@ func TestAnchoredSkillNegativeTwins(t *testing.T) {
 		}
 		return out
 	}
+	// A spec variant, same shape: only execution.SpecInstantiates can
+	// refuse it.
+	specPath := doc["spec_path"].(string)
+	specRaw, _ := os.ReadFile(specPath)
+	withSpec := func(name string, mutate func(s map[string]any)) string {
+		var s map[string]any
+		if err := json.Unmarshal(specRaw, &s); err != nil {
+			t.Fatal(err)
+		}
+		mutate(s)
+		sb, _ := json.Marshal(s)
+		sp := filepath.Join(dir, name+"-spec.json")
+		if err := os.WriteFile(sp, sb, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		e, err := LoadEnvelope(env)
+		if err != nil {
+			t.Fatal(err)
+		}
+		c := *e.Composition
+		c.Spec = hashBytes(sb)
+		return withEnvelopeFields(t, env, map[string]any{"spec_path": sp, "composition": commitmentMap(&c)}, "envelope-"+name+".json")
+	}
+	member := func(name, field string) string {
+		return withEnvelopeFields(t, env, map[string]any{
+			"composition": resealed(t, env, field, strings.Repeat("ab", 32))}, "envelope-"+name+".json")
+	}
+	// Every case shares the task id: all of these refuse in assembly,
+	// before CreateTask, so no task state exists to leak between them
+	// (a refusal that reached the record would fail the next case).
 	cases := []struct {
 		name string
 		env  string
@@ -457,16 +495,28 @@ func TestAnchoredSkillNegativeTwins(t *testing.T) {
 		{"wrong skill (unregistered)", withEnvelopeFields(t, env, map[string]any{
 			"skill": "no-such-skill@1", "origin": map[string]string{"skill": "no-such-skill@1"}}, "envelope-neg-a.json"),
 			"not in the anchored skill allowlist"},
-		{"member substituted: workflow", withEnvelopeFields(t, env, map[string]any{
-			"composition": resealed(t, env, "workflow", strings.Repeat("ab", 32))}, "envelope-neg-b.json"),
+		// D-SA-2: all seven members, each its own refusal.
+		{"member substituted: workflow", member("neg-b", "workflow"),
 			"composition's workflow is not the workflow that investigate-cve@1 registers"},
-		{"member substituted: grant template", withEnvelopeFields(t, env, map[string]any{
-			"composition": resealed(t, env, "grant_template", strings.Repeat("cd", 32))}, "envelope-neg-c.json"),
+		{"member substituted: workflow ceiling", member("neg-b2", "workflow_ceiling"),
+			"composition's workflow_ceiling is not the workflow_ceiling that investigate-cve@1 registers"},
+		{"member substituted: context contract", member("neg-b3", "context_contract"),
+			"composition's context_contract is not the context_contract that investigate-cve@1 registers"},
+		{"member substituted: grant template", member("neg-c", "grant_template"),
 			"composition's grant_template is not the grant_template that investigate-cve@1 registers"},
-		{"quota widened", withGrant("neg-d", func(g map[string]any) {
+		{"member substituted: spec template", member("neg-c2", "spec_template"),
+			"composition's spec_template is not the spec_template that investigate-cve@1 registers"},
+		{"member substituted: input schema", member("neg-c3", "input_schema"),
+			"composition's input_schema is not the input_schema that investigate-cve@1 registers"},
+		{"member substituted: procedure", member("neg-c4", "procedure"),
+			"composition's procedure is not the procedure that investigate-cve@1 registers"},
+		// D-SA-4 grant clauses.
+		{"per-tool quota widened", withGrant("neg-d", func(g map[string]any) {
 			entries(g)[0]["max_calls"] = 9999
+		}), "max_calls 9999 exceeds the template's"},
+		{"total quota widened", withGrant("neg-d2", func(g map[string]any) {
 			g["total_max_calls"] = 9999
-		}), "quotas only narrow"},
+		}), "total_max_calls 9999 exceeds the template's"},
 		{"tool added", withGrant("neg-e", func(g map[string]any) {
 			g["entries"] = append(g["entries"].([]any), map[string]any{"tool": "verify_report", "max_calls": 1, "workspace": "@workspace"})
 		}), "not in the template — the tool set is Skill-fixed"},
@@ -483,6 +533,33 @@ func TestAnchoredSkillNegativeTwins(t *testing.T) {
 				}
 			}
 		}), "mutating flag differs from the template"},
+		{"themis_scope added to an entry", withGrant("neg-i", func(g map[string]any) {
+			entries(g)[0]["themis_scope"] = []any{"finding:"}
+		}), "themis_scope differs from the template"},
+		{"literal workspace in an anchored grant (CRITICAL-1)", withGrant("neg-j", func(g map[string]any) {
+			for _, e := range entries(g) {
+				if e["workspace"] == "@workspace" {
+					e["workspace"] = "/etc"
+				}
+			}
+		}), "@workspace placeholder or absent"},
+		{"case-variant workspace key in an anchored grant (CRITICAL-1)", withGrant("neg-k", func(g map[string]any) {
+			for _, e := range entries(g) {
+				if e["workspace"] == "@workspace" {
+					delete(e, "workspace")
+					e["Workspace"] = "/etc"
+				}
+			}
+		}), "not an exact lowercase key"},
+		// D-SA-4 spec clauses.
+		{"spec deadline widened", withSpec("neg-l", func(s map[string]any) {
+			for _, l := range s["limits"].([]any) {
+				l.(map[string]any)["value"] = 999999
+			}
+		}), "the deadline only narrows"},
+		{"spec limit added", withSpec("neg-m", func(s map[string]any) {
+			s["limits"] = append(s["limits"].([]any), map[string]any{"dimension": "mem_bytes", "value": 1})
+		}), "limits are Skill-fixed"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -491,6 +568,19 @@ func TestAnchoredSkillNegativeTwins(t *testing.T) {
 				t.Fatalf("refused for the wrong reason (want %q): %v", c.want, err)
 			}
 		})
+	}
+}
+
+// D-SA-9 / MED-1 single read: the catalog the runtime loads must be
+// the catalog the anchor pins; a different catalog state refuses
+// before any resolution, so a substituted registration never answers.
+func TestAnchoredSkillCatalogMismatchRefused(t *testing.T) {
+	o, _, env := anchoredSkillWorld(t, p0Script(), func(a map[string]any) {
+		a["skill_catalog"] = strings.Repeat("ef", 32)
+	})
+	_, err := o.SubmitTask(env)
+	if err == nil || !strings.Contains(err.Error(), "skill catalog is not the anchored artifact") {
+		t.Fatalf("a catalog the anchor does not pin must refuse as such: %v", err)
 	}
 }
 
@@ -661,4 +751,67 @@ func TestLiveAnchoredSkillWalk(t *testing.T) {
 		t.Fatalf("anchored skill admission not in the record: %v", man.GovernedHashes)
 	}
 	t.Logf("live anchored skill walk: model=%s status=%s verdict=%s", modelName, res.Status, res.Verdict)
+}
+
+// A-SA-2: every member of skill X submitted under skill Y's name, with
+// both skills admitted and both bundles anchored, so only the
+// correspondence gate can refuse — and it must name the member. G1's
+// bundle gate passes (X's bundle is anchored); the allowlist passes (Y
+// is listed); D-SA-2 (v) refuses on the first member.
+func TestAnchoredMixedBundleRefused(t *testing.T) {
+	catalogPath := mustAbs(t, filepath.Join(repoRoot, "policies/skills/catalog.json"))
+	cat, err := skills.LoadCatalog(catalogPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, rem, err := cat.Resolve("remediate-dependency@1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	o, _, env := anchoredSkillWorld(t, p0Script(), func(a map[string]any) {
+		a["workflows"] = append(a["workflows"].([]any), map[string]any{
+			"workflow":         rem.Workflow.SHA256,
+			"workflow_ceiling": rem.WorkflowCeiling.SHA256,
+			"context_contract": rem.ContextContract.SHA256,
+		})
+		a["skills"] = []any{"investigate-cve@1", "remediate-dependency@1"}
+	})
+	swapped := withEnvelopeFields(t, env, map[string]any{
+		"skill": "remediate-dependency@1", "origin": map[string]string{"skill": "remediate-dependency@1"},
+	}, "envelope-mixed.json")
+	_, err = o.SubmitTask(swapped)
+	if err == nil || !strings.Contains(err.Error(), "composition's workflow is not the workflow that remediate-dependency@1 registers") {
+		t.Fatalf("a tuple swap must refuse at correspondence naming the member: %v", err)
+	}
+}
+
+// A-SA-4 reference-source rule, structurally: L7 resolves the reference
+// template by MEMBER NAME through the manifest; nothing in the skills
+// package resolves a template by a caller-supplied hash, so "instantiate
+// against the claimed template" is unexpressible.
+func TestReferenceTemplateResolvedByMemberNameOnly(t *testing.T) {
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, filepath.Join(repoRoot, "src/harness/skills"), func(fi os.FileInfo) bool {
+		return !strings.HasSuffix(fi.Name(), "_test.go")
+	}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, pkg := range pkgs {
+		for fname, file := range pkg.Files {
+			for _, d := range file.Decls {
+				fd, ok := d.(*ast.FuncDecl)
+				if !ok || !strings.Contains(fd.Name.Name, "Resolve") {
+					continue
+				}
+				for _, p := range fd.Type.Params.List {
+					if star, ok := p.Type.(*ast.ArrayType); ok {
+						if id, ok := star.Elt.(*ast.Ident); ok && id.Name == "byte" {
+							t.Fatalf("%s: %s resolves by bytes/hash — the reference template must be resolved by member name", filepath.Base(fname), fd.Name.Name)
+						}
+					}
+				}
+			}
+		}
+	}
 }

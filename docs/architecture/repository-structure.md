@@ -26,7 +26,7 @@ themis-ai-runtime/
 │       ├── state/                   # L6: task/ checkpoint/ session/ memory/ persistence/
 │       ├── orchestration/           # L7: planner/ scheduler/ router/ hooks/ retry/
 │       │                            #     approval/ handoff/
-│       ├── subagents/               # L8: runtime/ delegation/ isolation/ roles/
+│       ├── subagents/               # L8: delegation/ only (registry + template loaders)
 │       ├── skills/                  # L9 runtime: registry/ loader/ resolver/ executor/
 │       ├── verification/            # L10: build/ test/ lint/ security/ evidence/
 │       ├── observability/           # L10: tracing/ metrics/ logging/ events/

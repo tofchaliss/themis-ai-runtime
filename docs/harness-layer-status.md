@@ -12,7 +12,7 @@ long status paragraph above, which is cumulative history.
 | Area | State |
 |---|---|
 | L1–L7, L9–L11 | implemented, archived, frozen |
-| **L8 Subagents** | **ARCHITECTURE CLOSED 2026-09-22 (owner LOCK), Gate 0 PASS, UNIMPLEMENTED** — D-L8-1..21 + challenge record C-L8-1..21 (`openspec/changes/l8-subagents/design.md`); milestone plan `tasks.md`; scaffold collapses to `subagents/delegation/` at M1; production authorization not implied |
+| **L8 Subagents** | **ARCHITECTURE CLOSED 2026-09-22 (owner LOCK), Gate 0 PASS; M1 LANDED 2026-09-23** — D-L8-1..21 + C-L8-1..21 (`openspec/changes/l8-subagents/design.md`); M1: `src/harness/subagents/delegation/` (registry + template loaders, no write API, Register A green, 13/13 mutation probes killed), `policies/delegation/` with `dependency-triage@1` PROPOSED (owner registration act pending), preflight verifies template pins; scaffold `roles/ runtime/ isolation/` deleted; M0/M0b prerequisites and M2+ not started; production authorization not implied |
 | G1, G2 | closed and implemented |
 | Deployment `rsys@3` | **ACTIVE** (`b5f551ab7076`); `rsys@2`, `rsys@1`, `local-dev@1` withdrawn and interpretable |
 | Model allowlist | `qwen2.5:7b`, `gpt-oss:20b`, `cyberpal20b-v3` — three admitted, **none selected** |
@@ -66,10 +66,11 @@ refused — and an unconditional refusal satisfies that. It established
 
 ### Two grills queued, both owner-led
 
-1. **L8 Subagents** — grill CLOSED 2026-09-22, Gate 0 PASS (see the
-   2026-09-22 checkpoint below). Implementation not started; M0
-   prerequisite P-L8-1 (provider-response hard ceiling) precedes L8
-   code.
+1. **L8 Subagents** — grill CLOSED 2026-09-22, Gate 0 PASS; M1
+   (governance artifacts + loaders) LANDED 2026-09-23 with the first
+   template PROPOSED. Next: M0 (P-L8-1 provider-response hard ceiling,
+   P-L8-2) and M0b, which gate M4+; M2 (L4 `delegate`) after its Gate 1
+   section in `openspec/changes/l8-subagents/RESUME-HERE.md`.
 2. **L9/L7 skill-admission identity** —
    `openspec/changes/archive/2026-09-23-l9-l7-skill-admission-identity/proposal.md`.
    Built 2026-09-22/23 (see the table); remaining: `rsys@4` act and a

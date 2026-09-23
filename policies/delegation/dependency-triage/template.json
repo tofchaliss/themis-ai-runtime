@@ -1,0 +1,22 @@
+{
+ "version": 1,
+ "name": "dependency-triage",
+ "template_version": 1,
+ "context_contract": {
+  "path": "contract.json",
+  "sha256": "21f6b6b227f44a36e2b9f70eedba6050f5be35bdc36cd4323445e24fa4d33366"
+ },
+ "instruction": {
+  "path": "instruction.md",
+  "sha256": "9e7aa8cddc646835f88406e716a1fd945d42bc229ace2819b9f4bf1541ca2aa8"
+ },
+ "eis_carry_scopes": [
+  "repository",
+  "skill"
+ ],
+ "brief": {
+  "slot": "brief",
+  "max_bytes": 4096
+ },
+ "max_output_bytes": 65536
+}

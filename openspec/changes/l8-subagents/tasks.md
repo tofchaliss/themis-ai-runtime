@@ -21,9 +21,11 @@ detail / residual / architectural decision) before work continues.
       2026-09-22)
 - [x] Gate 0 PASS (owner, 2026-09-22): inventory = implementation
       whitelist; five registers judged sufficient
-- [ ] Gate 1: implementation design reviewed against §5 before M1 code
-      (registry schema, template schema, grant digest, L4 target
-      validation, L7 post-hook, L2 composition, L6 event construction)
+- [ ] Gate 1: implementation design reviewed against §5 before each
+      milestone's code — M1 portion recorded 2026-09-23 in
+      `RESUME-HERE.md` (registry schema, template schema, preflight);
+      grant digest, L4 target validation, L7 post-hook, L2 composition,
+      L6 event construction to be recorded there before M2/M3 code
 
 ## 1. L8-M0 — P-L8-1 prerequisite: provider-response hard ceiling (Class 3, NOT L8)
 
@@ -67,10 +69,10 @@ reopens D-L8-1..21.
 
 ## 2. L8-M1 — Governance artifacts + loaders (Class 3)
 
-- [ ] `policies/delegation/registry.json` (append-only; `name, version,
+- [x] `policies/delegation/registry.json` (append-only; `name, version,
       template_sha256, manifest_path, state, steward`) — mirrors
-      `policies/verification/contracts.json`
-- [ ] `policies/delegation/<name>/template.json` loader: closed schema,
+      `policies/verification/contracts.json` (2026-09-23)
+- [x] `policies/delegation/<name>/template.json` loader: closed schema,
       DisallowUnknownFields, duplicate-key refusal, trailing-content
       refusal, sha256 pins for `context_contract` and optional
       `instruction`, `eis_carry_scopes[]` ⊆ {repository, directory,
@@ -79,28 +81,36 @@ reopens D-L8-1..21.
       `max_output_bytes`; **disjointness enforced at load**: any
       workflow / ceiling / grant / spec / input_schema / template
       reference → refusal (D-L8-5/6)
-- [ ] Registry loader: `Resolve(name@version)` exact only, no
+- [x] Registry loader: `Resolve(name@version)` exact only, no
       `latest`/ranges; `CheckAppendOnly` (deletion / rebind /
       un-withdrawal detected); two-way identity agreement; confined
       paths; no write API — AST write-wall (the L9/L10 wall pattern)
 - [ ] First registered template (PROPOSED → Governance act): one
       template for `remediate-dependency@1`'s triage need; contract is
       an ordinary L2 contract with a `brief` slot of class
-      `external-untrusted`
-- [ ] Loader cross-checks: brief slot exists in the pinned contract and
+      `external-untrusted` — `dependency-triage@1` written and listed
+      `active` so the positive twin loads (2026-09-23); the
+      registration ACT is the owner's commit keeping or changing it
+- [x] Loader cross-checks: brief slot exists in the pinned contract and
       permits only `external-untrusted`; permitted classes ∈ L2's closed
       vocabulary; no requiredness/slot semantics in `template.json`
       (C-L8-14 D)
-- [ ] `policies/delegation/README.md` with the registration-review
+- [x] `policies/delegation/README.md` with the registration-review
       checklist (C-L8-14): no directive to disregard a higher scope; no
       factual claims in instruction files; classes/sensitivity/bounds
       justified
-- [ ] `themis-preflight` verifies every registered template's bytes
-      against its registry pin (C-L8-14 F)
-- [ ] Register A proofs + mutation probes (wall, closed world,
-      disjointness, exact resolution)
-- [ ] Package `src/harness/subagents/delegation/`; **delete `roles/`,
-      `runtime/`, `isolation/`** in the same change
+- [x] `themis-preflight` verifies every registered template's bytes
+      against its registry pin (C-L8-14 F) — "Delegation templates"
+      section, manifest + every pin; PASS on the P0 bundle
+- [x] Register A proofs + mutation probes (wall, closed world,
+      disjointness, exact resolution) — `subagents/delegation/
+      delegation_test.go`: positive twin through the real registry
+      first; 13 probes (root-naming carry, disjointness, pin hash,
+      brief class, withheld, output bound, withdrawn, registry hash,
+      two-way identity, rebind, un-withdrawal, exact version, key wall)
+      all killed 2026-09-23
+- [x] Package `src/harness/subagents/delegation/`; **delete `roles/`,
+      `runtime/`, `isolation/`** in the same change (2026-09-23)
 
 ## 3. L8-M2 — L4 amendment: `delegate` capability (Class 3; L4 archived-layer amendment)
 

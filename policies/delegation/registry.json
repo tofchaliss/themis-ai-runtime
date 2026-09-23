@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "name": "dependency-triage",
+      "version": 1,
+      "template_sha256": "0a0328e136566e27ba5a89963778aee8cf7f17c6fb97805957a1366d08cb433c",
+      "manifest_path": "dependency-triage/template.json",
+      "state": "active",
+      "steward": "security-engineering"
+    }
+  ]
+}

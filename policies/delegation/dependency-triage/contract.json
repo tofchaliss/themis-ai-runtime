@@ -1,0 +1,9 @@
+{
+ "version": 1,
+ "workflow": "dependency-triage",
+ "slots": [
+  {"name": "brief", "kind": "delegation-brief", "requirement": "required", "classes": ["external-untrusted"]},
+  {"name": "evidence", "kind": "evidence-payload", "requirement": "optional", "classes": ["governed-record", "derived"]}
+ ],
+ "sensitivity_ceiling": "public"
+}

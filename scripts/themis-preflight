@@ -195,6 +195,59 @@ else
   note "A live proof that fails IN ISOLATION is a real failure."
 fi
 
+# ------------------------------------------------- delegation templates
+# C-L8-14 F: every registered delegation template's manifest bytes must
+# match its registry pin, and every pin inside the manifest must match
+# its file. A drifted file is not a "changed template": the template
+# becomes unavailable (fail closed) and reconstruction keeps the stored
+# bytes. Read-only.
+sec "Delegation templates"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+DREG="$ROOT/policies/delegation/registry.json"
+if [ ! -f "$DREG" ]; then
+  warn "no delegation-template registry at $DREG"
+elif ! command -v python3 >/dev/null 2>&1 || ! command -v shasum >/dev/null 2>&1; then
+  warn "python3 or shasum missing — cannot verify template pins"
+else
+  DRES=$(python3 - "$DREG" <<'PY'
+import hashlib, json, os, sys
+reg = sys.argv[1]; root = os.path.dirname(reg)
+def sha(p):
+    with open(p, "rb") as f: return hashlib.sha256(f.read()).hexdigest()
+try:
+    entries = json.load(open(reg))["entries"]
+except Exception as e:
+    print(f"FAIL registry unreadable: {e}"); sys.exit(0)
+for e in entries:
+    ref = f'{e["name"]}@{e["version"]}'
+    mp = os.path.join(root, e["manifest_path"])
+    if not os.path.isfile(mp):
+        print(f"FAIL {ref}: manifest missing at {e['manifest_path']}"); continue
+    if sha(mp) != e["template_sha256"]:
+        print(f"FAIL {ref}: manifest bytes do not match the registry pin"); continue
+    m = json.load(open(mp)); mdir = os.path.dirname(mp); bad = False
+    for member in ("context_contract", "instruction"):
+        pin = m.get(member)
+        if not pin: continue
+        fp = os.path.join(mdir, pin["path"])
+        if not os.path.isfile(fp) or sha(fp) != pin["sha256"]:
+            print(f"FAIL {ref}: {member} bytes do not match the manifest pin"); bad = True
+    if not bad:
+        print(f"PASS {ref} ({e['state']}): manifest and every pin verified")
+PY
+)
+  if [ -z "$DRES" ]; then warn "registry lists no templates"; fi
+  # here-string, not a pipe: the PASS/FAIL counters must survive the loop
+  while IFS= read -r line; do
+    case "$line" in
+      PASS*) ok "${line#PASS }" ;;
+      FAIL*) bad "${line#FAIL }" ;;
+      "") ;;
+      *) note "$line" ;;
+    esac
+  done <<< "$DRES"
+fi
+
 # ----------------------------------------------------------- deployment
 if [ -n "$DEPLOY" ]; then
   sec "Deployment root: $DEPLOY"

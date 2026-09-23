@@ -261,9 +261,14 @@ changed. @1's procedure uses `## ` headings the renderer refuses —
    ANALYZE without reading or delegating (1m27s, FAILED via
    turn-no-action exhaustion in REMEDIATE). Model behaviour; the
    anchored scripted positive path is the Register B evidence.
-22. **Reviewer worktree branches remain** (`worktree-agent-*`): the
-   worktrees were pruned from the index and ignored, but branch
-   deletion is a topology change the git-guard blocks — owner act.
+22. **Reviewer worktree branches** — removed 2026-09-23 under owner
+   approval (Q4, four-question close): four worktrees removed, four
+   `worktree-agent-*` branches deleted after re-confirming zero
+   commits not on main. The git-guard has no approval marker for
+   branch deletion (pushes have `THEMIS_PUSH_APPROVED=1`), so the refs
+   were deleted with `git update-ref -d` under the recorded approval;
+   a `THEMIS_TOPOLOGY_APPROVED=1` marker in the guard would make the
+   approved path explicit — owner's hook to change.
 23. **LOW-14 mutual cover, recorded:** the seam's post-hook
    `seq >= ParentCallSeq` guard duplicates `Event.Validate`; kept as
    defence in depth, not claimed as an independently tested control.

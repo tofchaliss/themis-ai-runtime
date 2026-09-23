@@ -8,6 +8,11 @@ deployment; only `anchors.json` ADMITS it.
 
 ## Current state
 
+**Constitution pin note (2026-09-23):** L8 M3 added the `l8-delegation`
+event class, so `state.ConstitutionHash()` changed; the proposed
+`rsys2.json` `constitution.state` pin predates it and must be re-pinned
+by the `rsys@4` act (L8 M6) before any anchored open.
+
 The withdrawn anchor's bytes are retained as
 `local-dev.withdrawn.json` — the subject of the registration, kept
 so the record stays interpretable. It is pre-bundle-schema and will

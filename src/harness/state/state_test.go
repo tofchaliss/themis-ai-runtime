@@ -526,3 +526,32 @@ func TestContaminationFlagOnly(t *testing.T) {
 	}
 	tr.Close()
 }
+
+// L8 constitution amendment (D-L8-8): l8-delegation is a caller-
+// appendable event class, and the closed vocabulary grew by exactly
+// one — pinned by count and by membership so a later addition is a
+// deliberate act, not drift.
+func TestL8DelegationEventClass(t *testing.T) {
+	r := testRoot(t)
+	tr, err := r.CreateTask("t-l8", TaskOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tr.AppendEvent(EvL8Delegation, "l8", body("b")); err != nil {
+		t.Fatalf("l8-delegation must be caller-appendable: %v", err)
+	}
+	if primitiveOnlyEvents[EvL8Delegation] {
+		t.Fatal("l8-delegation is written by the seam, not an L6 primitive")
+	}
+	want := []string{EvLifecycle, EvRecovery, EvVerdict, EvContamination, EvL1Conflict, EvL2Delivery,
+		EvL3Selection, EvL4Audit, EvL5Transition, EvL5Op, EvArtifact, EvWorkflowTransition,
+		EvModelTurn, EvL7Invariant, EvVerification, EvL8Delegation}
+	if len(eventClasses) != len(want) {
+		t.Fatalf("event vocabulary has %d classes, the record says %d", len(eventClasses), len(want))
+	}
+	for _, c := range want {
+		if !eventClasses[c] {
+			t.Fatalf("%s missing from the closed vocabulary", c)
+		}
+	}
+}

@@ -3,7 +3,10 @@
 Updated at every green milestone. If context was compacted, start here.
 
 ## One-line status
-2026-09-23 (later still): M2 LANDED (L4 `delegate`: target class,
+2026-09-23 (M3): L6 `l8-delegation` class + body closure LANDED. Next:
+M4 (seam + L7 wiring) after its Gate 1 section here — the largest
+milestone; read D-L8-2/3, C-L8-5..10, C-L8-17..19 before designing.
+Earlier: M2 LANDED (L4 `delegate`: target class,
 exact-scope gate, evidence shape, closed error classes, instantiation
 executor over an injected compose half, registry-v5). Next: M3 (L6
 `l8-delegation` event class) then M4 (seam + L7 wiring) after their
@@ -97,9 +100,19 @@ executor runs — which is strictly before the authorizing `l4-audit`
 commits, so `seq < parent_call_seq` holds by construction (C-L8-8).
 `themis-run` stays on v4 until `rsys@4`.
 
+## Gate 1 — M3 (L6 `l8-delegation`) design against §5.2
+
+One new caller-appendable class; body owned by `subagents/delegation`
+(`Event` with closed `Outcome`, `Validate` closure: refs strictly
+ascending and < parent_call_seq, template bytes referenced, output
+present iff the outcome could produce one; `Encode`/`Decode`
+canonical; `SortEvidence` refuses duplicates, never dedups).
+Constitution hash changes → `rsys@4` re-pin at M6.
+
 ## Milestone log
 - [x] M0 — green 2026-09-23 (ceiling at both adapters; registry narrows; mutation-probed)
 - [x] M0b — green 2026-09-23 (F-L8-2/3/4; F-L8-3 residual: second-load window)
+- [x] M3 — green 2026-09-23 (state vocabulary 16; delegation event tests)
 - [x] M2 — green 2026-09-23 (tools/delegate_test.go; digest cases; skills surface test)
 - [x] M1 — green 2026-09-23 (full hermetic suite green; owner
   registration act for `dependency-triage@1` and three Class-3 reviews

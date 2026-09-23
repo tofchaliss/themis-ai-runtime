@@ -162,17 +162,22 @@ reopens D-L8-1..21.
 
 ## 4. L8-M3 — L6 constitution amendment: `l8-delegation` (Class 3/4 — constitution hash changes)
 
-- [ ] `EvL8Delegation = "l8-delegation"` in `eventClasses` (caller
+- [x] `EvL8Delegation = "l8-delegation"` in `eventClasses` (caller
       class, not primitive-only); closed-vocabulary tests updated
-      (`TestClosedVocabularies` grows by exactly one)
-- [ ] Event body per D-L8-8 (parent_call_seq / template / composition /
+      (`state.TestL8DelegationEventClass` pins count 16 and
+      membership; 2026-09-23)
+- [x] Event body per D-L8-8 (parent_call_seq / template / composition /
       evidence_refs / model_identity / output_object_ref / outcome /
       termination — **no `delegation_id`**; identity = `(task_id,
       seq)`, C-L8-20); L6 validates the envelope, never the content;
       Register C: event body reproducible from inputs (no random field)
-- [ ] Amendment record under
+      — `subagents/delegation/event.go` (`Event`, closure, canonical
+      encoding, `SortEvidence`); `TestEventBodyReproducible`,
+      `TestEventClosure` (2026-09-23)
+- [x] Amendment record under
       `openspec/changes/archive/2026-09-07-layer-06-durable-state/amendments/l8-delegation-event/`
-- [ ] Anchor consequence recorded: `constitution.state` re-pin → M6
+- [x] Anchor consequence recorded: `constitution.state` re-pin → M6
+      (`rsys2.json` proposed pin is stale as of 2026-09-23)
 
 ## 5. L8-M4 — Delegator seam + L7 wiring (Class 3; L7 archived-layer amendment)
 

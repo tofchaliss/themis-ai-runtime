@@ -24,4 +24,6 @@ var (
 	// ErrResolve: an exact reference did not resolve to an executable
 	// registration in the loaded registry state.
 	ErrResolve = errors.New("delegation template resolution refused")
+	// ErrEvent: an l8-delegation body that violates its own closure.
+	ErrEvent = errors.New("invalid l8-delegation record")
 )

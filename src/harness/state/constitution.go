@@ -84,6 +84,19 @@ const (
 	// than a third meaning on an existing one (the L9 event-class
 	// lesson). L6 validates the envelope, never the content.
 	EvVerification = "l10-verification"
+	// L8 constitution amendment (deliberate, hash-changing — the
+	// layer-08 fold, D-L8-8): the delegation witness — one established
+	// delegated reasoning execution within the parent task {parent
+	// call seq, template, composition refs, evidence refs, model
+	// identity, output ref, outcome}. A materially different semantic
+	// from model-turn ("a parent turn occurred") and l2-delivery ("a
+	// composition was delivered"), so its own class, even though reuse
+	// would be mechanically cheaper. Identity = (task_id, seq); no
+	// delegation id (C-L8-20). L6 validates the envelope, never the
+	// content; caller-appendable by the L8 seam under
+	// record-before-effect. Anchor consequence: constitution.state
+	// re-pin → rsys@4.
+	EvL8Delegation = "l8-delegation"
 )
 
 var eventClasses = map[string]bool{
@@ -91,7 +104,7 @@ var eventClasses = map[string]bool{
 	EvL1Conflict: true, EvL2Delivery: true, EvL3Selection: true,
 	EvL4Audit: true, EvL5Transition: true, EvL5Op: true, EvArtifact: true,
 	EvWorkflowTransition: true, EvModelTurn: true, EvL7Invariant: true,
-	EvVerification: true,
+	EvVerification: true, EvL8Delegation: true,
 }
 
 // primitiveOnlyEvents may be appended only by L6's own primitives

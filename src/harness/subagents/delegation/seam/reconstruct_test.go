@@ -441,3 +441,62 @@ func TestConversationProjectionAfterDelegation(t *testing.T) {
 		}
 	}
 }
+
+// Register C: without the parent turn object that carried the delegate
+// call, the brief cannot be recovered and the re-compose cannot run —
+// UNREPRODUCIBLE, never a silent CONFIRMED.
+func TestReconstructionWithoutParentTurnIsUnreproducible(t *testing.T) {
+	const task = "t-recon-noturn"
+	w, _, seq := completedWalk(t, task)
+	evs := events(t, w, task)
+	var d *delegation.Event
+	for _, e := range evs {
+		if e.Seq == seq {
+			d, _ = delegation.Decode(e.Body)
+		}
+	}
+	var turnObj string
+	for _, e := range evs {
+		if e.Class == state.EvModelTurn && e.Seq < d.ParentCallSeq && len(e.Refs) == 1 {
+			turnObj = e.Refs[0].ID
+		}
+	}
+	removeObject(t, w.stateDir, turnObj)
+	r, err := ReconstructDelegation(w.sroot, task, seq, trustFor(t, w))
+	if err != nil || r.Verdict != VerdictUnreproducible || !anyContains(r.MissingInputs, "parent turn object") {
+		t.Fatalf("%v %+v", err, r)
+	}
+}
+
+func removeObject(t *testing.T, stateDir, id string) {
+	t.Helper()
+	hex := strings.TrimPrefix(id, "sha256:")
+	removed := false
+	_ = filepath.WalkDir(stateDir, func(p string, de os.DirEntry, err error) error {
+		if err == nil && !de.IsDir() && strings.Contains(p, hex) {
+			removed = os.Remove(p) == nil
+		}
+		return nil
+	})
+	if !removed {
+		t.Skip("object layout not found on disk")
+	}
+}
+
+// C-L8-18 A: only an execution error of the closed vocabulary projects
+// as a refusal message.
+func TestProjectRefusalMessageIsClosed(t *testing.T) {
+	ok := state.Event{Seq: 1, Body: []byte(`{"Tool":"delegate","Decision":"error","ErrClass":"delegation-refused:brief-over-bound"}`)}
+	if msg, err := orchestration.ProjectRefusalMessage(ok); err != nil || msg != `{"error":"delegation-refused:brief-over-bound"}` {
+		t.Fatalf("%v %q", err, msg)
+	}
+	for _, bad := range []string{
+		`{"Tool":"delegate","Decision":"authorized"}`,
+		`{"Tool":"delegate","Decision":"error","ErrClass":"delegation-refused:made-up"}`,
+		`{"Tool":"delegate","Decision":"denied","DenialClass":"not-available"}`,
+	} {
+		if _, err := orchestration.ProjectRefusalMessage(state.Event{Seq: 2, Body: []byte(bad)}); err == nil {
+			t.Fatalf("must refuse to project %s", bad)
+		}
+	}
+}

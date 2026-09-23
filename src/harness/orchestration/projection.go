@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/tofchaliss/themis/execution"
+	"github.com/tofchaliss/themis/runtime/model"
 	"github.com/tofchaliss/themis/state"
 	"github.com/tofchaliss/themis/tools"
 )
@@ -84,10 +86,23 @@ type ExecutionBound struct {
 	Executions  int64 // Turns + Delegations ≤ W + M
 	WalkCeiling int64 // W
 	CallCeiling int64 // M
+	// OutputCaptured bounds the bytes delegations can put into L6:
+	// Delegations × the provider-response ceiling P. The admitted-to-
+	// parent bound (× a template's max_output_bytes B) is per
+	// delegation and resolved at instantiation, not statically here.
+	OutputCaptured int64
+	// WallDeadlineS is Δ: delegated wall time is bounded by the parent's
+	// remaining budget (min rule), independent of D.
+	WallDeadlineS int64
 }
 
-func executionBound(wf *WorkflowDef, c *WorkflowCeiling, g *tools.Grant, reg *tools.Registry) ExecutionBound {
+func executionBound(wf *WorkflowDef, c *WorkflowCeiling, g *tools.Grant, reg *tools.Registry, spec *execution.ProvisionSpec) ExecutionBound {
 	b := ExecutionBound{Turns: wf.WorstCaseLen, WalkCeiling: c.MaxWalkLength, CallCeiling: int64(c.MaxTotalCalls)}
+	if spec != nil {
+		if l, ok := spec.Limit(execution.DimWallDeadlineS); ok {
+			b.WallDeadlineS = l.Value
+		}
+	}
 	var d int64
 	for _, e := range g.Entries {
 		for _, t := range reg.Tools {
@@ -101,5 +116,6 @@ func executionBound(wf *WorkflowDef, c *WorkflowCeiling, g *tools.Grant, reg *to
 	}
 	b.Delegations = d
 	b.Executions = b.Turns + b.Delegations
+	b.OutputCaptured = d * model.DefaultMaxResponseBytes
 	return b
 }

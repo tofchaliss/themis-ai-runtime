@@ -825,13 +825,11 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 		return res, err
 	}
 	// Register D (C-L8-19 I): the static execution bound, computed
-	// from the loaded artifacts and recorded — an invariant the two
-	// checks above already imply, stated so the record carries it.
-	bound := executionBound(wf, wfCeiling, grant, reg)
-	if bound.Executions > bound.WalkCeiling+bound.CallCeiling {
-		envn.Teardown()
-		return res, fmt.Errorf("%w: model executions %d exceed the static bound %d", ErrInvariant, bound.Executions, bound.WalkCeiling+bound.CallCeiling)
-	}
+	// from the loaded artifacts and recorded. Executions ≤ W + M holds
+	// by construction of the two checks above (worst-case walk ≤ W at
+	// load; grant total ≤ M just now), so it is a recorded statement,
+	// not a runtime check that could fire.
+	bound := executionBound(wf, wfCeiling, grant, reg, spec)
 	// Grant validation, not call authorization (C-L8-15 G): every
 	// template_scope entry must resolve in the delegation registry in
 	// force, as unregistered phase capabilities are refused. Without a
@@ -885,7 +883,7 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 		"l1_status":       string(eis.Status),
 		"l6_constitution": state.ConstitutionHash(), "l7_constitution": ConstitutionHash(),
 		// Register D: the static bound this task ran under.
-		"l8_execution_bound": fmt.Sprintf("turns<=%d;delegations<=%d;executions<=%d", bound.Turns, bound.Delegations, bound.Executions),
+		"l8_execution_bound": fmt.Sprintf("turns<=%d;delegations<=%d;executions<=%d;output_captured<=%d;wall_s<=%d", bound.Turns, bound.Delegations, bound.Executions, bound.OutputCaptured, bound.WallDeadlineS),
 	}
 	// Opaque attribution: recorded verbatim, interpreted by nobody
 	// (D-L9-13). L7 does not know what a skill is; it only preserves

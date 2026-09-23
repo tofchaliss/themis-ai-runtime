@@ -183,6 +183,12 @@ func TestTemplateRefusals(t *testing.T) {
 		{"pins another template", func(m map[string]any) { m["template"] = "other@1" }, `may not pin "template"`},
 		{"names tools", func(m map[string]any) { m["tools"] = []any{"read_file"} }, `may not pin "tools"`},
 		{"names a model", func(m map[string]any) { m["model"] = "qwen" }, `may not pin "model"`},
+		{"pins a ceiling", func(m map[string]any) { m["ceiling"] = "x" }, `may not pin "ceiling"`},
+		{"pins a workflow ceiling", func(m map[string]any) { m["workflow_ceiling"] = "x" }, `may not pin "workflow_ceiling"`},
+		{"pins a spec", func(m map[string]any) { m["spec"] = "x" }, `may not pin "spec"`},
+		{"pins templates", func(m map[string]any) { m["templates"] = []any{"a@1"} }, `may not pin "templates"`},
+		{"names a scope", func(m map[string]any) { m["scope"] = "repository" }, `may not pin "scope"`},
+		{"pins a procedure", func(m map[string]any) { m["procedure"] = "x" }, `may not pin "procedure"`},
 		// Closed schema.
 		{"unknown field", func(m map[string]any) { m["evidence_required"] = true }, "unknown field"},
 		{"requiredness restated", func(m map[string]any) {

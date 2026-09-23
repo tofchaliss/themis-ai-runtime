@@ -270,11 +270,14 @@ reopens D-L8-1..21.
       recovery infers no execution)
 - [x] L10 history/reconstruction views include `l8-delegation`
       (read-only; no evidence kind, contract, or outcome)
-- [x] Register D: static boundedness proof extended by the delegate
-      term (loader-time computation + test): executions ≤ V·T +
-      min(D,G) ≤ W + M; output ≤ min(D,G)·P captured, ·B admitted;
-      wall ≤ Δ (C-L8-19 I); quota-attempt semantics pinned (denied and
-      refused calls count)
+- [x] Register D: static boundedness statement computed at assembly
+      and recorded (`l8_execution_bound`): executions ≤ V·T + min(D,G)
+      ≤ W + M; output captured ≤ min(D,G)·P; wall ≤ Δ (C-L8-19 I) —
+      `TestStaticExecutionBoundWithDelegate`; the admitted-to-parent
+      output bound (·B) is a per-delegation template bound enforced at
+      re-entry (`TestDelegationPostInstanceOutcomes/output over
+      bound`), not a static term; quota-attempt semantics pinned
+      (`TestDelegateQuotaCountsEveryAttempt`)
 - [x] Register C: the class derivation function `f` is total over
       event classes and maps every L7/L8-writable class to the floor or
       a registry-derived value; mutation: a branch reading a referenced
@@ -346,6 +349,30 @@ reopens D-L8-1..21.
         probe killed; LOW-1..5 → fixed (LOW-1 = arch MED-6); note:
         providers reporting dated model ids will mint
         `model-identity-mismatch` on every delegation — residual
+      - test (relaunched against `ad020a7`): HIGH-1 (the "prefix"
+        scope case exercised the ref-shape gate, not C-L8-15 G) → case
+        `dependency-triage@10` vs scope `@1` refuses
+        `template-outside-grant-scope`, prefix mutant killed; HIGH-2
+        (seam-hash-vs-pin check untested) → anchored negative, killed;
+        MED-3 (missing parent turn object silently CONFIRMED) → typed
+        UNREPRODUCIBLE, killed; MED-4 (`evidence-slot-ambiguous`,
+        model-turn / delegation-output evidence untested) →
+        `TestEvidenceSlotAmbiguousRefuses`,
+        `TestModelTurnAndDelegationOutputAsEvidence`, `tool:*` mutant
+        killed; MED-5 (Register D overclaim) → `ExecutionBound` gains
+        `OutputCaptured = min(D,G)·P` and `WallDeadlineS = Δ`; the
+        admitted-to-parent term (·B) is per template and stays a
+        per-delegation bound, not a static one — wording narrowed
+        below; the unreachable `Executions > W+M` runtime check
+        removed (recorded statement only); MED-6 (deadline / empty
+        output / unreported identity paths) →
+        `TestDelegateDeadlineAndEdgeOutcomes`, floor and reported-empty
+        mutants killed; MED-7 (stage-E orphan not asserted) → the
+        pre-event-commit fault test asserts the composition object is
+        retained and unreachable; LOW-8/9/10/11/12/13 → tests added,
+        mutants killed; LOW-14 (post-hook seq guard is mutual cover
+        with `Event.Validate`) → recorded, left as defence in depth.
+        12/12 named survivors now killed
 - [ ] `traceability.md`; archive under
       `openspec/changes/archive/<date>-layer-08-subagents/`;
       `docs/harness-layer-status.md` and `execution-chain.md` updated

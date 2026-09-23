@@ -86,7 +86,8 @@ func TestAuthorizeDelegate(t *testing.T) {
 	}{
 		{"version outside scope (C-L8-15 G)", ok(map[string]any{"template": "cve-analysis@2"}), DenialTargetRefused, "cve-analysis@2", "template-outside-grant-scope"},
 		{"name outside scope", ok(map[string]any{"template": "security-review@1"}), DenialTargetRefused, "security-review@1", "template-outside-grant-scope"},
-		{"prefix is not membership", ok(map[string]any{"template": "dependency-triage@1x"}), DenialTargetRefused, "", "template-ref-shape"},
+		{"prefix is not membership (shape)", ok(map[string]any{"template": "dependency-triage@1x"}), DenialTargetRefused, "", "template-ref-shape"},
+		{"prefix is not membership (C-L8-15 G, well-formed @10 vs scope @1)", ok(map[string]any{"template": "dependency-triage@10"}), DenialTargetRefused, "dependency-triage@10", "template-outside-grant-scope"},
 		{"floating reference", ok(map[string]any{"template": "dependency-triage@latest"}), DenialTargetRefused, "", "template-ref-shape"},
 		{"name-only reference", ok(map[string]any{"template": "dependency-triage"}), DenialTargetRefused, "", "template-ref-shape"},
 		{"model requests a scope (C-L8-4)", ok(map[string]any{"template": "dependency-triage@1", "scope": "repository"}), DenialInvalidArgs, "scope", "unknown-field"},
@@ -132,6 +133,10 @@ func TestEvidenceRefParse(t *testing.T) {
 	many := strings.Repeat(goodRef+",", MaxEvidenceRefs) + goodRef
 	if _, err := ParseEvidenceRefs(many); err == nil || !strings.Contains(err.Error(), "exceed the cap") {
 		t.Fatalf("cap: %v", err)
+	}
+	atCap := strings.TrimSuffix(strings.Repeat(goodRef+",", MaxEvidenceRefs), ",")
+	if refs, err := ParseEvidenceRefs(atCap); err != nil || len(refs) != MaxEvidenceRefs {
+		t.Fatalf("exactly the cap must parse: %v %d", err, len(refs))
 	}
 	for _, bad := range []string{"3:" + strings.Repeat("a", 64), "3:sha256:" + strings.Repeat("A", 64), "-1:" + strings.TrimPrefix(goodRef, "3:"), goodRef + ",", "x"} {
 		if _, err := ParseEvidenceRefs(bad); err == nil {

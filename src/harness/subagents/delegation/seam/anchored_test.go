@@ -50,7 +50,7 @@ type anchoredWorld struct {
 // registry at registryPath) and opens an anchored orchestrator with
 // the verifier and delegation seams wired. mutate edits the anchor
 // map; wire controls whether the delegation seam/path are configured.
-func newAnchoredWorld(t *testing.T, m model.Interface, modelName, registryPath string, mutate func(map[string]any), wire bool) (*anchoredWorld, error) {
+func newAnchoredWorld(t *testing.T, m model.Interface, modelName, registryPath string, mutate func(map[string]any), wire bool, seamRegistry ...string) (*anchoredWorld, error) {
 	t.Helper()
 	root := repoRoot(t)
 	base := t.TempDir()
@@ -131,7 +131,11 @@ func newAnchoredWorld(t *testing.T, m model.Interface, modelName, registryPath s
 		if err != nil {
 			t.Fatal(err)
 		}
-		s, err := New(w.registry, policy)
+		seamPath := w.registry
+		if len(seamRegistry) > 0 && seamRegistry[0] != "" {
+			seamPath = seamRegistry[0]
+		}
+		s, err := New(seamPath, policy)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -291,6 +295,17 @@ func TestAnchoredDelegationRefusals(t *testing.T) {
 		m := &dynModel{delegated: okDelegated}
 		_, err := newAnchoredWorld(t, m, "dyn", "", func(a map[string]any) { a["delegation_template_registry"] = strings.Repeat("ab", 32) }, true)
 		if !errors.Is(err, orchestration.ErrAssembly) || !strings.Contains(err.Error(), "delegation-template registry is not the anchored artifact") {
+			t.Fatalf("%v", err)
+		}
+	})
+	t.Run("seam holds a registry that is not the pinned bytes", func(t *testing.T) {
+		// The configured path hashes to the pin; the wired seam was built
+		// over other bytes (a copy with different formatting) — refused
+		// at Open (architecture review MED-6).
+		other := delegationRegistry(t, nil)
+		m := &dynModel{delegated: okDelegated}
+		_, err := newAnchoredWorld(t, m, "dyn", "", nil, true, other)
+		if !errors.Is(err, orchestration.ErrAssembly) || !strings.Contains(err.Error(), "wired delegation seam holds a registry") {
 			t.Fatalf("%v", err)
 		}
 	})

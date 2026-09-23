@@ -3,7 +3,9 @@
 Updated at every green milestone. If context was compacted, start here.
 
 ## One-line status
-2026-09-23 (reviews): architecture + security reviews remediated (see
+2026-09-23 (test review): all three reviews remediated; 12/12 named
+survivors killed; traceability finalized pending the two owner
+decisions. Next: archive. Earlier (reviews): architecture + security reviews remediated (see
 tasks.md §7 dispositions); owner decisions pending on arch MED-2
 (withdrawn-in-scope at assembly) and MED-3 (§3 "one method" text);
 test review relaunched. Then: traceability finalize, archive.
@@ -262,3 +264,6 @@ changed. @1's procedure uses `## ` headings the renderer refuses —
 22. **Reviewer worktree branches remain** (`worktree-agent-*`): the
    worktrees were pruned from the index and ignored, but branch
    deletion is a topology change the git-guard blocks — owner act.
+23. **LOW-14 mutual cover, recorded:** the seam's post-hook
+   `seq >= ParentCallSeq` guard duplicates `Event.Validate`; kept as
+   defence in depth, not claimed as an independently tested control.

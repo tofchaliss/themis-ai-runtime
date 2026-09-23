@@ -97,3 +97,31 @@ func TestRecordObjectSourcesFillOneSlot(t *testing.T) {
 		t.Fatalf("address mismatch: %v", err)
 	}
 }
+
+// A declared absence carries no class: a slot permitting only a
+// governed class still accepts the absence marker (typed absence), and
+// the same marker with a delivering source of the floor class would
+// refuse — the class check applies to what can deliver.
+func TestDeclaredAbsenceCarriesNoClass(t *testing.T) {
+	c := loadTestContract(t, `{"version":1,"workflow":"x","slots":[
+	 {"name":"brief","kind":"delegation-brief","requirement":"required","classes":["external-untrusted"]},
+	 {"name":"gov","kind":"g","requirement":"optional","classes":["governed-record"]}],
+	 "sensitivity_ceiling":"public"}`)
+	brief := Source{Name: "brief", Kind: KindInline, Authority: AuthorityExternalUntrusted, Sensitivity: SensitivityPublic,
+		Author: "m", Items: []ContextItem{{Kind: "delegation-brief", Evidence: []byte("b")}}}
+	g, err := Gather(c, []Assignment{{Slot: "brief", Source: brief}, {Slot: "gov", Source: AbsentSource("gov")}})
+	if err != nil {
+		t.Fatalf("a floor-class absence must be accepted in a governed-only slot: %v", err)
+	}
+	for _, s := range g.Slots {
+		if s.Slot == "gov" && s.Availability != AvailabilityUnavailable {
+			t.Fatalf("absence must be typed absence: %+v", s)
+		}
+	}
+	// A delivering floor-class source in the same slot still refuses.
+	deliver := AbsentSource("gov")
+	deliver.ObjectID, deliver.Objects, deliver.Items = "sha256:"+strings.Repeat("0", 64), memObjects{}, []ContextItem{{Kind: "g"}}
+	if _, err := Gather(c, []Assignment{{Slot: "brief", Source: brief}, {Slot: "gov", Source: deliver}}); !errors.Is(err, ErrPlanOutsideContract) {
+		t.Fatalf("a delivering floor source must be class-checked: %v", err)
+	}
+}

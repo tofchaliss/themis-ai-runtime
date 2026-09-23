@@ -148,6 +148,8 @@ func TestParseAnchorRefusals(t *testing.T) {
 		{"empty models", func(m map[string]any) { m["models"] = []any{} }},
 		{"empty model entry", func(m map[string]any) { m["models"] = []any{""} }},
 		{"model registry neither hash nor absent", func(m map[string]any) { m["model_registry"] = "local" }},
+		{"delegation registry neither hash nor absent", func(m map[string]any) { m["delegation_template_registry"] = "latest" }},
+		{"delegation registry missing", func(m map[string]any) { delete(m, "delegation_template_registry") }},
 		{"bad name", func(m map[string]any) { m["name"] = "Local Dev" }},
 		{"version zero", func(m map[string]any) { m["deployment_version"] = 0 }},
 		{"unknown field", func(m map[string]any) { m["auto_approve"] = true }},

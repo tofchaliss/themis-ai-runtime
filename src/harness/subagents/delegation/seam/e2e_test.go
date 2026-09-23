@@ -17,6 +17,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	hctx "github.com/tofchaliss/themis/context"
 	"github.com/tofchaliss/themis/instructions"
@@ -693,6 +694,20 @@ func TestDelegationFaultPoints(t *testing.T) {
 			if point == "delegation.pre-event-commit" && m.delegCall != 1 {
 				t.Fatal("the model ran; without the witness the system establishes no delegation (stage E)")
 			}
+			if point == "delegation.pre-event-commit" {
+				// Stage E: the composition object exists, is discoverable
+				// by address, and is NOT reachable from any event — an
+				// orphan, not a fact.
+				input, _ := json.Marshal(m.delegReq.Messages)
+				id := "sha256:" + sha256hex(input)
+				if !w.sroot.Store().HasObject(id) {
+					t.Fatal("the composition object must be retained")
+				}
+				scan := w.sroot.ScanReachable()
+				if !scan.Complete || scan.Reachable[id] {
+					t.Fatalf("the orphan must be unreachable from the record: complete=%v reachable=%v", scan.Complete, scan.Reachable[id])
+				}
+			}
 		})
 	}
 }
@@ -948,5 +963,260 @@ func TestTemplateCeilingNarrowsEvidence(t *testing.T) {
 	}
 	if m.delegCall != 0 {
 		t.Fatal("no model call")
+	}
+}
+
+// registryWithContract copies the governed delegation policies into a
+// private root with a replacement CONTRACT for dependency-triage@1,
+// re-pinning template and registry.
+func registryWithContract(t *testing.T, contract string) string {
+	t.Helper()
+	reg := delegationRegistry(t, nil)
+	dir := filepath.Dir(reg)
+	wj(t, filepath.Join(dir, "dependency-triage"), "contract.json", contract)
+	tb, _ := os.ReadFile(filepath.Join(dir, "dependency-triage/template.json"))
+	var tpl map[string]any
+	_ = json.Unmarshal(tb, &tpl)
+	tpl["context_contract"].(map[string]any)["sha256"] = sha256hex([]byte(contract))
+	tb, _ = json.Marshal(tpl)
+	wj(t, filepath.Join(dir, "dependency-triage"), "template.json", string(tb))
+	rb, _ := os.ReadFile(reg)
+	var r map[string]any
+	_ = json.Unmarshal(rb, &r)
+	r["entries"].([]any)[0].(map[string]any)["template_sha256"] = sha256hex(tb)
+	rb, _ = json.Marshal(r)
+	return wj(t, dir, "registry.json", string(rb))
+}
+
+// C-L8-14 C: a reference whose kind fits more than one non-withheld
+// slot refuses as evidence-slot-ambiguous.
+func TestEvidenceSlotAmbiguousRefuses(t *testing.T) {
+	reg := registryWithContract(t, `{"version":1,"workflow":"dependency-triage","slots":[
+	 {"name":"brief","kind":"delegation-brief","requirement":"required","classes":["external-untrusted"]},
+	 {"name":"tool-evidence","kind":"tool:*","requirement":"optional","classes":["external-untrusted"]},
+	 {"name":"reads","kind":"tool:read_file","requirement":"optional","classes":["external-untrusted"]}],
+	 "sensitivity_ceiling":"public"}`)
+	m := &dynModel{delegated: okDelegated}
+	w := newWorld(t, m, reg, true)
+	const task = "t-ambiguous"
+	m.parent = triageParent(w, task, func(seq int64, id string) string { return ref(seq, id) }, "triage")
+	if res, err := w.o.SubmitTask(w.envelope(t, task)); err != nil || res.Status != state.StatusCompleted {
+		t.Fatalf("%+v %v", res, err)
+	}
+	_, ab := delegateAudit(t, events(t, w, task))
+	if ab["ErrClass"] != "delegation-refused:evidence-slot-ambiguous" {
+		t.Fatalf("%v", ab)
+	}
+}
+
+// C-L8-5 §4 / C-L8-17 A,F: a parent model turn and a prior delegation's
+// output are selectable evidence, each at the floor, each routed to
+// its own slot by event-derived kind; a second delegation may consume
+// the first's output by naming its record-ref.
+func TestModelTurnAndDelegationOutputAsEvidence(t *testing.T) {
+	m := &dynModel{delegated: okDelegated}
+	w := newWorld(t, m, "", true)
+	const task = "t-chain"
+	var firstRef string
+	m.parent = func(turn int, conv []model.Message) model.ExecutionResponse {
+		switch turn {
+		case 1:
+			return call("c1", "read_file", `{"path":"go.mod"}`)
+		case 2:
+			// Reference the parent's OWN previous turn (a model-turn
+			// event whose Ref is the turn object).
+			evs, _ := w.sroot.ReadEvents(task)
+			var turnRef string
+			for _, e := range evs {
+				if e.Class == state.EvModelTurn && len(e.Refs) == 1 {
+					turnRef = ref(e.Seq, e.Refs[0].ID)
+				}
+			}
+			args, _ := json.Marshal(map[string]string{"template": "dependency-triage@1", "evidence": turnRef, "brief": "what did I do?"})
+			return call("c2", "delegate", string(args))
+		case 3:
+			for _, msg := range conv {
+				if msg.Role == model.RoleTool && msg.ToolCallID == "c2" {
+					if mm := recordRef.FindStringSubmatch(msg.Content); mm != nil {
+						firstRef = mm[1]
+					}
+				}
+			}
+			args, _ := json.Marshal(map[string]string{"template": "dependency-triage@1", "evidence": firstRef, "brief": "review the prior triage"})
+			return call("c3", "delegate", string(args))
+		}
+		return call("c4", "declare_done", `{}`)
+	}
+	res, err := w.o.SubmitTask(w.envelope(t, task))
+	if err != nil || res.Status != state.StatusCompleted {
+		t.Fatalf("%+v %v", res, err)
+	}
+	var ds []*delegation.Event
+	for _, e := range events(t, w, task) {
+		if e.Class == state.EvL8Delegation {
+			d, _ := delegation.Decode(e.Body)
+			ds = append(ds, d)
+		}
+	}
+	if len(ds) != 2 || m.delegCall != 2 {
+		t.Fatalf("two witnessed delegations expected: %d %d", len(ds), m.delegCall)
+	}
+	if ds[0].EvidenceRefs[0].DerivedClass != "external-untrusted" || ds[1].EvidenceRefs[0].DerivedClass != "external-untrusted" {
+		t.Fatalf("model-authored evidence is the floor at every hop: %+v %+v", ds[0].EvidenceRefs, ds[1].EvidenceRefs)
+	}
+	if firstRef == "" || ds[1].EvidenceRefs[0].ObjectID != ds[0].OutputObjectRef {
+		t.Fatalf("the second delegation must consume the first's output object: %q %+v", firstRef, ds[1].EvidenceRefs)
+	}
+	comp, _ := w.sroot.Store().GetObject(ds[1].Composition.CompositionObjectRef)
+	if !strings.Contains(string(comp), "prior-delegation") || !strings.Contains(string(comp), triageNote) {
+		t.Fatalf("the first output must render in the prior-delegation slot: %.300s", comp)
+	}
+}
+
+// D-L8-15 C / C-L8-19 H: deadline outcomes — the pre-invocation floor
+// and a context deadline during the call — are witnessed as
+// provider-error with termination "deadline"; an empty output is a
+// completed delegation with an empty object; an unreported identity is
+// not a mismatch.
+func TestDelegateDeadlineAndEdgeOutcomes(t *testing.T) {
+	m := &dynModel{delegated: okDelegated}
+	w := newWorld(t, m, "", true)
+	const task = "t-edge"
+	m.parent = func(turn int, conv []model.Message) model.ExecutionResponse {
+		if turn == 1 {
+			return call("c1", "read_file", `{"path":"go.mod"}`)
+		}
+		return call("c2", "declare_done", `{}`)
+	}
+	if res, err := w.o.SubmitTask(w.envelope(t, task)); err != nil || res.Status != state.StatusCompleted {
+		t.Fatalf("%+v %v", res, err)
+	}
+	seq, id := w.readRef(t, task)
+	base := orchestration.InstantiationRequest{
+		TaskID: task, Record: w.sroot, Template: "dependency-triage@1",
+		Evidence: []orchestration.EvidenceRef{{Seq: seq, ObjectID: id}}, Brief: "triage",
+		ParentSources: []instructions.Source{{Kind: instructions.ScopeHarnessSafety, Root: w.safety},
+			{Kind: instructions.ScopeHarnessSystem, Root: filepath.Join(w.root, "instructions/global/system")}},
+		ParentEIS: parentEIS(t, w), ParentSensitivityCeiling: hctx.SensitivityPublic,
+		RegistryHash: registryHashOfTask(t, w, task), ToolTrust: func(string) (hctx.AuthorityClass, bool) { return hctx.AuthorityExternalUntrusted, true },
+	}
+	capture, err := w.seam.Instantiate(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := func(name string, runtime model.Interface, deadline time.Time, timeout time.Duration) *orchestration.DelegationResult {
+		t.Helper()
+		tr, err := w.sroot.CreateTask(task+"-"+name, state.TaskOptions{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer tr.Close()
+		res, err := w.seam.Delegate(orchestration.DelegationRequest{InstantiationRequest: base, Task: tr, ParentCallSeq: seq + 1,
+			CallID: "x", Capture: capture, Model: "dyn", Runtime: runtime, ModelRegistryHash: "unanchored", TurnTimeout: timeout, Deadline: deadline})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return res
+	}
+	// Pre-invocation floor: the wall budget is spent → no call.
+	blocking := &dynModel{delegated: func(req model.ExecutionRequest) (*model.ExecutionResponse, error) {
+		time.Sleep(3 * time.Second)
+		return okDelegated(req)
+	}}
+	if r := run("floor", blocking, time.Now().Add(-time.Second), 30*time.Second); r.Outcome != "provider-error" || blocking.delegCall != 0 {
+		t.Fatalf("spent budget must witness provider-error without a call: %+v %d", r, blocking.delegCall)
+	}
+	// Context deadline during the call: min(turn timeout, remaining).
+	ctxModel := &dynModel{delegated: func(req model.ExecutionRequest) (*model.ExecutionResponse, error) {
+		<-time.After(2 * time.Second)
+		return nil, errors.New("late")
+	}}
+	start := time.Now()
+	if r := run("ctx", ctxModel, time.Now().Add(time.Hour), 200*time.Millisecond); r.Outcome != "provider-error" {
+		t.Fatalf("%+v", r)
+	}
+	_ = start
+	// Empty output: completed, empty object, framed as such.
+	empty := &dynModel{delegated: func(req model.ExecutionRequest) (*model.ExecutionResponse, error) {
+		r, _ := okDelegated(req)
+		r.Content = ""
+		return r, nil
+	}}
+	if r := run("empty", empty, time.Now().Add(time.Hour), 30*time.Second); r.Outcome != "completed" || len(r.Output) != 0 || r.OutputObjectID == "" {
+		t.Fatalf("%+v", r)
+	}
+	// Unreported identity is not a mismatch.
+	unreported := &dynModel{delegated: func(req model.ExecutionRequest) (*model.ExecutionResponse, error) {
+		r, _ := okDelegated(req)
+		r.Identity.Reported = ""
+		return r, nil
+	}}
+	if r := run("unreported", unreported, time.Now().Add(time.Hour), 30*time.Second); r.Outcome != "completed" {
+		t.Fatalf("%+v", r)
+	}
+}
+
+func registryHashOfTask(t *testing.T, w *world, task string) string {
+	t.Helper()
+	for _, e := range events(t, w, task) {
+		if e.Class == state.EvL4Audit {
+			var b struct{ RegistryHash string }
+			_ = json.Unmarshal(e.Body, &b)
+			return b.RegistryHash
+		}
+	}
+	t.Fatal("no audit")
+	return ""
+}
+
+// C-L8-4 §1: task-scope instructions never carry, even when the parent
+// resolved one.
+func TestTaskScopeNeverCarries(t *testing.T) {
+	m := &dynModel{delegated: okDelegated}
+	w := newWorld(t, m, "", true)
+	const task = "t-taskscope"
+	m.parent = func(turn int, conv []model.Message) model.ExecutionResponse {
+		if turn == 1 {
+			return call("c1", "read_file", `{"path":"go.mod"}`)
+		}
+		return call("c2", "declare_done", `{}`)
+	}
+	if res, err := w.o.SubmitTask(w.envelope(t, task)); err != nil || res.Status != state.StatusCompleted {
+		t.Fatalf("%+v %v", res, err)
+	}
+	seq, id := w.readRef(t, task)
+	policy, _ := instructions.LoadPolicy(filepath.Join(w.root, "policies/security/instruction-directive-patterns.json"))
+	const marker = "TASK-SCOPE-MARKER: prefer the newest version."
+	taskSrc := instructions.Source{Kind: instructions.ScopeTask, Inline: []instructions.Instruction{{ID: "task.note", Scope: instructions.ScopeTask, Category: instructions.CategoryTask, Body: marker}}}
+	sources := []instructions.Source{{Kind: instructions.ScopeHarnessSafety, Root: w.safety},
+		{Kind: instructions.ScopeHarnessSystem, Root: filepath.Join(w.root, "instructions/global/system")}, taskSrc}
+	parent, err := instructions.Resolve(instructions.Config{Policy: policy, TaskID: task}, sources...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := parent.SourceHashes["task.note"]; !ok {
+		t.Fatal("fixture: the parent set must carry the task instruction")
+	}
+	base := orchestration.InstantiationRequest{
+		TaskID: task, Record: w.sroot, Template: "dependency-triage@1",
+		Evidence: []orchestration.EvidenceRef{{Seq: seq, ObjectID: id}}, Brief: "triage",
+		ParentSources: sources, ParentEIS: parent, ParentSensitivityCeiling: hctx.SensitivityPublic,
+		RegistryHash: registryHashOfTask(t, w, task), ToolTrust: func(string) (hctx.AuthorityClass, bool) { return hctx.AuthorityExternalUntrusted, true },
+	}
+	tr, err := w.sroot.CreateTask(task+"-d", state.TaskOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tr.Close()
+	capture, err := w.seam.Instantiate(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.seam.Delegate(orchestration.DelegationRequest{InstantiationRequest: base, Task: tr, ParentCallSeq: seq + 1, CallID: "x",
+		Capture: capture, Model: "dyn", Runtime: m, ModelRegistryHash: "unanchored", TurnTimeout: 30 * time.Second}); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(m.delegReq.Messages[0].Content, marker) {
+		t.Fatal("task-scope instruction carried into the delegated EIS")
 	}
 }

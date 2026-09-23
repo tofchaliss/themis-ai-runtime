@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/tofchaliss/themis/execution"
+	"github.com/tofchaliss/themis/runtime/model"
 	"github.com/tofchaliss/themis/tools"
 )
 
@@ -40,22 +42,30 @@ func TestStaticExecutionBoundWithDelegate(t *testing.T) {
 			{Tool: "delegate", MaxCalls: d, TemplateScope: []string{"dependency-triage@1"}},
 			{Tool: "declare_done", MaxCalls: 6}}}
 	}
-	b := executionBound(wf, c, grant(3, 30), reg)
+	b := executionBound(wf, c, grant(3, 30), reg, nil)
 	if b.Turns != wf.WorstCaseLen || b.Delegations != 3 || b.Executions != wf.WorstCaseLen+3 {
 		t.Fatalf("%+v", b)
+	}
+	// Output captured ≤ min(D,G)·P; wall = Δ from the spec.
+	if b.OutputCaptured != 3*model.DefaultMaxResponseBytes {
+		t.Fatalf("output term: %+v", b)
+	}
+	spec := &execution.ProvisionSpec{Limits: []execution.LimitReq{{Dimension: execution.DimWallDeadlineS, Value: 120}}}
+	if b := executionBound(wf, c, grant(3, 30), reg, spec); b.WallDeadlineS != 120 {
+		t.Fatalf("wall term: %+v", b)
 	}
 	if b.Executions > b.WalkCeiling+b.CallCeiling {
 		t.Fatalf("bound violated: %+v", b)
 	}
 	// min(D, G): a delegate cap above the grant total is bounded by
 	// the total.
-	if b := executionBound(wf, c, grant(50, 30), reg); b.Delegations != 30 {
+	if b := executionBound(wf, c, grant(50, 30), reg, nil); b.Delegations != 30 {
 		t.Fatalf("delegations must be min(D, G): %+v", b)
 	}
 	// No delegate entry: no delegation term.
 	g := grant(3, 30)
 	g.Entries = g.Entries[:1]
-	if b := executionBound(wf, c, g, reg); b.Delegations != 0 || b.Executions != wf.WorstCaseLen {
+	if b := executionBound(wf, c, g, reg, nil); b.Delegations != 0 || b.Executions != wf.WorstCaseLen {
 		t.Fatalf("%+v", b)
 	}
 }

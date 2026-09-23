@@ -1,6 +1,6 @@
 package orchestration
 
-// M0b supporting-layer prerequisites (openspec/changes/l8-subagents
+// M0b supporting-layer prerequisites (openspec/changes/archive/2026-09-23-layer-08-subagents
 // §5.3): F-L8-2 execution identity on model-turn, F-L8-4 the parent
 // turn deadline is min(turn timeout, remaining wall budget). F-L8-3 is
 // asserted in TestVerificationRefusalIsNotAnOutcome.

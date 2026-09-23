@@ -1,7 +1,7 @@
 # Delegation templates (Layer 8)
 
 Governance's registration record for delegation templates
-(`openspec/changes/l8-subagents/design.md`, D-L8-5/6). A delegation
+(`openspec/changes/archive/2026-09-23-layer-08-subagents/design.md`, D-L8-5/6). A delegation
 template is a distinct governed artifact family: not a Skill, not a
 Skill member, never executable. It defines only the bounded composition
 available to one isolated, tool-less, single-call model execution that

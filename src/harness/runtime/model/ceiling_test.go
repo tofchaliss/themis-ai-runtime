@@ -1,6 +1,6 @@
 package model
 
-// P-L8-1 / P-L8-2 (openspec/changes/l8-subagents, M0): the provider
+// P-L8-1 / P-L8-2 (openspec/changes/archive/2026-09-23-layer-08-subagents, M0): the provider
 // response ceiling and the provider-reported identity, at both
 // adapters. Over-limit → typed termination, nothing parsed; at-limit →
 // an ordinary turn. Mutation: remove the limiter → the over-limit

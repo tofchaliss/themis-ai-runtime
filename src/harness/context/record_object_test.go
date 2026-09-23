@@ -1,6 +1,6 @@
 package context
 
-// L8 amendment to L2 (openspec/changes/l8-subagents §5.2, C-L8-6/7):
+// L8 amendment to L2 (openspec/changes/archive/2026-09-23-layer-08-subagents §5.2, C-L8-6/7):
 // the lazy record-object source, several distinct sources per slot,
 // and the tool:* slot kind.
 

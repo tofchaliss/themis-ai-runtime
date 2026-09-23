@@ -1,6 +1,6 @@
 package orchestration
 
-// The L8 delegation seam boundary (openspec/changes/l8-subagents §5.1,
+// The L8 delegation seam boundary (openspec/changes/archive/2026-09-23-layer-08-subagents §5.1,
 // D-L8-3, C-L8-12/13/17). L7 defines only the boundary types; the
 // implementation lives in subagents/delegation/seam and is injected at
 // service wiring, so L7 keeps zero dependency on the delegation

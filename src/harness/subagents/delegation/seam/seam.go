@@ -1,5 +1,5 @@
 // Package seam is the L8 Delegator implementation
-// (openspec/changes/l8-subagents §5.1, D-L8-2/3/4/8/15/16, C-L8-4..13,
+// (openspec/changes/archive/2026-09-23-layer-08-subagents §5.1, D-L8-2/3/4/8/15/16, C-L8-4..13,
 // C-L8-17..20): L1 Resolve over the parent-subset sources + the
 // template's one instruction → L2 Gather/Compose over the brief and
 // the re-established evidence references → exactly one tool-less

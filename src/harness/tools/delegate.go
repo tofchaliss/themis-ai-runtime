@@ -1,7 +1,7 @@
 package tools
 
 // The `delegate` capability — L4's half of Layer 8 (registry-v5; the L8
-// amendment to the archived L4 layer, openspec/changes/l8-subagents
+// amendment to the archived L4 layer, openspec/changes/archive/2026-09-23-layer-08-subagents
 // §5.2, D-L8-4, D-L8-15, C-L8-5, C-L8-11, C-L8-13). L4 owns: the target
 // class and its exact-scope gate (authorize.go), the closed delegation
 // error classes, the evidence-reference SHAPE, and the executor whose

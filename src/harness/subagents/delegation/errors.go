@@ -1,6 +1,6 @@
 // Package delegation is Layer 8's governed artifact family: the
 // delegation-template registry and the template manifest loader
-// (openspec/changes/l8-subagents, D-L8-5/6). A delegation template is
+// (openspec/changes/archive/2026-09-23-layer-08-subagents, D-L8-5/6). A delegation template is
 // a distinct Governance-registered artifact — not a Skill, not a Skill
 // member, never executable. It defines only the bounded composition
 // available to one isolated, tool-less L8 reasoning execution: a

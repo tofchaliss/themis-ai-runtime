@@ -4,7 +4,7 @@
  "template_version": 1,
  "context_contract": {
   "path": "contract.json",
-  "sha256": "21f6b6b227f44a36e2b9f70eedba6050f5be35bdc36cd4323445e24fa4d33366"
+  "sha256": "1089ccc7242486078026bf9c1fefd856121172d22d40ac347c74d319e22f2091"
  },
  "instruction": {
   "path": "instruction.md",

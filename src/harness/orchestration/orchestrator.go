@@ -88,6 +88,13 @@ type Config struct {
 	// Assembly refuses a task granting a verifier-eligible capability
 	// when no evaluator is wired (fail closed).
 	Verifier VerificationEvaluator
+	// Delegator is the injected L8 delegation seam (D-L8-3): the same
+	// mechanical-composition posture as the verifier — L7 calls no L8
+	// API and interprets nothing; the hook fires only on an authorized
+	// delegation-class capability result. Assembly refuses a phase
+	// exposing such a capability when no delegator is wired, and a
+	// grant template_scope entry the registry does not know.
+	Delegator Delegator
 }
 
 // VerificationEvaluator is the one-way L10 seam. The implementation
@@ -660,10 +667,14 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	}
 	registered := map[string]bool{}
 	verifierEligible := map[string]bool{}
+	delegationClass := map[string]bool{}
 	for _, t := range reg.Tools {
 		registered[t.Name] = true
 		if t.VerifierEligible {
 			verifierEligible[t.Name] = true
+		}
+		if t.Target == tools.TargetDelegationTemplate {
+			delegationClass[t.Name] = true
 		}
 	}
 	declaredEv := map[string]bool{}
@@ -676,6 +687,7 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 			phaseEdges[e.On] = true
 		}
 		exposesVerifier := false
+		exposesDelegation := false
 		for _, c := range p.Capabilities {
 			if !registered[c] {
 				return res, fmt.Errorf("%w: workflow capability %q is not in the registry", ErrAssembly, c)
@@ -683,6 +695,16 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 			if verifierEligible[c] {
 				exposesVerifier = true
 			}
+			if delegationClass[c] {
+				exposesDelegation = true
+			}
+		}
+		if exposesDelegation && o.cfg.Delegator == nil {
+			// Mirror of the verifier check (L8 §5.1): the seam that
+			// would execute the delegation must exist before a phase
+			// may offer the capability — a refusal at assembly, never
+			// a runtime surprise.
+			return res, fmt.Errorf("%w: phase %q exposes delegation capability but no L8 delegator is wired", ErrAssembly, p.Name)
 		}
 		if exposesVerifier {
 			// Declaration-gated verification exposure + reachability
@@ -774,10 +796,21 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 		envn.Teardown()
 		return res, err
 	}
-	table, err := tools.NewExecutorTable(reg, nil)
-	if err != nil {
-		envn.Teardown()
-		return res, err
+	// Grant validation, not call authorization (C-L8-15 G): every
+	// template_scope entry must resolve in the delegation registry in
+	// force, as unregistered phase capabilities are refused. Without a
+	// delegator no entry can be validated, so entries refuse.
+	for _, e := range grant.Entries {
+		for _, ref := range e.TemplateScope {
+			if o.cfg.Delegator == nil {
+				envn.Teardown()
+				return res, fmt.Errorf("%w: grant %q names template_scope %q but no L8 delegator is wired to validate it", ErrAssembly, e.Tool, ref)
+			}
+			if err := o.cfg.Delegator.Registered(ref); err != nil {
+				envn.Teardown()
+				return res, fmt.Errorf("%w: grant %q template_scope entry %q does not resolve: %v", ErrAssembly, e.Tool, ref, err)
+			}
+		}
 	}
 
 	// Root disjointness at its designed call site (Q-L6-4/D-L7-10).
@@ -791,7 +824,7 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 	// with one, the activated skill source joins it — resolved and
 	// byte-verified here so the walk never re-reads instruction bytes
 	// from mutable storage (D-L9-11).
-	eis, procedureBytes, err := o.resolveTaskEIS(env)
+	eis, procedureBytes, parentSources, err := o.resolveTaskEIS(env)
 	if err != nil {
 		envn.Teardown()
 		return res, err
@@ -895,10 +928,36 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 		return res, err
 	}
 
+	// The executor table is built with the task in hand so the
+	// delegate executor's compose half is bound to THIS record (L8
+	// M2/M4): a read handle, the parent's activated sources, and the
+	// registry-in-force for class derivation. Nil delegator = the
+	// executor fails closed at the call; assembly already refused any
+	// phase that could reach it.
+	instBase := InstantiationRequest{
+		TaskID: env.TaskID, Root: o.root, ParentSources: parentSources, RegistryHash: reg.Hash,
+		ToolTrust: func(tool string) (l2.AuthorityClass, bool) {
+			for i := range reg.Tools {
+				if reg.Tools[i].Name == tool {
+					return reg.Tools[i].Trust, true
+				}
+			}
+			return "", false
+		},
+	}
+	var inst tools.DelegationInstantiator
+	if o.cfg.Delegator != nil {
+		inst = delegationInstantiator{d: o.cfg.Delegator, base: instBase}
+	}
+	table, err := tools.NewExecutorTableWith(reg, nil, inst)
+	if err != nil {
+		envn.Teardown()
+		return res, err
+	}
 	w := &walk{
 		o: o, env: env, wf: wf, reg: reg, grant: grant, table: table,
 		task: task, l5: envn, execCeiling: execCeiling, spec: spec,
-		contract: contract, eis: eis,
+		contract: contract, eis: eis, instBase: instBase,
 	}
 	return w.run()
 }
@@ -940,7 +999,7 @@ func recordMaterializedArtifacts(task *state.TaskRecord, materialized map[string
 // source. Byte verification against the envelope's stated pin happens
 // inside the activation seam: L7 resolves no skill and consults no
 // catalog — it verifies bytes against a hash it was given.
-func (o *Orchestrator) resolveTaskEIS(env *Envelope) (*instructions.EffectiveSet, []byte, error) {
+func (o *Orchestrator) resolveTaskEIS(env *Envelope) (*instructions.EffectiveSet, []byte, []instructions.Source, error) {
 	sources := []instructions.Source{
 		{Kind: instructions.ScopeHarnessSafety, Root: o.cfg.SafetyRoot},
 		{Kind: instructions.ScopeHarnessSystem, Root: o.cfg.SystemRoot},
@@ -958,11 +1017,11 @@ func (o *Orchestrator) resolveTaskEIS(env *Envelope) (*instructions.EffectiveSet
 		// repository activation path performs before reading.
 		info, err := os.Lstat(env.SkillProcedurePath)
 		if err != nil || !info.Mode().IsRegular() {
-			return nil, nil, fmt.Errorf("%w: skill procedure must be a regular file", ErrAssembly)
+			return nil, nil, nil, fmt.Errorf("%w: skill procedure must be a regular file", ErrAssembly)
 		}
 		procedure, err := os.ReadFile(env.SkillProcedurePath)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%w: skill procedure: %v", ErrAssembly, err)
+			return nil, nil, nil, fmt.Errorf("%w: skill procedure: %v", ErrAssembly, err)
 		}
 		// The procedure becomes model INSTRUCTION text, so its identity is
 		// verified against bytes L7 hashed itself — never by comparing two
@@ -970,19 +1029,19 @@ func (o *Orchestrator) resolveTaskEIS(env *Envelope) (*instructions.EffectiveSet
 		// (the option-A state D-L9-11a rejected; M5 review HIGH-1).
 		if c := env.Composition; c != nil {
 			if err := c.verify("procedure", c.Procedure, hashBytes(procedure)); err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 		}
 		src, err := instructions.ActivateSkillSource(procedure, env.SkillProcedureSHA256)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%w: %v", ErrAssembly, err)
+			return nil, nil, nil, fmt.Errorf("%w: %v", ErrAssembly, err)
 		}
 		procedureBytes = procedure
 		sources = append(sources, src)
 	}
 	eis, err := instructions.Resolve(instructions.Config{Policy: o.policy, TaskID: env.TaskID}, sources...)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if declaredProcedure {
 		// A declared procedure is a MANDATORY member of the composition,
@@ -1000,15 +1059,15 @@ func (o *Orchestrator) resolveTaskEIS(env *Envelope) (*instructions.EffectiveSet
 			}
 		}
 		if !delivered {
-			return nil, nil, fmt.Errorf("%w: the declared skill procedure was not admitted into the instruction set (%d conflict(s)) — the submitted composition cannot be affirmed", ErrAssembly, len(eis.Conflicts))
+			return nil, nil, nil, fmt.Errorf("%w: the declared skill procedure was not admitted into the instruction set (%d conflict(s)) — the submitted composition cannot be affirmed", ErrAssembly, len(eis.Conflicts))
 		}
 	}
 	// Render at assembly, mirroring Open's rule: an unrenderable
 	// instruction configuration fails the task here, not mid-walk.
 	if _, _, err := eis.Render(o.policy); err != nil {
-		return nil, nil, fmt.Errorf("%w: %v", ErrAssembly, err)
+		return nil, nil, nil, fmt.Errorf("%w: %v", ErrAssembly, err)
 	}
-	return eis, procedureBytes, nil
+	return eis, procedureBytes, sources, nil
 }
 
 func checkControlVocabulary(reg *tools.Registry) error {
@@ -1199,4 +1258,15 @@ func scopeDigest(scope []string) string {
 func hashBytes(b []byte) string {
 	sum := sha256.Sum256(b)
 	return hex.EncodeToString(sum[:])
+}
+
+// modelRegistryHash is the anchor-pinned model registry identity the
+// record names for a delegation's governed model identity (C-L8-10):
+// the pin, "absent" when the anchor declares none, "unanchored" in the
+// test-harness caller role.
+func (o *Orchestrator) modelRegistryHash() string {
+	if o.anchor != nil {
+		return o.anchor.ModelRegistry
+	}
+	return "unanchored"
 }

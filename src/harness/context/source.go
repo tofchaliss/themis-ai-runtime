@@ -33,7 +33,24 @@ const (
 	// typed contract as a stub (gate-0 decision); real wiring waits
 	// for integrations/themis.
 	KindThemis SourceKind = "themis"
+	// KindRecordObject (L8 amendment, C-L8-7): a lazy read of ONE
+	// content-addressed L6 object the L8 seam already resolved and
+	// classified from its witnessing event. Metadata-only
+	// construction: the seam supplies the object id, the item kind,
+	// and the DERIVED class/sensitivity (class(item) = f(witnessing
+	// event), C-L8-18); collect() fetches the bytes through the
+	// reader and verifies them against the address, so L2 pulls
+	// evidence under its own caps and the seam reads no bytes.
+	KindRecordObject SourceKind = "record-object"
 )
+
+// ObjectReader is the typed read seam to the content-addressed store
+// (L6). L2 never learns where objects live; a read failure is a hard
+// error (a named reference that cannot be read is a refusal, never a
+// silent absence), and the reader's own corruption verdict propagates.
+type ObjectReader interface {
+	GetObject(id string) ([]byte, error)
+}
 
 // allowedClasses is the registration constraint table: a source kind
 // can only mint the classes its provenance can actually prove.
@@ -42,6 +59,10 @@ var allowedClasses = map[SourceKind][]AuthorityClass{
 	KindFilesystem: {AuthorityExternalUntrusted},
 	KindSearch:     {AuthorityExternalUntrusted},
 	KindThemis:     {AuthorityGovernedRecord, AuthorityGovernedExternal},
+	// The record-object kind carries whatever class the witnessing
+	// event derived (C-L8-5): the registration is the event, and the
+	// seam that read it is deterministic machinery, not a caller.
+	KindRecordObject: {AuthorityGovernedRecord, AuthorityGovernedExternal, AuthorityDerived, AuthorityExternalUntrusted},
 }
 
 // Source is a registered context source. Authority and Sensitivity
@@ -64,6 +85,10 @@ type Source struct {
 	Suffix string
 	// KindThemis: the typed read contract (stub in v1).
 	Reader ThemisReader
+	// KindRecordObject: the content address to fetch and the reader;
+	// Items[0].Kind / Version carry the item metadata (exactly one).
+	ObjectID string
+	Objects  ObjectReader
 }
 
 // ThemisReader is the typed seam to the Themis-owned data-access
@@ -160,6 +185,32 @@ func (s Source) collect() (items []ContextItem, available bool, err error) {
 	}
 
 	switch s.Kind {
+	case KindRecordObject:
+		if s.ObjectID == "" && len(s.Items) == 0 {
+			// Declared absence: the seam names every non-withheld slot
+			// and this one has no reference — the slot's requirement
+			// decides (optional → typed absence; required → refusal).
+			return nil, false, nil
+		}
+		if s.Objects == nil || s.ObjectID == "" || len(s.Items) != 1 {
+			return nil, false, fmt.Errorf("%w: record-object source %s needs a reader, an object id, and exactly one item declaration", ErrUnrecognizedSource, s.Name)
+		}
+		b, err := s.Objects.GetObject(s.ObjectID)
+		if err != nil {
+			// Hard error, never "unavailable": the reference was named
+			// and re-established; a read failure refuses the whole
+			// gather (C-L8-8 §5), and a corruption verdict propagates.
+			return nil, false, fmt.Errorf("%w: record-object source %s: %w", ErrUnrecognizedSource, s.Name, err)
+		}
+		if "sha256:"+evidenceHash(b) != s.ObjectID {
+			return nil, false, fmt.Errorf("%w: record-object source %s: bytes do not match their content address", ErrUnrecognizedSource, s.Name)
+		}
+		it, err := stamp(ContextItem{Kind: s.Items[0].Kind, Version: s.Items[0].Version}, b, "")
+		if err != nil {
+			return nil, false, err
+		}
+		return []ContextItem{it}, true, nil
+
 	case KindInline:
 		for _, raw := range s.Items {
 			it, err := stamp(ContextItem{Kind: raw.Kind, Version: raw.Version}, raw.Evidence, "")

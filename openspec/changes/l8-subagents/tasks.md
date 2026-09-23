@@ -181,24 +181,26 @@ reopens D-L8-1..21.
 
 ## 5. L8-M4 — Delegator seam + L7 wiring (Class 3; L7 archived-layer amendment)
 
-- [ ] `orchestration.Config.Delegator` one-way interface (one method):
+- [x] `orchestration.Config.Delegator` one-way interface (three entry
+      points after C-L8-12 Am. 1/C-L8-13 — Registered / Instantiate /
+      Delegate; one post-hook call site; 2026-09-23):
       inputs `{task id, model identity, call id, args, parent_call_seq}`
       + a read handle on the task record; **no conversation, response,
       or system-message type in the signature** (C-L8-17; wall test by
       AST)
-- [ ] Assembly: a phase exposing `delegate` with nil delegator →
+- [x] Assembly: a phase exposing `delegate` with nil delegator →
       `ErrAssembly` (mirror of the verifier check); `delegate` must be
       in ceiling `allowed_tools`; every grant `template_scope` entry
       must resolve in the template registry (grant validation, not
       call authorization — C-L8-15 G)
-- [ ] Loop post-hook `isDelegation` (registry classification, never an
+- [x] Loop post-hook `isDelegation` (registry classification, never an
       authorization branch) → seam → paired tool-result re-entry via
       the existing `frameToolResult` path with the `delegate` entry's
       `trust` (`authority: external-untrusted`, `hash:` = output object
       id); non-completed outcomes as unframed typed errors from the
       closed class set; the branch never calls `w.step` (C-L8-11);
       sequential in request order (D-L8-16 §6)
-- [ ] Seam: resolve template (stage B refusals typed, no event, no
+- [x] Seam: resolve template (stage B refusals typed, no event, no
       objects) → L1 `Resolve` over parent-subset sources + optional
       template instruction (a new resolution epoch, hashed) → L2
       `Gather`/`Compose` — the brief as its own `external-untrusted`
@@ -231,20 +233,25 @@ reopens D-L8-1..21.
       after the pre-invocation floor check (C-L8-19 H); `output-over-bound`
       path per D-L8-16 §5 (full storage, typed failure re-entry, no
       truncation)
-- [ ] `faultAt` points: `delegation.pre-composition-store`,
+- [x] `faultAt` points: `delegation.pre-composition-store`,
       `delegation.pre-output-store`, `delegation.pre-event-commit`
-- [ ] Not-a-second-L7 wall test (D-L8-21 §3): imports, single
+- [x] Not-a-second-L7 wall test (D-L8-21 §3): imports, single
       `Execute` whose `Model:` is the L7-supplied identity (mutation:
       constant → fails), no model-name literal, no registry access,
       single call site, no goroutines, single event literal,
       `controlVerbs`/`verificationEvents` unchanged
-- [ ] **F-L8-2:** parent `model-turn` body gains `Identity` + `Endpoint`
+- [x] **F-L8-2:** parent `model-turn` body gains `Identity` + `Endpoint`
       (additive; no constitution change); `l8-delegation.model_identity`
       = `{governed{name, registry_hash}, execution{...}}`; stage C
       outcome `model-identity-mismatch` when reported ≠ requested
       (C-L8-10)
-- [ ] Amendment record under
+- [x] Amendment record under
       `openspec/changes/archive/2026-09-07-layer-07-orchestration/amendments/l8-delegation-seam/`
+- [x] Landed 2026-09-23 — see the L7 archive amendment
+      `amendments/l8-delegation-seam/` (seam, assembly, post-hook,
+      walls, 17/17 mutation probes) and the L2/L1 amendments
+      `l8-record-object-source/`, `l8-delegation-source/`. Residual:
+      per-item `derived_sensitivity` is the floor rank in v1.
 
 ## 6. L8-M5 — Record, reconstruction, observation (Class 2/3)
 

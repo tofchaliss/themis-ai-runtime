@@ -137,9 +137,19 @@ func (c *Contract) slot(name string) *Slot {
 
 // kindMatches: a slot with kind "file:*" accepts any filesystem item;
 // otherwise exact match. Mechanical, never semantic.
+// KindMatches is the slot-kind routing rule, exported for the L8 seam
+// (C-L8-14 C): a reference is assigned to the unique non-withheld slot
+// whose kind matches its event-derived kind, by THIS rule and no other.
+func KindMatches(slotKind, itemKind string) bool { return kindMatches(slotKind, itemKind) }
+
 func kindMatches(slotKind, itemKind string) bool {
 	if slotKind == "file:*" {
 		return strings.HasPrefix(itemKind, "file:")
+	}
+	// tool:* (L8 amendment, C-L8-17 F): a slot for any recorded tool
+	// result, whose kind is "tool:<name>" from the l4-audit.
+	if slotKind == "tool:*" {
+		return strings.HasPrefix(itemKind, "tool:")
 	}
 	return slotKind == itemKind
 }

@@ -18,7 +18,12 @@ a parent task may request through the `delegate` capability.
   ⊆ `{repository, directory, skill}`, `brief {slot, max_bytes}`,
   `max_output_bytes`. The hash of these bytes is the template's
   identity and covers every pinned byte.
-- `<name>/contract.json` — an ordinary Layer 2 context contract.
+- `<name>/contract.json` — an ordinary Layer 2 context contract. Its
+  slots are kind-routed: the brief slot (kind `delegation-brief`), and
+  evidence slots by the referenced item's event-derived kind —
+  `tool:*` (any recorded tool result), `model-turn` (a parent model
+  turn), `delegation-output` (a prior delegation's output). A
+  reference that fits zero or more than one non-withheld slot refuses.
 - `<name>/instruction.md` — at most one skill-scope instruction file.
 
 The harness only reads this directory (`src/harness/subagents/

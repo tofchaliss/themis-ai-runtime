@@ -189,7 +189,7 @@ func recordedSystemMessage(t *testing.T, f *fixture, taskID, envelopePath string
 	if err != nil {
 		return "", err
 	}
-	eis, _, err := f.o.resolveTaskEIS(env)
+	eis, _, _, err := f.o.resolveTaskEIS(env)
 	if err != nil {
 		return "", err
 	}

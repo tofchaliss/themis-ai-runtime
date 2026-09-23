@@ -3,7 +3,11 @@
 Updated at every green milestone. If context was compacted, start here.
 
 ## One-line status
-2026-09-23 (M3): L6 `l8-delegation` class + body closure LANDED. Next:
+2026-09-23 (M4): seam + L7 wiring LANDED — positive walk, stage A/B,
+assembly, post-instance outcomes, fault points, carry filter, walls;
+17/17 probes killed. Next: M5 (record/reconstruction/observation,
+Register C/D) then M6 (anchor `rsys@4`, live proof, reviews, archive).
+Earlier (M3): L6 `l8-delegation` class + body closure LANDED. Next:
 M4 (seam + L7 wiring) after its Gate 1 section here — the largest
 milestone; read D-L8-2/3, C-L8-5..10, C-L8-17..19 before designing.
 Earlier: M2 LANDED (L4 `delegate`: target class,
@@ -109,9 +113,25 @@ present iff the outcome could produce one; `Encode`/`Decode`
 canonical; `SortEvidence` refuses duplicates, never dedups).
 Constitution hash changes → `rsys@4` re-pin at M6.
 
+## Gate 1 — M4 (seam + L7 wiring) design against §5.1/§5.2
+
+Recorded in full in the L7 archive amendment
+`amendments/l8-delegation-seam/AMENDMENT.md` (boundary types, assembly,
+post-hook, seam steps, walls). Classifications made at this gate:
+(1) the seam has three entry points (Registered / Instantiate /
+Delegate) — C-L8-13's instantiation half needs its own entry;
+(2) L2 `Gather` accepts several distinct sources per slot (C-L8-6
+assumed it; code refused it) — recorded as part of the §5.2 L2
+amendment, parent path unchanged; (3) declared-absence record-object
+sources so the seam names every non-withheld slot; (4) the P0
+contract's slots are kind-routed (`tool:*`, `model-turn`,
+`delegation-output`) — re-pinned in place because no registration act
+had occurred; (5) `derived_sensitivity` = floor rank (residual).
+
 ## Milestone log
 - [x] M0 — green 2026-09-23 (ceiling at both adapters; registry narrows; mutation-probed)
 - [x] M0b — green 2026-09-23 (F-L8-2/3/4; F-L8-3 residual: second-load window)
+- [x] M4 — green 2026-09-23 (subagents/delegation/seam e2e + walls; L2/L1 amendments)
 - [x] M3 — green 2026-09-23 (state vocabulary 16; delegation event tests)
 - [x] M2 — green 2026-09-23 (tools/delegate_test.go; digest cases; skills surface test)
 - [x] M1 — green 2026-09-23 (full hermetic suite green; owner
@@ -155,3 +175,20 @@ Constitution hash changes → `rsys@4` re-pin at M6.
    a chained command's `&&` broke before the vet step and the commit
    still ran. Fixed in the follow-up commit; lesson: never chain a
    commit behind steps whose failure the chain can skip past.
+9. **L2 refused two sources per slot** ("assigned twice") while C-L8-6
+   requires one source per evidence reference in one slot; amended
+   (distinct sources merge, same source twice still refused).
+10. **L2 requires every non-withheld slot assigned** — the seam
+   declares absence with an empty record-object source; the parent
+   path never needed this because its contract has one slot.
+11. **Two probes survived as mutual cover** (existence vs selectable
+   witness; selectable map vs deriveClass default) — folded into one
+   predicate each; now killed. The class again: a rule stated twice
+   lets either copy rot.
+12. **Sensitivity derivation is degenerate** (floor rank for every
+   reference) — no per-item sensitivity exists on l4-audit/model-turn.
+13. **The dynamic test model reads the record to build references** —
+   a test convenience; a real model derives `<seq>:<id>` from what it
+   saw (the framed hash equals the object hash; the seq is not shown
+   to the model today — the live proof at M6 will tell whether a model
+   can form a reference without it; likely an L7 furniture gap).

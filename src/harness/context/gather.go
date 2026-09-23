@@ -90,10 +90,15 @@ func Gather(contract *Contract, assignments []Assignment) (*Gathered, error) {
 		if slot.Withhold {
 			return nil, fmt.Errorf("%w: slot %q is withheld by the contract; the plan must not gather it", ErrPlanOutsideContract, a.Slot)
 		}
-		if assigned[a.Slot] {
+		// A slot may receive several DISTINCT sources (L8 amendment,
+		// C-L8-6: one source per evidence reference, all in the
+		// template's evidence slot); the same source twice is still a
+		// malformed plan. Items sort by (Kind, Hash) within the slot
+		// regardless of source, so presentation stays the contract's.
+		if assigned[a.Slot+"\x00"+a.Source.Name] {
 			return nil, fmt.Errorf("%w: slot %q assigned twice", ErrPlanOutsideContract, a.Slot)
 		}
-		assigned[a.Slot] = true
+		assigned[a.Slot+"\x00"+a.Source.Name] = true
 		if err := checkSource(a.Source); err != nil {
 			return nil, wrap(a.Source, err)
 		}
@@ -124,6 +129,10 @@ func Gather(contract *Contract, assignments []Assignment) (*Gathered, error) {
 				return nil, fmt.Errorf("%w: item kind %q does not fill slot %q (kind %q)", ErrPlanOutsideContract, it.Kind, slot.Name, slot.Kind)
 			}
 		}
+		// Merge with any source already delivered into this slot, then
+		// order the WHOLE slot by (Kind, Hash): caller order and source
+		// boundaries carry no presentation meaning (Q-L3-4; C-L8-6).
+		items = append(append([]ContextItem(nil), g.items[slot.Name]...), items...)
 		sort.SliceStable(items, func(i, j int) bool {
 			if items[i].Kind != items[j].Kind {
 				return items[i].Kind < items[j].Kind

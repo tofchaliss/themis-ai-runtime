@@ -749,13 +749,24 @@ func TestExportedAPIClosure(t *testing.T) {
 		// the hook fires only in the governed result-processing path
 		// (no query channel).
 		"GateCond": true, "VerificationEvaluator": true, "VerificationOutcome": true,
+		// L8 delegation-seam amendment (D-L8-3, C-L8-17): the one-way
+		// injected seam's boundary types — requests carry a record
+		// handle and selectors, never the conversation (pinned by
+		// TestDelegatorInterfaceCarriesNoConversation); the seam fires
+		// only in the governed result-processing path.
+		"Delegator": true, "InstantiationRequest": true, "DelegationRequest": true,
+		"DelegationResult": true, "DelegationRefusal": true, "EvidenceRef": true,
 	}
 	allowFuncs := map[string]bool{
 		"Open": true, "LoadEnvelope": true, "LoadWorkflow": true, "LoadWorkflowCeiling": true,
 		"ConstitutionHash": true,
+		// Register C fault injection for the seam's three points; SetFault
+		// is test wiring (production never installs a fault).
+		"FaultAt": true, "SetFault": true,
 	}
 	allowMethods := map[string]bool{
 		"Orchestrator.SubmitTask": true, "Orchestrator.ReadStatus": true,
+		"DelegationRefusal.Error": true, "delegationInstantiator.Instantiate": true,
 	}
 	fset := token.NewFileSet()
 	pkgs, err := parser.ParseDir(fset, ".", func(fi os.FileInfo) bool {

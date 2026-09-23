@@ -4,7 +4,7 @@
     {
       "name": "dependency-triage",
       "version": 1,
-      "template_sha256": "0a0328e136566e27ba5a89963778aee8cf7f17c6fb97805957a1366d08cb433c",
+      "template_sha256": "f184b8f33de9ce995731adee5d660d2eb9720822c0b1947ba9d1afd5b39507d4",
       "manifest_path": "dependency-triage/template.json",
       "state": "active",
       "steward": "security-engineering"

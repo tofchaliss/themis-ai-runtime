@@ -47,6 +47,9 @@ type walk struct {
 	execCeiling *execution.WorkspaceExecutionCeiling
 	spec        *execution.ProvisionSpec
 	contract    *l2.Contract
+	// instBase is the per-task base of every delegation instantiation
+	// request (L8 M4): read handle, parent sources, registry-in-force.
+	instBase InstantiationRequest
 	// eis is the task's instruction set, resolved ONCE at assembly
 	// (D-L9-11): the walk holds instruction bytes, never a path it
 	// would re-read per phase.
@@ -252,7 +255,33 @@ func (w *walk) runPhase() (string, error) {
 			// the conversation, keeping the tool_call/result protocol
 			// pairing intact (security review MED-2: a dropped result
 			// would let model behavior steer provider-protocol errors).
-			conversation = append(conversation, msg)
+			// The one exception is an AUTHORIZED delegation call: its
+			// executor evidence is the instantiation capture, which the
+			// model never sees (C-L8-12: "model observes: nothing");
+			// the paired message is the delegation's own result below.
+			delegated := audit.Decision == "authorized" && w.isDelegation(call.Name)
+			if !delegated {
+				conversation = append(conversation, msg)
+			}
+
+			// Delegation post-hook (L8 M4, D-L8-8 steps 5-10): the
+			// l4-audit at aev.Seq witnesses the authorized, instantiated
+			// request; the seam re-derives, executes one tool-less call,
+			// stores, and commits the witness; the result re-enters as
+			// the paired tool message. No δ step: an l8-delegation is
+			// execution history, never workflow vocabulary (D-L8-15).
+			if delegated {
+				var capture []byte
+				if ev != nil {
+					capture = ev.Evidence
+				}
+				dmsg, derr := w.delegate(call, aev.Seq, capture)
+				if derr != nil {
+					return "", derr
+				}
+				conversation = append(conversation, dmsg)
+				continue
+			}
 
 			// Verifier-eligible capability result → the injected L10
 			// evaluator (D-L10-6 stages 4-5, mechanical composition at

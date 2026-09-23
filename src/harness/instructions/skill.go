@@ -54,3 +54,24 @@ func ActivateSkillSource(procedure []byte, pinnedSHA256 string) (Source, error) 
 	}
 	return Source{Kind: ScopeSkill, Inline: []Instruction{inst}, activated: true}, nil
 }
+
+// delegationInstructionID is the fixed identity of a delegation
+// template's pinned instruction file (L8 amendment, C-L8-4): a second
+// skill-scope member so a carried parent procedure and the template's
+// own rules coexist without one shadowing the other. Fixed, not
+// derived from the template name — the consumer interprets nothing
+// about templates; identity travels in the l8-delegation witness.
+const delegationInstructionID = "skill.delegation"
+
+// ActivateDelegationSource is ActivateSkillSource for a delegation
+// template's instruction file: the same byte-integrity rule, the same
+// untrusted tier, the same unshadowable constitution — under the
+// delegation id. The only source a template may add (C-L8-4 §3).
+func ActivateDelegationSource(instruction []byte, pinnedSHA256 string) (Source, error) {
+	src, err := ActivateSkillSource(instruction, pinnedSHA256)
+	if err != nil {
+		return Source{}, err
+	}
+	src.Inline[0].ID = delegationInstructionID
+	return src, nil
+}

@@ -363,6 +363,15 @@ func Handle(reg *Registry, grant *Grant, table map[string]Executor, call model.T
 // fence-end--. The fence is content-derived and lengthened past any
 // collision, the same discipline as chooseFence.
 func frameToolResult(name, trust, hash string, evidence []byte) string {
+	return FrameToolResult(name, trust, hash, evidence)
+}
+
+// FrameToolResult is the frame renderer, exported for the ONE other
+// tool-result producer: L7's re-entry of an established delegation's
+// output under the delegate capability's registered trust (L8
+// amendment, C-L8-11 A/G) — the identical code path as any fetched
+// result, so no second framing exists.
+func FrameToolResult(name, trust, hash string, evidence []byte) string {
 	fence := "~~tool-" + hash[:12]
 	for bytes.Contains(evidence, []byte(fence)) {
 		fence += "~"

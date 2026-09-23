@@ -56,6 +56,14 @@ func New(registryPath string, policy *instructions.Policy) (*Seam, error) {
 // RegistryHash is the identity of the registry in force (anchor pin).
 func (s *Seam) RegistryHash() string { return s.registry.Hash }
 
+// CheckDisjoint: the registry root must be disjoint from every
+// task-writable root, or write_file could author a template the
+// machinery accepts (the L9 catalog / L10 registry rule). Deployment
+// wiring MUST check this before serving delegations.
+func (s *Seam) CheckDisjoint(taskWritableRoots ...string) error {
+	return state.CheckDisjointRoots(append([]string{s.registry.Root()}, taskWritableRoots...)...)
+}
+
 // Registered: assembly-time grant validation (C-L8-15 G).
 func (s *Seam) Registered(ref string) error {
 	_, _, err := s.registry.Resolve(ref)

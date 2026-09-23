@@ -3,7 +3,11 @@
 Updated at every green milestone. If context was compacted, start here.
 
 ## One-line status
-2026-09-23 (M5): record/reconstruction/observation LANDED (Register C
+2026-09-23 (M6 code): anchor pin, `rsys@4` PROPOSED with its four
+companion proposals, themis-run wiring, record-ref furniture, anchored
+Register B green, live walk admitted (model did not delegate). Next:
+three Class-3 reviews in worktrees → remediate → traceability →
+archive. Earlier (M5): record/reconstruction/observation LANDED (Register C
 verdicts from L6 alone, projection, static bound, L10 observation).
 Next: M6 — anchor pin `delegation_template_registry` + `rsys@4`
 PROPOSED, themis-run wiring (registry-v5 + seam), Register B anchored
@@ -135,9 +139,27 @@ contract's slots are kind-routed (`tool:*`, `model-turn`,
 `delegation-output`) — re-pinned in place because no registration act
 had occurred; (5) `derived_sensitivity` = floor rank (residual).
 
+## Gate 1 — M6 classifications
+
+(1) **Record-ref furniture:** the model could not form `<seq>:<id>`
+from a framed result (gap 13); L7 now appends `record-ref:
+<seq>:<objectID>` after the frame of every authorized evidence-bearing
+tool result and after a completed delegation's frame (the l8 seq +
+output id). Deterministic, record-derived, outside the fence, part of
+the projection. Implementation detail of L7 furniture; no authority.
+(2) **`report-valid@2`:** an L10 contract pins the L4 registry hash it
+is eligible under, so registry-v5 needs its own contract — a
+consequence, not a decision; PROPOSED beside `rsys@4`.
+(3) **`remediate-dependency@2`:** the delegating Skill is a new version
+(immutable @1); only ceiling `allowed_tools`, ANALYZE capabilities,
+the grant template, the gate token, and the procedure's method text
+changed. @1's procedure uses `## ` headings the renderer refuses —
+@1 cannot instantiate today (pre-existing, owner).
+
 ## Milestone log
 - [x] M0 — green 2026-09-23 (ceiling at both adapters; registry narrows; mutation-probed)
 - [x] M0b — green 2026-09-23 (F-L8-2/3/4; F-L8-3 residual: second-load window)
+- [~] M6 — code green 2026-09-23; reviews, traceability, archive pending; owner acts listed in tasks.md §7
 - [x] M5 — green 2026-09-23 (reconstruct.go, projection.go, L10 view; probes killed)
 - [x] M4 — green 2026-09-23 (subagents/delegation/seam e2e + walls; L2/L1 amendments)
 - [x] M3 — green 2026-09-23 (state vocabulary 16; delegation event tests)
@@ -208,3 +230,15 @@ had occurred; (5) `derived_sensitivity` = floor rank (residual).
 15. **Verdict precedence:** a discrepancy and a missing input can both
    occur; DISCREPANCY wins (a defect signal must not be hidden by an
    availability fact). First draft let the missing input win.
+16. **remediate-dependency@1 cannot instantiate:** its `procedure.md`
+   carries `## ANALYZE` / `## REMEDIATE`, which the L1 renderer refuses
+   as reserved H2 furniture. Never exercised by a test (the verification
+   e2e uses a hand-written workflow). Owner: re-register as @2's
+   sibling or accept @2 as its replacement.
+17. **Live model did not delegate** (qwen2.5:7b declared done in
+   ANALYZE, then stalled in REMEDIATE): admission + typed terminal
+   evidenced; delegation-through-a-live-model not. Same class as
+   `TestLiveWalkProof`'s coupling to model behaviour.
+18. **Anchor field is mandatory:** pre-amendment anchors (`rsys2.json`)
+   no longer load — by the "declaration, never a default" rule; the
+   loader test worlds gained the field.

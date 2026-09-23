@@ -42,7 +42,7 @@ func ProjectDelegationMessage(root *state.Root, taskID string, seq int64, trust 
 			if len(hash) > 7 && hash[:7] == "sha256:" {
 				hash = hash[7:]
 			}
-			return tools.FrameToolResult("delegate", trust, hash, out), nil
+			return tools.FrameToolResult("delegate", trust, hash, out) + recordRefLine(seq, body.OutputObjectRef), nil
 		case "provider-error":
 			return `{"error":"` + string(tools.ErrDelegationProviderError) + `"}`, nil
 		case "output-over-bound":

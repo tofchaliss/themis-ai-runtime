@@ -111,6 +111,13 @@ func (r *DelegationRefusal) Error() string { return "delegation-refused:" + r.Re
 // injector for tests in other packages; production never sets one.
 func SetFault(f func(point string) error) { fault = f }
 
+// recordRefLine renders the record-reference furniture appended after
+// a framed result: the witnessing event's seq and the object's content
+// address — exactly the `<seq>:<id>` an evidence argument names.
+func recordRefLine(seq int64, objectID string) string {
+	return fmt.Sprintf("record-ref: %d:%s\n", seq, objectID)
+}
+
 // FaultAt exposes the Register C fault-injection seam to the delegation
 // implementation for its three new points (delegation.pre-composition-
 // store, delegation.pre-output-store, delegation.pre-event-commit).
@@ -207,7 +214,7 @@ func (w *walk) delegate(call model.ToolCall, parentCallSeq int64, capture []byte
 		if len(hash) > len("sha256:") && hash[:7] == "sha256:" {
 			hash = hash[7:]
 		}
-		content = tools.FrameToolResult(call.Name, trust, hash, res.Output)
+		content = tools.FrameToolResult(call.Name, trust, hash, res.Output) + recordRefLine(res.Seq, res.OutputObjectID)
 	case "provider-error":
 		content = `{"error":"` + string(tools.ErrDelegationProviderError) + `"}`
 	case "output-over-bound":

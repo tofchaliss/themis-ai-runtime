@@ -29,8 +29,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/tofchaliss/themis/instructions"
 	"github.com/tofchaliss/themis/orchestration"
 	"github.com/tofchaliss/themis/runtime/model"
+	dseam "github.com/tofchaliss/themis/subagents/delegation/seam"
 	"github.com/tofchaliss/themis/tools"
 	"github.com/tofchaliss/themis/verification/seam"
 )
@@ -54,7 +56,7 @@ func main() {
 	c := &ctx{}
 	flag.StringVar(&c.repo, "repo", "", "themis-ai-runtime checkout (absolute)")
 	flag.StringVar(&c.deploy, "deploy", "", "deployment root (absolute)")
-	flag.StringVar(&c.anchorFile, "anchor-file", "rsys2.json", "anchor filename")
+	flag.StringVar(&c.anchorFile, "anchor-file", "rsys4.proposed.json", "anchor filename")
 	flag.StringVar(&c.anchorSHA, "anchor-sha256", "", "operator's expected anchor hash")
 	flag.StringVar(&c.pinnedSHA, "pinned-sha", "", "commit to provision at")
 	flag.StringVar(&c.mirrorRepo, "mirror-repo", "demo-vuln-app", "repo under mirror_root")
@@ -140,13 +142,29 @@ func (c *ctx) cfg() orchestration.Config {
 		AnchorsRegistryPath: filepath.Join(r, "policies/deployment/anchors.json"),
 		ExecCeilingPath:     filepath.Join(r, "execution-ceiling.json"),
 		SkillCatalogPath:    filepath.Join(r, "policies/skills/catalog.json"),
-		Model:               &inert{},
-		Verifier:            c.verifier(),
+		// L8: the anchor pins the delegation-template registry; the
+		// seam is built over the row's copy of it.
+		DelegationRegistryPath: filepath.Join(r, "policies/delegation/registry.json"),
+		Model:                  &inert{},
+		Verifier:               c.verifier(),
+		Delegator:              c.delegator(),
 	}
 }
 
+func (c *ctx) delegator() orchestration.Delegator {
+	policy, err := instructions.LoadPolicy(filepath.Join(c.rowDir, "policies/security/instruction-directive-patterns.json"))
+	if err != nil {
+		return nil
+	}
+	s, err := dseam.New(filepath.Join(c.rowDir, "policies/delegation/registry.json"), policy)
+	if err != nil {
+		return nil
+	}
+	return s
+}
+
 func (c *ctx) verifier() orchestration.VerificationEvaluator {
-	l4, err := tools.LoadRegistry(filepath.Join(c.rowDir, "policies/tools/registry-v4.json"))
+	l4, err := tools.LoadRegistry(filepath.Join(c.rowDir, "policies/tools/registry-v5.json"))
 	if err != nil {
 		return nil
 	}

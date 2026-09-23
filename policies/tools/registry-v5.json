@@ -176,7 +176,7 @@
           "name": "evidence",
           "type": "string",
           "required": false,
-          "description": "comma-separated references <seq>:<objectID> into this task's own record"
+          "description": "comma-separated record-ref values (<seq>:<objectID>) shown under this task's own tool results"
         },
         {
           "name": "brief",

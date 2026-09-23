@@ -248,7 +248,7 @@ loader uses — directory pins are `deployment.HashDir`, file pins are
 | `instruction_root_system` | `HashDir($REPO/instructions/global/system)` |
 | `instruction_root_themis` | `HashDir($REPO/instructions/themis)` |
 | `instruction_policy` | `HashFile($REPO/policies/security/instruction-directive-patterns.json)` |
-| `tool_registry` | `HashFile($REPO/policies/tools/registry-v4.json)` |
+| `tool_registry` | `HashFile($REPO/policies/tools/registry-v5.json)` (v5 = v4 + `delegate`, L8) |
 | `execution_ceiling` | `HashFile($DEPLOY/execution-ceiling.json)` |
 | `constitution.state` | `state.ConstitutionHash()` |
 | `constitution.orchestration` | `orchestration.ConstitutionHash()` |
@@ -259,6 +259,7 @@ loader uses — directory pins are `deployment.HashDir`, file pins are
 | `contract_registry` | `HashFile($REPO/policies/verification/contracts.json)` |
 | `criteria_registry` | `HashFile($REPO/policies/ratchet/criteria.json)` |
 | `regression_set_registry` | `HashFile($REPO/policies/ratchet/regression-sets.json)` |
+| `delegation_template_registry` | `HashFile($REPO/policies/delegation/registry.json)` or `"absent"` (L8; `themis-run` wires the seam over this path) |
 
 > **Open choice (undecided):** whether a reviewed anchor-minting
 > helper should exist, or whether pins are computed per deployment in

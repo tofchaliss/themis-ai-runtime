@@ -1,0 +1,8 @@
+{
+ "version": 1,
+ "fields": [
+  {"name": "dependency", "type": "string", "required": true, "max_length": 128},
+  {"name": "advisory", "type": "string", "required": true, "max_length": 64},
+  {"name": "target-version", "type": "string", "required": false, "max_length": 64}
+ ]
+}

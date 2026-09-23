@@ -8,6 +8,14 @@
       "contract_path": "report-valid/contract.json",
       "state": "active",
       "steward": "security-engineering"
+    },
+    {
+      "name": "report-valid",
+      "version": 2,
+      "contract_sha256": "bbc161f60fd09dcc1f5e2566693c1d32513fc9f540712d132fe7fc6de3f3e02f",
+      "contract_path": "report-valid-2/contract.json",
+      "state": "active",
+      "steward": "security-engineering"
     }
   ]
 }

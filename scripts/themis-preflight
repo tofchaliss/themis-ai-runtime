@@ -237,6 +237,7 @@ for e in entries:
 PY
 )
   if [ -z "$DRES" ]; then warn "registry lists no templates"; fi
+  note "delegation_template_registry pin: $(shasum -a 256 "$DREG" | cut -d' ' -f1)"
   # here-string, not a pipe: the PASS/FAIL counters must survive the loop
   while IFS= read -r line; do
     case "$line" in

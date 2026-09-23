@@ -16,6 +16,14 @@
    "manifest_path": "remediate-dependency/skill.json",
    "state": "active",
    "steward": "security-engineering"
+  },
+  {
+   "name": "remediate-dependency",
+   "version": 2,
+   "composition_sha256": "55b1ba44221ef5f24e5ac66d77588de791d30650400223e650e94101eb7545df",
+   "manifest_path": "remediate-dependency-2/skill.json",
+   "state": "active",
+   "steward": "security-engineering"
   }
  ]
 }

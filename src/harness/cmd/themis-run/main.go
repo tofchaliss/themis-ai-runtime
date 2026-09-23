@@ -35,8 +35,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/tofchaliss/themis/instructions"
 	"github.com/tofchaliss/themis/orchestration"
 	"github.com/tofchaliss/themis/runtime/model"
+	dseam "github.com/tofchaliss/themis/subagents/delegation/seam"
 	"github.com/tofchaliss/themis/tools"
 	"github.com/tofchaliss/themis/verification/seam"
 )
@@ -66,7 +68,7 @@ func main() {
 		}
 	}
 
-	l4, err := tools.LoadRegistry(filepath.Join(*repo, "policies/tools/registry-v4.json"))
+	l4, err := tools.LoadRegistry(filepath.Join(*repo, "policies/tools/registry-v5.json"))
 	if err != nil {
 		fail("tool registry: %v", err)
 	}
@@ -87,6 +89,27 @@ func main() {
 		fail("registry/workspace disjointness: %v", err)
 	}
 
+	// L8: the delegation seam over the governed template registry; the
+	// anchor pins the registry bytes (Open verifies the same path), and
+	// the registry root must be disjoint from every task-writable root.
+	policy, err := instructions.LoadPolicy(filepath.Join(*repo, "policies/security/instruction-directive-patterns.json"))
+	if err != nil {
+		fail("instruction policy: %v", err)
+	}
+	delegationRegistry := filepath.Join(*repo, "policies/delegation/registry.json")
+	delegator, err := dseam.New(delegationRegistry, policy)
+	if err != nil {
+		fail("delegation registry: %v", err)
+	}
+	if err := delegator.CheckDisjoint(
+		filepath.Join(*deploy, "state"),
+		filepath.Join(*deploy, "artifacts"),
+		filepath.Join(*deploy, "provider"),
+		filepath.Join(*deploy, "mirror"),
+	); err != nil {
+		fail("delegation registry/workspace disjointness: %v", err)
+	}
+
 	o, report, err := orchestration.Open(orchestration.Config{
 		StateRoot:   filepath.Join(*deploy, "state"),
 		ArtifactDir: filepath.Join(*deploy, "artifacts"),
@@ -98,15 +121,17 @@ func main() {
 		ThemisRoot: filepath.Join(*repo, "instructions/themis"),
 		PolicyPath: filepath.Join(*repo, "policies/security/instruction-directive-patterns.json"),
 
-		AnchorPath:          *anchor,
-		AnchorSHA256:        *anchorSHA,
-		AnchorsRegistryPath: *registry,
-		ExecCeilingPath:     filepath.Join(*deploy, "execution-ceiling.json"),
-		SkillCatalogPath:    filepath.Join(*repo, "policies/skills/catalog.json"),
-		ModelRegistryPath:   *modelReg,
+		AnchorPath:             *anchor,
+		AnchorSHA256:           *anchorSHA,
+		AnchorsRegistryPath:    *registry,
+		ExecCeilingPath:        filepath.Join(*deploy, "execution-ceiling.json"),
+		SkillCatalogPath:       filepath.Join(*repo, "policies/skills/catalog.json"),
+		ModelRegistryPath:      *modelReg,
+		DelegationRegistryPath: delegationRegistry,
 
-		Model:    model.NewOllamaChat(*endpoint),
-		Verifier: ev,
+		Model:     model.NewOllamaChat(*endpoint),
+		Verifier:  ev,
+		Delegator: delegator,
 		// Unanchored stays false. Production governs by anchor or
 		// refuses to open; there is no flag here to opt out, so this
 		// binary cannot fall into the test-harness caller role even by

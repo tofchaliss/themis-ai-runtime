@@ -261,6 +261,14 @@ func (w *walk) runPhase() (string, error) {
 			// the paired message is the delegation's own result below.
 			delegated := audit.Decision == "authorized" && w.isDelegation(call.Name)
 			if !delegated {
+				if ev != nil && len(refs) == 1 {
+					// Record-reference furniture (L8 M6): the committed
+					// audit's seq and the evidence object's address, so
+					// the model can name this result as `<seq>:<id>`
+					// evidence (C-L8-5). Descriptive, deterministic,
+					// derived from the record, outside the fence.
+					msg.Content += recordRefLine(aev.Seq, refs[0].ID)
+				}
 				conversation = append(conversation, msg)
 			}
 

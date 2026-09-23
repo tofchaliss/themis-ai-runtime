@@ -24,6 +24,7 @@ func validAnchorMap() map[string]any {
 		"model_registry": "absent",
 		"skill_catalog":  h("catalog"), "contract_registry": h("l10reg"),
 		"criteria_registry": h("l11reg"), "regression_set_registry": h("setreg"),
+		"delegation_template_registry": "absent",
 	}
 }
 

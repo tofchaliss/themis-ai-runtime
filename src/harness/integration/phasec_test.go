@@ -178,12 +178,13 @@ func buildAnchor(t *testing.T, envDir string) (anchorPath, anchorSHA, anchorsReg
 			"workflow_ceiling": env("wceiling.json"),
 			"context_contract": env("context-contract.json"),
 		}},
-		"models":                  []any{"scripted"},
-		"model_registry":          "absent",
-		"skill_catalog":           hf(filepath.Join(repoRoot, "policies/skills/catalog.json")),
-		"contract_registry":       hf(filepath.Join(repoRoot, "policies/verification/contracts.json")),
-		"criteria_registry":       hf(filepath.Join(repoRoot, "policies/ratchet/criteria.json")),
-		"regression_set_registry": hf(filepath.Join(repoRoot, "policies/ratchet/regression-sets.json")),
+		"models":                       []any{"scripted"},
+		"model_registry":               "absent",
+		"skill_catalog":                hf(filepath.Join(repoRoot, "policies/skills/catalog.json")),
+		"contract_registry":            hf(filepath.Join(repoRoot, "policies/verification/contracts.json")),
+		"criteria_registry":            hf(filepath.Join(repoRoot, "policies/ratchet/criteria.json")),
+		"regression_set_registry":      hf(filepath.Join(repoRoot, "policies/ratchet/regression-sets.json")),
+		"delegation_template_registry": "absent",
 	}
 	ab, _ := json.Marshal(anchor)
 	dir := t.TempDir()

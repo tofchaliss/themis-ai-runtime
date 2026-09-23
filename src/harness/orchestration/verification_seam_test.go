@@ -360,6 +360,9 @@ func anchorWorld(t *testing.T, mutate func(m map[string]any), ceiling ...string)
 		"contract_registry":       hashFile(filepath.Join(repoRoot, "policies/verification/contracts.json")),
 		"criteria_registry":       hashFile(filepath.Join(repoRoot, "policies/ratchet/criteria.json")),
 		"regression_set_registry": hashFile(filepath.Join(repoRoot, "policies/ratchet/regression-sets.json")),
+		// L8 (M6): the test-harness anchor ships no delegation registry
+		// unless a world pins one.
+		"delegation_template_registry": "absent",
 	}
 	if mutate != nil {
 		mutate(m)

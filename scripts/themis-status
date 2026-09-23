@@ -98,7 +98,8 @@ func main() {
 	}
 	files := map[string]string{
 		"instruction_policy":      "policies/security/instruction-directive-patterns.json",
-		"tool_registry":           "policies/tools/registry-v4.json",
+		"tool_registry":           "policies/tools/registry-v5.json",
+		"delegation_template_registry": "policies/delegation/registry.json",
 		"skill_catalog":           "policies/skills/catalog.json",
 		"contract_registry":       "policies/verification/contracts.json",
 		"criteria_registry":       "policies/ratchet/criteria.json",
@@ -200,6 +201,7 @@ reg policies/skills/catalog.json          "skills catalog"
 reg policies/verification/contracts.json  "L10 contracts"
 reg policies/ratchet/criteria.json        "L11 criteria"
 reg policies/ratchet/regression-sets.json "L11 regression sets"
+reg policies/delegation/registry.json     "L8 delegation templates"
 
 # ------------------------------------------------------ artifact pins
 sec "Artifact pins (diagnostic display only — not an anchor)"

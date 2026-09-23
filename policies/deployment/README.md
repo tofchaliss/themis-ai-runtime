@@ -8,6 +8,14 @@ deployment; only `anchors.json` ADMITS it.
 
 ## Current state
 
+**`rsys@4` PROPOSED (2026-09-23, L8 M6):** `rsys4.proposed.json`
+re-pins the constitution, moves to registry-v5, and adds
+`delegation_template_registry` (see the G1 amendment
+`delegation-template-registry-pin`); it lists `remediate-dependency@1..2`.
+Its companions are also PROPOSED: `report-valid@2`,
+`remediate-dependency@2`, `dependency-triage@1`. Committing them is
+the owner's act; nothing is ACTIVE.
+
 **Constitution pin note (2026-09-23):** L8 M3 added the `l8-delegation`
 event class, so `state.ConstitutionHash()` changed; the proposed
 `rsys2.json` `constitution.state` pin predates it and must be re-pinned

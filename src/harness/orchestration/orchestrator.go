@@ -71,6 +71,11 @@ type Config struct {
 	// submitter-selected: an anchored task's ceiling must BE these
 	// bytes, whatever path its envelope names.
 	ExecCeilingPath string
+	// DelegationRegistryPath is the L8 delegation-template registry
+	// the anchor pins (`delegation_template_registry`); the seam in
+	// Config.Delegator must have been built from these bytes (the
+	// wiring's obligation). Empty iff the anchor declares "absent".
+	DelegationRegistryPath string
 	// Unanchored is the EXPLICIT opt-in to running without a
 	// deployment anchor — the recorded test-harness caller role
 	// (close-review MEDIUM-1). Without it an anchorless Open refuses,
@@ -429,6 +434,23 @@ func verifyAnchoredInstructionPlane(cfg Config, a *deployment.Anchor) error {
 		got, herr := deployment.HashFile(cfg.ModelRegistryPath)
 		if herr != nil || got != a.ModelRegistry {
 			return fmt.Errorf("%w: model registry is not the anchored artifact (deployment %s@%d) — an endpoint enters a deployment only by Governance act", ErrAssembly, a.Name, a.Deployment)
+		}
+	}
+	// The delegation-template registry (L8, Q-L8-7): the same posture
+	// as the model registry — "absent" is a declaration, a pin is a
+	// hash-bound artifact, and a template enters a deployment only by
+	// Governance act.
+	if a.DelegationTemplateRegistry == "absent" {
+		if cfg.DelegationRegistryPath != "" {
+			return fmt.Errorf("%w: the anchor declares no delegation-template registry but one is configured (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
+		}
+	} else {
+		if cfg.DelegationRegistryPath == "" {
+			return fmt.Errorf("%w: the anchor pins a delegation-template registry but none is configured (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
+		}
+		got, herr := deployment.HashFile(cfg.DelegationRegistryPath)
+		if herr != nil || got != a.DelegationTemplateRegistry {
+			return fmt.Errorf("%w: delegation-template registry is not the anchored artifact (deployment %s@%d) — a template enters a deployment only by Governance act", ErrAssembly, a.Name, a.Deployment)
 		}
 	}
 	return nil

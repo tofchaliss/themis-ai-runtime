@@ -300,19 +300,29 @@ reopens D-L8-1..21.
 
 ## 7. L8-M6 — Anchor, positive path, live proof, close (Class 3/4)
 
-- [ ] Deployment anchor: `delegation_template_registry` pin +
-      `constitution.state` re-pin → `rsys@4` PROPOSED → Governance act;
+- [x] Deployment anchor: `delegation_template_registry` pin +
+      `constitution.state` re-pin → `rsys@4` PROPOSED
+      (`policies/deployment/rsys4.proposed.json`, 2026-09-23; with it
+      PROPOSED: registry-v5, `report-valid@2`, `remediate-dependency@2`,
+      `dependency-triage@1`) — the Governance act is the owner's;
       `themis-status` / `themis-preflight` print the pin
-- [ ] **Register B, positive path FIRST:** anchored `rsys@4` accepts and
-      executes a genuine `delegate` call from `remediate-dependency@1`
-      through `themis-run`; THEN each negative (scope, closed world,
-      withdrawn template, unreachable evidence, over-bound brief,
-      over-bound output, nil delegator) with both-ways mutation:
-      suppress the check → negative fails; refuse unconditionally →
-      positive fails
-- [ ] Register E: live proof vs local model through the UNMODIFIED L7
-      loop; the delegation's result visibly consumed by the parent's
-      next turn; cold reconstruction of the whole task afterwards
+- [x] **Register B, positive path FIRST:** a TEST-HARNESS anchor with
+      the `rsys@4` pin set accepts and executes a genuine `delegate`
+      call from `remediate-dependency@2` (L9-instantiated), the model's
+      reference formed from the record-ref furniture, witness present,
+      reconstruction CONFIRMED (`TestAnchoredDelegationPositivePath`);
+      negatives: scope, closed world, withdrawn, unreachable evidence,
+      over-bound brief, over-bound output, nil delegator, pin/path
+      disagreement (unanchored suite + `TestAnchoredDelegationRefusals`);
+      both-ways mutation on 21 controls (M4/M5 probes). NOT done:
+      production `rsys@4` via `themis-run` (owner act)
+- [~] Register E: `TestLiveDelegationWalk` (qwen2.5:7b, anchored @2,
+      unmodified loop) — admitted, typed terminal (FAILED via
+      turn-no-action exhaustion in REMEDIATE); the model declared done
+      in ANALYZE without delegating, so "result consumed by the next
+      turn" is NOT evidenced live (model behaviour, the live-register
+      discipline); reconstruction of any live delegation is asserted
+      CONFIRMED when one exists
 - [ ] Three Class-3 close reviews (architecture / security / test) in
       isolated worktrees, CRITICAL/HIGH remediated and mutation-verified
 - [ ] `traceability.md`; archive under

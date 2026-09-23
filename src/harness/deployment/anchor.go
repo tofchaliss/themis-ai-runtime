@@ -118,6 +118,13 @@ type Anchor struct {
 	ContractRegistry      string `json:"contract_registry"`
 	CriteriaRegistry      string `json:"criteria_registry"`
 	RegressionSetRegistry string `json:"regression_set_registry"`
+	// DelegationTemplateRegistry pins the L8 delegation-template
+	// registry bytes (D-L8-5/6, Q-L8-7): a deployment cannot silently
+	// acquire or lose available templates. "absent" is the explicit
+	// declaration that the deployment ships no delegation registry —
+	// no phase may then expose `delegate`; a declaration, never a
+	// default.
+	DelegationTemplateRegistry string `json:"delegation_template_registry"`
 
 	SHA256 string `json:"-"` // of the exact anchor bytes — the deployment identity
 	Raw    []byte `json:"-"`
@@ -187,6 +194,9 @@ func ParseAnchor(raw []byte, origin string) (*Anchor, error) {
 	}
 	if a.ModelRegistry != "absent" && !shaSyntax.MatchString(a.ModelRegistry) {
 		return nil, fmt.Errorf("%w: %s: model_registry must be a sha256 hex digest or the explicit declaration \"absent\"", ErrAnchor, origin)
+	}
+	if a.DelegationTemplateRegistry != "absent" && !shaSyntax.MatchString(a.DelegationTemplateRegistry) {
+		return nil, fmt.Errorf("%w: %s: delegation_template_registry must be a sha256 hex digest or the explicit declaration \"absent\" — nothing is defaulted", ErrAnchor, origin)
 	}
 	if len(a.Workflows) == 0 {
 		return nil, fmt.Errorf("%w: %s: the anchored workflow set must not be empty", ErrAnchor, origin)

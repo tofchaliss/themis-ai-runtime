@@ -27,11 +27,15 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
+	hctx "github.com/tofchaliss/themis/context"
 	"github.com/tofchaliss/themis/instructions"
 	"github.com/tofchaliss/themis/orchestration"
 	"github.com/tofchaliss/themis/runtime/model"
+	"github.com/tofchaliss/themis/skills"
+	"github.com/tofchaliss/themis/state"
 	dseam "github.com/tofchaliss/themis/subagents/delegation/seam"
 	"github.com/tofchaliss/themis/tools"
 	"github.com/tofchaliss/themis/verification/seam"
@@ -51,6 +55,15 @@ type row struct {
 	id, what, want string
 	run            func(c *ctx) error
 }
+
+// positiveRow marks a C-twin: it must ADMIT — run returns nil on the
+// expected outcome and a typed error otherwise. Without twins,
+// "refuse everything" would satisfy every negative row (the C17
+// lesson). Tracked by id so the existing unkeyed row literals stay
+// as they are.
+var positiveRows = map[string]bool{}
+
+func positive(r row) row { positiveRows[r.id] = true; return r }
 
 func main() {
 	c := &ctx{}
@@ -94,6 +107,16 @@ func main() {
 			continue
 		}
 		err := r.run(c)
+		if positiveRows[r.id] {
+			if err == nil {
+				fmt.Printf("%-4s \033[32madmitted\033[0m  %s\n", r.id, r.what)
+				pass++
+			} else {
+				fmt.Printf("%-4s \033[31mREFUSED\033[0m   %s\n      %s\n", r.id, r.what, firstLine(err.Error()))
+				fail++
+			}
+			continue
+		}
 		switch {
 		case err == nil:
 			fmt.Printf("%-4s \033[31mADMITTED\033[0m  %s\n", r.id, r.what)
@@ -209,7 +232,7 @@ func (c *ctx) openThenSubmit(mutate func(env map[string]any)) error {
 		"workflow_path":         filepath.Join(skill, "workflow.json"),
 		"workflow_ceiling_path": filepath.Join(skill, "ceiling.json"),
 		"context_contract_path": filepath.Join(skill, "contract.json"),
-		"registry_path":         filepath.Join(r, "policies/tools/registry-v4.json"),
+		"registry_path":         filepath.Join(r, "policies/tools/registry-v5.json"),
 		"grant_path":            grant,
 		"exec_ceiling_path":     filepath.Join(r, "execution-ceiling.json"),
 		"spec_path":             spec,
@@ -529,7 +552,7 @@ func matrix() []row {
 			func(c *ctx) error {
 				return c.openThenSubmit(func(e map[string]any) {
 					p := filepath.Join(c.rowDir, "other-registry.json")
-					b, _ := os.ReadFile(filepath.Join(c.rowDir, "policies/tools/registry-v4.json"))
+					b, _ := os.ReadFile(filepath.Join(c.rowDir, "policies/tools/registry-v5.json"))
 					_ = os.WriteFile(p, append(b, ' '), 0o600)
 					e["registry_path"] = p
 				})
@@ -548,12 +571,344 @@ func matrix() []row {
 				_, _, err := orchestration.Open(cfg)
 				return err
 			}},
+
+		// ---- Layer 8 (delegation) rows: the anchor pins the delegation-
+		// template registry; every row is an attempt to govern a
+		// delegation with something the anchor did not admit. The
+		// positive twin C20+ comes FIRST in evidence order (the C17
+		// lesson): a genuine delegate call from remediate-dependency@2
+		// under the real anchor is admitted, executed by a scripted
+		// delegated model, witnessed, and reconstructs CONFIRMED.
+		positive(row{"C20+", "POSITIVE: remediate-dependency@2 delegates under the real anchor (witness + CONFIRMED reconstruction)", "admitted",
+			func(c *ctx) error { return c.delegatingWalk("c20-pos", nil, checkDelegated) }}),
+		{"C20", "delegation-template registry rewritten after pinning", "delegation-template registry is not the anchored artifact",
+			func(c *ctx) error {
+				p := filepath.Join(c.rowDir, "policies/delegation/registry.json")
+				b, _ := os.ReadFile(p)
+				_ = os.WriteFile(p, append(b, ' '), 0o644)
+				return c.open()
+			}},
+		{"C21", "delegation seam configured while the anchor declares absent", "declares no delegation-template registry",
+			func(c *ctx) error {
+				p, sha, err := c.mintAnchor(func(a map[string]any) { a["delegation_template_registry"] = "absent" })
+				if err != nil {
+					return fmt.Errorf("row setup: %w", err)
+				}
+				c.anchorOverride, c.shaOverride = p, sha
+				defer func() { c.anchorOverride, c.shaOverride = "", "" }()
+				return c.open()
+			}},
+		{"C22", "wired seam holds a registry that is not the pinned bytes", "wired delegation seam holds a registry",
+			func(c *ctx) error {
+				// A byte-different copy (reformatted) of the same registry:
+				// the configured PATH still hashes to the pin; the seam was
+				// built over the copy.
+				src := filepath.Join(c.rowDir, "policies/delegation/registry.json")
+				raw, _ := os.ReadFile(src)
+				var reg map[string]any
+				_ = json.Unmarshal(raw, &reg)
+				other := filepath.Join(c.rowDir, "policies/delegation/other-registry.json")
+				ob, _ := json.Marshal(reg)
+				_ = os.WriteFile(other, ob, 0o600)
+				policy, err := instructions.LoadPolicy(filepath.Join(c.rowDir, "policies/security/instruction-directive-patterns.json"))
+				if err != nil {
+					return fmt.Errorf("row setup: %w", err)
+				}
+				sm, err := dseam.New(other, policy)
+				if err != nil {
+					return fmt.Errorf("row setup: %w", err)
+				}
+				cfg := c.cfg()
+				cfg.Delegator = sm
+				_, _, err = orchestration.Open(cfg)
+				return err
+			}},
+		{"C23", "Skill's template_scope names a template the pinned registry never registered", "does not resolve",
+			func(c *ctx) error {
+				// Under a Skill the scope is fixed-by-skill (D-SA-4: a
+				// caller-widened scope trips Instantiates first), so the
+				// unregistered entry must come from the GOVERNED side: the
+				// pinned registry is one that never registered
+				// dependency-triage@1, while the Skill's grant template
+				// still names it. Assembly refuses at scope resolution.
+				regPath := filepath.Join(c.rowDir, "policies/delegation/registry.json")
+				_ = os.WriteFile(regPath, []byte("{\"version\":1,\"entries\":[]}\n"), 0o600)
+				p, sha, err := c.mintAnchor(func(a map[string]any) { a["delegation_template_registry"] = fileSHA(regPath) })
+				if err != nil {
+					return fmt.Errorf("row setup: %w", err)
+				}
+				c.anchorOverride, c.shaOverride = p, sha
+				defer func() { c.anchorOverride, c.shaOverride = "", "" }()
+				return c.delegatingWalk("c23", nil, nil)
+			}},
+		{"C24", "phase exposes delegate but no seam is wired", "no L8 delegator is wired",
+			func(c *ctx) error {
+				// The anchor pins a registry, so Open needs the path; the
+				// seam itself is absent → assembly refuses the phase.
+				cfg := c.cfg()
+				cfg.Delegator = nil
+				_, _, err := orchestration.Open(cfg)
+				if err != nil {
+					return err
+				}
+				return c.delegatingWalkWith(cfg, "c24", nil, nil)
+			}},
+		positive(row{"C25", "template withdrawn under the pinned registry: Skill still assembles, delegate refuses stage B (C-L8-14 G)", "admitted",
+			func(c *ctx) error {
+				// Withdraw in the row's copy, re-pin the anchor to the
+				// withdrawn registry (a Governance act in miniature), then
+				// walk: assembly admits, the delegate call refuses
+				// template-withdrawn in the audit, no witness.
+				regPath := filepath.Join(c.rowDir, "policies/delegation/registry.json")
+				raw, _ := os.ReadFile(regPath)
+				_ = os.WriteFile(regPath, []byte(strings.Replace(string(raw), `"state": "active"`, `"state": "withdrawn"`, 1)), 0o600)
+				p, sha, err := c.mintAnchor(func(a map[string]any) { a["delegation_template_registry"] = fileSHA(regPath) })
+				if err != nil {
+					return fmt.Errorf("row setup: %w", err)
+				}
+				c.anchorOverride, c.shaOverride = p, sha
+				defer func() { c.anchorOverride, c.shaOverride = "", "" }()
+				return c.delegatingWalk("c25", nil, checkWithdrawnRefusal)
+			}}),
+		positive(row{"C26", "delegate names a template outside the Skill's template_scope", "admitted",
+			func(c *ctx) error {
+				// Stage A: an L4 target refusal witnessed in the audit; the
+				// walk continues and completes without a delegation.
+				return c.delegatingWalk("c26", func(env map[string]any) {
+					env["_delegate_template"] = "cve-analysis@1"
+				}, checkScopeDenial)
+			}}),
+		positive(row{"C27", "delegate references evidence beyond the task's record", "admitted",
+			func(c *ctx) error {
+				return c.delegatingWalk("c27", func(env map[string]any) {
+					env["_delegate_evidence"] = "999:sha256:" + strings.Repeat("0", 64)
+				}, checkUnreachableRefusal)
+			}}),
 	}
 }
 
 // inert never gets called: every row must refuse before a model turn.
 // If a row ever reaches it, that row failed to refuse and the error
 // says so loudly rather than letting a walk proceed.
+// delegatingWalk runs remediate-dependency@2 (L9-instantiated for this
+// row's deployment copy) under the row's anchored orchestrator with a
+// scripted parent model: read go.mod, delegate over that read, declare
+// done, write the report, verify it, declare done. mutateEnv edits the
+// L9 envelope before submission (a "_delegate_*" key steers the
+// scripted delegate call instead); check inspects the record.
+func (c *ctx) delegatingWalk(task string, mutateEnv func(map[string]any), check func(root *state.Root, task string, m *scriptedParent) error) error {
+	return c.delegatingWalkWith(c.cfg(), task, mutateEnv, check)
+}
+
+func (c *ctx) delegatingWalkWith(cfg orchestration.Config, task string, mutateEnv func(map[string]any), check func(root *state.Root, task string, m *scriptedParent) error) error {
+	m := &scriptedParent{template: "dependency-triage@1"}
+	cfg.Model = m
+	o, _, err := orchestration.Open(cfg)
+	if err != nil {
+		return fmt.Errorf("row setup: Open refused unexpectedly: %w", err)
+	}
+	r := c.rowDir
+	_ = os.MkdirAll(filepath.Join(r, "state"), 0o755)
+	envPath, err := skills.Instantiate(filepath.Join(r, "policies/skills/catalog.json"), "remediate-dependency@2", skills.Request{
+		TaskID: task, Repo: c.mirrorRepo, PinnedSHA: c.pinnedSHA,
+		Inputs:        map[string]any{"dependency": "vulnerable-dep", "advisory": "ADV-2026-1"},
+		WallDeadlineS: 300,
+		Deployment: skills.Deployment{Model: "qwen2.5:7b", TurnTimeoutSec: 60,
+			RegistryPath: filepath.Join(r, "policies/tools/registry-v5.json"), ExecCeilingPath: filepath.Join(r, "execution-ceiling.json"),
+			StateRoot: filepath.Join(r, "state"), ArtifactDir: filepath.Join(r, "artifacts"), WorkspaceRoot: filepath.Join(r, "provider")},
+		OutDir: filepath.Join(r, "envelopes"),
+	})
+	if err != nil {
+		return fmt.Errorf("row setup: L9 instantiation: %w", err)
+	}
+	if mutateEnv != nil {
+		raw, _ := os.ReadFile(envPath)
+		var env map[string]any
+		_ = json.Unmarshal(raw, &env)
+		mutateEnv(env)
+		if t, ok := env["_delegate_template"].(string); ok {
+			m.template = t
+			delete(env, "_delegate_template")
+		}
+		if e, ok := env["_delegate_evidence"].(string); ok {
+			m.evidence = e
+			delete(env, "_delegate_evidence")
+		}
+		b, _ := json.MarshalIndent(env, "", " ")
+		envPath = filepath.Join(r, "envelope-mutated.json")
+		_ = os.WriteFile(envPath, b, 0o600)
+	}
+	res, err := o.SubmitTask(envPath)
+	if err != nil {
+		return err
+	}
+	if res.Status != state.StatusCompleted {
+		return fmt.Errorf("walk ended %s, want COMPLETED", res.Status)
+	}
+	if check == nil {
+		return nil
+	}
+	root, err := state.OpenRoot(filepath.Join(r, "state"))
+	if err != nil {
+		return err
+	}
+	rowDirForRoot[root] = filepath.Join(r, "state")
+	return check(root, task, m)
+}
+
+// scriptedParent is the parent model for the delegating walk. The
+// delegated call (no tools offered) answers with a fixed triage note;
+// parent turns follow the @2 lattice and form the evidence reference
+// from the record-ref furniture they SAW.
+type scriptedParent struct {
+	turn       int
+	template   string
+	evidence   string // "" = derive from the read_file furniture
+	delegCalls int
+	delegReq   *model.ExecutionRequest
+}
+
+var recordRef = regexp.MustCompile(`record-ref: ([0-9]+:sha256:[0-9a-f]{64})`)
+
+func (p *scriptedParent) Name() string { return "scripted" }
+func (p *scriptedParent) Execute(_ stdctx.Context, req model.ExecutionRequest) (*model.ExecutionResponse, error) {
+	if len(req.Tools) == 0 {
+		p.delegCalls++
+		r := req
+		p.delegReq = &r
+		return &model.ExecutionResponse{Content: "Triage: go.mod pins vulnerable-dep v1; evidence-backed.", Termination: model.TerminationStop,
+			Identity: model.Identity{WireModel: req.Model, Runtime: "scripted", Reported: req.Model}, Provenance: model.Provenance{Endpoint: "scripted://phase-c"}}, nil
+	}
+	p.turn++
+	call := func(id, name, args string) *model.ExecutionResponse {
+		return &model.ExecutionResponse{Termination: model.TerminationToolCalls,
+			ToolCalls: []model.ToolCall{{ID: id, Name: name, Arguments: json.RawMessage(args)}}}
+	}
+	switch p.turn {
+	case 1:
+		return call("c1", "read_file", `{"path":"go.mod"}`), nil
+	case 2:
+		ev := p.evidence
+		if ev == "" {
+			for _, msg := range req.Messages {
+				if msg.Role == model.RoleTool && msg.ToolCallID == "c1" {
+					if mm := recordRef.FindStringSubmatch(msg.Content); mm != nil {
+						ev = mm[1]
+					}
+				}
+			}
+		}
+		args, _ := json.Marshal(map[string]string{"template": p.template, "evidence": ev, "brief": "Is vulnerable-dep the affected dependency?"})
+		return call("c2", "delegate", string(args)), nil
+	case 3:
+		return call("c3", "declare_done", `{}`), nil
+	case 4:
+		rb, _ := json.Marshal(`{"finding": "vulnerable-dep v1 in go.mod", "remediation": "bump to v2", "evidence": "go.mod updated"}`)
+		return call("c4", "write_file", `{"path":"report.json","content":`+string(rb)+`}`), nil
+	case 5:
+		return call("c5", "verify_report", `{"path":"report.json","contract":"report-valid@2"}`), nil
+	}
+	return call("c6", "declare_done", `{}`), nil
+}
+
+func delegateAudit(root *state.Root, task string) (map[string]any, bool, error) {
+	evs, err := root.ReadEvents(task)
+	if err != nil {
+		return nil, false, err
+	}
+	var audit map[string]any
+	witnessed := false
+	for _, e := range evs {
+		if e.Class == state.EvL8Delegation {
+			witnessed = true
+		}
+		if e.Class == state.EvL4Audit {
+			var b map[string]any
+			_ = json.Unmarshal(e.Body, &b)
+			if b["Tool"] == "delegate" {
+				audit = b
+			}
+		}
+	}
+	if audit == nil {
+		return nil, false, fmt.Errorf("no delegate call in the record")
+	}
+	return audit, witnessed, nil
+}
+
+// checkDelegated: the positive twin's record properties — authorized
+// call, witness present, exactly one delegated model execution, and a
+// reconstruction from the record that is CONFIRMED.
+func checkDelegated(root *state.Root, task string, m *scriptedParent) error {
+	rowRoot := filepath.Dir(rootDirOf(root))
+	audit, witnessed, err := delegateAudit(root, task)
+	if err != nil {
+		return err
+	}
+	if audit["Decision"] != "authorized" || !witnessed || m.delegCalls != 1 {
+		return fmt.Errorf("decision=%v witnessed=%v delegated calls=%d", audit["Decision"], witnessed, m.delegCalls)
+	}
+	l4, _ := tools.LoadRegistry(filepath.Join(rowRoot, "policies/tools/registry-v5.json"))
+	cfg := dseam.ReconstructConfig{}
+	if l4 != nil {
+		cfg.RegistryHash = l4.Hash
+		cfg.ToolTrust = func(name string) (hctx.AuthorityClass, bool) {
+			for _, t := range l4.Tools {
+				if t.Name == name {
+					return t.Trust, true
+				}
+			}
+			return "", false
+		}
+	}
+	recs, err := dseam.ReconstructTask(root, task, cfg)
+	if err != nil {
+		return err
+	}
+	if len(recs) != 1 || recs[0].Verdict != dseam.VerdictConfirmed {
+		return fmt.Errorf("reconstruction: %+v", recs)
+	}
+	return nil
+}
+
+func checkWithdrawnRefusal(root *state.Root, task string, m *scriptedParent) error {
+	audit, witnessed, err := delegateAudit(root, task)
+	if err != nil {
+		return err
+	}
+	if audit["Decision"] != "error" || audit["ErrClass"] != "delegation-refused:template-withdrawn" || witnessed || m.delegCalls != 0 {
+		return fmt.Errorf("want stage-B template-withdrawn with no witness: %v witnessed=%v calls=%d", audit, witnessed, m.delegCalls)
+	}
+	return nil
+}
+
+func checkScopeDenial(root *state.Root, task string, m *scriptedParent) error {
+	audit, witnessed, err := delegateAudit(root, task)
+	if err != nil {
+		return err
+	}
+	if audit["Decision"] != "denied" || !strings.Contains(fmt.Sprint(audit["TracePredicate"]), "template-outside-grant-scope") || witnessed || m.delegCalls != 0 {
+		return fmt.Errorf("want an L4 scope denial with no witness: %v witnessed=%v", audit, witnessed)
+	}
+	return nil
+}
+
+func checkUnreachableRefusal(root *state.Root, task string, m *scriptedParent) error {
+	audit, witnessed, err := delegateAudit(root, task)
+	if err != nil {
+		return err
+	}
+	if audit["Decision"] != "error" || audit["ErrClass"] != "delegation-refused:evidence-unreachable" || witnessed || m.delegCalls != 0 {
+		return fmt.Errorf("want stage-B evidence-unreachable with no witness: %v witnessed=%v", audit, witnessed)
+	}
+	return nil
+}
+
+// rootDirOf: the state root's directory (its parent is the row dir).
+var rowDirForRoot = map[*state.Root]string{}
+
+func rootDirOf(r *state.Root) string { return rowDirForRoot[r] }
+
 type inert struct{}
 
 func (i *inert) Name() string { return "inert" }

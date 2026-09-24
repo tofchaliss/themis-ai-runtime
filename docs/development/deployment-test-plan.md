@@ -119,12 +119,25 @@ the right reason — a refusal for the wrong reason is a finding.
 | C17+ | **Positive twin (Q-SA-12 / A-SA-11):** a genuine L9-instantiated skill envelope under an anchor that lists the skill is ADMITTED and executes; every A-SA-1..10 negative refuses with its own gate's message. Lives in `orchestration/skill_admission_test.go` (`TestAnchoredSkillPositiveTwin`, `TestAnchoredSkillNegativeTwins`, `TestAnchoredWithdrawnSkillRefused`, `TestAnchoredSkillAllowlist`, `TestAnchoredUnattributedProcedureRefused`, `TestAnchoredSkillCatalogMismatchRefused`; key-wall twins `TestGrantKeyWallAtAssembly`, `TestInstantiateGrantPostBindAssertion` in `review_test.go`). Without it, "refuse everything" satisfied C17. | admitted (COMPLETED under the scripted model); refusals name their gate |
 | C18 | `Open` with no anchor and no explicit `Unanchored` | "a deployment governs by anchor or refuses to open" |
 | C19 | `Unanchored` declared alongside an anchor | "the caller role is ambiguous" |
+| C20+ | **Layer 8 positive twin (first, the C17 lesson):** `remediate-dependency@2` (L9-instantiated) under an anchor pinning the delegation-template registry; a scripted parent reads `go.mod`, forms its evidence reference from the `record-ref` furniture it saw, delegates to `dependency-triage@1`, and completes | admitted; `l4-audit{authorized}` + `l8-delegation` witness; exactly one delegated model execution; `ReconstructTask` → CONFIRMED from the record alone |
+| C20 | Delegation-template registry rewritten after pinning | "delegation-template registry is not the anchored artifact" |
+| C21 | Delegation seam configured while the anchor declares `absent` | "declares no delegation-template registry" |
+| C22 | Wired seam built over bytes other than the pinned registry (configured path still hashes to the pin) | "wired delegation seam holds a registry" |
+| C23 | Skill's `template_scope` names a template the pinned registry never registered (the registry side; a caller-widened scope trips D-SA-4 first and is C17's family) | "does not resolve" |
+| C24 | Phase exposes `delegate` but no seam is wired | "no L8 delegator is wired" |
+| C25 | **Twin:** template withdrawn under the pinned registry (C-L8-14 G) | admitted at assembly; the `delegate` call refuses stage B `delegation-refused:template-withdrawn` in its audit; no witness; the walk COMPLETES |
+| C26 | **Twin:** `delegate` names a template outside the Skill's scope | admitted; L4 `denied` with `template-outside-grant-scope`; no witness; the walk COMPLETES |
+| C27 | **Twin:** `delegate` references evidence beyond the task's record | admitted; stage B `delegation-refused:evidence-unreachable`; no witness; the walk COMPLETES |
 
 Automated coverage today: C1–C6, C8–C19 in
 `orchestration/verification_seam_test.go` +
-`deployment/anchor_test.go`; C7 in `deployment/anchor_test.go`. On a
+`deployment/anchor_test.go`; C7 in `deployment/anchor_test.go`;
+C20–C27 in `subagents/delegation/seam/{anchored,e2e}_test.go`. On a
 real deployment they are re-run against the REAL anchor rather than a
-test-minted one (Phase E).
+test-minted one (Phase E) by `evidence/harness/phasec`, which now
+carries C20+–C27 (positive rows print `admitted`, and a positive row
+that refuses is a finding). Smoke-run 2026-09-24 on the development
+host against a scratch `rsys@4`: 25 rows, 0 findings.
 
 ---
 
@@ -139,6 +152,10 @@ test-minted one (Phase E).
 | D5 | Anchor BYTES are durable in the record | object retrievable |
 | D6 | Read-path re-verification (`deployment.VerifyAnchorRecord`) | re-establishes the deployment from record + registry alone |
 | D7 | Kill the process mid-walk; reopen | startup sweep drives the task to a typed terminal; no continuation |
+| D8 | **L8:** `themis-run` submits the L9-instantiated `remediate-dependency@2` envelope under the ACTIVE `rsys@4` with a model that delegates (scripted stand-in or a capable live model) | COMPLETED; `l8-delegation` in the record; the manifest carries `l8_execution_bound`; `deployment_anchor` = the rsys@4 hash |
+| D9 | **L8:** cold reconstruction of that delegation from the host record (`seam.ReconstructTask` under the anchored registry hash) | CONFIRMED; the composition object is the exact `[system, user]` input; template bytes referenced |
+| D10 | **L8:** L10 history view of the task | `delegations[]` lists the witness read-only; no verification instance minted for it |
+| D11 | **L8:** kill the process between the delegated model call and the witness commit (fault point `delegation.pre-event-commit`, or `kill -9` timed by the record) | task FAILED_PARTIAL by the sweep; the composition object retained and unreachable (orphan, not a fact); no `l8-delegation` |
 
 ---
 
@@ -175,6 +192,13 @@ Record, do not summarize away:
   sensitivity inheritance (local-endpoint scope); the four
   consumption-pinned registries whose consumers live outside L7;
   `TestLivePressureProof` flake.
+- **L8:** the C20+ record (witness seq, composition and output object
+  ids, reconstruction verdict), the D8 `themis-run` receipt, the D11
+  orphan scan, the VM-8 delegate-call count; residuals still-recorded:
+  live model may not delegate (Register E admitted-not-delegated),
+  per-item `derived_sensitivity` = parent ceiling, providers reporting
+  dated model ids mint `model-identity-mismatch`,
+  `remediate-dependency@1` cannot instantiate (reserved H2 headings).
 
 Production wiring proceeds only on the owner's decision after this
 evidence exists. The plan produces evidence; it does not grant the
@@ -308,6 +332,22 @@ git checkout -- "$REPO/instructions/global/system"
 Capture the exact refusal text for each. A refusal with the wrong
 reason is a finding, not a pass.
 
+The whole matrix, C1–C27, runs from the evidence tool against the REAL
+anchor (it copies the governed trees and never writes the deployment):
+
+```bash
+cd "$REPO/evidence/harness" && GOWORK=off go build -o /tmp/phasec ./phasec
+/tmp/phasec -repo "$REPO" -deploy "$DEPLOY" \
+  -anchor-file rsys4.json -anchor-sha256 "$ANCHOR_SHA" \
+  -pinned-sha "$PINNED_SHA" -mirror-repo demo-vuln-app -git /usr/bin/git
+#   expected: every C-row "refused" with its reason; C20+, C25, C26,
+#   C27 "admitted"; "0 findings". Add -only C20+ to run one row.
+```
+
+`-mirror-repo` names the repository under the ceiling's `mirror_root`
+whose `go.mod` the delegating walk reads; `-pinned-sha` is a commit
+of that repository.
+
 ## VM-6 — Anchored positive path and kill/recovery (Phase D)
 
 ```bash
@@ -320,6 +360,58 @@ kill -9 <pid>            # mid-walk
 Verify in the record: `deployment_anchor` present and equal to the
 anchor hash; the anchor bytes retrievable; `VerifyAnchorRecord`
 re-establishes the deployment from record + registry alone.
+
+**L8 (D8–D11):**
+
+```bash
+# D8 — instantiate the delegating Skill through L9 for THIS deployment
+#      and submit it through the real binary
+cd "$REPO/src/harness" && go run ./cmd/themis-instantiate \
+  -catalog "$REPO/policies/skills/catalog.json" -skill remediate-dependency@2 \
+  -task rsys4-deleg-1 -repo demo-vuln-app -pinned-sha "$PINNED_SHA" \
+  -input dependency=vulnerable-dep -input advisory=ADV-2026-1 \
+  -model qwen2.5:7b -turn-timeout 180 -wall-deadline 300 \
+  -registry "$REPO/policies/tools/registry-v5.json" -exec-ceiling "$DEPLOY/execution-ceiling.json" \
+  -state "$DEPLOY/state" -artifacts "$DEPLOY/artifacts" -workspaces "$DEPLOY/provider" \
+  -out "$DEPLOY/envelopes"
+#   prints the envelope path; the effective grant/spec sit beside it.
+#   L9's disjointness wall requires every task-writable root to EXIST
+#   (mkdir -p "$DEPLOY"/{state,artifacts,provider,envelopes} first).
+go run ./cmd/themis-run -deploy "$DEPLOY" -governed-root "$REPO" \
+  -anchor "$REPO/policies/deployment/rsys4.json" -anchor-sha256 "$ANCHOR_SHA" \
+  -anchors-registry "$REPO/policies/deployment/anchors.json" \
+  -envelope "$DEPLOY/envelopes/<envelope>.json" -model-endpoint http://localhost:11434 -json
+#   with a live model the model MAY not delegate (recorded, not a
+#   finding); for a guaranteed delegation, run the C20+ row instead
+#   (scripted parent) — it is the same walk under the same anchor.
+
+# D9 — cold reconstruction from the host record
+cat > /tmp/recon.go <<'GO'
+package main
+import ("encoding/json";"fmt";"os";"path/filepath"
+ hctx "github.com/tofchaliss/themis/context";"github.com/tofchaliss/themis/state"
+ "github.com/tofchaliss/themis/subagents/delegation/seam";"github.com/tofchaliss/themis/tools")
+func main(){ root,err:=state.OpenRoot(os.Args[1]); if err!=nil{panic(err)}
+ reg,err:=tools.LoadRegistry(filepath.Join(os.Args[3],"policies/tools/registry-v5.json")); if err!=nil{panic(err)}
+ cfg:=seam.ReconstructConfig{RegistryHash:reg.Hash,ToolTrust:func(n string)(hctx.AuthorityClass,bool){for _,t:=range reg.Tools{if t.Name==n{return t.Trust,true}};return "",false}}
+ recs,err:=seam.ReconstructTask(root,os.Args[2],cfg); if err!=nil{panic(err)}
+ b,_:=json.MarshalIndent(recs,""," "); fmt.Println(string(b)) }
+GO
+cd "$REPO/src/harness" && go run /tmp/recon.go "$DEPLOY/state" rsys4-deleg-1 "$REPO"
+#   expected: one entry, "verdict": "CONFIRMED", every check listed
+
+# D10 — L10 observes, never evaluates
+#   seam.TaskVerificationHistory(root, task).Delegations has one entry;
+#   History/Latest carry only the report-valid@2 evaluation
+
+# D11 — crash before the witness
+#   start themis-run with a scripted-or-live model, `kill -9` the
+#   process once `l4-audit{Tool:delegate, authorized}` is in the stream
+#   and before `l8-delegation` appears; reopen → the sweep closes the
+#   task FAILED_PARTIAL; state.ScanReachable() lists the composition
+#   object as present and NOT reachable; no l8-delegation exists.
+#   (Deterministic form: the hermetic TestDelegationFaultPoints.)
+```
 
 ## VM-7 — Full governed chain (Phase E)
 
@@ -336,6 +428,12 @@ export THEMIS_LIVE_TOOL_MODEL=qwen2.5:7b
 cd "$REPO/src/harness"
 go test ./verification/seam/ -run TestLiveRemediateWalk -count=1 -v
 go test ./ratchet/ -run TestLiveModelAuthorsCandidate -count=1 -v
+# L8 (Register E): the anchored @2 walk through the unmodified loop
+go test ./subagents/delegation/seam/ -run TestLiveDelegationWalk -count=1 -v
+#   asserted: admission + typed terminal + CONFIRMED reconstruction of
+#   any delegation that occurred. Whether the model delegates is
+#   recorded (the -v log prints delegate calls and witnessed
+#   delegations), never asserted — the live-register discipline.
 ```
 
 These are machine-local evidence: record the model name and digest

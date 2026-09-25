@@ -29,6 +29,20 @@
    "artifact_sha256": "b5f551ab70769e7424f823579715cbd4b2d317ec358ceb1c9574bfe930636b8c",
    "state": "active",
    "steward": "deployment-validation"
+  },
+  {
+   "name": "rsys",
+   "version": 4,
+   "artifact_sha256": "206375725e41fe23db83bffb9310d4d45025854f49bba638b6f7844664fac65f",
+   "state": "withdrawn",
+   "steward": "security-engineering"
+  },
+  {
+   "name": "rsys",
+   "version": 5,
+   "artifact_sha256": "0dd1867fbb04321ce3042710e9c16fa026079c4a7442047fa1358fe13a8ed313",
+   "state": "active",
+   "steward": "security-engineering"
   }
  ]
 }

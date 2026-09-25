@@ -1,0 +1,42 @@
+{
+ "version": 1,
+ "name": "rsys",
+ "deployment_version": 5,
+ "instruction_root_safety": "2accb7bfe3043617be1d82e98fe28d06a69dcfe559fd8b5b1a98a7bf103b9f28",
+ "instruction_root_system": "4ab949a297a3b5be0bc2e1c11adf6df778f8c0a956f6a22650e66b442ae6d6d4",
+ "instruction_root_themis": "c6efa6aa3d114981b01d318342d6315eaa75285855b3f4cd8cc8904201d3659b",
+ "instruction_policy": "2cfe5f336ba77a251cd2da2f0fc9ec5cd8a93de49f4aa5b7ea9a537e51324485",
+ "constitution": {
+  "state": "33c6f6c54c2e7b56b33b27384488c03eb217aad0f504402b7ee750c27f22b8db",
+  "orchestration": "008be050c29740ce8d863b3f7ae858fa6b63eb29ad853d563b358e2156662370"
+ },
+ "execution_ceiling": "fd8fcdc19e23d2833e2efb5c5323d1b68b16b647826e4baf88d430e31b696f13",
+ "tool_registry": "7c489f9941884a7d1cf0fde0624f4ea040e0045135867e9a523d49da34d72902",
+ "workflows": [
+  {
+   "workflow": "c10826f24c2612bb7c3135bec152f40a1b7941ffe09d5f735ebbaac536c731a9",
+   "workflow_ceiling": "06bf8c0a9f2c06f7297dcdab90f7b12618ad72224ad288e712c391012cbf0f0f",
+   "context_contract": "dfb4ade9c5fe1f2d6f8b285ec9099c407842fa16f7a48f87cea051e9d4ed8f96"
+  },
+  {
+   "workflow": "b87481573d73089459b5e59ac615edb6d5ac02faaa63b84960fbb7347159b0d5",
+   "workflow_ceiling": "44bba701c152d091e0185ca5eebf0ed4bea82b9b6290e39dbde715d41f2e5c6e",
+   "context_contract": "dfb4ade9c5fe1f2d6f8b285ec9099c407842fa16f7a48f87cea051e9d4ed8f96"
+  }
+ ],
+ "models": [
+  "qwen2.5:7b",
+  "gpt-oss:20b",
+  "cyberpal20b-v3"
+ ],
+ "model_registry": "absent",
+ "skill_catalog": "44e1a1014981b0708d5dc39a2bf5cee33810210c78bf2a8b393328e53123b5ab",
+ "skills": [
+  "remediate-dependency@1",
+  "remediate-dependency@2"
+ ],
+ "contract_registry": "4b3e043ef2a37a3acaa7257d9044246d4d134c8e71d3e2d317c8f743899146aa",
+ "criteria_registry": "d739002c16d9286712b8f7230f632de9faf66de5ba0564f19a614f171d13d2a4",
+ "regression_set_registry": "d5fe3e245a37d3d2fda9b459a3e3f6e49ec095840caebdd13fcd68e741b7f09c",
+ "delegation_template_registry": "82843f6aa671d45d686f0feea6a61d1cbec8765a7bb51c79740df9d382993997"
+}

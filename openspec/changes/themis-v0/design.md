@@ -1,0 +1,122 @@
+# Design: Themis v0 — the read door and the decision door
+
+Grill OPEN 2026-09-25 (owner-led, one question at a time, facts from
+the record before opinions). §2 holds locked decisions; §3 the question
+table; §6 the challenge record when the owner opens it. Proposal:
+`proposal.md` (scope A, the out-of-scope list, the three boundaries).
+
+## 0. Position in the flow
+
+```
+Themis store (Findings, Products, Positions)
+   │ read door: ThemisSeam / ThemisReader        governed-record ─► model context
+   │                                                                     │
+   │                                              model proposes / acts (L1–L11)
+   │                                                                     │
+   │                                              egress artifact bound (L6) · L10 PASS
+   │                                                                     │
+   └─ decision door: operator command ◄── referencable execution tuple ──┘
+          │  Themis derives + verifies everything from the record plane
+          ▼
+     HumanDecision (witnessed) ─► Enterprise Position
+```
+
+The harness never writes to Themis. The model never touches either
+door's authority: the read door delivers under a class the model cannot
+change; the decision door is an operator act the model cannot invoke.
+
+## 1. Hard invariants (inherited, not grillable)
+
+- ARCHITECTURE.md: Themis owns security truth, Findings, Enterprise
+  Positions, Security Governance. The harness may write to Themis only
+  through Themis-owned interfaces; acceptance into security truth
+  requires the appropriate human or governed Themis decision; a
+  governed automated decision is not AI self-authority.
+- G1: a caller-supplied hash IDENTIFIES a deployment; only the anchors
+  registry ADMITS it. G2: an L6 object is a fact of kind F iff a
+  committed event of F's minting class names it.
+- Authority classes are minted at their owning doors only; the model's
+  output is `external-untrusted` at every hop (C-L8-18).
+- Withdrawal governs new use, never history (L8 D-L8-8, C-L8-14 G; L9
+  D-L9-10; G1 Q-G1-8).
+
+## 2. Locked decisions
+
+### D-T-1 — The referencable execution tuple (LOCKED 2026-09-25, owner; Q-T-1, folds Q-T-3)
+
+> A Themis-referencable harness execution is identified by the tuple
+> `(deployment_anchor_hash, task_id, artifact_bound_event_seq)`. The
+> tuple is the ADMISSIBILITY HANDLE Themis uses to resolve an execution
+> act from the harness record plane; Themis derives and verifies
+> everything else. The caller supplies the execution tuple and never an
+> object id: a caller cannot say "accept object X", only "this governed
+> execution act", after which Themis determines what that act bound.
+
+Resolution chain (every step is existing harness code; Themis adds no
+identity mechanism):
+
+```
+(anchor hash, task id, artifact-bound seq)
+   │
+   ▼ ReadManifest(task)
+   ├── status terminal COMPLETED, verdict VERIFIED
+   └── governed_hashes.deployment_anchor == anchor hash
+   │
+   ▼ VerifyAnchorRecord(recorded hash, anchor bytes from the record, anchors registry)
+   └── the anchor is REGISTERED (its current state is irrelevant to history:
+       withdrawal after the fact does not unmake the execution)
+   │
+   ▼ ReadEvents(task) → event at seq
+   ├── class artifact-bound
+   └── Refs = [{ObjectID, egress-artifact}]  → the artifact identity, DERIVED
+   │
+   ▼ GetObject(ObjectID)  (re-hashed by the store; corruption is a verdict, not a refusal)
+```
+
+Rules folded in:
+- **Why a triple, not "anchor + object address":** one content address
+  can be bound by two tasks (objects dedup across tasks), so the
+  address alone does not name an execution; the binding event does.
+  The manifest, not the object, carries `deployment_anchor`; identity
+  runs through the manifest.
+- **Unanchored tasks are not referencable.** `deployment_anchor =
+  "unanchored"` is refused before any further resolution.
+- **The anchor in the tuple is not authorization re-established from
+  the caller's hash.** Themis performs the G1 two-step: the supplied
+  hash identifies the requested deployment; the exact anchor bytes
+  come from the record; registration is checked in the anchors
+  registry; then the manifest binding is used.
+- **No new L6 identity mechanism, no new artifact identity mechanism,
+  no caller-supplied ObjectID authority.**
+
+### Boundaries locked with D-T-1 (owner, 2026-09-25)
+
+- **B-T-1 — Human decision only.** The decision door is structurally
+  `HumanDecision`. A governed automated decision is a separate
+  mechanism with its own grill; it must not be introduced as an
+  extension of the human door's proof.
+- **B-T-2 — L10 PASS is admissibility, not correctness.** No PASS, no
+  intake; but PASS establishes only that the artifact satisfies the
+  registered contract. The acceptance view exposes model turns,
+  artifact bytes, and the L10 outcome as three independent things; the
+  human decision is the semantic acceptance act.
+- **B-T-3 — The write boundary is proven structurally.** The harness
+  holds no Position capability, executor, or seam, and an import/AST
+  wall proves harness packages never reference the Themis write path.
+  Capability absence is a consequence of ownership; the wall is the
+  evidence.
+
+## 3. Grill — question table
+
+| # | Question | Recommendation | Disposition |
+|---|---|---|---|
+| Q-T-1 | What constitutes a Themis-referencable harness execution? | the triple, derived artifact, unanchored refused | LOCKED → D-T-1 |
+| Q-T-2 | Which deployment identity is authoritative, how resolved? | — | open |
+| Q-T-3 | Which L6 object/event identifies the artifact? | — | folded into D-T-1 |
+| Q-T-4 | How does Themis verify the artifact was produced by that execution? | — | open |
+| Q-T-5 | How does Themis verify the L10 result? | — | open |
+| Q-T-6 | Withdrawn / unavailable task, anchor, artifact, verification record? | — | open |
+| Q-T-7 | What exact act creates the Enterprise Position? | — | open |
+| Q-T-8 | How is the human decision witnessed? | — | open |
+| Q-T-9 | The read door: what, which class, pinned how? | — | open |
+| Q-T-10 | Package, store, command; the walls | — | open |

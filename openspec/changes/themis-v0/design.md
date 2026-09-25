@@ -136,6 +136,53 @@ task record ── deployment_anchor object (exact bytes)
   no caller-supplied anchor authority · no content-only identity · no
   invalidation of history by later withdrawal.
 
+### D-T-4 — Artifact production is established by causal replay of the record (LOCKED 2026-09-25, owner; Q-T-4)
+
+> Themis establishes that the artifact was PRODUCED by the governed
+> execution by replaying the authoritative record and verifying the
+> complete production chain from governed L5 egress to artifact
+> binding and terminal completion. `artifact-bound` is not the
+> production witness by itself; it is the final binding in a
+> multi-event witness. Themis obtains the artifact bytes only after
+> the replay succeeds.
+
+```
+l5-transition  seal task-complete
+      │
+l5-op          egress naming the artifact address
+      │
+L6 object      bytes re-hash to the address
+      │
+artifact-bound Ref{ObjectID, egress-artifact} — the SAME address
+      │
+lifecycle      → COMPLETED
+```
+
+Mandatory checks, all in the tuple's own stream: the sealing
+transition precedes the egress; the egress names the address the
+binding names; the object re-hashes to it; ordering holds; terminal
+COMPLETED follows the binding; no competing `artifact-bound` exists
+for the execution; every event's writer is the layer that owns its
+class; no model turn and no L8 event can establish the production
+fact.
+
+- **Fail-closed, link-named:** any required link absent, duplicated,
+  inconsistent, mis-ordered, or attributable to an unauthorized writer
+  refuses with a typed reason naming the failed link
+  (`artifact-provenance-refused: missing l5-op egress witness for
+  artifact <ObjectID>`), never a generic "invalid artifact".
+- **No signature, no attestation, no new L6 witness class.** A signed
+  egress receipt answers "can an independent party authenticate this
+  receipt?"; Themis v0's question is "can I mechanically reconstruct
+  whether this artifact was produced by this governed execution?",
+  which the record plane already answers (ordered events, durable
+  objects, hashes, layer-owned writers, lifecycle, chain verification).
+  Adding a signature would be a new L6 mechanism for an undemonstrated
+  gap.
+- No caller-supplied artifact identity; no trust in `artifact-bound`
+  alone. Themis stays a consumer of the harness's authoritative
+  evidence, never a competing execution-truth subsystem.
+
 ### Boundaries locked with D-T-1 (owner, 2026-09-25)
 
 - **B-T-1 — Human decision only.** The decision door is structurally
@@ -160,7 +207,7 @@ task record ── deployment_anchor object (exact bytes)
 | Q-T-1 | What constitutes a Themis-referencable harness execution? | the triple, derived artifact, unanchored refused | LOCKED → D-T-1 |
 | Q-T-2 | Which deployment identity is authoritative, how resolved? | record bytes identify; governed registry establishes; any lifecycle | LOCKED → D-T-2 |
 | Q-T-3 | Which L6 object/event identifies the artifact? | — | folded into D-T-1 |
-| Q-T-4 | How does Themis verify the artifact was produced by that execution? | — | open |
+| Q-T-4 | How does Themis verify the artifact was produced by that execution? | causal replay l5-transition → l5-op → object → artifact-bound → COMPLETED; fail-closed, link-named | LOCKED → D-T-4 |
 | Q-T-5 | How does Themis verify the L10 result? | — | open |
 | Q-T-6 | Withdrawn / unavailable task, anchor, artifact, verification record? | — | open |
 | Q-T-7 | What exact act creates the Enterprise Position? | — | open |

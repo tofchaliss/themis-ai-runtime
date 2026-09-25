@@ -3,6 +3,13 @@
 Updated at every green milestone. If context was compacted, start here.
 
 ## One-line status
+**2026-09-25 (direction change, owner): Option A — the REAL Themis
+(`~/code/themis`, its own repo) is the system of record; no second Themis
+inside this repo. `src/themis` is a stand-in to be DISSOLVED once
+`openspec/changes/themis-integration/` (grill open, Q-I-1..8) decides
+where each piece goes. D-T-1..8 stand; T-M4/T-M5 shape superseded;
+W-M1..W-M3 unaffected. Nothing deleted yet.**
+
 2026-09-25 (latest): T-M3 LANDED (admissibility only, per owner) —
 `intake.Resolve` D-T-1 → D-T-2 → D-T-4 → D-T-5 under the D-T-6 table,
 every refusal typed and link-named, `EvidenceView` by identity; the

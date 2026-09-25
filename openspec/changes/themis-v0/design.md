@@ -183,6 +183,54 @@ fact.
   alone. Themis stays a consumer of the harness's authoritative
   evidence, never a competing execution-truth subsystem.
 
+### D-T-5 — The L10 fact is re-established over the exact artifact (LOCKED 2026-09-25, owner; Q-T-5)
+
+> Themis never reads the outcome from the `l10-verification` event
+> body as a claim. The PASS used for intake must be a REPRODUCIBLE PASS
+> for the EXACT egress artifact identified by D-T-4: Themis runs the
+> existing L10 reconstruction over the task's verification events and
+> requires (1) a `Consistent` reconstruction with outcome PASS under a
+> contract registered in Themis's governed checkout (`contracts.json`,
+> any lifecycle state, two-way identity); (2) its `execution_ref`
+> resolving to an authorized `l4-audit` of a verifier-eligible
+> capability in the same stream, whose `ResultHash` equals the hash of
+> the reconstruction's raw bytes; (3) the raw bytes BYTE-IDENTICAL to
+> the egress artifact bytes obtained under D-T-4; (4) the verification
+> event's seq preceding the `artifact-bound` seq. The L7 gate that fired
+> on the outcome is not consulted.
+
+```
+D-T-4 egress artifact ── exact bytes ──┐
+                                        ▼
+L10 reconstruction: registered contract · Consistent · PASS ·
+authorized verifier audit (ResultHash = raw hash) ·
+raw bytes == artifact bytes · verification seq < binding seq
+                                        │
+                                        ▼
+                          eligible for human intake
+```
+
+- **Why (3):** without it, `verify_report(A) → PASS` then `egress(B)`
+  is internally consistent and would accept B on A's PASS. The
+  verifier can operate on workspace content mid-walk; the artifact is
+  produced at completion; the equality makes the PASS about THIS
+  artifact.
+- **Consequence, accepted:** verify → mutate → egress yields no
+  verified artifact for v0. A workflow needing that pattern needs
+  another governed verification after the mutation, producing a new
+  fact for the final artifact — never a weaker intake contract.
+- **Why not the L7 gate:** the gate proves what the harness required
+  for its own progression; Themis independently establishes whether
+  the evidence satisfies the INTAKE contract. Otherwise Themis would
+  trust another layer's conclusion about its own conclusion.
+- Named refusals: `no reproducible PASS` · `contract not registered` ·
+  `verifier execution not authorized` · `verification evidence
+  unavailable` · `verified bytes are not the bound artifact` ·
+  `verification does not correspond to artifact production`.
+- No new verifier · no new verification event type · no trust in the
+  recorded outcome alone · no trust in the L7 gate · no PASS over
+  different bytes.
+
 ### Boundaries locked with D-T-1 (owner, 2026-09-25)
 
 - **B-T-1 — Human decision only.** The decision door is structurally
@@ -208,7 +256,7 @@ fact.
 | Q-T-2 | Which deployment identity is authoritative, how resolved? | record bytes identify; governed registry establishes; any lifecycle | LOCKED → D-T-2 |
 | Q-T-3 | Which L6 object/event identifies the artifact? | — | folded into D-T-1 |
 | Q-T-4 | How does Themis verify the artifact was produced by that execution? | causal replay l5-transition → l5-op → object → artifact-bound → COMPLETED; fail-closed, link-named | LOCKED → D-T-4 |
-| Q-T-5 | How does Themis verify the L10 result? | — | open |
+| Q-T-5 | How does Themis verify the L10 result? | reproducible PASS, registered contract, authorized audit, raw bytes == artifact, verification precedes binding; L7 gate not consulted | LOCKED → D-T-5 |
 | Q-T-6 | Withdrawn / unavailable task, anchor, artifact, verification record? | — | open |
 | Q-T-7 | What exact act creates the Enterprise Position? | — | open |
 | Q-T-8 | How is the human decision witnessed? | — | open |

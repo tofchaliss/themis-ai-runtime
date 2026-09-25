@@ -55,7 +55,7 @@ authority boundary; nothing more is built.
 | Q-T-2 | Which deployment identity is authoritative, and how does Themis resolve it? | LOCKED 2026-09-25 (D-T-2) |
 | Q-T-3 | Which L6 object/event combination identifies the artifact? | folded into D-T-1 |
 | Q-T-4 | How does Themis verify the artifact was produced by that governed execution? | LOCKED 2026-09-25 (D-T-4) |
-| Q-T-5 | How does Themis verify the L10 result rather than trusting a claim? | open |
+| Q-T-5 | How does Themis verify the L10 result rather than trusting a claim? | LOCKED 2026-09-25 (D-T-5) |
 | Q-T-6 | What happens when the task, anchor, artifact, or verification record is withdrawn or unavailable? | open |
 | Q-T-7 | What exact act creates the Enterprise Position? | open |
 | Q-T-8 | How is the human decision itself witnessed? | open |

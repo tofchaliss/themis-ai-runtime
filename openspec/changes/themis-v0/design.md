@@ -1,8 +1,11 @@
 # Design: Themis v0 — the read door and the decision door
 
-Grill OPEN 2026-09-25 (owner-led, one question at a time, facts from
-the record before opinions). §2 holds locked decisions; §3 the question
-table; §6 the challenge record when the owner opens it. Proposal:
+Grill OPEN 2026-09-25 → **CLOSED 2026-09-25: Q-T-1..10 all disposed
+(D-T-1, D-T-2, D-T-4..10; Q-T-3 folded into D-T-1), boundaries
+B-T-1..3, owner LOCK on each.** §2 holds the locked decisions; §3 the
+question table; §4 Gate 0 (implementation whitelist and registers);
+§6 the challenge record if the owner opens one. Implementation NOT
+STARTED. Proposal:
 `proposal.md` (scope A, the out-of-scope list, the three boundaries).
 
 ## 0. Position in the flow
@@ -380,6 +383,66 @@ anchor-pinned store · governed-record classification → Themis record
   security-truth model, not a component/SBOM hierarchy, not an
   authorization object, not a remediation state machine.
 
+### D-T-10 — Where Themis lives, and the walls (LOCKED 2026-09-25, owner; Q-T-10)
+
+> Themis v0 is its own Go module, `src/themis` (`module
+> github.com/tofchaliss/themis-app`), in the workspace. Themis depends
+> on the harness module for READ-ONLY record-plane, deployment, and
+> verification contracts (`state`, `deployment`, `verification`,
+> `verification/seam`) and on nothing else in it. The harness depends
+> on Themis nowhere. `cmd/themis-run` may construct the read seam
+> (`store`) and must never import `intake`. The harness executes
+> governed work on behalf of Themis; it is not the authority that owns
+> Themis state.
+
+Packages and binaries: `themis/store` (anchor-pinned read-only
+registries, `ThemisSeam.Read`, D-T-9) · `themis/intake` (D-T-1..8
+resolution, the evidence view, the Position append) ·
+`cmd/themis-decide` (the human's command, D-T-7/8) · `cmd/themis-run`
+gains only the read seam.
+
+```
+                     THEMIS
+          ┌────────────────────────┐
+          │ store        intake    │
+          │  READ         WRITE    │
+          └─────┬────────────▲─────┘
+                │ read seam  │ themis-decide (human)
+          ┌─────▼────────────┴─────┐
+          │        HARNESS         │
+          │   L1 ─────────── L11   │
+          │   NO Position writer   │
+          │   NO intake dependency │
+          └────────────────────────┘
+```
+
+**The write operation does not exist in the harness authority
+surface**: the Position writer is not "not exposed as a tool"; it is
+unreachable from the model execution path by the dependency graph.
+Stronger than `model → write_position → refused`.
+
+Four walls, each a test:
+1. **Dependency wall** — the ENTIRE harness module's dependency graph
+   (`go list -deps` over every harness package, not only direct
+   imports) contains no `themis-app/intake`; an indirect path
+   `harness → A → B → intake` is a violation.
+2. **Binary wall** — `cmd/themis-run` imports `themis-app/store` only,
+   never `intake`.
+3. **Writer wall** — `intake` has exactly one write site
+   (`positions/<id>/<n>.json`, `O_EXCL` so a sequence number can never
+   be reused), no other `os` writer, and no import of `tools`,
+   `orchestration`, `execution`, or `runtime/model`. The store package
+   has no `os` writer at all — a Themis read-store immutability wall
+   (its own boundary, not an L9 rule). Both tested by AST against the
+   intended boundary, never by package naming alone.
+4. **Capability wall** — the L4 registry contains no Position-writing
+   capability, verb, target class, executor, or error vocabulary.
+
+Core invariant: *the harness may consume Themis-governed records
+through the read seam, but the harness dependency graph contains no
+path to the Themis Position writer. Position creation is exclusively a
+Themis-owned human command.*
+
 ### Boundaries locked with D-T-1 (owner, 2026-09-25)
 
 - **B-T-1 — Human decision only.** The decision door is structurally
@@ -410,4 +473,68 @@ anchor-pinned store · governed-record classification → Themis record
 | Q-T-7 | What exact act creates the Enterprise Position? | `themis-decide` only; append-only numbered record about an existing Finding; closed dispositions; references never copies | LOCKED → D-T-7 |
 | Q-T-8 | How is the human decision witnessed? | the Position record; decision block observed never asserted; evidence view recorded; `observed-not-authenticated` | LOCKED → D-T-8 |
 | Q-T-9 | The read door: what, which class, pinned how? | L4 `ThemisSeam` only; findings + products anchor-pinned (`themis_store`); L4 mints the class; withdrawn unservable; Positions unpinned; Product minimal | LOCKED → D-T-9 |
-| Q-T-10 | Package, store, command; the walls | — | open |
+| Q-T-10 | Package, store, command; the walls | own module `src/themis`; Themis → harness one-way; store/intake/themis-decide; four walls incl. whole-graph dependency | LOCKED → D-T-10 |
+
+## 4. Gate 0 — implementation whitelist (LOCKED with the grill, 2026-09-25)
+
+Anything not listed here stops implementation and is classified first.
+
+**Themis-owned (`src/themis`, module `themis-app`)**
+- `store`: loaders for `policies/themis/findings.json` and
+  `products.json` (append-only registries, strict keys, immutable
+  records, `state`, `steward`; withdrawn refuses on read), the
+  `ThemisSeam` implementation, the `themis_store` hash.
+- `intake`: `Resolve(tuple)` implementing D-T-1..6 with link-named
+  refusals; `EvidenceView` (model turns shown, artifact bytes, L10
+  reconstruction) with the identities of everything rendered; `Append`
+  writing `positions/<finding>/<n>.json` under `O_EXCL`; `Current`
+  (highest sequence projection); the Position record type (D-T-7/8).
+- `cmd/themis-decide`: the human command (tuple, `--disposition`,
+  `--rationale`; refuses any `decision.*`; observes identity).
+- `cmd/themis-inspect` (read-only): renders a Finding's Positions and
+  re-verifies one Position against the record (reconstruction).
+
+**Existing-layer amendments**
+- G1 anchor: pin `themis_store` (sha or `"absent"`); Open verifies it
+  against `Config.ThemisStorePath` the way it verifies the delegation
+  registry; `rsys@6` proposed.
+- `cmd/themis-run`: constructs `store` and passes it as the L4
+  `ThemisSeam`; never imports `intake`.
+- `themis-status` / `themis-preflight`: print the pin; verify the two
+  registries load.
+- Skill: `remediate-dependency@3` whose grant template grants
+  `get_finding` (scope `FIND-`) and `get_product` (scope `PROD-`), and
+  whose procedure tells the model to read the Finding first;
+  `investigate-cve` untouched. The P0 Finding `FIND-2026-0001` and
+  Product `PROD-demo-vuln-app` authored as PROPOSED registrations.
+- G2 fact table: row `themis_position` — established by a human
+  through `themis-decide`, witnessed by the Position record.
+
+**Explicitly absent**: L2 `ThemisReader` wiring · any harness import of
+`intake` · a Position capability/verb/executor · automated acceptance ·
+Position edit/delete · identity provider or signatures · feeds, KB,
+enrichment, SBOM, component hierarchy · Positions in the model-visible
+pin.
+
+**Proof registers**
+- **A — Admission/authority**: store loaders (closed schema, withdrawn,
+  key wall), intake refusals (each D-T-1..6 link, link-named), the
+  four walls (D-T-10), `decision.*` refused.
+- **B — Positive path FIRST**: a real record from the harness
+  (anchored `remediate-dependency@3` walk that read `FIND-2026-0001`
+  through `get_finding`, egressed, L10 PASS) → `themis-decide` creates
+  Position 1 → `themis-inspect` re-verifies it CONFIRMED; then each
+  negative twin (verify-then-mutate, PASS on other bytes, FAILED task,
+  unregistered anchor, missing object, unknown Finding, withdrawn
+  Finding read, second Position supersedes, `O_EXCL` collision).
+- **C — Record**: the Position's evidence view re-derives from the
+  harness record; a Position survives withdrawal of its anchor,
+  contract, and Finding; corruption → refused, never partial.
+- **D — Laundering**: the Finding enters the model as
+  `governed-record`; the model's restatement re-enters at the floor
+  (record projection); nothing the model wrote appears in the Position
+  except by the human's rationale.
+- **E — Live**: the demo walk (VM): live model reads the Finding, runs
+  the workflow to COMPLETED/PASS under `rsys@6`; the operator creates
+  the Position; `themis-inspect` shows Finding → execution → artifact
+  → verification → decision.

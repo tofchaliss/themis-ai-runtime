@@ -305,6 +305,39 @@ Themis Finding → governed read → model reasoning → governed execution
     → verified artifact → human decision → Position (same Finding)
 ```
 
+### D-T-8 — The decision witness (LOCKED 2026-09-25, owner; Q-T-8)
+
+> The Position record itself is the durable decision witness. Its
+> `decision` block is OBSERVED by `themis-decide` from its own process,
+> never asserted by an argument: observed OS username, uid, host; UTC
+> time; the disposition and rationale exactly as the human supplied
+> them; the identities of every evidence item RENDERED to the decider
+> (artifact object id, verification record id, the model-turn object
+> ids shown, anchor hash); the governed Themis checkout commit; and
+> `decider_authentication: observed-not-authenticated`. Any
+> `decision.*` key supplied in arguments is refused (the `stampOrigin`
+> rule). Decision identity is accountability metadata, not authority:
+> the authority is that only `themis-decide` writes Positions and only
+> a human runs it.
+
+- **Legitimate human inputs:** disposition, rationale. **Not inputs:**
+  the human's identity, the evidence identities (derived from the
+  resolved execution and from what was actually rendered).
+- **Why the evidence hashes:** the Position records the evidence VIEW
+  at the moment of decision, so a reviewer reconstructs Finding →
+  tuple → artifact → L10 → model turns shown → anchor → commit →
+  human-entered decision. The model's reasoning stays evidence; the
+  decision stays a distinct Governance act.
+- **`observed-not-authenticated`, retained verbatim:** it tells the
+  reviewer the system observed and recorded the OS identity and did
+  not cryptographically authenticate the human. Authentication is the
+  system-wide residual it already is on every signoff; upgrading it is
+  a Governance/security decision for the whole system, never a
+  Themis-only mechanism.
+- No identity provider · no signing key · no Themis-specific
+  authentication root · no caller-asserted identity · no model
+  authority.
+
 ### Boundaries locked with D-T-1 (owner, 2026-09-25)
 
 - **B-T-1 — Human decision only.** The decision door is structurally
@@ -333,6 +366,6 @@ Themis Finding → governed read → model reasoning → governed execution
 | Q-T-5 | How does Themis verify the L10 result? | reproducible PASS, registered contract, authorized audit, raw bytes == artifact, verification precedes binding; L7 gate not consulted | LOCKED → D-T-5 |
 | Q-T-6 | Withdrawn / unavailable task, anchor, artifact, verification record? | withdrawn → proceed (recorded); unavailable/corrupt → refuse; Positions never rewritten | LOCKED → D-T-6 |
 | Q-T-7 | What exact act creates the Enterprise Position? | `themis-decide` only; append-only numbered record about an existing Finding; closed dispositions; references never copies | LOCKED → D-T-7 |
-| Q-T-8 | How is the human decision witnessed? | — | open |
+| Q-T-8 | How is the human decision witnessed? | the Position record; decision block observed never asserted; evidence view recorded; `observed-not-authenticated` | LOCKED → D-T-8 |
 | Q-T-9 | The read door: what, which class, pinned how? | — | open |
 | Q-T-10 | Package, store, command; the walls | — | open |

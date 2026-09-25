@@ -15,7 +15,7 @@ finding — record it, do not "fix" it by weakening a loader.
 # 0. Identity of this run — record everything this prints
 # =====================================================================
 export REPO="$HOME/themis-ai-runtime"           # the checkout
-export DEPLOY="/srv/themis"                     # deployment root, outside the repo
+export DEPLOY="/srv/themis/rsys"                # deployment root, outside the repo (the rsys instance root)
 export GIT_BIN="$(command -v git || echo /usr/bin/git)"
 date -u; uname -a; id -un
 
@@ -68,36 +68,44 @@ printf 'module demo // vulnerable-dep v1\n' > go.mod
 git -c user.name=t -c user.email=t@t add . && git -c user.name=t -c user.email=t@t commit -q -m seed
 export PINNED_SHA="$(git rev-parse HEAD)"; echo "$PINNED_SHA"   # record
 
-# the deployment's execution ceiling — exact bytes, pinned by the anchor
-cat > "$DEPLOY/execution-ceiling.json" <<JSON
+# the deployment's execution ceiling — exact bytes, pinned by the anchor.
+# On a host that already runs an ACTIVE anchor, DO NOT overwrite it: the
+# existing ceiling is what the prior anchor pins and rsys@4 inherits.
+# Only a fresh host writes one:
+test -f "$DEPLOY/execution-ceiling.json" || cat > "$DEPLOY/execution-ceiling.json" <<JSON
 {"version":1,"mirror_root":"$DEPLOY/mirror","max_wall_deadline_sec":600,"max_file_bytes":1048576,"max_total_bytes":10485760,"max_file_count":500,"max_mem_bytes":1073741824,"max_cpu_time_sec":600,"max_proc_count":64}
 JSON
 sha256sum "$DEPLOY/execution-ceiling.json"        # record
 
 # =====================================================================
 # 5. Mint rsys@4 for THIS deployment (Phase B4–B5)
-#    On a production host the ceiling and models come from the ACTIVE
-#    rsys@3 (docs/operations/rsys4-host-sequence.md). This VM has no
-#    rsys@3, so the ceiling is the one just written and the allowlist is
-#    the model this VM serves. Everything else is computed from the tree.
+#    When the host runs an ACTIVE rsys@3, the ceiling and the model
+#    allowlist are taken from it verbatim (rsys4-host-sequence.md);
+#    on a fresh host they are the ceiling just written and the model
+#    the host serves. Everything else is computed from the tree.
 # =====================================================================
 cd "$REPO"
 python3 - <<'PY'
 import json, hashlib, os
-R = os.getcwd(); D = os.environ["DEPLOY"]
+D = os.environ["DEPLOY"]
 def sha(p): return hashlib.sha256(open(p, "rb").read()).hexdigest()
 a = json.load(open("policies/deployment/rsys4.proposed.json"))
-a["execution_ceiling"] = sha(D + "/execution-ceiling.json")
-a["models"] = ["qwen2.5:7b"]
+if os.path.exists("policies/deployment/rsys3.json"):
+    r3 = json.load(open("policies/deployment/rsys3.json"))
+    a["execution_ceiling"], a["models"] = r3["execution_ceiling"], r3["models"]
+    assert a["execution_ceiling"] == sha(D + "/execution-ceiling.json"), "host ceiling is not the one rsys@3 pins"
+else:
+    a["execution_ceiling"] = sha(D + "/execution-ceiling.json")
+    a["models"] = ["qwen2.5:7b"]
 a["skills"] = ["remediate-dependency@1", "remediate-dependency@2"]
 assert a["name"] == "rsys" and a["deployment_version"] == 4
 open("policies/deployment/rsys4.json", "w").write(json.dumps(a, indent=1) + "\n")
-print("rsys4.json written")
+print("rsys4.json written; models =", a["models"])
 PY
 export ANCHOR_SHA="$(sha256sum policies/deployment/rsys4.json | cut -d' ' -f1)"; echo "$ANCHOR_SHA"   # record: the deployment identity
 
 # parse + schema validation
-cat > /tmp/anchorcheck.go <<'GO'
+cat >| /tmp/anchorcheck.go <<'GO'
 package main
 import ("fmt";"os";"github.com/tofchaliss/themis/deployment")
 func main(){ b,_:=os.ReadFile(os.Args[1]); a,err:=deployment.ParseAnchor(b,os.Args[1])
@@ -128,7 +136,7 @@ PY
 # =====================================================================
 # 6. Prove the proposal is INERT, then the Governance act (Phase B6–B8)
 # =====================================================================
-cat > /tmp/admitcheck.go <<'GO'
+cat >| /tmp/admitcheck.go <<'GO'
 package main
 import ("fmt";"os";"github.com/tofchaliss/themis/deployment")
 func main(){ _,err:=deployment.AdmitAnchor(os.Args[1],os.Args[2],os.Args[3])
@@ -137,10 +145,13 @@ GO
 cd "$REPO/src/harness" && go run /tmp/admitcheck.go "$REPO/policies/deployment/rsys4.json" "$ANCHOR_SHA" "$REPO/policies/deployment/anchors.json"
 # expect: a refusal — rsys@4 is not registered. If this admits, STOP: the proposal path is not inert (a defect).
 
-# the registration (still inert: anchors.json is untouched)
+# the registration (still inert: anchors.json is untouched). Builds on
+# the host's OWN registry so prior versions keep their history; a stale
+# rsys@4 entry from an earlier attempt is replaced, never duplicated.
 cd "$REPO" && python3 - <<'PY'
 import json, os
 reg = json.load(open("policies/deployment/anchors.json"))
+reg["entries"] = [e for e in reg["entries"] if not (e["name"] == "rsys" and e["version"] == 4)]
 reg["entries"].append({"name": "rsys", "version": 4, "artifact_sha256": os.environ["ANCHOR_SHA"], "state": "active", "steward": "security-engineering"})
 open("policies/deployment/anchors.proposed.json", "w").write(json.dumps(reg, indent=1) + "\n")
 print("anchors.proposed.json written")
@@ -199,7 +210,7 @@ grep -o '"class":"[a-z0-9-]*"' "$DEPLOY"/state/tasks/rsys4-deleg-1/*.log 2>/dev/
 # =====================================================================
 # 9. D9/D10 — cold reconstruction and the L10 view (record only, no registry files)
 # =====================================================================
-cat > /tmp/recon.go <<'GO'
+cat >| /tmp/recon.go <<'GO'
 package main
 import ("encoding/json";"fmt";"os";"path/filepath"
  hctx "github.com/tofchaliss/themis/context";"github.com/tofchaliss/themis/state"
@@ -258,6 +269,21 @@ ls -la "$HOME/evidence"
 # C20+ reconstruction verdict, the D8 receipt, the VM-8 delegate-call
 # count and model digest, and any finding with its triage category.
 ```
+
+## Verified run
+
+Executed 2026-09-25 on the `rsys` host (Ubuntu, 24 cores, CPU-only
+inference) at commit `6b98313`, with `rsys@3` ACTIVE beforehand:
+preflight 15/0; `rsys@4` = `206375725e41fe23db83bffb9310d4d45025854f49bba638b6f7844664fac65f`
+over ceiling `fd8fcdc1…`; Phase C 25 rows, 0 findings; D8 `themis-run`
+COMPLETED/VERIFIED under `rsys@4` with qwen2.5:7b; C20+ reconstruction
+CONFIRMED (seven checks); L10 view observes the delegation; three fault
+points PASS; live walk COMPLETED in 1m13s with 0 delegate calls
+(recorded). Evidence: `~/evidence/themis-l8-evidence-20260925.tgz` on
+the host; record in `docs/development/deployment-signoff-rsys.md`
+Addendum F. Notes from that run folded in above: `$DEPLOY` is the
+instance root; a host with an ACTIVE anchor keeps its ceiling; shells
+with `noclobber` need `>|`.
 
 ## Reading the results
 

@@ -721,3 +721,113 @@ in the envelope.
 
 **Unchanged:** `rsys@3` is correctly configured and ACTIVE. The run-3
 refusal is not a deployment defect.
+
+---
+
+## Addendum F — `rsys@4`, Layer 8 on the host, and the first live COMPLETED (2026-09-25)
+
+Executed on the `rsys` host at governed commit `6b98313` (the L8 archive,
+the test-plan rows C20+–C27, `themis-instantiate`) with `rsys@3` ACTIVE
+beforehand. Evidence archive on the host:
+`~/evidence/themis-l8-evidence-20260925.tgz` (state, artifacts, the
+Phase C scratch roots, receipts, and every refusal text).
+
+### Governance act: `rsys@4`
+
+Derived from the tree plus exactly two fields inherited from `rsys@3`
+(`execution_ceiling`, `models`), skills retained as
+`remediate-dependency@1..2` (`docs/operations/rsys4-host-sequence.md`).
+Parse-verified; every tree pin matched (`PINS OK`, including both
+constitution hashes); inert before the act (refused: "not a
+Governance-registered deployment anchor") and still inert after the
+registration was written to `anchors.proposed.json`; ACTIVE after the
+copy-and-commit; admission `<nil>`.
+
+| Identity | Value |
+|---|---|
+| **Anchor `rsys@4`** | `206375725e41fe23db83bffb9310d4d45025854f49bba638b6f7844664fac65f` — **ACTIVE** (`rsys@3` remains ACTIVE beside it; supersession does not withdraw) |
+| Execution ceiling | `fd8fcdc19e23d2833e2efb5c5323d1b68b16b647826e4baf88d430e31b696f13` (unchanged since `rsys@2`) |
+| Models | `qwen2.5:7b`, `gpt-oss:20b`, `cyberpal20b-v3` (inherited from `rsys@3`) |
+| Tool registry | registry-v5 (`7c489f99…`) |
+| Delegation-template registry | `82843f6aa671d45d686f0feea6a61d1cbec8765a7bb51c79740df9d382993997` |
+| Mirror fixture `demo-vuln-app` | commit `43755b035b9930a7053bc85177689e863d84c97c` |
+| Preflight | 15 pass, 2 warn (CPU-only inference; full-suite live contention), 0 fail |
+
+### Phase C on the real anchor — 25 rows, 0 findings
+
+Every C1–C24 row refused for its stated reason (texts in
+`phase-c.txt`); the four Layer-8 twins admitted:
+
+| Row | Observed |
+|---|---|
+| C20+ | admitted — `remediate-dependency@2` delegated to `dependency-triage@1`; `l4-audit{authorized}` at seq 7, `l8-delegation` at seq 8 |
+| C20 | `delegation-template registry is not the anchored artifact (deployment rsys@4) — a template enters a deployment only by Governance act` |
+| C21 | `the anchor declares no delegation-template registry but one is configured (deployment rsys@4)` |
+| C22 | `the wired delegation seam holds a registry that is not the anchored artifact (deployment rsys@4)` |
+| C23 | `grant "delegate" template_scope entry "dependency-triage@1" does not resolve: … is not registered — unregistered template-shaped artifacts are data` |
+| C24 | `phase "ANALYZE" exposes delegation capability but no L8 delegator is wired` |
+| C25 | admitted — withdrawn template: assembly admitted, `delegate` refused stage B `template-withdrawn`, walk COMPLETED (C-L8-14 G) |
+| C26 | admitted — out-of-scope template: L4 `denied`, walk COMPLETED |
+| C27 | admitted — unreachable evidence: stage B `evidence-unreachable`, walk COMPLETED |
+
+### Phase D — the first live COMPLETED under a production anchor
+
+`rsys4-deleg-1`: `themis-instantiate` produced the L9 envelope for
+`remediate-dependency@2`; `themis-run` submitted it under `rsys@4` with
+`qwen2.5:7b` (CPU-only). Receipt: **COMPLETED, VERIFIED**, egress
+artifact `sha256:ad5210c8…`, `deployment_anchor` = the `rsys@4` hash.
+Record: 7 `l4-audit`, 9 `model-turn`, 1 `l10-verification`
+(`report-valid@2` PASS), 2 `workflow-transition`, artifact bound. This
+closes the gap Addendum D and E left open: a live model drove a
+governed Skill to COMPLETED through the real binary under an ACTIVE
+anchor.
+
+The model **did not delegate** (no `l8-delegation` in the D8 record).
+The live walk (`TestLiveDelegationWalk`, same Skill, same anchor
+pins) also COMPLETED in 1m13s with 0 delegate calls. Recorded as
+model behaviour: the task is small enough that a 7B model completes it
+without a second reading. Not a finding.
+
+### Register C on the host
+
+`ReconstructTask` over the C20+ record, with the registry hash and
+trust map supplied from the tree: one delegation, **CONFIRMED**, all
+seven checks (authorizing audit; empty window; two-way template
+identity from stored bytes; composition object = recorded EIS render;
+every evidence reference re-established and re-classified; re-derived
+composition byte-identical; output self-consistent). The L10 history
+view lists the delegation beside the `report-valid@2` PASS and mints
+no verification instance for it. The D8 record reconstructs to `null`
+(no delegation) with the same PASS in view. `TestDelegationFaultPoints`
+PASS on the host's own record plane (three points; the
+pre-event-commit case asserts the orphan composition object retained
+and unreachable).
+
+### Host hygiene (not governed)
+
+- The host's three earlier Governance-act commits (`rsys@1`, `rsys@2`
+  with `walk-report-score-delta@1`, `rsys@3`) had never been pushed;
+  the checkout was reset to `6b98313` for the run with those commits
+  preserved on branch `vm-governance-20260925`, and `rsys3.json`
+  restored beside the tree for the derivation. They are pushed to
+  origin after this run as the deployment's record (owner decision,
+  2026-09-25).
+- `$DEPLOY` on this host is `/srv/themis/rsys`; the procedure file
+  now says so. The shell runs with `noclobber`; probe files use `>|`.
+- `THEMIS_LIVE_MODEL` (the conversational model two context proofs
+  use) is absent on the host; pointed at `qwen2.5:7b` for preflight.
+  Nothing in the L8 run calls it.
+
+### What Addendum F establishes, and what it does not
+
+**Established:** Layer 8 is operationally proven on a real deployment
+— admission, the full negative space, the scripted positive path with
+a CONFIRMED reconstruction, the three fault points, and the L10
+observation, all under an ACTIVE anchor that pins the delegation
+registry. **Established:** the first live-model COMPLETED under a
+production anchor, twice.
+
+**Not established:** a live model choosing to delegate. Register E
+remains admitted-not-delegated; the residual is recorded in the L8
+archive. Nothing here selects a model or authorizes production wiring;
+the evidence exists for the owner's decision.

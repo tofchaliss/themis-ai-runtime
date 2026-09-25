@@ -164,3 +164,50 @@ future reconstruction gets a complete L5 history without interpreting
 **Trace durability is outside D-W-3.** The events are the durable
 witnesses; whether the in-memory `Trace` is additionally materialized
 is a separate durability question, not raised here.
+
+## D-W-4 — Constitution hash and anchor re-pin (LOCKED 2026-09-25, owner)
+
+> `eventWriters` MUST be folded into `state.ConstitutionHash()` as
+> deterministic `writer:<class>><writer>` components: the writer
+> invariant is part of the governed constitution, not an
+> implementation detail, and the hash changes exactly once because the
+> constitution actually changed. `orchestration.ConstitutionHash()`
+> is unchanged (the sink changes how L5 emits, not L7's verbs,
+> transition events, or terminal mapping) — asserted by an explicit
+> old == new test, never by inspection.
+
+**One host mint: `rsys@6`**, carrying the amended L6 constitution
+hash, the `themis_store` pin, and the catalog/skill state T-M5
+requires. No intermediate anchor solely for the amendment (a
+deployable-but-not-demoable state nobody intends). `rsys@5` is
+withdrawn only after `rsys@6` is ACTIVE and independently validated;
+the registry stays append-only.
+
+**Invariant:** a constitution hash identifies the exact execution
+constitution under which a task was created; an anchor identifies the
+governed deployment that executed it. Changing the hash never mutates
+historical records — it creates a clean boundary:
+
+```
+Pre-D-W-4 task   → old constitution hash → old anchor → historical interpretation (Q-W-5)
+Post-D-W-4 task  → new constitution hash → rsys@6 → l5-transition + l5-op witnesses
+                                                    → complete five-link production chain
+```
+
+`VerifyAnchorRecord` resolving withdrawn anchors establishes
+historical ADDRESSABILITY, not compatibility with the five-link proof
+— that is Q-W-5's to define.
+
+**Exit proofs (all four required):**
+
+| # | Proof | Required result |
+|---|---|---|
+| 1 | L6 constitution test | new hash includes `eventWriters` and has the expected new value |
+| 2 | L7 constitution test | hash unchanged |
+| 3 | Host validation | `rsys@6` ACTIVE with the new constitution and the Themis pin |
+| 4 | Governance record | Addendum G records the re-pin and activation |
+
+Plus, before the amendment is called complete: the `constitution.state`
+stored in `rsys@6` must equal the compiled `state.ConstitutionHash()`
+of the binary ACTUALLY RUNNING on the host (the rsys@4 host-tree
+lesson, closed at the constitution too).

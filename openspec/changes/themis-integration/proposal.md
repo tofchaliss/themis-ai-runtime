@@ -76,7 +76,7 @@ which CLAUDE.md forbids. The real Themis exists: `~/code/themis`
 
 | # | Question | Recommendation (PROPOSED) | State |
 |---|---|---|---|
-| Q-I-1 | Topology: where does intake run, and how does it reach the harness record plane? | a Themis-owned CLI in the Themis greenfield tree (`cmd/themis-intake`), run by a human on the host that holds the harness state root, reading the record from disk and raising the Proposal over Governance's authenticated API; Governance's service never touches harness files | OPEN |
+| Q-I-1 | Topology: where does intake run, and how does it reach the harness record plane? | **LOCKED 2026-09-25 → D-I-1** (same host confirmed by the owner): Themis-owned `cmd/themis-intake` on the harness VM, tuple in, local read-only record, Proposal out over the authenticated Governance API; Governance never reads harness files; the harness never initiates a Governance act. | LOCKED |
 | Q-I-2 | Harness module identity and how Themis consumes it | rename the harness module to `github.com/tofchaliss/themis-ai-runtime/src/harness`; Themis `require`s it at a pinned commit (pseudo-version), never `replace` | OPEN |
 | Q-I-3 | The read door and its G1 pin | seam = HTTP client (Governance + Registry), pinned base URLs, key from env; the anchor pins the **contract** (hash of the two OpenAPI specs) not the data; data is live by design | OPEN |
 | Q-I-4 | Finding identity, skill scopes, the demo Finding | `themis_scope` becomes UUID syntax; skill inputs derived from Finding content (PURL, CVE); the demo Finding is created through Themis's own pipeline or its dev seed, never hand-written | OPEN |
@@ -85,8 +85,8 @@ which CLAUDE.md forbids. The real Themis exists: `~/code/themis`
 | Q-I-7 | Walls across two repos | harness: no Themis import (wall 1 trivially true, kept as a test); Themis: `internal/governance/adapters/harness` may import only `state`, `deployment`, `verification`, `verification/seam` (depguard) + arch test; `src/themis` removed with its walls re-homed | OPEN |
 | Q-I-8 | Demo topology on the VM | Postgres + Registry + Governance (+ Evidence/Knowledge for Finding creation) beside the harness on the enterprise VM; rsys@6 pins the Themis contract | OPEN |
 
-Owner facts still needed: whether the enterprise VM running the harness is
-the estate the Themis services run on (Q-I-1/Q-I-8); confirmation the
+Owner facts: the harness and the Themis services run on the SAME
+enterprise VM (confirmed 2026-09-25). Still needed: confirmation the
 Themis repo may be changed under this work (its own rules apply there).
 
 ## What stays, what goes

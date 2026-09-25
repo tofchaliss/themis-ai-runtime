@@ -94,6 +94,11 @@ type readingParent struct {
 	seen     []model.Message
 	finding  string
 	delegReq *model.ExecutionRequest
+	// report overrides the turn-6 report content; tail supplies the
+	// calls for turns 8.. in order (then declare_done). Intake tests
+	// use them to verify one thing and egress another.
+	report string
+	tail   []model.ToolCall
 }
 
 func (p *readingParent) Name() string { return "scripted" }
@@ -116,7 +121,11 @@ func (p *readingParent) Execute(_ stdctx.Context, req model.ExecutionRequest) (*
 		return &model.ExecutionResponse{Termination: model.TerminationToolCalls,
 			ToolCalls: []model.ToolCall{{ID: id, Name: name, Arguments: json.RawMessage(args)}}}
 	}
-	rb, _ := json.Marshal(`{"finding": "` + p.finding + `: vulnerable-dep v1 in go.mod", "remediation": "bump to v2", "evidence": "go.mod updated"}`)
+	report := p.report
+	if report == "" {
+		report = `{"finding": "` + p.finding + `: vulnerable-dep v1 in go.mod", "remediation": "bump to v2", "evidence": "go.mod updated"}`
+	}
+	rb, _ := json.Marshal(report)
 	switch p.turn {
 	case 1:
 		return call("c1", "get_finding", `{"id":"`+p.finding+`"}`), nil
@@ -134,6 +143,9 @@ func (p *readingParent) Execute(_ stdctx.Context, req model.ExecutionRequest) (*
 	case 7:
 		return call("c7", "verify_report", `{"path":"report.json","contract":"report-valid@2"}`), nil
 	}
+	if i := p.turn - 8; i < len(p.tail) {
+		return &model.ExecutionResponse{Termination: model.TerminationToolCalls, ToolCalls: []model.ToolCall{p.tail[i]}}, nil
+	}
 	return call("c8", "declare_done", `{}`), nil
 }
 
@@ -144,6 +156,7 @@ type world struct {
 	sha        string
 	storeDir   string
 	anchorSHA  string
+	regs       string // the anchors registry the deployment opened under
 }
 
 // storeCopy copies the governed Themis store into a private dir and
@@ -230,6 +243,7 @@ func newWorld(t *testing.T, m model.Interface, storeDir, seamDir string, mutate 
 	sum := sha256.Sum256(ab)
 	w.anchorSHA = hex.EncodeToString(sum[:])
 	regs := wj(t, base, "anchors.json", `{"version":1,"kind":"deployment-anchors","entries":[{"name":"test-rsys","version":6,"artifact_sha256":"`+w.anchorSHA+`","state":"active","steward":"t"}]}`)
+	w.regs = regs
 
 	l4, err := tools.LoadRegistry(filepath.Join(root, "policies/tools/registry-v5.json"))
 	if err != nil {

@@ -186,6 +186,20 @@ fact.
   alone. Themis stays a consumer of the harness's authoritative
   evidence, never a competing execution-truth subsystem.
 
+**Implementation note — as recorded (T-M3, 2026-09-25; PROPOSED, owner
+to ratify or reclassify).** The harness constitution names
+`l5-transition` and `l5-op` as event classes, but no layer writes
+them: L5's seal and egress leave no event in the task stream today.
+`intake.Resolve` therefore replays the chain over the links that
+EXIST — `artifact-bound` (writer l6, one `egress-artifact` reference
+that its body names) → object re-hash by the store → lifecycle
+`COMPLETED` (writer l6) AFTER the binding → no competing binding →
+manifest projection agrees → the egress manifest names the tuple's
+task — and refuses link-named on each. The L5 witness is recorded as an
+OWED HARNESS AMENDMENT (a record gap, not a Themis mechanism); Themis
+never simulates it. When L5 witnessing lands, the two links are added
+to the replay and this note is retired.
+
 ### D-T-5 — The L10 fact is re-established over the exact artifact (LOCKED 2026-09-25, owner; Q-T-5)
 
 > Themis never reads the outcome from the `l10-verification` event
@@ -233,6 +247,22 @@ raw bytes == artifact bytes · verification seq < binding seq
 - No new verifier · no new verification event type · no trust in the
   recorded outcome alone · no trust in the L7 gate · no PASS over
   different bytes.
+
+**Implementation note — as recorded (T-M3, 2026-09-25; PROPOSED, owner
+to ratify or reclassify).** The bound `egress-artifact` object is the
+L5 EGRESS MANIFEST (`{task_id, changes[{path, type, new_hash, size,
+content}], …}`), not the report file. Byte-equality between the raw
+verified bytes and the manifest is therefore never true. Check (3) is
+implemented as the property it states: the reconstruction's raw bytes
+are a MEMBER of the bound manifest — a non-deleted change whose
+`new_hash` is the raw bytes' SHA-256 and whose `content` is those
+bytes — and the member's path is recorded (`VerifiedPath`). The
+verify(A) → egress(B) case refuses exactly as written. The
+verification used is the LAST `l10-verification` before the binding
+(the fact the harness progressed on); an earlier PASS over other bytes
+does not admit. Reconstruction is the seam's exported per-event
+function (`seam.ReconstructEvent`, pure: it stores no discrepancy
+artifact in a record Themis does not own).
 
 ### D-T-6 — Withdrawal versus unavailability (LOCKED 2026-09-25, owner; Q-T-6)
 

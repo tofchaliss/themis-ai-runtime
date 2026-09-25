@@ -3,7 +3,17 @@
 Updated at every green milestone. If context was compacted, start here.
 
 ## One-line status
-2026-09-25 (later): T-M2 LANDED — store loaders + `Read`, `themis_store`
+2026-09-25 (latest): T-M3 LANDED (admissibility only, per owner) —
+`intake.Resolve` D-T-1 → D-T-2 → D-T-4 → D-T-5 under the D-T-6 table,
+every refusal typed and link-named, `EvidenceView` by identity; the
+owner's key case proven both ways (verify A → egress B refused
+`verified bytes are not the bound artifact`; re-verify B → admitted on
+the second fact); forged-record tests prove Themis re-establishes
+rather than trusts the record's claims; nine probes run, eight killed,
+one structurally unreachable. NO Position, NO rsys@6, NO push. Two
+record-shape facts recorded as PROPOSED implementation notes under
+D-T-4/D-T-5 for the owner (below). Next: owner disposes the two notes,
+then T-M4. Earlier: T-M2 LANDED — store loaders + `Read`, `themis_store`
 anchor pin verified at Open (pin ⇔ path, seam hash ⇔ pin), read seam
 wired in `themis-run`, `remediate-dependency@3` PROPOSED, preflight and
 status print the pin; positive chain anchor → store → seam → L4 →
@@ -84,7 +94,77 @@ architecture.
    `investigate-cve` untouched. Finding schema kept at what the demo
    needs: a Finding references a Product; a Product is name + version.
 
+## Gate 1 — T-M3 (owner constraints, 2026-09-25)
+
+Owner's rule: intake/admissibility machinery only; no Position
+creation; the key test is L10 PASS on report A with egress of report B
+→ `verification-refused: verified bytes are not the bound artifact`,
+plus the inverse positive; keep f730afb/a18b901 local; no rsys@6.
+
+**Two record-shape facts the implementation had to classify** (both
+written as PROPOSED implementation notes under D-T-4 and D-T-5 in
+`design.md`; the owner ratifies or reclassifies before T-M4):
+
+1. **No L5 witness events exist.** `l5-transition`/`l5-op` are
+   constitution classes with no writer. D-T-4's replay runs over the
+   links that exist (binding → object → COMPLETED-after-binding → no
+   competing binding → manifest projection → manifest task id), each
+   link-named on refusal. L5 witnessing is an OWED HARNESS AMENDMENT;
+   Themis does not simulate it. Recommendation: ratify as-recorded,
+   open the harness amendment separately.
+2. **The egress artifact is the L5 manifest, not the report.** D-T-5
+   (3) is implemented as manifest MEMBERSHIP by content hash and bytes
+   (`new_hash == sha256(raw) && content == raw`, non-deleted), with the
+   member path recorded. This is the property the decision states.
+   Recommendation: ratify as-recorded.
+
+**What landed** (`src/themis/intake/intake.go`, `src/themis/intake_test.go`):
+- `Resolve(root, Checkout{anchors, contracts}, Tuple)`: Themis's OWN
+  checkout registries are a deployment property, never per-call input.
+  Refusal classes `ErrNotReferencable` (D-T-1/D-T-6 rows 1–2),
+  `ErrDeployment` (D-T-2), `ErrProvenance` (D-T-4), `ErrVerification`
+  (D-T-5); anchor and contract lifecycle STATE AT INTAKE recorded, never
+  refused (D-T-6 "proceed" rows).
+- D-T-2: anchor bytes come from the record's `materialized-governed-
+  artifacts` event (the id must be one the event references), verified
+  by the harness's own `deployment.VerifyAnchorRecord` against Themis's
+  anchors registry.
+- D-T-5: last `l10-verification` before the binding; the seam's
+  reconstruction must be Consistent with no missing inputs and PASS;
+  contract two-way registered on Themis's contracts registry (bytes
+  registered under another name@version refuse); `execution_ref` →
+  `l4-audit` by l4, `authorized`, same capability, same authorizing
+  registry, `ResultHash == sha256(raw)`; raw bytes a manifest member.
+- `Resolution.View()`: the three facts by identity; a test asserts no
+  report content appears in the view.
+- Harness change (Class 2, read-only): `seam.reconstructOne` exported
+  as `seam.ReconstructEvent` (pure); `ReconstructTask` unchanged in
+  behaviour.
+- Fixture: the scripted parent gained `report` (turn-6 content) and
+  `tail` (turns 8..) so a walk can verify one thing and egress another;
+  `forgeRecord` builds a second task from a real walk's objects through
+  the L6 primitives with one alteration, and its un-altered twin is
+  admitted (so refusals are the alteration's).
+- Probes (mutation, restored after each): drop member check → killed by
+  the key test; skip contract registration → killed; ignore tuple seq →
+  killed; accept any status → killed; record-only anchor identity →
+  killed; take the FIRST verification instead of the last → killed by
+  the inverse positive; trust the recorded outcome (force Consistent)
+  → killed by the forged "PASS over an invalid report"; drop audit
+  ResultHash equality → killed by the forged audit; drop
+  COMPLETED-after-binding → SURVIVED, structurally unreachable
+  (`BindArtifact` refuses on a terminal task), kept as defence in
+  depth and named here so nobody claims a test for it.
+- `intake` imports `verification/seam` directly (D-T-10 whitelist);
+  the seam's evaluator half imports orchestration/tools/model, so
+  those are TRANSITIVELY in intake's graph. Wall 3 is a direct-import
+  wall by design (importing grants no call site); recorded so the
+  wall is not later read as claiming more.
+
 ## Milestone log
+- [x] T-M3 — green 2026-09-25 (`intake_test.go`: positive, key
+  negative, inverse positive, 12 refusals + 2 proceed rows, 4
+  unavailability rows, 4 forged-record cases; probes 8/9 killed)
 - [x] T-M2 — green 2026-09-25 (`store` Register A; `readdoor_test.go`
   positive chain + 7 negatives + laundering; probes: pin-vs-path, seam
   hash, absent-with-seam, withdrawn-served — all killed)
@@ -110,3 +190,13 @@ architecture.
 5. **Wall 1 needed an exclusion:** `cmd/themis-run` legitimately
    reaches `store`; wall 1 now covers every harness package except
    that binary, which wall 2 governs (store only, never intake).
+6. **Provenance checks fired in the wrong order:** the competing-
+   binding scan ran before the named event was checked, so a tuple
+   naming a model-turn seq refused as "competing artifact-bound"
+   instead of "not artifact-bound". Link-named means the FIRST failed
+   link in causal order; reordered, caught by the refusal tests.
+7. **A forged record is the only way to kill "trust the claim":** a
+   walk-produced record is always self-consistent, so probes P2/P8
+   survived until `forgeRecord` (L6 primitives, one alteration) gave
+   the tests a record whose claim is false. Recorded so the next
+   milestone does not mistake "no walk can produce it" for "tested".

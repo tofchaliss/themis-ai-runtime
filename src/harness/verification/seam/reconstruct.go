@@ -49,7 +49,7 @@ func ReconstructTask(root *state.Root, taskID string) ([]verification.Report, []
 		if ev.Class != state.EvVerification {
 			continue
 		}
-		rep := reconstructOne(root, ev, events)
+		rep := ReconstructEvent(root, ev, events)
 		reports = append(reports, rep)
 		if !rep.Consistent {
 			body, merr := json.Marshal(rep)
@@ -66,7 +66,13 @@ func ReconstructTask(root *state.Root, taskID string) ([]verification.Report, []
 	return reports, artifacts, torn, nil
 }
 
-func reconstructOne(root *state.Root, ev state.Event, events []state.Event) verification.Report {
+// ReconstructEvent reconstructs ONE committed l10-verification event
+// from durable inputs and returns the report without storing anything
+// — the pure half of ReconstructTask, exported so a consumer outside
+// the harness (Themis's intake, D-T-5) can re-establish a verification
+// fact over the record it names without minting discrepancy artifacts
+// in a record it does not own.
+func ReconstructEvent(root *state.Root, ev state.Event, events []state.Event) verification.Report {
 	fail := func(missing string) verification.Report {
 		return verification.Report{
 			ViewVersion:   "reconstruct-v1",

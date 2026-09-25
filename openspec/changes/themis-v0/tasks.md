@@ -53,26 +53,35 @@ anything not in Gate 0 stops implementation and is classified first.
 - [x] Landed 2026-09-25 (RESUME-HERE Gate 1 T-M2; probes killed).
       `rsys@6` deliberately NOT minted — a T-M5 host act.
 
-## 3. T-M3 — Intake (Class 3)
-- [ ] `intake.Resolve(tuple)`: D-T-1 (manifest COMPLETED/VERIFIED,
+## 3. T-M3 — Intake (Class 3) — admissibility landed 2026-09-25
+- [x] `intake.Resolve(tuple)`: D-T-1 (manifest COMPLETED/VERIFIED,
       anchor equality, event at seq is `artifact-bound`, unanchored
       refused) → D-T-2 (anchor bytes from the record, registry of the
-      governed checkout, any lifecycle) → D-T-4 (causal replay
-      l5-transition → l5-op → object → binding → COMPLETED; writers;
-      no competing binding) → D-T-5 (L10 reconstruction: registered
-      contract, Consistent, PASS, authorized audit with ResultHash =
-      raw hash, raw bytes == artifact, verification seq < binding seq)
+      governed checkout, any lifecycle) → D-T-4 (causal replay over the
+      links the record HAS: binding → object → COMPLETED after binding;
+      writers; no competing binding — the L5 witness is an owed harness
+      amendment, PROPOSED note under D-T-4) → D-T-5 (L10 reconstruction:
+      registered contract, Consistent, PASS, authorized audit with
+      ResultHash = raw hash, raw bytes a MEMBER of the egress manifest
+      (PROPOSED note under D-T-5), verification seq < binding seq)
       → D-T-6 table; every refusal link-named
-- [ ] `intake.EvidenceView`: model turns shown (object ids), artifact
-      bytes, L10 reconstruction; the identities rendered
+- [x] `intake.EvidenceView`: model turns shown (object ids), artifact
+      identity and verified member, L10 reconstruction; the identities
+      rendered, never report content
 - [ ] Position record type (D-T-7/8), `Append` under `O_EXCL`, `Current`
-      projection, Finding-exists check through the store
-- [ ] Register A: every refusal reachable with its own test and its
+      projection, Finding-exists check through the store — DEFERRED to
+      T-M4 by the owner ("do not create the Position yet")
+- [x] Register A: every refusal reachable with its own test and its
       positive twin; verify-then-mutate refused; PASS on other bytes
       refused; anchor withdrawn after → proceeds and recorded; contract
-      withdrawn after → proceeds using stored bytes
+      withdrawn after → proceeds using stored bytes; forged records
+      (claimed PASS over invalid bytes, record/event divergence, audit
+      not the producer) refused
 - [ ] Register C: Position evidence view re-derives from the record; a
-      Position survives later withdrawals; corruption refuses
+      Position survives later withdrawals; corruption refuses — with
+      the Position, T-M4
+- [x] Landed 2026-09-25 (RESUME-HERE Gate 1 T-M3; probes 8/9 killed,
+      the ninth structurally unreachable). Local only; no rsys@6.
 
 ## 4. T-M4 — `themis-decide`, `themis-inspect`, walls (Class 3)
 - [ ] `cmd/themis-decide`: tuple + `--disposition` + `--rationale`;

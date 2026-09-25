@@ -275,7 +275,10 @@ ls -la "$HOME/evidence"
 Executed 2026-09-25 on the `rsys` host (Ubuntu, 24 cores, CPU-only
 inference) at commit `6b98313`, with `rsys@3` ACTIVE beforehand:
 preflight 15/0; `rsys@4` = `206375725e41fe23db83bffb9310d4d45025854f49bba638b6f7844664fac65f`
-over ceiling `fd8fcdc1…`; Phase C 25 rows, 0 findings; D8 `themis-run`
+over ceiling `fd8fcdc1…` (later withdrawn for `rsys@5` =
+`0dd1867f…` — the host's unpushed criterion registration made
+`rsys@4`'s `criteria_registry` pin wrong; see Addendum F. Rule: pull
+or replay every host Governance act into the tree BEFORE step 5); Phase C 25 rows, 0 findings; D8 `themis-run`
 COMPLETED/VERIFIED under `rsys@4` with qwen2.5:7b; C20+ reconstruction
 CONFIRMED (seven checks); L10 view observes the delegation; three fault
 points PASS; live walk COMPLETED in 1m13s with 0 delegate calls

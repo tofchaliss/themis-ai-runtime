@@ -277,3 +277,14 @@ changed. @1's procedure uses `## ` headings the renderer refuses —
    reported SURVIVED; the same mutant is killed under the parent test
    names. Lesson for the probe script: assert that the run executed at
    least one test (`-v` + count) before trusting a verdict.
+25. **Operationally proven on the host 2026-09-25** (signoff Addendum
+   F): Phase C 25/0, C20+ CONFIRMED from the host record, D8 live
+   COMPLETED/VERIFIED under `rsys@4`, fault points PASS, live walk
+   COMPLETED without delegating. Register E stays
+   admitted-not-delegated.
+26. **Anchor minted from a tree lacking a host Governance act:**
+   `rsys@4` pinned origin's `criteria_registry`; the host had
+   registered a criterion in an unpushed act. The pin refused, as
+   designed; re-minted as `rsys@5` (the registry refuses a second hash
+   per `name@version`). Procedure rule added: replay every host act
+   into the tree before minting.

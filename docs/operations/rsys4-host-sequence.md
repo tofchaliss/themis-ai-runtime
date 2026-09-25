@@ -1,5 +1,15 @@
 # `rsys@4` — host sequence (prepared 2026-09-23; NOT an activation)
 
+> **Executed 2026-09-25.** `rsys@4` (`20637572…`) was activated, ran
+> the Layer-8 evidence, and was withdrawn the same day: its
+> `criteria_registry` pin came from origin's tree, not the host's
+> governed one (the host had registered `walk-report-score-delta@1`
+> in an unpushed act). `rsys@5` (`0dd1867f…`) is the re-mint over the
+> host's tree and is ACTIVE. Record: `deployment-signoff-rsys.md`
+> Addendum F. Lesson folded into step 3 below: verify the pins against
+> the tree THAT CARRIES EVERY HOST GOVERNANCE ACT, never a tree that
+> lacks one.
+
 Governance decision (owner, 2026-09-23, Q3 of the L8 close): the four
 registrations `report-valid@2`, `remediate-dependency@2`,
 `dependency-triage@1`, and tool registry-v5 are **ratified as they

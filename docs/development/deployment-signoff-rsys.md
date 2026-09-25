@@ -724,7 +724,7 @@ refusal is not a deployment defect.
 
 ---
 
-## Addendum F — `rsys@4`, Layer 8 on the host, and the first live COMPLETED (2026-09-25)
+## Addendum F — `rsys@4` → `rsys@5`, Layer 8 on the host, and the first live COMPLETED (2026-09-25)
 
 Executed on the `rsys` host at governed commit `6b98313` (the L8 archive,
 the test-plan rows C20+–C27, `themis-instantiate`) with `rsys@3` ACTIVE
@@ -745,7 +745,8 @@ copy-and-commit; admission `<nil>`.
 
 | Identity | Value |
 |---|---|
-| **Anchor `rsys@4`** | `206375725e41fe23db83bffb9310d4d45025854f49bba638b6f7844664fac65f` — **ACTIVE** (`rsys@3` remains ACTIVE beside it; supersession does not withdraw) |
+| **Anchor `rsys@4`** | `206375725e41fe23db83bffb9310d4d45025854f49bba638b6f7844664fac65f` — ACTIVE for the run below, **WITHDRAWN the same day** (see "The criteria-registry finding") |
+| **Anchor `rsys@5`** | `0dd1867fbb04321ce3042710e9c16fa026079c4a7442047fa1358fe13a8ed313` — **ACTIVE** (`rsys@4` re-minted over the host's governed tree; `rsys@3` remains ACTIVE beside it, supersession does not withdraw) |
 | Execution ceiling | `fd8fcdc19e23d2833e2efb5c5323d1b68b16b647826e4baf88d430e31b696f13` (unchanged since `rsys@2`) |
 | Models | `qwen2.5:7b`, `gpt-oss:20b`, `cyberpal20b-v3` (inherited from `rsys@3`) |
 | Tool registry | registry-v5 (`7c489f99…`) |
@@ -803,15 +804,39 @@ PASS on the host's own record plane (three points; the
 pre-event-commit case asserts the orphan composition object retained
 and unreachable).
 
+### The criteria-registry finding, and `rsys@5`
+
+The host's three earlier Governance acts (`rsys@1`; `rsys@2` with the
+registration of `walk-report-score-delta@1`; `rsys@3`) had never
+reached origin. The run above was made on a checkout reset to
+`6b98313` (the acts preserved on a branch, `rsys3.json` restored for
+the derivation), so `rsys@4` inherited `rsys@3`'s ceiling and models
+but took its `criteria_registry` pin from ORIGIN's `criteria.json`
+(`a4df8898…`), a file the host never governed: the host's registry
+carries the criterion and hashes `d739002c…`, which `rsys@3` pins.
+
+Bringing the three acts back onto the tree therefore made `rsys@4`
+unable to open ("criteria registry is not the anchored artifact") —
+the pin doing its job: an anchor minted from a tree that did not
+carry the deployment's own registered criterion. Disposition
+(category 1, deployment): re-mint over the host's governed tree.
+The anchors registry refuses a second hash for one `name@version`
+(duplicate registration) and treats a changed hash as a rebind, so
+the re-mint is a new version, **`rsys@5`**, byte-identical to
+`rsys@4` except `deployment_version` and `criteria_registry`
+(`d739002c…`). `rsys@4` is WITHDRAWN, not deleted: its two admitted
+tasks (`rsys4-deleg-1`, the C20+ row) stay interpretable under the
+identity they ran under. `rsys@5` parsed, `PINS OK` on all twelve
+pins, inert until the act, admission `<nil>` after it, and C20+
+admitted under it on the real anchor (0 findings). The four acts were
+brought to origin as a patch bundle (the host cannot push through the
+enterprise network) and applied in order on top of `63507e8`.
+
 ### Host hygiene (not governed)
 
-- The host's three earlier Governance-act commits (`rsys@1`, `rsys@2`
-  with `walk-report-score-delta@1`, `rsys@3`) had never been pushed;
-  the checkout was reset to `6b98313` for the run with those commits
-  preserved on branch `vm-governance-20260925`, and `rsys3.json`
-  restored beside the tree for the derivation. They are pushed to
-  origin after this run as the deployment's record (owner decision,
-  2026-09-25).
+- Governance-act commits now on origin, oldest first: `rsys@1`,
+  `rsys@2` + criterion, `rsys@3`, `rsys@5` (with `rsys@4` withdrawn).
+  The host's `main` and origin's agree.
 - `$DEPLOY` on this host is `/srv/themis/rsys`; the procedure file
   now says so. The shell runs with `noclobber`; probe files use `>|`.
 - `THEMIS_LIVE_MODEL` (the conversational model two context proofs
@@ -825,7 +850,10 @@ and unreachable).
 a CONFIRMED reconstruction, the three fault points, and the L10
 observation, all under an ACTIVE anchor that pins the delegation
 registry. **Established:** the first live-model COMPLETED under a
-production anchor, twice.
+production anchor, twice (both under `rsys@4` before its withdrawal;
+the identity those records carry). **Established:** the anchor's
+`criteria_registry` pin caught an anchor minted from a tree lacking the
+deployment's own governed registration — G1 working as designed.
 
 **Not established:** a live model choosing to delegate. Register E
 remains admitted-not-delegated; the residual is recorded in the L8

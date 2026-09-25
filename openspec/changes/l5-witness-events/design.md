@@ -67,3 +67,44 @@ makes the writer non-forgeable is NOT settled by D-W-2; it is Q-W-6.
 Timing: none required (the L4 precedent). Sequence gives causal
 order; wall-clock time is trace metadata, not part of the security
 fact.
+
+## D-W-6 — Writer attribution is a closed class→writer invariant; L5 emits only through a fixed handle (LOCKED 2026-09-25, owner)
+
+> Event writer attribution is a closed class→writer invariant enforced
+> by the record sink, and L5 emission is exposed only through an
+> L5-scoped handle whose writer identity and event classes are fixed
+> by construction. Two independent walls.
+
+**Wall A — record-plane invariant.** The sink owns the authoritative
+mapping (`l5-transition → l5`, `l5-op → l5`, `l4-audit → l4`,
+`l8-delegation → l8`, `l10-verification → l10`, L7's classes → `l7`,
+…) and refuses any `(class, writer)` pair outside it, typed
+`ErrConstitution`. For these classes `writer` is part of the record's
+structural validity, no longer metadata.
+
+**Wall B — L5 emission capability.** `TaskRecord.L5Sink()` exposes
+`Transition(…)` and `Op(…)` only: no writer string, no class string,
+no generic `AppendEvent`. The handle cannot emit any non-L5 class.
+
+Why both: the handle alone proves L5 can emit only L5 events, not that
+nobody else can; the mapping alone proves the accepted pair is valid,
+but a caller could still pass `("l5-transition", "l5")` directly. The
+combination closes both directions.
+
+**AST wall (precision, owner):** the proof is architectural, not a
+global search for the literal `"l5"`: only the state/emission
+implementation owns the L5 writer constant; the handle is the only API
+exposed to L5; other packages cannot invoke the L5-specific emission
+primitive; sink validation independently rejects forged pairs.
+Structural AND runtime proof.
+
+**Constitution/anchor consequence — NOT absorbed here.** Adding
+`eventWriters` to the constitution moves `constitution.state` and the
+constitution hash; Q-W-4 must deal explicitly with the resulting
+anchor re-pin. The implementation must not update the constitution and
+keep running under the old anchor.
+
+**What this does not prove:** process authentication. It proves the
+governed code paths cannot legitimately misattribute an event under
+the defined architecture; G1 binds execution to the authorized
+deployment artifact.

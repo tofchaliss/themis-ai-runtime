@@ -203,11 +203,14 @@ that its body names) → object re-hash by the store → lifecycle
 manifest projection agrees → the egress manifest names the tuple's
 task — and refuses link-named on each. The L5 witness is recorded as an
 OWED HARNESS AMENDMENT (a record gap, not a Themis mechanism); Themis
-never simulates it. T-M4 does not start until that amendment is
-classified by the owner as an accepted v0 residual or a required
-amendment — it is the one item that changes what Themis is entitled to
-claim from the record. When L5 witnessing lands, the two links are
-added to the replay and this note is retired.
+never simulates it. **Owner classification 2026-09-25: REQUIRED
+AMENDMENT, pre-T-M4.** The T-M3 evidence stands as as-recorded
+evidence; `intake.Resolve` must not claim the full D-T-4 causal-
+production proof for NEW Position intake until L5-owned witnesses
+exist — `Resolution.ProductionWitness` is `l6-record-only` and the
+evidence view renders it. T-M4 stays blocked until the amendment's
+seven exit conditions hold and the replay covers five links; then
+this note is retired.
 
 ### D-T-5 — The L10 fact is re-established over the exact artifact (LOCKED 2026-09-25, owner; Q-T-5)
 

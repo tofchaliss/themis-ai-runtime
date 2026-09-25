@@ -143,6 +143,11 @@ func TestIntakePositivePath(t *testing.T) {
 	if v.Verification.Outcome != "PASS" || !v.Verification.Consistent || v.Artifact.ObjectID != r.ArtifactObjectID {
 		t.Fatalf("view: %s", vb)
 	}
+	// The replay names what it witnessed: L6-written links only, until
+	// the L5 witness amendment lands (owner classification 2026-09-25).
+	if r.ProductionWitness != intake.WitnessL6Only || v.Artifact.ProductionWitness != intake.WitnessL6Only {
+		t.Fatalf("production witness claimed: %q", r.ProductionWitness)
+	}
 }
 
 // THE KEY NEGATIVE (owner, T-M3): verify report A → PASS, then write

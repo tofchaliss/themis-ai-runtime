@@ -14,8 +14,9 @@ one structurally unreachable. NO Position, NO rsys@6, NO push. Two
 record-shape facts recorded as PROPOSED implementation notes under
 D-T-4/D-T-5 for the owner (below). Owner ratified both as-recorded
 (same day); the L5 witness gap is OPEN as
-`openspec/changes/l5-witness-events/`. Next: owner classifies it
-(accepted v0 residual | required amendment), then T-M4. Earlier: T-M2 LANDED — store loaders + `Read`, `themis_store`
+`openspec/changes/l5-witness-events/`. Owner classified it REQUIRED
+AMENDMENT (pre-T-M4). Next: the amendment's grill Q-W-2..5, then its
+implementation, then T-M4. Earlier: T-M2 LANDED — store loaders + `Read`, `themis_store`
 anchor pin verified at Open (pin ⇔ path, seam hash ⇔ pin), read seam
 wired in `themis-run`, `remediate-dependency@3` PROPOSED, preflight and
 status print the pin; positive chain anchor → store → seam → L4 →
@@ -110,8 +111,14 @@ synthesizes L5 witnesses; a proposed event class must not quietly
 become an implemented fact source); D-T-5 manifest-defined egress
 artifact accepted (owner's diagram now in design.md); the
 `verification/seam` transitive dependency is the documented scope of
-Wall 3, no architecture change. **T-M4 does not start until the L5
-item is classified** (accepted v0 residual | required amendment).
+Wall 3, no architecture change. **L5 item CLASSIFIED (owner, same
+day): REQUIRED AMENDMENT — T-M4 BLOCKED** until the seven exit
+conditions in `openspec/changes/l5-witness-events/proposal.md` hold
+(L5 owns the writes; writer restrictions tested; pin implications
+resolved; pre-amendment compatibility rule; five-link replay;
+positive/negative proofs; forge/omit/substitute probes). Historical
+T-M3 evidence stays valid as-recorded; `Resolution.ProductionWitness
+= "l6-record-only"` is rendered so no Position can claim more.
 
 **Two record-shape facts the implementation had to classify** (both
 written as implementation notes under D-T-4 and D-T-5 in `design.md`,

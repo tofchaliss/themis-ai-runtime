@@ -1,11 +1,64 @@
 # Proposal: L5 witness events — who writes `l5-transition` / `l5-op`, and what they attest
 
-Status: **OPEN 2026-09-25** (harness amendment; raised by Themis v0
-T-M3, ratified as-recorded by the owner with this gap kept explicitly
-open). **Classification pending (owner):** accepted v0 residual, or
-required amendment. Themis v0 T-M4 does not start until this is
-classified — it is the one T-M3 item that changes what Themis is
-entitled to claim from the record.
+Status: **CLASSIFIED 2026-09-25 (owner): REQUIRED AMENDMENT, pre-T-M4.**
+Themis v0 T-M4 remains BLOCKED until the seven exit conditions below
+are met. Grill open (owner-led): Q-W-1 LOCKED by the classification;
+Q-W-2..5 open, one per turn.
+
+## Owner classification (2026-09-25, verbatim in substance)
+
+> L5 witness events are a required pre-T-M4 harness amendment. The
+> current T-M3 evidence remains valid as historical/as-recorded
+> evidence, but `intake.Resolve` must not claim the full D-T-4
+> causal-production proof for new Position intake until L5-owned
+> witnesses exist.
+
+Why not a residual (owner): (1) it is an OWNERSHIP gap, not missing
+metadata — the classes exist constitutionally and lack their
+authoritative writer; treating L6-written representations as
+substitutes turns "L5 witnessed its own execution" into "L6 recorded
+what another layer says L5 did", the cross-layer authority ambiguity
+the architecture has consistently refused; (2) Themis v0's
+differentiator is independent reconstruction, and the demo must
+withstand "how do you know the artifact came from the governed
+execution?" at exactly this point; (3) the amendment is small and
+already shaped — L5 owns `Trace` (seal reason, transitions, ops,
+artifact address, egress outcome); a narrow class-restricted sink
+gives L5 a controlled route to its own classes; L7 keeps orchestrating
+and does not become the L5 witness; Themis stays a consumer; no new
+event class.
+
+```
+Current v0 evidence                    Architectural claim (D-T-4)
+
+L6-written record                      L5-owned execution
+    ├── seal-related link                  ├── environment transition
+    ├── egress-related link                └── governed egress operation
+    └── artifact binding                            │
+             ▼                                      ▼
+       artifact identity                        L6 record
+                                                    ▼
+                                              artifact binding
+```
+
+Nuance (owner): the four T-M3 artifacts are NOT invalidated and the
+earlier implementation is not "wrong". Historical T-M3 evidence →
+valid as-recorded; new Themis Position intake → blocked until the
+D-T-4 causal witness is complete. Implemented as
+`intake.Resolution.ProductionWitness = "l6-record-only"`, rendered in
+the evidence view, so the claim Themis makes is exactly what the
+record supports.
+
+## Exit conditions (owner) — T-M4 unblocks when ALL hold
+
+1. L5 owns the `l5-transition` and `l5-op` witness writes.
+2. Writer restrictions are defined and tested.
+3. Constitution/registry pin implications are resolved.
+4. Pre-amendment records have an explicit compatibility rule.
+5. `intake.Resolve` replays the five-link chain.
+6. Positive and negative proofs cover the new witness boundary.
+7. Mutation probes cover attempts to forge / omit / substitute L5
+   witnesses.
 
 Raised by: `openspec/changes/themis-v0/design.md` D-T-4 implementation
 note; `openspec/changes/themis-v0/RESUME-HERE.md` Gate 1 — T-M3.
@@ -64,17 +117,33 @@ synthesize the missing two.
   binding today; what is missing is the L5-attributed witness that
   the egress OPERATION happened, in order, before the binding.
 
+- **Writer attribution is caller-asserted today.** `AppendEvent(class,
+  writer, …)` records whatever writer string the caller passes; the
+  constitution restricts only `primitiveOnlyEvents` (recovery,
+  verdict, artifact-bound, lifecycle) to L6's own primitives. There is
+  no per-class writer rule for `l4-audit`, `l10-verification`,
+  `l8-delegation`, or the two L5 classes — "every event's writer is the
+  layer that owns its class" is a convention of the emitting code, not
+  a sink-enforced invariant. Exit condition 2 (writer restrictions
+  defined and tested) therefore reaches beyond L5.
+- **`Trace` already holds the transition list**: `Transitions
+  []Transition{From, To, Reason}` appended at every `transitionLocked`
+  (PROVISIONING → ACTIVE → SEALED → EGRESSING → ACKNOWLEDGED → TEARDOWN
+  → DESTROYED | TEARDOWN_ANOMALOUS), and `Ops []OpRecord{Phase, Argv,
+  Exit, Outcome, MaxRSSByte}`. The witness content exists; only its
+  route to the record is missing.
+
 ## What the amendment must decide (grill, owner-led)
 
 | # | Question | Recommendation (facts-first; PROPOSED) |
 |---|---|---|
-| Q-W-1 | Who is the WRITER of `l5-transition`/`l5-op`? L5 itself (given a narrow append handle), or L7 on L5's behalf from the L5 trace? | L5 itself, through a narrow sink interface (append-only, class-restricted to the two L5 classes) handed in at provision — "every event's writer is the layer that owns its class" (D-T-4) is the rule the constitution already states for every other class; L7 writing on L5's behalf would make L7 the fact source for L5 facts. |
+| Q-W-1 | Who is the WRITER of `l5-transition`/`l5-op`? | **LOCKED 2026-09-25 (owner, with the classification):** L5 itself, through a narrow class-restricted sink; L7 keeps orchestrating and is never the L5 witness. Was: L5 itself, through a narrow sink interface (append-only, class-restricted to the two L5 classes) handed in at provision — "every event's writer is the layer that owns its class" (D-T-4) is the rule the constitution already states for every other class; L7 writing on L5's behalf would make L7 the fact source for L5 facts. |
 | Q-W-2 | What does `l5-transition` attest? | `{from, to, reason}` for every Env lifecycle edge, at least the seal (`→ SEALED`, reason) and the egress edges (`→ EGRESSING`, `→ ACKNOWLEDGED`); one event per edge, in order, record-before-effect where the effect is reversible and record-after-effect where it is not (the seal makes the workspace read-only first, then is witnessed). |
 | Q-W-3 | What does `l5-op` attest? | Each governed op the trace already holds (`Ops`), plus the egress op `{op: egress, artifact_address, observed_total_bytes, observed_file_count}` — the address L5 acknowledged, so the binding can be checked against an L5-attributed claim rather than against itself. |
 | Q-W-4 | Is this a constitution amendment (hash-changing)? | No new class — both classes already exist; adding writers is not a vocabulary change. Whether `primitiveOnlyEvents` or writer attribution rules change must be checked in `state/constitution.go`; if they do, `constitution.state` re-pins and the anchor sequence follows (the L8 precedent). |
 | Q-W-5 | What does Themis do when it lands? | Add the two links to `intake.Resolve`'s replay (seal `task-complete` precedes the egress op; the egress op names the bound address; both before the binding) and retire the D-T-4 note. Records made before the amendment have no L5 witnesses: a Themis-side rule is needed — refuse them, or admit as-recorded with the absence recorded in the Position. Owner's call; PROPOSED: admit as-recorded with the absence named in the Position, since D-T-6 forbids invalidating history by later Governance acts. |
 
-## Classification the owner must make before T-M4
+## Classification — made (see status above)
 
 - **Accepted v0 residual:** the demo and Themis v0 proceed on the
   three-link replay; the Position records that L5 witnessing was not

@@ -83,7 +83,7 @@ anything not in Gate 0 stops implementation and is classified first.
 - [x] Landed 2026-09-25 (RESUME-HERE Gate 1 T-M3; probes 8/9 killed,
       the ninth structurally unreachable). Local only; no rsys@6.
 
-## 4. T-M4 — `themis-decide`, `themis-inspect`, walls (Class 3) — BLOCKED until `openspec/changes/l5-witness-events/` is classified (owner, 2026-09-25)
+## 4. T-M4 — `themis-decide`, `themis-inspect`, walls (Class 3) — BLOCKED — `openspec/changes/l5-witness-events/` classified REQUIRED AMENDMENT (owner, 2026-09-25); unblocks on its seven exit conditions
 - [ ] `cmd/themis-decide`: tuple + `--disposition` + `--rationale`;
       refuses `decision.*`; observes uid/user/host/time; records the
       Themis checkout commit and `observed-not-authenticated`; prints

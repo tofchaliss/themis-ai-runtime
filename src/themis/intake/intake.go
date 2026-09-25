@@ -71,6 +71,16 @@ type Checkout struct {
 	ContractsRegistryPath string
 }
 
+// WitnessL6Only names what the production replay establishes TODAY:
+// the L6-written links (binding, object, COMPLETED) — not the L5-owned
+// witnesses D-T-4 claims. Owner classification 2026-09-25: L5 witness
+// events are a REQUIRED pre-T-M4 harness amendment
+// (openspec/changes/l5-witness-events/); a Resolution carrying this
+// value is valid as-recorded evidence and MUST NOT be used to create a
+// Position. The value becomes WitnessL5Owned only when the five-link
+// replay exists.
+const WitnessL6Only = "l6-record-only"
+
 // Typed refusal classes. Every refusal wraps exactly one of these and
 // names the failed link in its message (D-T-4: link-named, never a
 // generic "invalid artifact").
@@ -105,6 +115,9 @@ type Resolution struct {
 	ArtifactBytes    []byte // the egress manifest, exact bytes
 	BindingSeq       int64
 	CompletedSeq     int64
+	// ProductionWitness states which layer's witnesses the replay ran
+	// over. WitnessL6Only until the L5 witness amendment lands.
+	ProductionWitness string
 
 	// D-T-5: the verification fact re-established over the artifact.
 	VerificationSeq  int64
@@ -351,6 +364,7 @@ func replayProduction(root *state.Root, man *state.Manifest, events []state.Even
 		return fmt.Errorf("%w: egress manifest names task %q, the tuple names %q", ErrProvenance, em.TaskID, res.Tuple.TaskID)
 	}
 	res.ArtifactObjectID, res.ArtifactBytes, res.CompletedSeq = id, b, completed
+	res.ProductionWitness = WitnessL6Only
 	return nil
 }
 
@@ -510,6 +524,9 @@ type EvidenceView struct {
 		CompletedSeq int64  `json:"completed_seq"`
 		VerifiedPath string `json:"verified_member_path"`
 		VerifiedHash string `json:"verified_member_sha256"`
+		// ProductionWitness is rendered so the view never claims more
+		// than the record supports (owner, 2026-09-25).
+		ProductionWitness string `json:"production_witness"`
 	} `json:"artifact"`
 	Verification struct {
 		Seq            int64  `json:"seq"`
@@ -531,6 +548,7 @@ func (r *Resolution) View() EvidenceView {
 	v.ModelTurns = append([]ModelTurn(nil), r.ModelTurns...)
 	v.Artifact.ObjectID, v.Artifact.BindingSeq, v.Artifact.CompletedSeq = r.ArtifactObjectID, r.BindingSeq, r.CompletedSeq
 	v.Artifact.VerifiedPath, v.Artifact.VerifiedHash = r.VerifiedPath, r.VerifiedHash
+	v.Artifact.ProductionWitness = r.ProductionWitness
 	v.Verification.Seq = r.VerificationSeq
 	v.Verification.Contract = fmt.Sprintf("%s@%d", r.ContractName, r.ContractVersion)
 	v.Verification.ContractSHA256, v.Verification.ContractState = r.ContractSHA256, r.ContractState

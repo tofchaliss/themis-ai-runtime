@@ -59,7 +59,7 @@ authority boundary; nothing more is built.
 | Q-T-6 | What happens when the task, anchor, artifact, or verification record is withdrawn or unavailable? | LOCKED 2026-09-25 (D-T-6) |
 | Q-T-7 | What exact act creates the Enterprise Position? | LOCKED 2026-09-25 (D-T-7) |
 | Q-T-8 | How is the human decision itself witnessed? | LOCKED 2026-09-25 (D-T-8) |
-| Q-T-9 | The read door: what is served, under which class, pinned how? | open |
+| Q-T-9 | The read door: what is served, under which class, pinned how? | LOCKED 2026-09-25 (D-T-9) |
 | Q-T-10 | Where does Themis live (package, store, command) and what walls prove the harness cannot write? | open |
 
 ## Boundaries locked with Q-T-1 (owner, 2026-09-25)

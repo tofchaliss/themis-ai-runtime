@@ -338,6 +338,48 @@ Themis Finding → governed read → model reasoning → governed execution
   authentication root · no caller-asserted identity · no model
   authority.
 
+### D-T-9 — The read door (LOCKED 2026-09-25, owner; Q-T-9)
+
+> The Themis store is a governed, anchor-pinned, read-only registry
+> family under `policies/themis/`: `findings.json` and `products.json`
+> (append-only registries of immutable records: `id`, fields, `state`
+> active|withdrawn, `steward`), plus `positions/` (D-T-7, written only
+> by `themis-decide`). A new anchor pin, `themis_store`, hashes the
+> Findings and Products registries; Positions are EXCLUDED from the
+> model-visible pin. The sole v0 read door is the existing L4 seam: a
+> Themis package implements `ThemisSeam.Read(kind, id)` for `finding`
+> and `product`, returning the exact record bytes hash-verified at
+> load; withdrawn records refuse typed (history, not servable current
+> context); unknown ids are `seam-unavailable`. The authority class is
+> minted by the L4 registry's `trust: governed-record` on the
+> capability, never by the store — the store carries no class field, so
+> a malformed record cannot self-declare. The L2 `ThemisReader` seam
+> stays unwired in v0.
+
+```
+model → get_finding / get_product → L4: grant.themis_scope · quota ·
+anchor-pinned store · governed-record classification → Themis record
+```
+
+- **Why L4, not L2 composition:** composition-time Themis context
+  would need a contract slot, a source registration, and a decision
+  about which Findings a task sees before it runs — relevance,
+  count, sensitivity, capacity, task-time selection — a real L2/L3
+  design question the demo does not need. The tool path already
+  carries the controls: scope prefix, quotas, framed result with a
+  hash, and the loop D-T-7 requires (a Finding fetched by id → a
+  Position on that Finding).
+- **Why Positions are unpinned and unserved:** they are Governance
+  outputs created after the anchor; pinning them would ask when a
+  changing Position registry enters a running deployment's
+  model-visible state — not solved for v0.
+- **Product, locked minimal:** a name-and-version referential record a
+  Finding may identify (`id`, `name`, `version`, `state`, `steward`).
+  **`get_product` is referential context only; a Product has no
+  independent security disposition in v0.** Not a second
+  security-truth model, not a component/SBOM hierarchy, not an
+  authorization object, not a remediation state machine.
+
 ### Boundaries locked with D-T-1 (owner, 2026-09-25)
 
 - **B-T-1 — Human decision only.** The decision door is structurally
@@ -367,5 +409,5 @@ Themis Finding → governed read → model reasoning → governed execution
 | Q-T-6 | Withdrawn / unavailable task, anchor, artifact, verification record? | withdrawn → proceed (recorded); unavailable/corrupt → refuse; Positions never rewritten | LOCKED → D-T-6 |
 | Q-T-7 | What exact act creates the Enterprise Position? | `themis-decide` only; append-only numbered record about an existing Finding; closed dispositions; references never copies | LOCKED → D-T-7 |
 | Q-T-8 | How is the human decision witnessed? | the Position record; decision block observed never asserted; evidence view recorded; `observed-not-authenticated` | LOCKED → D-T-8 |
-| Q-T-9 | The read door: what, which class, pinned how? | — | open |
+| Q-T-9 | The read door: what, which class, pinned how? | L4 `ThemisSeam` only; findings + products anchor-pinned (`themis_store`); L4 mints the class; withdrawn unservable; Positions unpinned; Product minimal | LOCKED → D-T-9 |
 | Q-T-10 | Package, store, command; the walls | — | open |

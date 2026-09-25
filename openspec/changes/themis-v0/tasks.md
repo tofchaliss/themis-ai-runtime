@@ -11,12 +11,16 @@ anything not in Gate 0 stops implementation and is classified first.
 - [ ] Gate 1: implementation design against §4 before each milestone's
       code, recorded in `RESUME-HERE.md`
 
-## 1. T-M1 — Module and store (Class 3)
-- [ ] `src/themis` module (`themis-app`) in the workspace; depends on
+## 1. T-M1 — Module and walls (Class 3; architectural proof — owner)
+- [x] `src/themis` module (`themis-app`) in the workspace; depends on
       the harness module read-only; harness never imports it
-- [ ] `store`: `findings.json` / `products.json` loaders (append-only,
-      strict keys, closed schema, `state`, `steward`; withdrawn
-      unservable), `ThemisSeam.Read`, `themis_store` hash
+      (2026-09-25)
+- [x] `store` / `intake` boundary scaffolds; `themis-decide` /
+      `themis-inspect` refusing stubs; the four D-T-10 walls as tests,
+      walls 1–3 mutation-killed (`RESUME-HERE.md`)
+- [ ] (moved to T-M2) `store`: `findings.json` / `products.json` loaders
+      (append-only, strict keys, closed schema, `state`, `steward`;
+      withdrawn unservable), `ThemisSeam.Read`, `themis_store` hash
 - [ ] P0 records PROPOSED: `FIND-2026-0001` (vulnerable-dep in
       `PROD-demo-vuln-app`), the Product
 - [ ] `policies/themis/README.md` (what a Finding/Product is in v0;

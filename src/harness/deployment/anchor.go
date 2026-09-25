@@ -125,6 +125,13 @@ type Anchor struct {
 	// no phase may then expose `delegate`; a declaration, never a
 	// default.
 	DelegationTemplateRegistry string `json:"delegation_template_registry"`
+	// ThemisStore pins the Themis v0 read store (D-T-9): the SHA-256 of
+	// the exact Findings and Products registry bytes. A deployment
+	// cannot silently gain or lose Findings. "absent" is the explicit
+	// declaration that the deployment serves no Themis records — no
+	// grant may then carry get_finding/get_product; a declaration,
+	// never a default. Positions are NOT part of this pin.
+	ThemisStore string `json:"themis_store"`
 
 	SHA256 string `json:"-"` // of the exact anchor bytes — the deployment identity
 	Raw    []byte `json:"-"`
@@ -197,6 +204,9 @@ func ParseAnchor(raw []byte, origin string) (*Anchor, error) {
 	}
 	if a.DelegationTemplateRegistry != "absent" && !shaSyntax.MatchString(a.DelegationTemplateRegistry) {
 		return nil, fmt.Errorf("%w: %s: delegation_template_registry must be a sha256 hex digest or the explicit declaration \"absent\" — nothing is defaulted", ErrAnchor, origin)
+	}
+	if a.ThemisStore != "absent" && !shaSyntax.MatchString(a.ThemisStore) {
+		return nil, fmt.Errorf("%w: %s: themis_store must be a sha256 hex digest or the explicit declaration \"absent\" — nothing is defaulted", ErrAnchor, origin)
 	}
 	if len(a.Workflows) == 0 {
 		return nil, fmt.Errorf("%w: %s: the anchored workflow set must not be empty", ErrAnchor, origin)

@@ -35,6 +35,7 @@ import (
 	"strconv"
 	"strings"
 
+	tstore "github.com/tofchaliss/themis-app/store"
 	"github.com/tofchaliss/themis/instructions"
 	"github.com/tofchaliss/themis/orchestration"
 	"github.com/tofchaliss/themis/runtime/model"
@@ -110,6 +111,15 @@ func main() {
 		fail("delegation registry/workspace disjointness: %v", err)
 	}
 
+	// Themis v0 read door (D-T-9): the anchor pins the store bytes; the
+	// seam is built over the governed store and handed to L4 as the
+	// ThemisSeam. This binary imports themis-app/store ONLY — never
+	// intake (D-T-10 wall 2).
+	themisStore, err := tstore.Load(filepath.Join(*repo, "policies/themis"))
+	if err != nil {
+		fail("themis store: %v", err)
+	}
+
 	o, report, err := orchestration.Open(orchestration.Config{
 		StateRoot:   filepath.Join(*deploy, "state"),
 		ArtifactDir: filepath.Join(*deploy, "artifacts"),
@@ -128,6 +138,8 @@ func main() {
 		SkillCatalogPath:       filepath.Join(*repo, "policies/skills/catalog.json"),
 		ModelRegistryPath:      *modelReg,
 		DelegationRegistryPath: delegationRegistry,
+		ThemisStorePath:        filepath.Join(*repo, "policies/themis"),
+		ThemisSeam:             themisStore,
 
 		Model:     model.NewOllamaChat(*endpoint),
 		Verifier:  ev,

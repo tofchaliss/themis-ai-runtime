@@ -1,0 +1,17 @@
+{
+ "version": 1,
+ "entries": [
+  {
+   "id": "FIND-2026-0001",
+   "product": "PROD-demo-vuln-app",
+   "advisory": "ADV-2026-1",
+   "component": "vulnerable-dep",
+   "affected_version": "v1",
+   "fixed_version": "v2",
+   "severity": "high",
+   "summary": "demo-vuln-app pins vulnerable-dep v1 in go.mod; ADV-2026-1 is fixed in v2.",
+   "state": "active",
+   "steward": "security-governance"
+  }
+ ]
+}

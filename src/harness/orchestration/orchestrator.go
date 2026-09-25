@@ -76,6 +76,19 @@ type Config struct {
 	// Config.Delegator must have been built from these bytes (the
 	// wiring's obligation). Empty iff the anchor declares "absent".
 	DelegationRegistryPath string
+	// ThemisStorePath is the Themis v0 read store directory the anchor
+	// pins (`themis_store`); Config.ThemisSeam must have been built
+	// from those bytes (the wiring's obligation, checked at Open
+	// through ThemisSeam's StoreHash when it offers one). Empty iff the
+	// anchor declares "absent".
+	ThemisStorePath string
+	// ThemisSeam is the injected L4 read door to Themis records
+	// (tools.ThemisSeam): get_finding / get_product serve its bytes
+	// under the registry's governed-record trust. Nil = no Themis
+	// records in this deployment; the executors fail closed typed. L7
+	// never reads through it and holds no Themis type — the seam is
+	// handed to the executor table and nothing else.
+	ThemisSeam tools.ThemisSeam
 	// Unanchored is the EXPLICIT opt-in to running without a
 	// deployment anchor — the recorded test-harness caller role
 	// (close-review MEDIUM-1). Without it an anchorless Open refuses,
@@ -459,7 +472,43 @@ func verifyAnchoredInstructionPlane(cfg Config, a *deployment.Anchor) error {
 			return fmt.Errorf("%w: the wired delegation seam holds a registry that is not the anchored artifact (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
 		}
 	}
+	// The Themis read store (D-T-9): the same posture — "absent" is a
+	// declaration, a pin is a hash-bound artifact, and a Finding
+	// enters a deployment only by Governance act. The pin is over the
+	// two registries' exact bytes (findings then products), computed
+	// here without any Themis import.
+	if a.ThemisStore == "absent" {
+		if cfg.ThemisStorePath != "" || cfg.ThemisSeam != nil {
+			return fmt.Errorf("%w: the anchor declares no Themis store but one is configured (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
+		}
+	} else {
+		if cfg.ThemisStorePath == "" {
+			return fmt.Errorf("%w: the anchor pins a Themis store but none is configured (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
+		}
+		got, herr := themisStoreHash(cfg.ThemisStorePath)
+		if herr != nil || got != a.ThemisStore {
+			return fmt.Errorf("%w: Themis store is not the anchored artifact (deployment %s@%d) — a Finding enters a deployment only by Governance act", ErrAssembly, a.Name, a.Deployment)
+		}
+		if h, ok := cfg.ThemisSeam.(interface{ StoreHash() string }); ok && h.StoreHash() != a.ThemisStore {
+			return fmt.Errorf("%w: the wired Themis seam holds a store that is not the anchored artifact (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
+		}
+	}
 	return nil
+}
+
+// themisStoreHash is the `themis_store` pin: SHA-256 over the exact
+// findings.json bytes followed by the exact products.json bytes. L7
+// computes it from the files so it imports nothing of Themis.
+func themisStoreHash(dir string) (string, error) {
+	fb, err := os.ReadFile(filepath.Join(dir, "findings.json"))
+	if err != nil {
+		return "", err
+	}
+	pb, err := os.ReadFile(filepath.Join(dir, "products.json"))
+	if err != nil {
+		return "", err
+	}
+	return hashBytes(append(append([]byte{}, fb...), pb...)), nil
 }
 
 // recordObservedRegistry persists the anchors-registry state this
@@ -990,7 +1039,7 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 		inst = &delegationInstantiator{d: o.cfg.Delegator, base: instBase}
 		instIface = inst
 	}
-	table, err := tools.NewExecutorTableWith(reg, nil, instIface)
+	table, err := tools.NewExecutorTableWith(reg, o.cfg.ThemisSeam, instIface)
 	if err != nil {
 		envn.Teardown()
 		return res, err

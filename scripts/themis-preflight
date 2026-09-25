@@ -249,6 +249,28 @@ PY
   done <<< "$DRES"
 fi
 
+# ----------------------------------------------------- themis store
+# D-T-9: the two registries must load under their closed schemas and
+# the pin is what an anchor's themis_store field must equal.
+sec "Themis store"
+TDIR="$ROOT/policies/themis"
+if [ ! -f "$TDIR/findings.json" ] || [ ! -f "$TDIR/products.json" ]; then
+  warn "no Themis store at $TDIR"
+else
+  TPIN=$(cat "$TDIR/findings.json" "$TDIR/products.json" | shasum -a 256 | cut -d' ' -f1)
+  note "themis_store pin: $TPIN"
+  if python3 - "$TDIR" <<'PY'
+import json, sys, re
+d = sys.argv[1]
+p = json.load(open(d + "/products.json")); f = json.load(open(d + "/findings.json"))
+ids = {e["id"] for e in p["entries"]}
+bad = [e["id"] for e in f["entries"] if e.get("product") not in ids or not re.match(r"^FIND-", e["id"])]
+sys.exit(1 if bad else 0)
+PY
+  then ok "findings reference registered products ($(python3 -c 'import json,sys;print(len(json.load(open(sys.argv[1]))["entries"]))' "$TDIR/findings.json") findings, $(python3 -c 'import json,sys;print(len(json.load(open(sys.argv[1]))["entries"]))' "$TDIR/products.json") products)"
+  else bad "a finding references an unregistered product or has a bad id"; fi
+fi
+
 # ----------------------------------------------------------- deployment
 if [ -n "$DEPLOY" ]; then
   sec "Deployment root: $DEPLOY"

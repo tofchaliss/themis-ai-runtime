@@ -25,6 +25,7 @@ func validAnchorMap() map[string]any {
 		"skill_catalog":  h("catalog"), "contract_registry": h("l10reg"),
 		"criteria_registry": h("l11reg"), "regression_set_registry": h("setreg"),
 		"delegation_template_registry": "absent",
+		"themis_store":                 "absent",
 	}
 }
 
@@ -150,6 +151,8 @@ func TestParseAnchorRefusals(t *testing.T) {
 		{"model registry neither hash nor absent", func(m map[string]any) { m["model_registry"] = "local" }},
 		{"delegation registry neither hash nor absent", func(m map[string]any) { m["delegation_template_registry"] = "latest" }},
 		{"delegation registry missing", func(m map[string]any) { delete(m, "delegation_template_registry") }},
+		{"themis store neither hash nor absent", func(m map[string]any) { m["themis_store"] = "latest" }},
+		{"themis store missing", func(m map[string]any) { delete(m, "themis_store") }},
 		{"bad name", func(m map[string]any) { m["name"] = "Local Dev" }},
 		{"version zero", func(m map[string]any) { m["deployment_version"] = 0 }},
 		{"unknown field", func(m map[string]any) { m["auto_approve"] = true }},

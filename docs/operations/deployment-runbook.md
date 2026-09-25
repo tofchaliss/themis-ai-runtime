@@ -260,6 +260,7 @@ loader uses — directory pins are `deployment.HashDir`, file pins are
 | `criteria_registry` | `HashFile($REPO/policies/ratchet/criteria.json)` |
 | `regression_set_registry` | `HashFile($REPO/policies/ratchet/regression-sets.json)` |
 | `delegation_template_registry` | `HashFile($REPO/policies/delegation/registry.json)` or `"absent"` (L8; `themis-run` wires the seam over this path) |
+| `themis_store` | SHA-256 of `findings.json` bytes followed by `products.json` bytes under `$REPO/policies/themis`, or `"absent"` (Themis v0 D-T-9; `themis-status` prints it; `themis-run` wires the read seam over the directory) |
 
 > **Open choice (undecided):** whether a reviewed anchor-minting
 > helper should exist, or whether pins are computed per deployment in

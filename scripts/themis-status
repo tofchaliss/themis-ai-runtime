@@ -71,6 +71,8 @@ cat > "$HELPER" <<'GO'
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 
@@ -104,6 +106,13 @@ func main() {
 		"contract_registry":       "policies/verification/contracts.json",
 		"criteria_registry":       "policies/ratchet/criteria.json",
 		"regression_set_registry": "policies/ratchet/regression-sets.json",
+	}
+	// themis_store: the pin over findings.json then products.json bytes.
+	if fb, err := os.ReadFile(repo + "/policies/themis/findings.json"); err == nil {
+		if pb, err := os.ReadFile(repo + "/policies/themis/products.json"); err == nil {
+			sum := sha256.Sum256(append(append([]byte{}, fb...), pb...))
+			fmt.Printf("PIN\tthemis_store\t%s\n", hex.EncodeToString(sum[:]))
+		}
 	}
 	for name, rel := range files {
 		if h, err := deployment.HashFile(repo + "/" + rel); err == nil {
@@ -202,6 +211,8 @@ reg policies/verification/contracts.json  "L10 contracts"
 reg policies/ratchet/criteria.json        "L11 criteria"
 reg policies/ratchet/regression-sets.json "L11 regression sets"
 reg policies/delegation/registry.json     "L8 delegation templates"
+reg policies/themis/findings.json         "Themis findings"
+reg policies/themis/products.json         "Themis products"
 
 # ------------------------------------------------------ artifact pins
 sec "Artifact pins (diagnostic display only — not an anchor)"

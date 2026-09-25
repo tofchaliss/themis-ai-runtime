@@ -1,0 +1,7 @@
+{
+ "version": 1,
+ "task_id": "@task_id",
+ "repo": "@repo",
+ "pinned_sha": "@pinned_sha",
+ "limits": [{"dimension": "wall_deadline_s", "value": 600}]
+}

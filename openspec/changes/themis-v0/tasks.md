@@ -18,34 +18,40 @@ anything not in Gate 0 stops implementation and is classified first.
 - [x] `store` / `intake` boundary scaffolds; `themis-decide` /
       `themis-inspect` refusing stubs; the four D-T-10 walls as tests,
       walls 1–3 mutation-killed (`RESUME-HERE.md`)
-- [ ] (moved to T-M2) `store`: `findings.json` / `products.json` loaders
+- [x] (moved to T-M2) `store`: `findings.json` / `products.json` loaders
       (append-only, strict keys, closed schema, `state`, `steward`;
       withdrawn unservable), `ThemisSeam.Read`, `themis_store` hash
-- [ ] P0 records PROPOSED: `FIND-2026-0001` (vulnerable-dep in
+      (2026-09-25)
+- [x] P0 records PROPOSED: `FIND-2026-0001` (vulnerable-dep in
       `PROD-demo-vuln-app`), the Product
-- [ ] `policies/themis/README.md` (what a Finding/Product is in v0;
+- [x] `policies/themis/README.md` (what a Finding/Product is in v0;
       registration checklist; Product is referential only)
-- [ ] Register A: loaders, withdrawn, key wall, store has no `os` writer
-      (AST)
+- [x] Register A: loaders, withdrawn, key wall, store has no `os` writer
+      (AST) — `store/store_test.go` + wall 3
 
 ## 2. T-M2 — Anchor pin and the read door in the harness (Class 3/4; G1 amendment)
-- [ ] `Anchor.ThemisStore` (`themis_store`, sha or `"absent"`);
+- [x] `Anchor.ThemisStore` (`themis_store`, sha or `"absent"`);
       `Config.ThemisStorePath`; Open verifies pin ⇔ path like the
       delegation registry; anchor tests
-- [ ] `cmd/themis-run` constructs the store and passes it as the L4 seam
+- [x] `cmd/themis-run` constructs the store and passes it as the L4 seam
       (imports `store` only)
-- [ ] `themis-status` / `themis-preflight` print and verify the pin
-- [ ] `remediate-dependency@3` PROPOSED: grant template adds
+- [x] `themis-status` / `themis-preflight` print and verify the pin
+- [x] `remediate-dependency@3` PROPOSED: grant template adds
       `get_finding` (`themis_scope: ["FIND-"]`) and `get_product`
       (`["PROD-"]`); ceiling `allowed_tools` extended; procedure reads
       the Finding first; catalog entry
-- [ ] Register B first (harness side): an anchored @3 walk with a
+- [x] Register B first (harness side): an anchored @3 walk with a
       scripted model calls `get_finding FIND-2026-0001`, gets a
       `governed-record` framed result, completes with L10 PASS;
       negatives: id outside scope, withdrawn Finding, unknown id, store
-      bytes ≠ pin, seam configured while `absent`
-- [ ] Register D: the model's restatement of the Finding re-enters at
+      bytes ≠ pin, registry modified after pinning, seam over other
+      bytes, seam configured while `absent`, pin without path, class
+      other than governed-record refused at load
+      (`src/themis/readdoor_test.go`, 2026-09-25)
+- [x] Register D: the model's restatement of the Finding re-enters at
       the floor (projection), the Finding at `governed-record`
+- [x] Landed 2026-09-25 (RESUME-HERE Gate 1 T-M2; probes killed).
+      `rsys@6` deliberately NOT minted — a T-M5 host act.
 
 ## 3. T-M3 — Intake (Class 3)
 - [ ] `intake.Resolve(tuple)`: D-T-1 (manifest COMPLETED/VERIFIED,

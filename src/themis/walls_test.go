@@ -42,17 +42,31 @@ func goList(t *testing.T, dir string, args ...string) []string {
 	return lines
 }
 
-// Wall 1 — dependency wall: the ENTIRE harness module's dependency
-// graph reaches no Themis package at all (an indirect path
-// harness → A → B → themis-app/... is a violation too).
+// Wall 1 — dependency wall: the ENTIRE dependency graph of every
+// harness LAYER package reaches no Themis package at all (an indirect
+// path harness → A → B → themis-app/... is a violation too). The one
+// binary that legitimately wires the read seam, cmd/themis-run, is
+// governed by wall 2; every other package, including every other
+// binary, is under this wall.
 func TestWall1HarnessGraphReachesNoThemis(t *testing.T) {
-	deps := goList(t, harnessDir, "-deps", "./...")
+	pkgs := goList(t, harnessDir, "./...")
+	var layer []string
+	for _, p := range pkgs {
+		if p == harnessModule+"/cmd/themis-run" {
+			continue
+		}
+		layer = append(layer, p)
+	}
+	if len(layer) < 20 {
+		t.Fatalf("suspiciously few harness packages (%d) — the wall is not being checked", len(layer))
+	}
+	deps := goList(t, harnessDir, append([]string{"-deps"}, layer...)...)
 	if len(deps) < 50 {
-		t.Fatalf("suspiciously few harness deps (%d) — the wall is not being checked", len(deps))
+		t.Fatalf("suspiciously few harness deps (%d)", len(deps))
 	}
 	for _, d := range deps {
 		if strings.HasPrefix(d, themisModule) {
-			t.Errorf("harness dependency graph reaches %s — the harness must not depend on Themis (D-T-10)", d)
+			t.Errorf("harness dependency graph reaches %s — no harness layer package may depend on Themis (D-T-10)", d)
 		}
 	}
 }

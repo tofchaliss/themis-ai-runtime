@@ -263,6 +263,48 @@ raw bytes == artifact bytes · verification seq < binding seq
 - Reviewer-visible property: withdrawal is not retroactive erasure, and
   missing evidence is never silently tolerated.
 
+### D-T-7 — What a Position is, and the one act that creates it (LOCKED 2026-09-25, owner; Q-T-7)
+
+> A Position is an append-only Themis record about exactly ONE EXISTING
+> Finding, expressing a disposition from the closed v0 vocabulary
+> (`not-applicable | mitigated | accepted-risk | remediation-planned`)
+> and citing exactly one referencable harness execution as its
+> evidence basis. It REFERENCES, never copies: the Finding identity,
+> the execution tuple, the derived egress artifact object id, the
+> verification contract identity and reconstruction verdict, the
+> anchor hash with its lifecycle state at intake, the human decision
+> witness (D-T-8), and its own hash. The report bytes never become the
+> Position; the harness record remains the evidence.
+>
+> **Only Themis can create a Position, and `themis-decide` is the only
+> v0 creation mechanism**: run by a human; resolves the tuple through
+> D-T-1..6 and refuses on any failure before showing anything; renders
+> the three facts separately (model turns, artifact bytes, L10
+> outcome); takes the disposition and a rationale as explicit
+> arguments; appends `positions/<finding-id>/<n>.json` with `n` DERIVED
+> by Themis as the next unused sequence. No update, no delete, no
+> edit, no model-selected disposition, no object-id argument, no
+> report-path argument.
+
+- **The Finding must exist** in the authoritative Themis store,
+  resolved through Themis's own read door — the Finding id is not
+  evidence of existence. Refusal: `position-refused: finding-not-found`.
+  This closes the v0 loop: Finding read → model work → governed
+  execution → verified artifact → human decision → Position on the
+  SAME Finding.
+- **Supersession by sequence:** every Position for a Finding remains a
+  historical Governance act; the CURRENT Position is a deterministic
+  projection (highest valid sequence), never a mutable flag.
+- **Anchor state is intake metadata, not disposition:**
+  `anchor.state_at_intake` records what a reviewer should know ("made
+  from an execution governed by anchor X, withdrawn by intake time");
+  it never changes the Position's meaning.
+
+```
+Themis Finding → governed read → model reasoning → governed execution
+    → verified artifact → human decision → Position (same Finding)
+```
+
 ### Boundaries locked with D-T-1 (owner, 2026-09-25)
 
 - **B-T-1 — Human decision only.** The decision door is structurally
@@ -290,7 +332,7 @@ raw bytes == artifact bytes · verification seq < binding seq
 | Q-T-4 | How does Themis verify the artifact was produced by that execution? | causal replay l5-transition → l5-op → object → artifact-bound → COMPLETED; fail-closed, link-named | LOCKED → D-T-4 |
 | Q-T-5 | How does Themis verify the L10 result? | reproducible PASS, registered contract, authorized audit, raw bytes == artifact, verification precedes binding; L7 gate not consulted | LOCKED → D-T-5 |
 | Q-T-6 | Withdrawn / unavailable task, anchor, artifact, verification record? | withdrawn → proceed (recorded); unavailable/corrupt → refuse; Positions never rewritten | LOCKED → D-T-6 |
-| Q-T-7 | What exact act creates the Enterprise Position? | — | open |
+| Q-T-7 | What exact act creates the Enterprise Position? | `themis-decide` only; append-only numbered record about an existing Finding; closed dispositions; references never copies | LOCKED → D-T-7 |
 | Q-T-8 | How is the human decision witnessed? | — | open |
 | Q-T-9 | The read door: what, which class, pinned how? | — | open |
 | Q-T-10 | Package, store, command; the walls | — | open |

@@ -186,8 +186,14 @@ fact.
   alone. Themis stays a consumer of the harness's authoritative
   evidence, never a competing execution-truth subsystem.
 
-**Implementation note — as recorded (T-M3, 2026-09-25; PROPOSED, owner
-to ratify or reclassify).** The harness constitution names
+**Implementation note — as recorded (T-M3; RATIFIED AS-RECORDED by the
+owner 2026-09-25, with the L5 witness gap kept EXPLICITLY OPEN as the
+separate harness amendment `openspec/changes/l5-witness-events/`).**
+Owner's rule: T-M3 evidence stands as an as-recorded result; the
+absence of L5 writers is a real gap between the constitutional event
+model and the implemented record; a proposed event class must not
+quietly become an implemented fact source; Themis never invents or
+synthesizes L5 witnesses. The harness constitution names
 `l5-transition` and `l5-op` as event classes, but no layer writes
 them: L5's seal and egress leave no event in the task stream today.
 `intake.Resolve` therefore replays the chain over the links that
@@ -197,8 +203,11 @@ that its body names) → object re-hash by the store → lifecycle
 manifest projection agrees → the egress manifest names the tuple's
 task — and refuses link-named on each. The L5 witness is recorded as an
 OWED HARNESS AMENDMENT (a record gap, not a Themis mechanism); Themis
-never simulates it. When L5 witnessing lands, the two links are added
-to the replay and this note is retired.
+never simulates it. T-M4 does not start until that amendment is
+classified by the owner as an accepted v0 residual or a required
+amendment — it is the one item that changes what Themis is entitled to
+claim from the record. When L5 witnessing lands, the two links are
+added to the replay and this note is retired.
 
 ### D-T-5 — The L10 fact is re-established over the exact artifact (LOCKED 2026-09-25, owner; Q-T-5)
 
@@ -248,8 +257,27 @@ raw bytes == artifact bytes · verification seq < binding seq
   recorded outcome alone · no trust in the L7 gate · no PASS over
   different bytes.
 
-**Implementation note — as recorded (T-M3, 2026-09-25; PROPOSED, owner
-to ratify or reclassify).** The bound `egress-artifact` object is the
+**Implementation note — as recorded (T-M3; RATIFIED AS-RECORDED by the
+owner 2026-09-25).** Owner's operational form of D-T-5:
+
+```
+L10 verified bytes
+        │
+        ▼
+L5 egress manifest member
+        │
+        ├── new_hash
+        └── content bytes
+        │
+        ▼
+byte/hash identity established
+```
+
+The artifact verified is the egress MEMBER of the L5 manifest,
+identified by `new_hash` and its content/path; the property that
+matters is that the same exact bytes are used in the verification-to-
+artifact comparison. "Artifact" is not broadened into the report
+itself. The bound `egress-artifact` object is the
 L5 EGRESS MANIFEST (`{task_id, changes[{path, type, new_hash, size,
 content}], …}`), not the report file. Byte-equality between the raw
 verified bytes and the manifest is therefore never true. Check (3) is
@@ -465,6 +493,14 @@ Four walls, each a test:
    has no `os` writer at all — a Themis read-store immutability wall
    (its own boundary, not an L9 rule). Both tested by AST against the
    intended boundary, never by package naming alone.
+   **Scope of Wall 3 (owner, 2026-09-25, documented — no
+   architecture change):** Wall 3 is a DIRECT-import wall. `intake` has
+   a direct dependency on the read-only verification reconstruction
+   seam (`verification/seam`); the seam's transitive implementation
+   dependencies (orchestration, tools, runtime/model) are not
+   prohibited by Wall 3. Nobody may read the wall as "intake cannot
+   reach orchestration/tools/model"; the wall's claim is that `intake`
+   itself imports none of them and holds no call site into them.
 4. **Capability wall** — the L4 registry contains no Position-writing
    capability, verb, target class, executor, or error vocabulary.
 

@@ -1,0 +1,97 @@
+# Proposal: L5 witness events — who writes `l5-transition` / `l5-op`, and what they attest
+
+Status: **OPEN 2026-09-25** (harness amendment; raised by Themis v0
+T-M3, ratified as-recorded by the owner with this gap kept explicitly
+open). **Classification pending (owner):** accepted v0 residual, or
+required amendment. Themis v0 T-M4 does not start until this is
+classified — it is the one T-M3 item that changes what Themis is
+entitled to claim from the record.
+
+Raised by: `openspec/changes/themis-v0/design.md` D-T-4 implementation
+note; `openspec/changes/themis-v0/RESUME-HERE.md` Gate 1 — T-M3.
+
+## The gap
+
+The L6 constitution (`src/harness/state/constitution.go`) names two
+event classes, `l5-transition` and `l5-op`, in its closed vocabulary.
+No harness layer writes either: there is no `AppendEvent(state.EvL5Transition, …)`
+or `AppendEvent(state.EvL5Op, …)` anywhere in non-test code. The
+classes exist in the constitutional event model and are absent from
+every implemented record.
+
+D-T-4 (Themis v0, LOCKED) describes production as a chain
+
+```
+l5-transition  seal task-complete
+l5-op          egress naming the artifact address
+L6 object      bytes re-hash to the address
+artifact-bound Ref{ObjectID, egress-artifact}
+lifecycle      → COMPLETED
+```
+
+whose first two links do not exist in the record. `intake.Resolve`
+replays the three that do, link-named on refusal, and the owner
+ratified that as an as-recorded result. Themis does not and must not
+synthesize the missing two.
+
+## What the record holds today (facts from code)
+
+- **L5 keeps its own trace, in memory, never in the task stream.**
+  `execution.Env` carries a `Trace` with `SealReason`, `Ops`,
+  `ArtifactAddress`, `EgressOutcome`, workspace/provider identities
+  (`execution/lifecycle.go`, `execution/egress.go`). It is L5-owned
+  evidence that never reaches L6.
+- **L5 does not import `state`.** `execution` imports `confine` and
+  `internal/strictjson` only. It has no handle on a task record and
+  cannot append to one as written.
+- **L7 drives the completion path and writes what the record has.**
+  `orchestration/loop.go` `complete()`: `l5.Seal(SealTaskComplete)` →
+  `l5.Egress(ceiling, spec, store)` (returns the artifact-store
+  address) → readback → `task.StoreObject(egress-artifact, bytes)` →
+  `task.BindArtifact(objID)` (L6 writes `artifact-bound`, writer l6) →
+  `l5.Teardown()` → `task.Transition(COMPLETED)` (L6 writes
+  `lifecycle`, writer l6). L7 records nothing about the seal or the
+  egress op itself.
+- **Seal is a mechanism with a typed reason** (`task-complete`,
+  `deadline`, `fatal-breach`, `caller-abort`) and makes the workspace
+  OS-level read-only; egress is reachable only from a clean seal
+  (`beginEgress`). The seal reason is exactly the fact D-T-4's first
+  link wants witnessed, and it exists — in L5's memory.
+- **The egress manifest already names the task** (`task_id`,
+  `spec_hash`, `ceiling_hash`, `binary_digest`, `provider`, `changes[]`),
+  and the bound object IS that manifest. The second link's content
+  (the egress op naming the artifact address) is derivable from the
+  binding today; what is missing is the L5-attributed witness that
+  the egress OPERATION happened, in order, before the binding.
+
+## What the amendment must decide (grill, owner-led)
+
+| # | Question | Recommendation (facts-first; PROPOSED) |
+|---|---|---|
+| Q-W-1 | Who is the WRITER of `l5-transition`/`l5-op`? L5 itself (given a narrow append handle), or L7 on L5's behalf from the L5 trace? | L5 itself, through a narrow sink interface (append-only, class-restricted to the two L5 classes) handed in at provision — "every event's writer is the layer that owns its class" (D-T-4) is the rule the constitution already states for every other class; L7 writing on L5's behalf would make L7 the fact source for L5 facts. |
+| Q-W-2 | What does `l5-transition` attest? | `{from, to, reason}` for every Env lifecycle edge, at least the seal (`→ SEALED`, reason) and the egress edges (`→ EGRESSING`, `→ ACKNOWLEDGED`); one event per edge, in order, record-before-effect where the effect is reversible and record-after-effect where it is not (the seal makes the workspace read-only first, then is witnessed). |
+| Q-W-3 | What does `l5-op` attest? | Each governed op the trace already holds (`Ops`), plus the egress op `{op: egress, artifact_address, observed_total_bytes, observed_file_count}` — the address L5 acknowledged, so the binding can be checked against an L5-attributed claim rather than against itself. |
+| Q-W-4 | Is this a constitution amendment (hash-changing)? | No new class — both classes already exist; adding writers is not a vocabulary change. Whether `primitiveOnlyEvents` or writer attribution rules change must be checked in `state/constitution.go`; if they do, `constitution.state` re-pins and the anchor sequence follows (the L8 precedent). |
+| Q-W-5 | What does Themis do when it lands? | Add the two links to `intake.Resolve`'s replay (seal `task-complete` precedes the egress op; the egress op names the bound address; both before the binding) and retire the D-T-4 note. Records made before the amendment have no L5 witnesses: a Themis-side rule is needed — refuse them, or admit as-recorded with the absence recorded in the Position. Owner's call; PROPOSED: admit as-recorded with the absence named in the Position, since D-T-6 forbids invalidating history by later Governance acts. |
+
+## Classification the owner must make before T-M4
+
+- **Accepted v0 residual:** the demo and Themis v0 proceed on the
+  three-link replay; the Position records that L5 witnessing was not
+  available in the record it cites; the amendment is scheduled after
+  v0.
+- **Required amendment:** the amendment lands (harness change,
+  constitution check, VM proof) before T-M4, and `intake.Resolve`
+  replays five links from the start.
+
+Recommendation (PROPOSED): **accepted v0 residual**, on the facts
+above — the three implemented links are all L6-written, ordered,
+hash-verified, and the egress manifest is task-named; the missing
+witnesses add L5 attribution and ordering evidence, not a new
+identity. The Position must NAME the residual so the claim Themis
+makes is exactly what the record supports.
+
+## Not in scope
+
+No new event class · no signature or attestation · no Themis-side
+synthesis of L5 events · no change to D-T-4's locked intent.

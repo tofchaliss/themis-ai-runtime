@@ -231,6 +231,38 @@ raw bytes == artifact bytes · verification seq < binding seq
   recorded outcome alone · no trust in the L7 gate · no PASS over
   different bytes.
 
+### D-T-6 — Withdrawal versus unavailability (LOCKED 2026-09-25, owner; Q-T-6)
+
+> **Withdrawal changes future admissibility; it does not rewrite or
+> invalidate an already-established historical fact. Unavailability or
+> corruption prevents re-establishment of that fact and therefore
+> fails closed.** If the historical execution and evidence can be
+> deterministically reconstructed, withdrawal does not prevent review;
+> if reconstruction cannot be established, Themis refuses intake.
+
+| Condition | Themis v0 |
+|---|---|
+| Task not COMPLETED (FAILED, FAILED_PARTIAL, non-terminal) | refuse — `execution not referencable: not a completed execution` |
+| Record verdict TORN / CORRUPT | refuse — no partial acceptance |
+| Anchor withdrawn after the execution | proceed — the Position records the anchor hash and its withdrawal state at intake |
+| Anchor never registered on Themis's checkout | refuse (D-T-2) |
+| Artifact object missing / hash mismatch | refuse (D-T-4) |
+| Verification contract withdrawn after the execution | proceed — the reconstruction uses the STORED contract bytes, never today's registry entry; the Position records the contract identity and its state at intake |
+| Verification evidence missing / corrupt | refuse (D-T-5) |
+| Any Themis-side registry unreadable | refuse — Themis never assumes |
+
+- The registry establishes that the contract was governed; the stored
+  contract bytes establish what contract was actually used. Historical
+  reproducibility never depends on today's registry entry.
+- **Position lifecycle boundary:** once an Enterprise Position exists,
+  later withdrawal of an artifact, anchor, or contract it references
+  does not invalidate or rewrite it. A Position is a historical
+  Governance act; a later decision creates a subsequent state of
+  Governance, it does not mutate the historical act. Supersession,
+  conflict, and multiplicity are Q-T-7's.
+- Reviewer-visible property: withdrawal is not retroactive erasure, and
+  missing evidence is never silently tolerated.
+
 ### Boundaries locked with D-T-1 (owner, 2026-09-25)
 
 - **B-T-1 — Human decision only.** The decision door is structurally
@@ -257,7 +289,7 @@ raw bytes == artifact bytes · verification seq < binding seq
 | Q-T-3 | Which L6 object/event identifies the artifact? | — | folded into D-T-1 |
 | Q-T-4 | How does Themis verify the artifact was produced by that execution? | causal replay l5-transition → l5-op → object → artifact-bound → COMPLETED; fail-closed, link-named | LOCKED → D-T-4 |
 | Q-T-5 | How does Themis verify the L10 result? | reproducible PASS, registered contract, authorized audit, raw bytes == artifact, verification precedes binding; L7 gate not consulted | LOCKED → D-T-5 |
-| Q-T-6 | Withdrawn / unavailable task, anchor, artifact, verification record? | — | open |
+| Q-T-6 | Withdrawn / unavailable task, anchor, artifact, verification record? | withdrawn → proceed (recorded); unavailable/corrupt → refuse; Positions never rewritten | LOCKED → D-T-6 |
 | Q-T-7 | What exact act creates the Enterprise Position? | — | open |
 | Q-T-8 | How is the human decision witnessed? | — | open |
 | Q-T-9 | The read door: what, which class, pinned how? | — | open |

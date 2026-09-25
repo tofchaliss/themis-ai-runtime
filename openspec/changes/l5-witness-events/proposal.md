@@ -2,8 +2,9 @@
 
 Status: **CLASSIFIED 2026-09-25 (owner): REQUIRED AMENDMENT, pre-T-M4.**
 Themis v0 T-M4 remains BLOCKED until the seven exit conditions below
-are met. Grill open (owner-led): Q-W-1 LOCKED by the classification;
-Q-W-2..5 open, one per turn.
+are met. Grill open (owner-led): Q-W-1, Q-W-2 LOCKED (`design.md` D-W-1,
+D-W-2); Q-W-6 (writer non-forgeability) next; Q-W-3..5 open, one per
+turn.
 
 ## Owner classification (2026-09-25, verbatim in substance)
 
@@ -138,10 +139,11 @@ synthesize the missing two.
 | # | Question | Recommendation (facts-first; PROPOSED) |
 |---|---|---|
 | Q-W-1 | Who is the WRITER of `l5-transition`/`l5-op`? | **LOCKED 2026-09-25 (owner, with the classification):** L5 itself, through a narrow class-restricted sink; L7 keeps orchestrating and is never the L5 witness. Was: L5 itself, through a narrow sink interface (append-only, class-restricted to the two L5 classes) handed in at provision — "every event's writer is the layer that owns its class" (D-T-4) is the rule the constitution already states for every other class; L7 writing on L5's behalf would make L7 the fact source for L5 facts. |
-| Q-W-2 | What does `l5-transition` attest? | `{from, to, reason}` for every Env lifecycle edge, at least the seal (`→ SEALED`, reason) and the egress edges (`→ EGRESSING`, `→ ACKNOWLEDGED`); one event per edge, in order, record-before-effect where the effect is reversible and record-after-effect where it is not (the seal makes the workspace read-only first, then is witnessed). |
+| Q-W-2 | What does `l5-transition` attest, and when is it written? | **LOCKED 2026-09-25 → D-W-2:** one event per committed edge of the full L5 machine, body `{from, to, reason}` = the `Trace` transition, at `transitionLocked`; seal record-after-effect, EGRESSING record-before-effect, other edges decided per edge; no timing; class restriction locked, writer non-forgeability deferred to Q-W-6. |
 | Q-W-3 | What does `l5-op` attest? | Each governed op the trace already holds (`Ops`), plus the egress op `{op: egress, artifact_address, observed_total_bytes, observed_file_count}` — the address L5 acknowledged, so the binding can be checked against an L5-attributed claim rather than against itself. |
 | Q-W-4 | Is this a constitution amendment (hash-changing)? | No new class — both classes already exist; adding writers is not a vocabulary change. Whether `primitiveOnlyEvents` or writer attribution rules change must be checked in `state/constitution.go`; if they do, `constitution.state` re-pins and the anchor sequence follows (the L8 precedent). |
 | Q-W-5 | What does Themis do when it lands? | Add the two links to `intake.Resolve`'s replay (seal `task-complete` precedes the egress op; the egress op names the bound address; both before the binding) and retire the D-T-4 note. Records made before the amendment have no L5 witnesses: a Themis-side rule is needed — refuse them, or admit as-recorded with the absence recorded in the Position. Owner's call; PROPOSED: admit as-recorded with the absence named in the Position, since D-T-6 forbids invalidating history by later Governance acts. |
+| Q-W-6 | How is the L5 writer identity made NON-FORGEABLE — so an event carrying writer `l5` can only have come through the L5-owned emission path, and no other path can emit an L5 class? (Raised by the owner at Q-W-2: the sink records a caller-asserted writer string today; only the four primitive-only classes are sink-enforced.) | see the turn record; PROPOSED |
 
 ## Classification — made (see status above)
 

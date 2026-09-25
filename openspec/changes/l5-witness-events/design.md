@@ -211,3 +211,56 @@ Plus, before the amendment is called complete: the `constitution.state`
 stored in `rsys@6` must equal the compiled `state.ConstitutionHash()`
 of the binary ACTUALLY RUNNING on the host (the rsys@4 host-tree
 lesson, closed at the constitution too).
+
+## D-W-5 — Constitution-keyed production compatibility (LOCKED 2026-09-25, owner)
+
+> Proof obligations are VERSIONED BY CONSTITUTION; the historical
+> record stays immutable. Themis maintains a closed witnessing-
+> constitution table, seeded with the amended L6 hash; the compiled
+> harness constitution hash must be present in it (build-time guard
+> against Themis silently falling behind a constitution change).
+
+**The constitution hash determines what evidence is OWED; the event
+stream determines whether that evidence EXISTS.** The branch is taken
+from the task's RECORDED `constitution_hash`, never from the running
+binary's — replay determinism.
+
+```
+read constitution_hash
+        ├── witnessing constitution → require the D-W-2 + D-W-3 chain
+        └── historical constitution → reconstruct only the evidence that existed
+```
+
+| Record | Constitution | L5 witnesses | Result |
+|---|---|---|---|
+| Historical | old | impossible / absent | inspectable, NOT Position-eligible |
+| Current | witnessing | present and valid | Position-eligible (`ProductionWitness = l5-witnessed`) |
+| Current | witnessing | missing / invalid | REFUSED `artifact-provenance-refused`, link-named |
+
+Witnessing constitution — the mandatory chain: ACTIVE→SEALED
+(task-complete) → SEALED→EGRESSING → `l5-op` egress acknowledged
+address A → `artifact-bound` A → COMPLETED; any missing, reordered,
+duplicated, unacknowledged, or mismatched witness refuses with the
+failing link named. A current record can NEVER fall back to
+historical treatment because its witnesses are missing.
+
+Historical constitution — `intake.Resolve` still reconstructs D-T-1,
+D-T-2, the three L6 links, and D-T-5, renders `ProductionWitness =
+l6-record-only` with the actual historical constitution hash; it is
+inspectable; `themis-decide` refuses `position-refused:
+production-witness-incomplete`. Historical records are valid
+historical evidence and cannot be promoted into a new Themis security
+decision without the current provenance requirement — the residual
+rejected at T-M3 is not relocated into the Position schema.
+
+Demo consequence: `rsys@6` → new constitution → five-link replay → L10
+verification → Position eligibility; the four T-M3 fixtures become
+deliberate historical negatives.
+
+## Closure
+
+Grill CLOSED 2026-09-25 with D-W-1..6 locked. The chain: D-W-2
+witnesses state transitions · D-W-3 witnesses governed operations and
+egress · D-W-6 makes writer attribution non-forgeable · D-W-4 makes it
+constitutional and re-anchors · D-W-5 makes the proof obligation
+constitution-versioned. The T-M3 boundary is unchanged.

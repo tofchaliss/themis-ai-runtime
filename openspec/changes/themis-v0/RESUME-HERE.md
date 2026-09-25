@@ -15,8 +15,10 @@ record-shape facts recorded as PROPOSED implementation notes under
 D-T-4/D-T-5 for the owner (below). Owner ratified both as-recorded
 (same day); the L5 witness gap is OPEN as
 `openspec/changes/l5-witness-events/`. Owner classified it REQUIRED
-AMENDMENT (pre-T-M4). Next: the amendment's grill Q-W-2..5, then its
-implementation, then T-M4. Earlier: T-M2 LANDED — store loaders + `Read`, `themis_store`
+AMENDMENT (pre-T-M4); its grill CLOSED the same day (D-W-1..6 in
+`openspec/changes/l5-witness-events/design.md`). Next: W-M1
+(constitutional writer invariant) on the owner's go, then W-M2, W-M3,
+then T-M4; rsys@6 is one host mint folded into T-M5 (W-M4). Earlier: T-M2 LANDED — store loaders + `Read`, `themis_store`
 anchor pin verified at Open (pin ⇔ path, seam hash ⇔ pin), read seam
 wired in `themis-run`, `remediate-dependency@3` PROPOSED, preflight and
 status print the pin; positive chain anchor → store → seam → L4 →

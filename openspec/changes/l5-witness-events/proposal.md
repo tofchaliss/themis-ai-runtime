@@ -2,8 +2,8 @@
 
 Status: **CLASSIFIED 2026-09-25 (owner): REQUIRED AMENDMENT, pre-T-M4.**
 Themis v0 T-M4 remains BLOCKED until the seven exit conditions below
-are met. Grill open (owner-led): Q-W-1, Q-W-2, Q-W-3, Q-W-4, Q-W-6 LOCKED
-(`design.md` D-W-1..4, D-W-6); Q-W-5 open.
+are met. **Grill CLOSED 2026-09-25: Q-W-1..6 all LOCKED (`design.md` D-W-1..6).**
+Implementation plan: `tasks.md` W-M1..W-M4; T-M4 unblocks after W-M3.
 
 ## Owner classification (2026-09-25, verbatim in substance)
 
@@ -141,7 +141,7 @@ synthesize the missing two.
 | Q-W-2 | What does `l5-transition` attest, and when is it written? | **LOCKED 2026-09-25 → D-W-2:** one event per committed edge of the full L5 machine, body `{from, to, reason}` = the `Trace` transition, at `transitionLocked`; seal record-after-effect, EGRESSING record-before-effect, other edges decided per edge; no timing; class restriction locked, writer non-forgeability deferred to Q-W-6. |
 | Q-W-3 | What does `l5-op` attest? | **LOCKED 2026-09-25 → D-W-3:** two forms — one event per governed subprocess op `{phase, argv, exit, outcome}` on all four paths, record-after-effect, secret scan applies, `MaxRSSByte` excluded; one egress event `{op: egress, outcome, artifact_address, observed_total_bytes, observed_file_count}` after the store acknowledges and before L7 stores/binds; only `acknowledged` can satisfy production; Trace durability out of scope. |
 | Q-W-4 | Constitution hash and anchor re-pin? | **LOCKED 2026-09-25 → D-W-4:** fold `eventWriters` into the L6 hash (`writer:<class>><writer>`); L7 hash unchanged, asserted by test; ONE host mint `rsys@6` carrying the new constitution + `themis_store` + T-M5 catalog/skills; `rsys@5` withdrawn only after `rsys@6` ACTIVE and validated; history never mutated; four exit proofs incl. Addendum G; host binary's compiled hash must equal the stored pin. |
-| Q-W-5 | What does Themis do when it lands? | Add the two links to `intake.Resolve`'s replay (seal `task-complete` precedes the egress op; the egress op names the bound address; both before the binding) and retire the D-T-4 note. Records made before the amendment have no L5 witnesses: a Themis-side rule is needed — refuse them, or admit as-recorded with the absence recorded in the Position. Owner's call; PROPOSED: admit as-recorded with the absence named in the Position, since D-T-6 forbids invalidating history by later Governance acts. |
+| Q-W-5 | What does Themis do when it lands; pre-amendment records? | **LOCKED 2026-09-25 → D-W-5:** closed witnessing-constitution table (compiled hash must be in it); branch on the RECORD's `constitution_hash`; witnessing → five-link chain mandatory, `l5-witnessed`, Position-eligible; historical → evidence that existed, `l6-record-only`, inspectable, `themis-decide` refuses `production-witness-incomplete`; a current record never falls back to historical. |
 | Q-W-6 | How is the L5 writer identity made NON-FORGEABLE? | **LOCKED 2026-09-25 → D-W-6:** Wall A — sink-enforced closed class→writer mapping for every class (`ErrConstitution`); Wall B — `TaskRecord.L5Sink()` with `Transition`/`Op` only, writer and classes fixed by construction; architectural AST proof; constitution hash / anchor re-pin explicitly deferred to Q-W-4; not process authentication (G1's). |
 
 ## Classification — made (see status above)

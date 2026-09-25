@@ -89,6 +89,53 @@ Rules folded in:
 - **No new L6 identity mechanism, no new artifact identity mechanism,
   no caller-supplied ObjectID authority.**
 
+### D-T-2 — Authoritative deployment identity and its resolution (LOCKED 2026-09-25, owner; Q-T-2)
+
+> The authoritative deployment identity for Themis is the exact
+> `deployment_anchor` bytes materialized in the task's own record; their
+> SHA-256 must equal `manifest.governed_hashes.deployment_anchor`. The
+> anchor's Governance registration is resolved from the `anchors.json`
+> registry of the governed checkout in which Themis operates — match by
+> artifact hash, two-way name/version agreement, any lifecycle state.
+> **Themis MUST NOT establish deployment identity from the record
+> alone: the record identifies the anchor; Governance registration in
+> the authoritative deployment registry establishes that the anchor was
+> governed.**
+
+```
+task record ── deployment_anchor object (exact bytes)
+            └─ manifest.governed_hashes.deployment_anchor
+                     │ hash equality, else REFUSE
+                     ▼ parse anchor bytes
+          governed checkout / anchors.json
+                     │ hash → name/version (two-way)
+          ┌──────────┴──────────┐
+     registered            never registered
+     (any lifecycle)            │
+          │                  REFUSE
+          ▼
+   historical execution
+```
+
+- The record is authoritative for EXECUTION identity, not sufficient
+  for GOVERNANCE identity: accepting a self-consistent anchor because
+  its hash matches the manifest would let an execution introduce its
+  own deployment authority into the record — the bootstrap G1 closed.
+- Themis never reads a caller-supplied anchor file; the caller
+  identifies the execution tuple, Themis reconstructs the anchor from
+  the durable record.
+- Lifecycle read historically: registered+active → referencable;
+  registered+withdrawn → referencable for history; never registered →
+  not referencable. Withdrawal affects new opens, never recognition of
+  a previously governed execution.
+- Deployment coupling: Themis and the harness resolve against the same
+  governed checkout, or Themis receives a pinned copy of the
+  authoritative registry as a deployment property. A consistency
+  requirement, not an identity mechanism.
+- No new registry · no Themis write access to deployment governance ·
+  no caller-supplied anchor authority · no content-only identity · no
+  invalidation of history by later withdrawal.
+
 ### Boundaries locked with D-T-1 (owner, 2026-09-25)
 
 - **B-T-1 — Human decision only.** The decision door is structurally
@@ -111,7 +158,7 @@ Rules folded in:
 | # | Question | Recommendation | Disposition |
 |---|---|---|---|
 | Q-T-1 | What constitutes a Themis-referencable harness execution? | the triple, derived artifact, unanchored refused | LOCKED → D-T-1 |
-| Q-T-2 | Which deployment identity is authoritative, how resolved? | — | open |
+| Q-T-2 | Which deployment identity is authoritative, how resolved? | record bytes identify; governed registry establishes; any lifecycle | LOCKED → D-T-2 |
 | Q-T-3 | Which L6 object/event identifies the artifact? | — | folded into D-T-1 |
 | Q-T-4 | How does Themis verify the artifact was produced by that execution? | — | open |
 | Q-T-5 | How does Themis verify the L10 result? | — | open |

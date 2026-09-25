@@ -108,3 +108,59 @@ keep running under the old anchor.
 governed code paths cannot legitimately misattribute an event under
 the defined architecture; G1 binds execution to the authorized
 deployment artifact.
+
+## D-W-3 — `l5-op` has exactly two governed forms (LOCKED 2026-09-25, owner)
+
+> `l5-op` attests L5 EXECUTION FACTS, never generic telemetry. Two
+> forms only.
+
+**1. Subprocess operation** — one event per governed subprocess
+invocation, body `{phase, argv, exit, outcome}` exactly as the
+`OpRecord` holds it, record-after-effect at the existing `record()`
+site. All four paths are witnessed: refused · budget-exhausted ·
+start-failed · completed — a complete governed subprocess history, not
+only successes. `MaxRSSByte` stays in the Trace (an observation, not a
+bound). The sink's body secret scan applies: `argv` must never become
+a way to introduce secret material into the durable record.
+
+**2. Egress operation** — one event, body `{op: "egress", outcome,
+artifact_address, observed_total_bytes, observed_file_count}`.
+Sequence:
+
+```
+L5 EGRESSING → artifact store acknowledges address
+             → l5-op egress outcome=acknowledged address=A   (L5's acknowledgement)
+             → L7 stores object → artifact-bound address=A   (L6's binding)
+             → COMPLETED
+```
+
+**Tightening (owner):** a refused/failed egress IS witnessed (typed
+outcome, no address) but CANNOT satisfy production. Only
+`outcome = acknowledged` is a candidate production link; a failed
+egress witness never satisfies the presence requirement of the second
+D-T-4 link.
+
+D-T-4 replay, precise:
+
+```
+l5-transition ACTIVE→SEALED reason=task-complete
+   → l5-transition SEALED→EGRESSING
+   → l5-op op=egress outcome=acknowledged address=A
+   → artifact-bound address=A
+   → object bytes/hash verified
+   → COMPLETED
+```
+
+Themis refuses, naming the first failed link: egress witness absent ·
+outcome not `acknowledged` · ordering wrong · more than one successful
+egress witness · bound address differs · durable object does not
+correspond to the acknowledged address · chain otherwise broken.
+
+Why full subprocess witnessing: "did not run" and "ran but was not
+recorded" must be distinguishable; the ceiling bounds the op count;
+future reconstruction gets a complete L5 history without interpreting
+`Trace`.
+
+**Trace durability is outside D-W-3.** The events are the durable
+witnesses; whether the in-memory `Trace` is additionally materialized
+is a separate durability question, not raised here.

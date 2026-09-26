@@ -111,3 +111,15 @@ chain end to end, and a step-by-step real-VM scenario.
 procedure: provision, pin, propose, prove inert, Governance act,
 verify Open, validate, record evidence — plus change/withdrawal
 procedures and a troubleshooting table.
+
+## Door provenance (version 2, D-R-2)
+
+From registry version 2 every anchor entry carries `decision_ref` and
+`decision_sha256`: the id and exact-bytes hash of the reliance decision
+record under `policies/decisions/`. The loader binds two-way (record
+exists, hashes to the pin, targets exactly this `name@version` +
+`artifact_sha256`) and refuses the registry otherwise. The record says
+WHY the door was exercised — actor (`commit:<author>` = asserted git
+identity; `key:<KeyID>` = authenticated Themis principal), rationale,
+decided-at, and the L11 evidence considered, by reference. It never
+determines whether an anchor is relied upon: this registry does.

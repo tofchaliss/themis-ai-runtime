@@ -363,7 +363,7 @@ func anchorWorld(t *testing.T, mutate func(m map[string]any), ceiling ...string)
 		// L8 (M6): the test-harness anchor ships no delegation registry
 		// unless a world pins one.
 		"delegation_template_registry": "absent",
-		"themis_store":                 "absent",
+		"themis_contract":              "absent",
 	}
 	if mutate != nil {
 		mutate(m)

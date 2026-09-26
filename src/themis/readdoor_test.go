@@ -15,6 +15,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,6 +26,8 @@ import (
 
 	"github.com/tofchaliss/themis-ai-runtime/src/harness/deployment"
 	"github.com/tofchaliss/themis-ai-runtime/src/harness/instructions"
+	themisclient "github.com/tofchaliss/themis-ai-runtime/src/harness/integrations/themis/client"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/integrations/themis/contracts"
 	"github.com/tofchaliss/themis-ai-runtime/src/harness/orchestration"
 	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
 	"github.com/tofchaliss/themis-ai-runtime/src/harness/skills"
@@ -31,7 +35,6 @@ import (
 	dseam "github.com/tofchaliss/themis-ai-runtime/src/harness/subagents/delegation/seam"
 	"github.com/tofchaliss/themis-ai-runtime/src/harness/tools"
 	vseam "github.com/tofchaliss/themis-ai-runtime/src/harness/verification/seam"
-	"github.com/tofchaliss/themis-app/store"
 )
 
 func repoRoot(t *testing.T) string {
@@ -87,8 +90,8 @@ func wj(t *testing.T, dir, name, body string) string {
 	return p
 }
 
-// readingParent: get_finding, get_product, read_file, declare, write
-// the report, verify, declare. It records every tool message it saw.
+// readingParent: get_finding, read_file, declare, write the report,
+// verify, declare. It records every tool message it saw.
 type readingParent struct {
 	turn     int
 	seen     []model.Message
@@ -130,9 +133,9 @@ func (p *readingParent) Execute(_ stdctx.Context, req model.ExecutionRequest) (*
 	case 1:
 		return call("c1", "get_finding", `{"id":"`+p.finding+`"}`), nil
 	case 2:
-		return call("c2", "get_product", `{"id":"PROD-demo-vuln-app"}`), nil
-	case 3:
 		return call("c3", "read_file", `{"path":"go.mod"}`), nil
+	case 3:
+		return &model.ExecutionResponse{Content: "noted", Termination: model.TerminationStop}, nil
 	case 4:
 		// The model RESTATES the Finding in prose: a model-turn object.
 		return &model.ExecutionResponse{Content: "The Finding says demo-vuln-app pins vulnerable-dep v1; ADV-2026-1 is fixed in v2. I will bump it.", Termination: model.TerminationStop}, nil
@@ -154,38 +157,76 @@ type world struct {
 	sroot      *state.Root
 	base, root string
 	sha        string
-	storeDir   string
 	anchorSHA  string
 	regs       string // the anchors registry the deployment opened under
+	contract   string // the Themis interface contract file the anchor pins
+	gov, reg   *httptest.Server
 }
 
-// storeCopy copies the governed Themis store into a private dir and
-// lets a test mutate it before pinning.
-func storeCopy(t *testing.T, mutate func(dir string)) string {
+// The demo Finding as the live authority serves it (Governance
+// FindingView shape), with positions and proposals PRESENT so the
+// projection is exercised on every read. UUID identities (D-I-4).
+const (
+	demoFindingID = "b1be6f86-2ecd-451f-9411-95f1f32fd501"
+	demoProductID = "0f8fad5b-d9cb-469f-a165-70867728950e"
+	demoReadKey   = "tk_read_test_0123456789"
+)
+
+func findingView(id string) string {
+	return `{"id":"` + id + `","release_id":"3f0c1a2e-0000-4000-8000-000000000001","faultline_id":"3f0c1a2e-0000-4000-8000-000000000002","cve":"ADV-2026-1","stage":"identified",
+ "components":[{"purl":"pkg:golang/demo/vulnerable-dep@v1","name":"vulnerable-dep","version":"v1","ecosystem":"golang","claim_class":"carrier"}],
+ "current_position":{"version":2,"stance":"accepted_risk","rationale":"PRIOR-DECISION-MUST-NOT-REACH-THE-MODEL"},
+ "positions":[{"version":1,"stance":"affected"}],"proposals":[{"proposal_id":"p-1","stance":"mitigated"}]}`
+}
+
+// themisStandIn serves the demo Finding and Product over HTTP as the
+// Themis estate would: the harness-side tests prove the seam, never a
+// running Themis (D-I-7). keySeen records the credential presented.
+func themisStandIn(t *testing.T, keySeen *string, serveFinding bool) (*httptest.Server, *httptest.Server) {
 	t.Helper()
-	dir := t.TempDir()
-	for _, f := range []string{"findings.json", "products.json"} {
-		b, err := os.ReadFile(filepath.Join(repoRoot(t), "policies/themis", f))
-		if err != nil {
-			t.Fatal(err)
+	gov := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		*keySeen = r.Header.Get("X-API-Key")
+		if !serveFinding || r.URL.Path != "/api/v1/findings/"+demoFindingID {
+			http.Error(w, `{"title":"not found"}`, 404)
+			return
 		}
-		wj(t, dir, f, string(b))
-	}
-	if mutate != nil {
-		mutate(dir)
-	}
-	return dir
+		_, _ = w.Write([]byte(findingView(demoFindingID)))
+	}))
+	reg := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/products/"+demoProductID {
+			http.Error(w, `{"title":"not found"}`, 404)
+			return
+		}
+		_, _ = w.Write([]byte(`{"id":"` + demoProductID + `","name":"demo-vuln-app"}`))
+	}))
+	t.Cleanup(gov.Close)
+	t.Cleanup(reg.Close)
+	return gov, reg
 }
 
-// newWorld opens an anchored orchestrator whose anchor pins storeDir
-// (or "absent" when storeDir is ""); seamDir is the store the seam is
-// built over (defaults to storeDir); mutate edits the anchor map.
-func newWorld(t *testing.T, m model.Interface, storeDir, seamDir string, mutate func(map[string]any)) (*world, error) {
+func writeContract(t *testing.T, dir string, gov, reg *httptest.Server) string {
+	t.Helper()
+	return wj(t, dir, "contract.json", `{"version":1,"governance_base_url":"`+gov.URL+`","registry_base_url":"`+reg.URL+`","governance_spec_sha256":"`+strings.Repeat("d", 64)+`","registry_spec_sha256":"`+strings.Repeat("e", 64)+`","themis_commit":"`+strings.Repeat("f", 40)+`"}`)
+}
+
+// worldOpts shapes the read door a test world opens with: withDoor
+// wires a contract + HTTP seam (an anchor pinning it, unless mutate
+// says otherwise); seamContract lets a test build the seam over a
+// DIFFERENT contract than the anchor pins.
+type worldOpts struct {
+	withDoor     bool
+	serveFinding bool
+	seamContract string
+	keySeen      *string
+}
+
+// newWorld opens an anchored orchestrator; mutate edits the anchor map.
+func newWorld(t *testing.T, m model.Interface, opts worldOpts, mutate func(map[string]any)) (*world, error) {
 	t.Helper()
 	root := repoRoot(t)
 	base := t.TempDir()
 	mirror, sha := mkMirror(t)
-	w := &world{base: base, root: root, sha: sha, storeDir: storeDir}
+	w := &world{base: base, root: root, sha: sha}
 	ceiling := wj(t, base, "execution-ceiling.json",
 		`{"version":1,"mirror_root":"`+mirror+`","max_wall_deadline_sec":600,"max_file_bytes":1048576,"max_total_bytes":10485760,"max_file_count":500,"max_mem_bytes":1073741824,"max_cpu_time_sec":600,"max_proc_count":64}`)
 	hashDir := func(p string) string {
@@ -202,14 +243,34 @@ func newWorld(t *testing.T, m model.Interface, storeDir, seamDir string, mutate 
 		}
 		return h
 	}
-	bundle := filepath.Join(root, "policies/skills/remediate-dependency-3")
+	bundle := filepath.Join(root, "policies/skills/remediate-dependency-4")
 	themisPin := "absent"
-	if storeDir != "" {
-		h, err := store.HashOf(storeDir)
+	var seam tools.ThemisSeam
+	if opts.withDoor {
+		keySeen := opts.keySeen
+		if keySeen == nil {
+			keySeen = new(string)
+		}
+		w.gov, w.reg = themisStandIn(t, keySeen, opts.serveFinding)
+		w.contract = writeContract(t, base, w.gov, w.reg)
+		h, err := deployment.HashFile(w.contract)
 		if err != nil {
 			t.Fatal(err)
 		}
 		themisPin = h
+		seamPath := w.contract
+		if opts.seamContract != "" {
+			seamPath = opts.seamContract
+		}
+		c, err := contracts.Load(seamPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cl, err := themisclient.New(c, demoReadKey, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		seam = cl
 	}
 	a := map[string]any{
 		"version": 1, "name": "test-rsys", "deployment_version": 6,
@@ -228,12 +289,12 @@ func newWorld(t *testing.T, m model.Interface, storeDir, seamDir string, mutate 
 		"models":                       []any{"scripted"},
 		"model_registry":               "absent",
 		"skill_catalog":                hashFile(filepath.Join(root, "policies/skills/catalog.json")),
-		"skills":                       []any{"remediate-dependency@3"},
+		"skills":                       []any{"remediate-dependency@4"},
 		"contract_registry":            hashFile(filepath.Join(root, "policies/verification/contracts.json")),
 		"criteria_registry":            hashFile(filepath.Join(root, "policies/ratchet/criteria.json")),
 		"regression_set_registry":      hashFile(filepath.Join(root, "policies/ratchet/regression-sets.json")),
 		"delegation_template_registry": hashFile(filepath.Join(root, "policies/delegation/registry.json")),
-		"themis_store":                 themisPin,
+		"themis_contract":              themisPin,
 	}
 	if mutate != nil {
 		mutate(a)
@@ -271,16 +332,9 @@ func newWorld(t *testing.T, m model.Interface, storeDir, seamDir string, mutate 
 		Model:                  m, Verifier: &vseam.Evaluator{RegistryPath: filepath.Join(root, "policies/verification/contracts.json"), L4: l4},
 		Delegator: ds,
 	}
-	if seamDir == "" {
-		seamDir = storeDir
-	}
-	if seamDir != "" {
-		st, err := store.Load(seamDir)
-		if err != nil {
-			t.Fatal(err)
-		}
-		cfg.ThemisSeam = st
-		cfg.ThemisStorePath = storeDir
+	if seam != nil {
+		cfg.ThemisSeam = seam
+		cfg.ThemisContractPath = w.contract
 	}
 	o, _, err := orchestration.Open(cfg)
 	if err != nil {
@@ -297,7 +351,7 @@ func newWorld(t *testing.T, m model.Interface, storeDir, seamDir string, mutate 
 func (w *world) instantiate(t *testing.T, task, finding string) string {
 	t.Helper()
 	_ = os.MkdirAll(filepath.Join(w.base, "state"), 0o755)
-	path, err := skills.Instantiate(filepath.Join(w.root, "policies/skills/catalog.json"), "remediate-dependency@3", skills.Request{
+	path, err := skills.Instantiate(filepath.Join(w.root, "policies/skills/catalog.json"), "remediate-dependency@4", skills.Request{
 		TaskID: task, Repo: "demo-vuln-app", PinnedSHA: w.sha,
 		Inputs:        map[string]any{"finding": finding, "dependency": "vulnerable-dep", "advisory": "ADV-2026-1"},
 		WallDeadlineS: 300,
@@ -307,7 +361,7 @@ func (w *world) instantiate(t *testing.T, task, finding string) string {
 		OutDir: filepath.Join(w.base, "envelopes"),
 	})
 	if err != nil {
-		t.Fatalf("L9 instantiation of remediate-dependency@3: %v", err)
+		t.Fatalf("L9 instantiation of remediate-dependency@4: %v", err)
 	}
 	return path
 }
@@ -332,45 +386,60 @@ func audits(t *testing.T, w *world, task string) map[string]map[string]any {
 	return out
 }
 
-// THE POSITIVE CHAIN: anchor pin → store → seam → L4 → governed-record → model.
+// THE POSITIVE CHAIN: anchor pin → contract → HTTP seam → L4 →
+// governed-record → model. The bytes the model sees are the PROJECTED
+// Finding (no positions, no proposals); the credential is presented to
+// the authority and appears in no record.
 func TestReadDoorPositivePath(t *testing.T) {
-	m := &readingParent{finding: "FIND-2026-0001"}
-	w, err := newWorld(t, m, storeCopy(t, nil), "", nil)
+	m := &readingParent{finding: demoFindingID}
+	var keySeen string
+	w, err := newWorld(t, m, worldOpts{withDoor: true, serveFinding: true, keySeen: &keySeen}, nil)
 	if err != nil {
-		t.Fatalf("anchored Open with the Themis store: %v", err)
+		t.Fatalf("anchored Open with the Themis contract: %v", err)
 	}
 	const task = "t-read-ok"
-	res, err := w.o.SubmitTask(w.instantiate(t, task, "FIND-2026-0001"))
+	res, err := w.o.SubmitTask(w.instantiate(t, task, demoFindingID))
 	if err != nil || res.Status != state.StatusCompleted {
 		t.Fatalf("%+v %v", res, err)
 	}
 	a := audits(t, w, task)
-	if a["get_finding"]["Decision"] != "authorized" || a["get_product"]["Decision"] != "authorized" {
-		t.Fatalf("both reads must be authorized: %v %v", a["get_finding"], a["get_product"])
+	if a["get_finding"]["Decision"] != "authorized" {
+		t.Fatalf("the read must be authorized: %v", a["get_finding"])
 	}
-	// The result the model saw: framed under governed-record, with the
-	// registered bytes inside the fence.
+	if _, ok := a["get_product"]; ok {
+		t.Fatal("remediate-dependency@4 holds no get_product (D-I-4)")
+	}
+	if keySeen != demoReadKey {
+		t.Fatalf("the read key must reach the authority: %q", keySeen)
+	}
 	var framed string
 	for _, msg := range m.seen {
 		if msg.Role == model.RoleTool && msg.ToolCallID == "c1" {
 			framed = msg.Content
 		}
 	}
-	if !strings.Contains(framed, "kind: tool-result:get_finding") || !strings.Contains(framed, "authority: governed-record") || !strings.Contains(framed, `"advisory": "ADV-2026-1"`) {
-		t.Fatalf("the Finding must re-enter framed as governed-record with the registered bytes:\n%s", framed)
+	if !strings.Contains(framed, "kind: tool-result:get_finding") || !strings.Contains(framed, "authority: governed-record") || !strings.Contains(framed, `"cve":"ADV-2026-1"`) {
+		t.Fatalf("the Finding must re-enter framed as governed-record with the projected bytes:\n%s", framed)
 	}
-	// The evidence object in the record IS the registered bytes.
-	st, _ := store.Load(w.storeDir)
-	want, _ := st.Read("finding", "FIND-2026-0001")
-	if h := a["get_finding"]["ResultHash"].(string); h != hex64(want) {
-		t.Fatalf("audit ResultHash %s ≠ hash of the registered bytes %s", h, hex64(want))
+	for _, forbidden := range []string{"current_position", "positions", "proposals", "PRIOR-DECISION", demoReadKey} {
+		if strings.Contains(framed, forbidden) {
+			t.Fatalf("%q reached the model", forbidden)
+		}
 	}
-	// Register D — laundering: the model's restatement is a model-turn
-	// object; the record's class derivation puts model-turn at the
-	// floor, so the same sentence never carries governed-record.
+	// The evidence object in the record IS the projected bytes, hashed
+	// by L4 — and the credential is in no object and no event.
 	evs, _ := w.sroot.ReadEvents(task)
 	restated := false
 	for _, e := range evs {
+		if strings.Contains(string(e.Body), demoReadKey) {
+			t.Fatalf("credential in event %d", e.Seq)
+		}
+		for _, r := range e.Refs {
+			b, _ := w.sroot.Store().GetObject(r.ID)
+			if strings.Contains(string(b), demoReadKey) || strings.Contains(string(b), "PRIOR-DECISION") {
+				t.Fatalf("credential or unprojected Finding content in object %s", r.ID)
+			}
+		}
 		if e.Class == state.EvModelTurn && len(e.Refs) == 1 {
 			b, _ := w.sroot.Store().GetObject(e.Refs[0].ID)
 			if strings.Contains(string(b), "The Finding says demo-vuln-app") {
@@ -385,7 +454,7 @@ func TestReadDoorPositivePath(t *testing.T) {
 		t.Fatal("fixture: the restatement turn was not recorded")
 	}
 	man, _ := w.sroot.ReadManifest(task)
-	if man.GovernedHashes["skill"] != "remediate-dependency@3" || man.GovernedHashes["deployment_anchor"] != w.anchorSHA {
+	if man.GovernedHashes["skill"] != "remediate-dependency@4" || man.GovernedHashes["deployment_anchor"] != w.anchorSHA {
 		t.Fatalf("record: %v", man.GovernedHashes)
 	}
 }
@@ -396,124 +465,117 @@ func hex64(b []byte) string {
 }
 
 func TestReadDoorRefusals(t *testing.T) {
-	t.Run("anchor pins the store, none configured", func(t *testing.T) {
-		m := &readingParent{finding: "FIND-2026-0001"}
-		_, err := newWorld(t, m, "", "", func(a map[string]any) { a["themis_store"] = strings.Repeat("ab", 32) })
-		if !errors.Is(err, orchestration.ErrAssembly) || !strings.Contains(err.Error(), "pins a Themis store but none is configured") {
+	t.Run("anchor pins a contract, no door configured", func(t *testing.T) {
+		m := &readingParent{finding: demoFindingID}
+		_, err := newWorld(t, m, worldOpts{}, func(a map[string]any) { a["themis_contract"] = strings.Repeat("ab", 32) })
+		if !errors.Is(err, orchestration.ErrAssembly) || !strings.Contains(err.Error(), "pins a Themis contract but no read door is configured") {
 			t.Fatalf("%v", err)
 		}
 	})
-	t.Run("anchor declares absent, seam configured", func(t *testing.T) {
-		m := &readingParent{finding: "FIND-2026-0001"}
-		_, err := newWorld(t, m, storeCopy(t, nil), "", func(a map[string]any) { a["themis_store"] = "absent" })
-		if !errors.Is(err, orchestration.ErrAssembly) || !strings.Contains(err.Error(), "declares no Themis store") {
+	t.Run("anchor declares absent, door configured", func(t *testing.T) {
+		m := &readingParent{finding: demoFindingID}
+		_, err := newWorld(t, m, worldOpts{withDoor: true, serveFinding: true}, func(a map[string]any) { a["themis_contract"] = "absent" })
+		if !errors.Is(err, orchestration.ErrAssembly) || !strings.Contains(err.Error(), "declares no Themis contract") {
 			t.Fatalf("%v", err)
 		}
 	})
-	t.Run("store bytes are not the pinned bytes", func(t *testing.T) {
-		m := &readingParent{finding: "FIND-2026-0001"}
-		dir := storeCopy(t, nil)
-		w, err := newWorld(t, m, dir, "", func(a map[string]any) { a["themis_store"] = strings.Repeat("cd", 32) })
-		if !errors.Is(err, orchestration.ErrAssembly) || !strings.Contains(err.Error(), "Themis store is not the anchored artifact") {
-			t.Fatalf("%v %v", w, err)
+	t.Run("contract bytes are not the pinned bytes", func(t *testing.T) {
+		m := &readingParent{finding: demoFindingID}
+		_, err := newWorld(t, m, worldOpts{withDoor: true, serveFinding: true}, func(a map[string]any) { a["themis_contract"] = strings.Repeat("cd", 32) })
+		if !errors.Is(err, orchestration.ErrAssembly) || !strings.Contains(err.Error(), "Themis contract is not the anchored artifact") {
+			t.Fatalf("%v", err)
 		}
 	})
-	t.Run("registry modified after pinning", func(t *testing.T) {
-		m := &readingParent{finding: "FIND-2026-0001"}
-		dir := storeCopy(t, nil)
-		w, err := newWorld(t, m, dir, "", nil)
+	t.Run("contract modified after pinning", func(t *testing.T) {
+		m := &readingParent{finding: demoFindingID}
+		w, err := newWorld(t, m, worldOpts{withDoor: true, serveFinding: true}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
-		// A Finding added after the anchor: the per-task re-verification
-		// refuses the next SubmitTask.
-		b, _ := os.ReadFile(filepath.Join(dir, "findings.json"))
-		wj(t, dir, "findings.json", string(b)+"\n")
-		_, err = w.o.SubmitTask(w.instantiate(t, "t-mod", "FIND-2026-0001"))
-		if !errors.Is(err, orchestration.ErrAssembly) || !strings.Contains(err.Error(), "Themis store is not the anchored artifact") {
-			t.Fatalf("a Finding enters a deployment only by Governance act: %v", err)
+		// An endpoint change after the anchor: the per-task
+		// re-verification refuses the next SubmitTask.
+		b, _ := os.ReadFile(w.contract)
+		wj(t, filepath.Dir(w.contract), "contract.json", string(b)+"\n")
+		_, err = w.o.SubmitTask(w.instantiate(t, "t-mod", demoFindingID))
+		if !errors.Is(err, orchestration.ErrAssembly) || !strings.Contains(err.Error(), "Themis contract is not the anchored artifact") {
+			t.Fatalf("an interface enters a deployment only by Governance act: %v", err)
 		}
 	})
-	t.Run("seam built over other bytes than the pin", func(t *testing.T) {
-		m := &readingParent{finding: "FIND-2026-0001"}
-		pinned := storeCopy(t, nil)
-		other := storeCopy(t, func(d string) {
-			b, _ := os.ReadFile(filepath.Join(d, "products.json"))
-			wj(t, d, "products.json", string(b)+"\n")
-		})
-		_, err := newWorld(t, m, pinned, other, nil)
-		if !errors.Is(err, orchestration.ErrAssembly) || !strings.Contains(err.Error(), "wired Themis seam holds a store") {
+	t.Run("door built over another contract than the pin", func(t *testing.T) {
+		m := &readingParent{finding: demoFindingID}
+		var seen string
+		gov2, reg2 := themisStandIn(t, &seen, true)
+		other := writeContract(t, t.TempDir(), gov2, reg2)
+		_, err := newWorld(t, m, worldOpts{withDoor: true, serveFinding: true, seamContract: other}, nil)
+		if !errors.Is(err, orchestration.ErrAssembly) || !strings.Contains(err.Error(), "not built over the anchored contract") {
 			t.Fatalf("%v", err)
 		}
 	})
-	// Read-time refusals: the walk continues; the audit names the gate;
-	// no governed bytes reach the model.
-	readCase := func(t *testing.T, name, finding string, mutateStore func(string), want map[string]string) {
+	readCase := func(t *testing.T, task, id string, serve bool, want map[string]string) {
 		t.Helper()
-		m := &readingParent{finding: finding}
-		w, err := newWorld(t, m, storeCopy(t, mutateStore), "", nil)
+		m := &readingParent{finding: id}
+		w, err := newWorld(t, m, worldOpts{withDoor: true, serveFinding: serve}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
-		res, err := w.o.SubmitTask(w.instantiate(t, name, finding))
-		if err != nil {
-			t.Fatalf("a read refusal is data; the walk continues: %v", err)
+		if _, err := w.o.SubmitTask(w.instantiate(t, task, id)); err != nil {
+			t.Fatal(err)
 		}
-		_ = res
-		a := audits(t, w, name)["get_finding"]
+		a := audits(t, w, task)["get_finding"]
 		for k, v := range want {
-			if got, _ := a[k].(string); !strings.Contains(got, v) {
-				t.Fatalf("audit %s: want %q in %q (%v)", k, v, got, a)
-			}
-		}
-		for _, msg := range m.seen {
-			if msg.Role == model.RoleTool && msg.ToolCallID == "c1" && strings.Contains(msg.Content, "authority: governed-record") {
-				t.Fatal("no governed bytes may reach the model on a refused read")
+			if a[k] != v {
+				t.Fatalf("get_finding audit %s = %v, want %s (%v)", k, a[k], v, a)
 			}
 		}
 	}
-	t.Run("withdrawn finding is unavailable", func(t *testing.T) {
-		readCase(t, "t-withdrawn", "FIND-2026-0001", func(d string) {
-			b, _ := os.ReadFile(filepath.Join(d, "findings.json"))
-			wj(t, d, "findings.json", strings.Replace(string(b), `"state": "active"`, `"state": "withdrawn"`, 1))
-		}, map[string]string{"Decision": "error", "ErrClass": "seam-unavailable"})
+	t.Run("finding the authority does not serve is unavailable", func(t *testing.T) {
+		// 404 from Governance (unknown, withdrawn, or not this estate's):
+		// the seam fails closed and L4 records seam-unavailable.
+		readCase(t, "t-unknown", "b1be6f86-2ecd-451f-9411-95f1f32fd509", true, map[string]string{"Decision": "error", "ErrClass": "seam-unavailable"})
 	})
-	t.Run("unknown finding is unavailable", func(t *testing.T) {
-		readCase(t, "t-unknown", "FIND-2026-9999", nil, map[string]string{"Decision": "error", "ErrClass": "seam-unavailable"})
+	t.Run("authority down is unavailable", func(t *testing.T) {
+		readCase(t, "t-down", demoFindingID, false, map[string]string{"Decision": "error", "ErrClass": "seam-unavailable"})
 	})
-	t.Run("id outside themis_scope is an L4 refusal", func(t *testing.T) {
-		// The grant scopes get_finding to FIND-; a PROD- id through it is
-		// refused at L4 before the seam is ever consulted.
-		readCase(t, "t-scope", "PROD-demo-vuln-app", nil, map[string]string{"Decision": "denied", "TracePredicate": "themis-id-outside-grant-scope"})
+	t.Run("id outside the uuid scope is an L4 refusal", func(t *testing.T) {
+		// The grant scopes get_finding to uuid; a prefixed id through it
+		// is refused at L4 before the seam is ever consulted.
+		readCase(t, "t-scope", "FIND-2026-0001", true, map[string]string{"Decision": "denied", "TracePredicate": "themis-id-outside-grant-scope"})
 	})
 	t.Run("get_finding cannot mint a class other than governed-record", func(t *testing.T) {
 		// Structural: the registry loader refuses a Themis read
-		// registered at any other trust; the seam has no class field.
+		// registered at any other trust; the projected record carries no
+		// class field of its own.
 		body := `{"version":5,"tools":[{"name":"get_finding","description":"d","target":"themis-id","timeout_sec":5,"trust":"derived","params":[{"name":"id","type":"string","required":true,"description":"i","target":true}]}]}`
 		p := wj(t, t.TempDir(), "r.json", body)
 		if _, err := tools.LoadRegistry(p); err == nil || !strings.Contains(err.Error(), "derived") {
 			t.Fatalf("derived must be refused at load: %v", err)
 		}
-		st, _ := store.Load(storeCopy(t, nil))
-		b, _ := st.Read("finding", "FIND-2026-0001")
+		var seen string
+		gov, reg := themisStandIn(t, &seen, true)
+		c, _ := contracts.Load(writeContract(t, t.TempDir(), gov, reg))
+		cl, _ := themisclient.New(c, demoReadKey, nil)
+		b, err := cl.Read("finding", demoFindingID)
+		if err != nil {
+			t.Fatal(err)
+		}
 		var rec map[string]any
 		_ = json.Unmarshal(b, &rec)
-		for _, k := range []string{"authority", "trust", "class"} {
+		for _, k := range []string{"authority", "trust", "class", "current_position", "positions", "proposals"} {
 			if _, ok := rec[k]; ok {
-				t.Fatalf("the store must carry no class field: %s", k)
+				t.Fatalf("the projected record must carry no %s", k)
 			}
 		}
 	})
 	t.Run("L2 ThemisReader stays unwired", func(t *testing.T) {
 		// The loop constructs no KindThemis source; the only Themis
 		// bytes in any record enter through l4-audit under get_finding.
-		m := &readingParent{finding: "FIND-2026-0001"}
-		w, err := newWorld(t, m, storeCopy(t, nil), "", nil)
+		m := &readingParent{finding: demoFindingID}
+		w, err := newWorld(t, m, worldOpts{withDoor: true, serveFinding: true}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 		const task = "t-l2"
-		if _, err := w.o.SubmitTask(w.instantiate(t, task, "FIND-2026-0001")); err != nil {
+		if _, err := w.o.SubmitTask(w.instantiate(t, task, demoFindingID)); err != nil {
 			t.Fatal(err)
 		}
 		evs, _ := w.sroot.ReadEvents(task)

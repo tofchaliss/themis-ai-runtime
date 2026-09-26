@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/decisions"
 	"io"
 	"os"
 	"path/filepath"
@@ -125,13 +126,13 @@ type Anchor struct {
 	// no phase may then expose `delegate`; a declaration, never a
 	// default.
 	DelegationTemplateRegistry string `json:"delegation_template_registry"`
-	// ThemisStore pins the Themis v0 read store (D-T-9): the SHA-256 of
-	// the exact Findings and Products registry bytes. A deployment
-	// cannot silently gain or lose Findings. "absent" is the explicit
-	// declaration that the deployment serves no Themis records — no
-	// grant may then carry get_finding/get_product; a declaration,
-	// never a default. Positions are NOT part of this pin.
-	ThemisStore string `json:"themis_store"`
+	// ThemisContract pins the Themis interface contract (D-I-3, amending
+	// D-T-9): the SHA-256 of policies/themis/contract.json — the
+	// authorized Governance/Registry endpoints and their OpenAPI spec
+	// identities at a named Themis commit. The explicit declaration
+	// "absent" means this deployment reads no Themis authority. The
+	// contract pins the interface, never live Finding/Product data.
+	ThemisContract string `json:"themis_contract"`
 
 	SHA256 string `json:"-"` // of the exact anchor bytes — the deployment identity
 	Raw    []byte `json:"-"`
@@ -205,8 +206,8 @@ func ParseAnchor(raw []byte, origin string) (*Anchor, error) {
 	if a.DelegationTemplateRegistry != "absent" && !shaSyntax.MatchString(a.DelegationTemplateRegistry) {
 		return nil, fmt.Errorf("%w: %s: delegation_template_registry must be a sha256 hex digest or the explicit declaration \"absent\" — nothing is defaulted", ErrAnchor, origin)
 	}
-	if a.ThemisStore != "absent" && !shaSyntax.MatchString(a.ThemisStore) {
-		return nil, fmt.Errorf("%w: %s: themis_store must be a sha256 hex digest or the explicit declaration \"absent\" — nothing is defaulted", ErrAnchor, origin)
+	if a.ThemisContract != "absent" && !shaSyntax.MatchString(a.ThemisContract) {
+		return nil, fmt.Errorf("%w: %s: themis_contract must be a sha256 hex digest or the explicit declaration \"absent\" — nothing is defaulted", ErrAnchor, origin)
 	}
 	if len(a.Workflows) == 0 {
 		return nil, fmt.Errorf("%w: %s: the anchored workflow set must not be empty", ErrAnchor, origin)
@@ -268,6 +269,11 @@ type registryEntry struct {
 	Artifact string `json:"artifact_sha256"`
 	State    string `json:"state"`
 	Steward  string `json:"steward,omitempty"`
+	// Door provenance (D-R-2): the reliance decision record, two-way
+	// bound. Required from registry version 2 when loaded from the
+	// governed tree; the observed copy is compared by identity only.
+	DecisionRef    string `json:"decision_ref,omitempty"`
+	DecisionSHA256 string `json:"decision_sha256,omitempty"`
 }
 
 // AdmitAnchor performs the D-G1-1A two-step for Open:
@@ -500,6 +506,19 @@ func LoadRegistry(path string) (*Registry, error) {
 	r, err := parseRegistry(raw)
 	if err != nil {
 		return nil, err
+	}
+	if r.Version >= 2 {
+		// D-R-2: the governed tree's registry carries provenance for every
+		// reliance act; the binding is checked here, where the tree is.
+		ddir := decisions.Dir(path)
+		for _, e := range r.Entries {
+			if e.DecisionRef == "" || !shaSyntax.MatchString(e.DecisionSHA256) {
+				return nil, fmt.Errorf("%w: anchors registry: %s@%d: decision_ref and decision_sha256 are required from registry version 2", ErrAdmission, e.Name, e.Version)
+			}
+			if _, err := decisions.Bind(ddir, e.DecisionRef, e.DecisionSHA256, e.Name, e.Version, e.Artifact); err != nil {
+				return nil, fmt.Errorf("%w: anchors registry: %s@%d: %v", ErrAdmission, e.Name, e.Version, err)
+			}
+		}
 	}
 	return r, nil
 }

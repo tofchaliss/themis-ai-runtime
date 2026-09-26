@@ -1,0 +1,16 @@
+{
+ "id": "rel-anchor-rsys-4",
+ "kind": "reliance",
+ "target": {
+  "name": "rsys",
+  "version": 4,
+  "hash": "206375725e41fe23db83bffb9310d4d45025854f49bba638b6f7844664fac65f"
+ },
+ "evidence": [],
+ "rationale": "rsys@4 minted on the host for the L8 proof and withdrawn the same day: its criteria_registry pin came from origin's tree, not the host's (Addendum F).",
+ "decided_at": "2026-09-25",
+ "actor": {
+  "kind": "commit",
+  "id": "tofchaliss"
+ }
+}

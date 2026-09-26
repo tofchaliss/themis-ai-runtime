@@ -36,12 +36,13 @@ import (
 	"strings"
 
 	"github.com/tofchaliss/themis-ai-runtime/src/harness/instructions"
+	themisclient "github.com/tofchaliss/themis-ai-runtime/src/harness/integrations/themis/client"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/integrations/themis/contracts"
 	"github.com/tofchaliss/themis-ai-runtime/src/harness/orchestration"
 	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
 	dseam "github.com/tofchaliss/themis-ai-runtime/src/harness/subagents/delegation/seam"
 	"github.com/tofchaliss/themis-ai-runtime/src/harness/tools"
 	"github.com/tofchaliss/themis-ai-runtime/src/harness/verification/seam"
-	tstore "github.com/tofchaliss/themis-app/store"
 )
 
 func main() {
@@ -111,13 +112,24 @@ func main() {
 		fail("delegation registry/workspace disjointness: %v", err)
 	}
 
-	// Themis v0 read door (D-T-9): the anchor pins the store bytes; the
-	// seam is built over the governed store and handed to L4 as the
-	// ThemisSeam. This binary imports themis-app/store ONLY — never
-	// intake (D-T-10 wall 2).
-	themisStore, err := tstore.Load(filepath.Join(*repo, "policies/themis"))
+	// The Themis read door (D-I-3): the anchor pins the interface
+	// contract; the seam is an HTTP client built over that exact file
+	// and handed to L4 as the ThemisSeam. The read-scope credential
+	// comes from the environment into the client only — it is never in
+	// a record, a registry, an anchor, or model context (D-I-8). This
+	// binary imports nothing of Themis (D-I-7).
+	contractPath := filepath.Join(*repo, "policies/themis/contract.json")
+	contract, err := contracts.Load(contractPath)
 	if err != nil {
-		fail("themis store: %v", err)
+		fail("themis contract: %v", err)
+	}
+	readKey := os.Getenv("THEMIS_API_KEY_READ")
+	if readKey == "" {
+		fmt.Fprintln(os.Stderr, "themis-run: THEMIS_API_KEY_READ is not set — the read door will present no credential (dev estates only)")
+	}
+	themisDoor, err := themisclient.New(contract, readKey, nil)
+	if err != nil {
+		fail("themis read door: %v", err)
 	}
 
 	o, report, err := orchestration.Open(orchestration.Config{
@@ -138,8 +150,8 @@ func main() {
 		SkillCatalogPath:       filepath.Join(*repo, "policies/skills/catalog.json"),
 		ModelRegistryPath:      *modelReg,
 		DelegationRegistryPath: delegationRegistry,
-		ThemisStorePath:        filepath.Join(*repo, "policies/themis"),
-		ThemisSeam:             themisStore,
+		ThemisContractPath:     contractPath,
+		ThemisSeam:             themisDoor,
 
 		Model:     model.NewOllamaChat(*endpoint),
 		Verifier:  ev,

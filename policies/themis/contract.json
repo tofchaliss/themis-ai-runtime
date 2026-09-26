@@ -1,0 +1,8 @@
+{
+ "version": 1,
+ "governance_base_url": "http://127.0.0.1:8083",
+ "registry_base_url": "http://127.0.0.1:8082",
+ "governance_spec_sha256": "d71707fa8e84e7b328f8083cfb0ca67cbb8f022d0a696a7a7c1a681627c15720",
+ "registry_spec_sha256": "1d87cbd8d9fbb18f461b27c78be1b1c7c6aa756ac85852ce1303cf2e752df31d",
+ "themis_commit": "fb83e82562f04e605210db0a00cd33d88f82bd26"
+}

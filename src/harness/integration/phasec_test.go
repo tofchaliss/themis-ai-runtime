@@ -185,7 +185,7 @@ func buildAnchor(t *testing.T, envDir string) (anchorPath, anchorSHA, anchorsReg
 		"criteria_registry":            hf(filepath.Join(repoRoot, "policies/ratchet/criteria.json")),
 		"regression_set_registry":      hf(filepath.Join(repoRoot, "policies/ratchet/regression-sets.json")),
 		"delegation_template_registry": "absent",
-		"themis_store":                 "absent",
+		"themis_contract":              "absent",
 	}
 	ab, _ := json.Marshal(anchor)
 	dir := t.TempDir()

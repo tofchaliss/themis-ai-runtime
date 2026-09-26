@@ -126,6 +126,14 @@ type Request struct {
 	Repo      string
 	PinnedSHA string
 	Inputs    map[string]any
+	// Commission is the Themis commission id this work runs under
+	// (D-C-5): carried verbatim into the envelope's sealed Origin as
+	// "commission", recorded by L7 as origin:commission, interpreted by
+	// nobody in the runtime. Empty means no commission is cited — a
+	// valid runtime state; Governance use then refuses (D-C-5 §2). L9
+	// validates the SYNTAX only; whether the commission exists or is
+	// valid is Themis's question at proposal time.
+	Commission string
 
 	QuotaOverrides map[string]int // tool → narrowed max_calls (≤ skill bound)
 	WallDeadlineS  int            // 0 = the skill's bound; >0 must be ≤ it
@@ -232,6 +240,9 @@ func Instantiate(catalogPath, ref string, req Request) (string, error) {
 	schema, err := parseSchema(schemaRaw)
 	if err != nil {
 		return "", err
+	}
+	if req.Commission != "" && !commissionSyntax.MatchString(req.Commission) {
+		return "", fmt.Errorf("%w: commission must be a canonical UUID (D-C-5); L9 checks the shape only", ErrInputs)
 	}
 	if err := schema.Validate(req.Inputs); err != nil {
 		return "", err
@@ -360,7 +371,7 @@ func Instantiate(catalogPath, ref string, req Request) (string, error) {
 		// Template AND effective identities travel together (D-L9-7,
 		// extending the L7 grant_envelope/grant_effective pattern), so
 		// the record shows both what was reviewed and what executed.
-		"origin": map[string]string{
+		"origin": originWithCommission(map[string]string{
 			"skill":             fmt.Sprintf("%s@%d", entry.Name, entry.Version),
 			"skill_composition": m.CompositionHash,
 			"skill_catalog":     cat.Hash,
@@ -377,7 +388,7 @@ func Instantiate(catalogPath, ref string, req Request) (string, error) {
 			"skill_workflow_ceiling": m.WorkflowCeiling.SHA256,
 			"skill_context_contract": m.ContextContract.SHA256,
 			"skill_input_schema":     m.InputSchema.SHA256,
-		},
+		}, req.Commission),
 	}
 	if req.RetryOf != "" {
 		env["retry_of"] = req.RetryOf
@@ -559,4 +570,20 @@ func instantiateSpecTemplate(raw []byte, taskID, repo, pinnedSHA string, wallS i
 		}
 	}
 	return json.Marshal(doc)
+}
+
+// commissionSyntax is the shape of a Themis-minted commission id
+// (UUID v4, canonical lowercase). Shape only: existence and validity
+// are Themis's to establish at proposal time (D-C-5).
+var commissionSyntax = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+
+// originWithCommission adds the commission attribution to the origin
+// block when one was supplied. Origin is opaque attribution recorded
+// verbatim by L7 (D-L9-13); "commission" is never a skill input and
+// never reaches the model's task data (D-C-5).
+func originWithCommission(origin map[string]string, commission string) map[string]string {
+	if commission != "" {
+		origin["commission"] = commission
+	}
+	return origin
 }

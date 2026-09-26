@@ -1,45 +1,26 @@
-# policies/themis — the Themis v0 store
+# Themis interface contract
 
-Governance's system of record for the demo-scale Themis
-(`openspec/changes/themis-v0`, D-T-7 and D-T-9). Two anchor-pinned,
-append-only, READ-ONLY registries that the harness may read through
-the L4 seam, and one Governance-output directory it may never touch.
+`contract.json` is the governed statement of which Themis authority a
+deployment reads and against which interface (D-I-3, amending D-T-9).
+The deployment anchor pins its SHA-256 as `themis_contract`; the
+harness's read door (`src/harness/integrations/themis/client`) is built
+over this exact file and reports the same hash at Open.
 
-## Layout
+| Field | Meaning |
+|---|---|
+| `governance_base_url` | Governance read API (`GET /api/v1/findings/{id}`) — loopback on the shared host |
+| `registry_base_url` | Registry read API (`GET /api/v1/products/{id}`) |
+| `governance_spec_sha256`, `registry_spec_sha256` | SHA-256 of the two OpenAPI specifications at `themis_commit` |
+| `themis_commit` | The Themis source commit those specifications come from; the host verifies the deployed estate is at it before minting the anchor (D-I-8) |
 
-- `findings.json` — Findings: `id` (`FIND-…`), `product` (a registered
-  Product id), `advisory`, `component`, `affected_version`,
-  `fixed_version`, `severity` (`low|medium|high|critical`), `summary`,
-  `state` (`active|withdrawn`), `steward`. Immutable once registered; a
-  change is a new Finding; withdrawal is forward-only.
-- `products.json` — Products: `id` (`PROD-…`), `name`, `version`,
-  `state`, `steward`. **A Product is a minimal name-and-version
-  referential record a Finding may identify. `get_product` is
-  referential context only; a Product has no independent security
-  disposition in v0.**
-- `positions/<finding-id>/<n>.json` — Enterprise Positions, written
-  ONLY by `themis-decide` (D-T-7), never by the harness, never edited,
-  never deleted. Not part of the model-visible pin.
+The contract pins the INTERFACE. It does not pin Finding or Product
+bytes (they are read live and captured as execution-time governed
+records) and does not attest the running Themis binary. The read-scope
+credential is never in this file: it reaches the client from the
+environment (`THEMIS_API_KEY_READ`) and appears in no record.
 
-## The pin
+Regenerating the spec hashes (from the Themis checkout at the commit):
 
-The deployment anchor's `themis_store` is the SHA-256 of the exact
-bytes of `findings.json` and `products.json` concatenated in that
-order (`themis-status` prints it). A deployment cannot silently gain or
-lose Findings; a change is a new anchor version.
-
-## Read door
-
-`get_finding` / `get_product` (L4, `trust: governed-record`, target
-class `themis-id`, scoped by the grant's `themis_scope` prefixes)
-return the exact record bytes. The store mints no authority class: the
-L4 registration does. Withdrawn records are not servable (they remain
-history); unknown ids are `seam-unavailable`.
-
-## Registration checklist
-
-1. Finding `product` names a registered Product.
-2. Severity from the closed vocabulary; `summary` is a fact statement
-   about the Finding, not a disposition (dispositions are Positions).
-3. Steward named.
-4. Never edit in place: append, withdraw, re-register.
+```bash
+shasum -a 256 api/governance.openapi.yaml api/registry.openapi.yaml
+```

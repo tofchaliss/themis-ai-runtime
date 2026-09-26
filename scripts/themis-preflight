@@ -249,26 +249,31 @@ PY
   done <<< "$DRES"
 fi
 
-# ----------------------------------------------------- themis store
-# D-T-9: the two registries must load under their closed schemas and
-# the pin is what an anchor's themis_store field must equal.
-sec "Themis store"
-TDIR="$ROOT/policies/themis"
-if [ ! -f "$TDIR/findings.json" ] || [ ! -f "$TDIR/products.json" ]; then
-  warn "no Themis store at $TDIR"
+# ----------------------------------------------------- themis contract
+# D-I-3: the anchor pins the Themis INTERFACE contract (endpoints and
+# OpenAPI spec identities at a named Themis commit); the pin is the
+# SHA-256 of the exact file. Live Finding/Product data is never pinned.
+sec "Themis contract"
+TCON="$ROOT/policies/themis/contract.json"
+if [ ! -f "$TCON" ]; then
+  warn "no Themis contract at $TCON (an anchor may only declare themis_contract: absent)"
 else
-  TPIN=$(cat "$TDIR/findings.json" "$TDIR/products.json" | shasum -a 256 | cut -d' ' -f1)
-  note "themis_store pin: $TPIN"
-  if python3 - "$TDIR" <<'PY'
+  TPIN=$(shasum -a 256 "$TCON" | cut -d' ' -f1)
+  note "themis_contract pin: $TPIN"
+  if python3 - "$TCON" <<'PY'
 import json, sys, re
-d = sys.argv[1]
-p = json.load(open(d + "/products.json")); f = json.load(open(d + "/findings.json"))
-ids = {e["id"] for e in p["entries"]}
-bad = [e["id"] for e in f["entries"] if e.get("product") not in ids or not re.match(r"^FIND-", e["id"])]
-sys.exit(1 if bad else 0)
+c = json.load(open(sys.argv[1]))
+ok = c.get("version") == 1 and all(k in c for k in ("governance_base_url","registry_base_url","governance_spec_sha256","registry_spec_sha256","themis_commit"))
+ok = ok and re.fullmatch(r"[0-9a-f]{40}", c["themis_commit"]) is not None
+sys.exit(0 if ok else 1)
 PY
-  then ok "findings reference registered products ($(python3 -c 'import json,sys;print(len(json.load(open(sys.argv[1]))["entries"]))' "$TDIR/findings.json") findings, $(python3 -c 'import json,sys;print(len(json.load(open(sys.argv[1]))["entries"]))' "$TDIR/products.json") products)"
-  else bad "a finding references an unregistered product or has a bad id"; fi
+  then ok "contract well-formed (commit ${TPIN:0:0}$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['themis_commit'][:12])" "$TCON"))"
+  else fail "contract.json is malformed"; fi
+  if [ -z "${THEMIS_API_KEY_READ:-}" ]; then
+    warn "THEMIS_API_KEY_READ is not set — themis-run will present no read credential (dev estates only)"
+  else
+    ok "THEMIS_API_KEY_READ is set (value never printed)"
+  fi
 fi
 
 # ----------------------------------------------------------- deployment

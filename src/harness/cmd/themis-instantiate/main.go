@@ -44,6 +44,7 @@ func main() {
 		registry    = flag.String("registry", "", "tool registry the deployment anchors (absolute)")
 		ceiling     = flag.String("exec-ceiling", "", "the deployment's execution ceiling (absolute)")
 		stateRoot   = flag.String("state", "", "deployment state root (absolute)")
+		commission  = flag.String("commission", "", "Themis commission id this work runs under (UUID; recorded as origin:commission, D-C-5)")
 		artifacts   = flag.String("artifacts", "", "deployment artifact dir (absolute)")
 		workspaces  = flag.String("workspaces", "", "deployment workspace/provider root (absolute)")
 		out         = flag.String("out", "", "directory to write the envelope and its effective grant/spec (absolute)")
@@ -61,6 +62,7 @@ func main() {
 	}
 	path, err := skills.Instantiate(*catalog, *skill, skills.Request{
 		TaskID: *task, RetryOf: *retryOf, Repo: *repo, PinnedSHA: *pinned, Inputs: inputs,
+		Commission:    *commission,
 		WallDeadlineS: *wall,
 		Deployment: skills.Deployment{
 			Model: *modelName, TurnTimeoutSec: *turnTimeout, RegistryPath: *registry, ExecCeilingPath: *ceiling,

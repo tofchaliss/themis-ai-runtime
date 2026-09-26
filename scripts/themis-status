@@ -71,15 +71,13 @@ cat > "$HELPER" <<'GO'
 package main
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"os"
 
-	"github.com/tofchaliss/themis/deployment"
-	"github.com/tofchaliss/themis/execution"
-	"github.com/tofchaliss/themis/orchestration"
-	"github.com/tofchaliss/themis/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/deployment"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/execution"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/orchestration"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
 )
 
 func main() {
@@ -107,13 +105,8 @@ func main() {
 		"criteria_registry":       "policies/ratchet/criteria.json",
 		"regression_set_registry": "policies/ratchet/regression-sets.json",
 	}
-	// themis_store: the pin over findings.json then products.json bytes.
-	if fb, err := os.ReadFile(repo + "/policies/themis/findings.json"); err == nil {
-		if pb, err := os.ReadFile(repo + "/policies/themis/products.json"); err == nil {
-			sum := sha256.Sum256(append(append([]byte{}, fb...), pb...))
-			fmt.Printf("PIN\tthemis_store\t%s\n", hex.EncodeToString(sum[:]))
-		}
-	}
+	// themis_contract: the pin over the exact contract.json bytes (D-I-3).
+	files["themis_contract"] = "policies/themis/contract.json"
 	for name, rel := range files {
 		if h, err := deployment.HashFile(repo + "/" + rel); err == nil {
 			fmt.Printf("PIN\t%s\t%s\n", name, h)

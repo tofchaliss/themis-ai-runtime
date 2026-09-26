@@ -1,0 +1,16 @@
+{
+ "id": "rel-anchor-rsys-5",
+ "kind": "reliance",
+ "target": {
+  "name": "rsys",
+  "version": 5,
+  "hash": "0dd1867fbb04321ce3042710e9c16fa026079c4a7442047fa1358fe13a8ed313"
+ },
+ "evidence": [],
+ "rationale": "rsys@5 re-minted over the host's tree; ACTIVE; the first live COMPLETED under production (Addendum F).",
+ "decided_at": "2026-09-25",
+ "actor": {
+  "kind": "commit",
+  "id": "tofchaliss"
+ }
+}

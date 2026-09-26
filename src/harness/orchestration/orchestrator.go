@@ -76,12 +76,11 @@ type Config struct {
 	// Config.Delegator must have been built from these bytes (the
 	// wiring's obligation). Empty iff the anchor declares "absent".
 	DelegationRegistryPath string
-	// ThemisStorePath is the Themis v0 read store directory the anchor
-	// pins (`themis_store`); Config.ThemisSeam must have been built
-	// from those bytes (the wiring's obligation, checked at Open
-	// through ThemisSeam's StoreHash when it offers one). Empty iff the
-	// anchor declares "absent".
-	ThemisStorePath string
+	// ThemisContractPath is the governed Themis interface contract the
+	// anchor pins (`themis_contract`, D-I-3); Config.ThemisSeam must
+	// have been built over that exact file (it reports the hash through
+	// ContractHash). Empty iff the anchor declares "absent".
+	ThemisContractPath string
 	// ThemisSeam is the injected L4 read door to Themis records
 	// (tools.ThemisSeam): get_finding / get_product serve its bytes
 	// under the registry's governed-record trust. Nil = no Themis
@@ -472,43 +471,30 @@ func verifyAnchoredInstructionPlane(cfg Config, a *deployment.Anchor) error {
 			return fmt.Errorf("%w: the wired delegation seam holds a registry that is not the anchored artifact (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
 		}
 	}
-	// The Themis read store (D-T-9): the same posture — "absent" is a
-	// declaration, a pin is a hash-bound artifact, and a Finding
-	// enters a deployment only by Governance act. The pin is over the
-	// two registries' exact bytes (findings then products), computed
-	// here without any Themis import.
-	if a.ThemisStore == "absent" {
-		if cfg.ThemisStorePath != "" || cfg.ThemisSeam != nil {
-			return fmt.Errorf("%w: the anchor declares no Themis store but one is configured (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
+	// The Themis interface contract (D-I-3): the same posture — "absent"
+	// is a declaration, a pin is a hash-bound artifact. The pin is over
+	// the contract file's exact bytes, computed here from the file so L7
+	// imports nothing of Themis; the wired seam must report the same
+	// hash, so the door in use is the door that was pinned. Live
+	// Finding/Product data is deliberately NOT pinned.
+	if a.ThemisContract == "absent" {
+		if cfg.ThemisContractPath != "" || cfg.ThemisSeam != nil {
+			return fmt.Errorf("%w: the anchor declares no Themis contract but a read door is configured (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
 		}
 	} else {
-		if cfg.ThemisStorePath == "" {
-			return fmt.Errorf("%w: the anchor pins a Themis store but none is configured (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
+		if cfg.ThemisContractPath == "" || cfg.ThemisSeam == nil {
+			return fmt.Errorf("%w: the anchor pins a Themis contract but no read door is configured (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
 		}
-		got, herr := themisStoreHash(cfg.ThemisStorePath)
-		if herr != nil || got != a.ThemisStore {
-			return fmt.Errorf("%w: Themis store is not the anchored artifact (deployment %s@%d) — a Finding enters a deployment only by Governance act", ErrAssembly, a.Name, a.Deployment)
+		got, herr := deployment.HashFile(cfg.ThemisContractPath)
+		if herr != nil || got != a.ThemisContract {
+			return fmt.Errorf("%w: Themis contract is not the anchored artifact (deployment %s@%d) — an interface enters a deployment only by Governance act", ErrAssembly, a.Name, a.Deployment)
 		}
-		if h, ok := cfg.ThemisSeam.(interface{ StoreHash() string }); ok && h.StoreHash() != a.ThemisStore {
-			return fmt.Errorf("%w: the wired Themis seam holds a store that is not the anchored artifact (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
+		h, ok := cfg.ThemisSeam.(interface{ ContractHash() string })
+		if !ok || h.ContractHash() != a.ThemisContract {
+			return fmt.Errorf("%w: the wired Themis read door is not built over the anchored contract (deployment %s@%d)", ErrAssembly, a.Name, a.Deployment)
 		}
 	}
 	return nil
-}
-
-// themisStoreHash is the `themis_store` pin: SHA-256 over the exact
-// findings.json bytes followed by the exact products.json bytes. L7
-// computes it from the files so it imports nothing of Themis.
-func themisStoreHash(dir string) (string, error) {
-	fb, err := os.ReadFile(filepath.Join(dir, "findings.json"))
-	if err != nil {
-		return "", err
-	}
-	pb, err := os.ReadFile(filepath.Join(dir, "products.json"))
-	if err != nil {
-		return "", err
-	}
-	return hashBytes(append(append([]byte{}, fb...), pb...)), nil
 }
 
 // recordObservedRegistry persists the anchors-registry state this

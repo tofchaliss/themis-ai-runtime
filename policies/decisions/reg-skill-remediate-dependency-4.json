@@ -1,0 +1,16 @@
+{
+ "id": "reg-skill-remediate-dependency-4",
+ "kind": "registration",
+ "target": {
+  "name": "remediate-dependency",
+  "version": 4,
+  "hash": "be6398748de39e9053e70b94efb5f65df53a233774988e7dda9846a4e3e204de"
+ },
+ "evidence": [],
+ "rationale": "Themis integration revision (D-I-4): UUID-scoped get_finding against the live authority, get_product removed as unneeded authority, procedure reads the Finding by UUID; commission travels in Origin (D-C-5). Initial registration of the revision; no L11 comparison.",
+ "decided_at": "2026-09-26",
+ "actor": {
+  "kind": "commit",
+  "id": "tofchaliss"
+ }
+}

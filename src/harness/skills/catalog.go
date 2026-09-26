@@ -11,6 +11,7 @@ package skills
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/decisions"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -34,6 +35,12 @@ type Entry struct {
 	ManifestPath string     `json:"manifest_path"` // relative to the catalog file
 	State        EntryState `json:"state"`
 	Steward      string     `json:"steward,omitempty"` // accountability metadata, never authority
+	// Door provenance (D-R-2): the decision record that explains this
+	// registration, two-way bound (id + hash here; target there).
+	// Required from catalog version 2; never authority — the catalog
+	// still determines registration.
+	DecisionRef    string `json:"decision_ref,omitempty"`
+	DecisionSHA256 string `json:"decision_sha256,omitempty"`
 }
 
 type Catalog struct {
@@ -90,6 +97,19 @@ func LoadCatalog(path string) (*Catalog, error) {
 		}
 		if e.State != StateActive && e.State != StateWithdrawn {
 			return nil, fmt.Errorf("%w: %s: unknown state %q", ErrCatalog, key, e.State)
+		}
+		if c.Version >= 2 {
+			// D-R-2: every entry is traceable to one immutable decision
+			// record; a missing, mismatched, or retargeted record refuses
+			// the catalog — provenance is artifact integrity, not prose.
+			if e.DecisionRef == "" || !shaSyntax.MatchString(e.DecisionSHA256) {
+				return nil, fmt.Errorf("%w: %s: decision_ref and decision_sha256 are required from catalog version 2", ErrCatalog, key)
+			}
+			if _, err := decisions.Bind(decisions.Dir(path), e.DecisionRef, e.DecisionSHA256, e.Name, e.Version, e.Composition); err != nil {
+				return nil, fmt.Errorf("%w: %s: %v", ErrCatalog, key, err)
+			}
+		} else if e.DecisionRef != "" || e.DecisionSHA256 != "" {
+			return nil, fmt.Errorf("%w: %s: decision_ref appears in a version-1 catalog", ErrCatalog, key)
 		}
 	}
 	c.Hash = hashBytes(raw)

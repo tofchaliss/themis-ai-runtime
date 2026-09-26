@@ -49,6 +49,14 @@ const maxTargetEcho = 256
 
 var themisIDSyntax = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$`)
 
+// ScopeUUID is the themis_scope syntax class meaning "any RFC 4122
+// UUID in canonical lowercase hex form" — Themis's identity shape for
+// Findings and Products (D-I-4). A grant naming it authorizes reads of
+// any such id; the exact-subject narrowing is D-I-9 (deferred).
+const ScopeUUID = "uuid"
+
+var uuidSyntax = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+
 // Authorize implements the locked decision table. Check order is the
 // anti-oracle invariant (Q-L4-5 §3): availability (registry ∩ grant ∩
 // quota) is established BEFORE any argument inspection, so an
@@ -155,9 +163,20 @@ func Authorize(reg *Registry, grant *Grant, toolName string, rawArgs json.RawMes
 		if !themisIDSyntax.MatchString(target) {
 			return deny(DenialTargetRefused, bound(target), "themis-id-shape")
 		}
-		inScope := len(entry.ThemisScope) == 0 && false // empty scope grants nothing
-		for _, prefix := range entry.ThemisScope {
-			if strings.HasPrefix(target, prefix) {
+		// A scope entry is either the syntax class "uuid" (D-I-4: the
+		// authorized id set is "any UUID", the identity shape Themis
+		// mints) or a literal prefix (the T-M2 form, kept for
+		// registries whose ids carry one). Empty scope grants nothing.
+		inScope := false
+		for _, scope := range entry.ThemisScope {
+			if scope == ScopeUUID {
+				if uuidSyntax.MatchString(target) {
+					inScope = true
+					break
+				}
+				continue
+			}
+			if strings.HasPrefix(target, scope) {
 				inScope = true
 				break
 			}

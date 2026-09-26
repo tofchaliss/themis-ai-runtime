@@ -591,8 +591,25 @@ func TestAnchoredWithdrawnSkillRefused(t *testing.T) {
 	// A private catalog root: the real bundle copied, the entry marked
 	// withdrawn. The composition bytes are untouched — withdrawal is
 	// state on the identity, never mutation of the artifact.
-	root := t.TempDir()
+	root := filepath.Join(t.TempDir(), "skills")
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	src := filepath.Join(repoRoot, "policies/skills")
+	// The catalog copy is version 2: its entries cite decision records
+	// beside it (policies/decisions, D-R-2), so the sibling travels too.
+	ddir := filepath.Join(filepath.Dir(root), "decisions")
+	if err := os.MkdirAll(ddir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if ents, err := os.ReadDir(filepath.Join(repoRoot, "policies/decisions")); err == nil {
+		for _, e := range ents {
+			b, _ := os.ReadFile(filepath.Join(repoRoot, "policies/decisions", e.Name()))
+			if err := os.WriteFile(filepath.Join(ddir, e.Name()), b, 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
 	for _, name := range []string{"investigate-cve", "remediate-dependency"} {
 		if err := os.MkdirAll(filepath.Join(root, name), 0o755); err != nil {
 			t.Fatal(err)

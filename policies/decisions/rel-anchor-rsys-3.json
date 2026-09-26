@@ -1,0 +1,16 @@
+{
+ "id": "rel-anchor-rsys-3",
+ "kind": "reliance",
+ "target": {
+  "name": "rsys",
+  "version": 3,
+  "hash": "b5f551ab70769e7424f823579715cbd4b2d317ec358ceb1c9574bfe930636b8c"
+ },
+ "evidence": [],
+ "rationale": "rsys@3 minted on the host from the governed tree; ACTIVE for the L9/L10 proofs (deployment-signoff-rsys).",
+ "decided_at": "2026-09-15",
+ "actor": {
+  "kind": "commit",
+  "id": "tofchaliss"
+ }
+}

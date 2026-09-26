@@ -260,7 +260,7 @@ loader uses — directory pins are `deployment.HashDir`, file pins are
 | `criteria_registry` | `HashFile($REPO/policies/ratchet/criteria.json)` |
 | `regression_set_registry` | `HashFile($REPO/policies/ratchet/regression-sets.json)` |
 | `delegation_template_registry` | `HashFile($REPO/policies/delegation/registry.json)` or `"absent"` (L8; `themis-run` wires the seam over this path) |
-| `themis_store` | SHA-256 of `findings.json` bytes followed by `products.json` bytes under `$REPO/policies/themis`, or `"absent"` (Themis v0 D-T-9; `themis-status` prints it; `themis-run` wires the read seam over the directory) |
+| `themis_contract` | SHA-256 of the exact bytes of `$REPO/policies/themis/contract.json` (the Governance/Registry endpoints and their OpenAPI spec identities at a named Themis commit), or `"absent"` (D-I-3, amending D-T-9; `themis-status` prints it; `themis-run` builds the HTTP read door over that file with the credential from `THEMIS_API_KEY_READ`; the host verifies the deployed Themis estate is at `themis_commit` before minting) |
 
 > **Open choice (undecided):** whether a reviewed anchor-minting
 > helper should exist, or whether pins are computed per deployment in

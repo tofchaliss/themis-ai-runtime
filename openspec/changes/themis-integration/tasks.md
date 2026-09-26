@@ -22,25 +22,52 @@ I-M0 → W-M1 → W-M2 → I-M1 → I-M2 → I-M3 (absorbs W-M3) → I-M4 → I-
 
 ## W-M1, W-M2 — see `openspec/changes/l5-witness-events/tasks.md` (harness-only)
 
-## I-M1 — Harness read seam and contract pin (D-I-3, D-I-4; Class 3)
-- [ ] `src/harness/integrations/themis/client`: HTTP `ThemisSeam` over
-      Governance `GET /findings/{id}` and Registry `GET /products/{id}`;
-      projection (id, release, faultline, CVE, stage, components / id,
-      name); response-id equality before returning; key from env only;
-      HTTP error/404 → `ErrUnavailable`
-- [ ] Anchor field `themis_store` → `themis_contract`; `policies/themis/contract.json`
-      (URLs, two spec SHA-256s, Themis commit); Open verifies the file
-      hash against the pin and configures the seam from it; `absent` kept
-- [ ] Tool registry v6: `themis_scope` `uuid` syntax; `remediate-dependency@4`
-      (UUID-scoped `get_finding`, no `get_product`); catalog entry
-- [ ] `skills.Request.Commission` → `origin:commission`; `themis-instantiate --commission` (D-C-5; `themis-commissioning/tasks.md`)
-- [ ] Door provenance (D-R-2/4): `policies/decisions/`, catalog + anchors `version: 2` with `decision_ref`, read-only loader, wall tests (`l11-governance-promotion/tasks.md`)
-- [ ] `themis-run`, `themis-status`, `themis-preflight`, runbook updated
-- [ ] Tests against an httptest Governance/Registry stand-in: projection,
-      identity mismatch refused, pin mismatch refused, unavailable fails
-      closed, key never in any record body; the T-M2 read-door tests
-      re-homed here; probes killed
-- [ ] Remove `policies/themis/{findings,products}.json` and the byte-pin path
+## I-M1 — Harness read seam and contract pin (D-I-3, D-I-4, D-C-5, D-R-2/4; Class 3) — LANDED 2026-09-26
+- [x] `integrations/themis/contracts`: closed-schema loader for
+      `policies/themis/contract.json` (URLs, two spec hashes, Themis
+      commit; Lstat-bounded, no dup keys, no unknown fields)
+- [x] `integrations/themis/client`: HTTP `ThemisSeam` over Governance
+      `GET /api/v1/findings/{id}` and Registry `GET /api/v1/products/{id}`;
+      projection by construction (id, release, faultline, CVE, stage,
+      components / id, name — positions and proposals never decoded);
+      response-id equality; UUID-only ids; key from env, presented as
+      `X-API-Key`, never in served bytes or errors; HTTP error/404 →
+      `ErrUnavailable` → L4 `seam-unavailable`
+- [x] Anchor `themis_store` → `themis_contract`; Open verifies the
+      contract file hash against the pin AND the seam's `ContractHash()`;
+      `absent` ⇔ no path and no seam; per-task re-verification kept
+- [x] L4 `themis_scope` gains the `uuid` syntax class (grant-template
+      value interpreted by L4 — NOT a tool-registry change; registry-v5
+      stays: the scope is a grant property)
+- [x] `remediate-dependency@4`: UUID-scoped `get_finding`, no `get_product`,
+      procedure reads the Finding by UUID and corroborates dependency/CVE;
+      catalog entry `be639874…`
+- [x] `skills.Request.Commission` → sealed `origin["commission"]`;
+      `themis-instantiate --commission`; syntax-only validation; never in
+      the payload (D-C-5)
+- [x] Door provenance (D-R-2): `decisions` package (closed schema,
+      read-only, two-way `Bind`); catalog and both anchors registries at
+      `version: 2` with `decision_ref` + `decision_sha256` on every entry;
+      11 records under `policies/decisions/` written from the archived
+      ratifications (actor `commit:tofchaliss`, evidence `[]` stated);
+      loaders refuse missing/mismatched/retargeted records; v1 observed
+      copies still parse (identity comparison only)
+- [x] D-R-4 walls: door loaders (`skills` catalog/manifest, `deployment`,
+      `decisions`, the Themis client/contracts) have no `os` writer, no
+      `os/exec`, no `net`; `ratchet` and `themis-ratchet` import no door
+      package (L9 instantiation's envelope writer is named and excluded)
+- [x] `themis-run` builds the door from the contract + `THEMIS_API_KEY_READ`;
+      `themis-status` prints `themis_contract` (and its embedded helper now
+      uses the renamed module — an I-M0 miss); preflight validates the
+      contract and warns when the read key is unset; runbook pin row
+- [x] Old JSON store removed (`policies/themis/{findings,products}.json`,
+      `src/themis/store`); the stand-in's world now opens over an httptest
+      Governance/Registry serving the full FindingView; positive path proves
+      projection, credential presented and never recorded, laundering;
+      refusals: pin/no door, absent/door, bytes≠pin, modified after
+      pinning, door over another contract, 404 and down → seam-unavailable,
+      prefixed id → L4 scope denial, class minting, L2 unwired
+- [x] Hermetic suites green in both modules; evidence tools build
 
 ## I-M2 — Fixture with provenance (D-I-7; Class 2)
 - [ ] A harness test generates a REAL completed record (post-W-M2, five-link)

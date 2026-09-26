@@ -99,7 +99,7 @@ func newAnchoredWorld(t *testing.T, m model.Interface, modelName, registryPath s
 		"criteria_registry":            hashFile(filepath.Join(root, "policies/ratchet/criteria.json")),
 		"regression_set_registry":      hashFile(filepath.Join(root, "policies/ratchet/regression-sets.json")),
 		"delegation_template_registry": hashFile(w.registry),
-		"themis_store":                 "absent",
+		"themis_contract":              "absent",
 	}
 	if mutate != nil {
 		mutate(a)

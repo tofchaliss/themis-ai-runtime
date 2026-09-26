@@ -1,5 +1,5 @@
 {
- "version": 1,
+ "version": 2,
  "kind": "deployment-anchors",
  "entries": [
   {
@@ -7,42 +7,54 @@
    "version": 1,
    "artifact_sha256": "c34a7de9242a1c62d33548307e5fd0f14216494c69efa0fb94173b263373ab3e",
    "state": "withdrawn",
-   "steward": "security-engineering"
+   "steward": "security-engineering",
+   "decision_ref": "rel-anchor-local-dev-1",
+   "decision_sha256": "380a268917a2fca0fc444972522f4ac3be91447ad2f73ba815e9d765c22ab443"
   },
   {
    "name": "rsys",
    "version": 1,
    "artifact_sha256": "04fcdfaf609457d76b7be467cea91eded7318bf575d6c224e16ad586b8909b30",
    "state": "withdrawn",
-   "steward": "deployment-validation"
+   "steward": "deployment-validation",
+   "decision_ref": "rel-anchor-rsys-1",
+   "decision_sha256": "7f1ee210ea46e2a6abc57be614ff7b75b84f358e7fb8690105d867d43c40faf8"
   },
   {
    "name": "rsys",
    "version": 2,
    "artifact_sha256": "666fd868f34f54fad02eef104a5f8b5fce0b4e7958d42da64b8764741c4f5918",
    "state": "withdrawn",
-   "steward": "deployment-validation"
+   "steward": "deployment-validation",
+   "decision_ref": "rel-anchor-rsys-2",
+   "decision_sha256": "e1b8f05f66aca004ecc98f24cd83de5ffb0b2f460a82b8e7195881c9278954ee"
   },
   {
    "name": "rsys",
    "version": 3,
    "artifact_sha256": "b5f551ab70769e7424f823579715cbd4b2d317ec358ceb1c9574bfe930636b8c",
    "state": "active",
-   "steward": "deployment-validation"
+   "steward": "deployment-validation",
+   "decision_ref": "rel-anchor-rsys-3",
+   "decision_sha256": "8d7d2f3a816ffa85d7c0b693995f8e5dc5544da38ffe56bb09ec10792c123cbd"
   },
   {
    "name": "rsys",
    "version": 4,
    "artifact_sha256": "206375725e41fe23db83bffb9310d4d45025854f49bba638b6f7844664fac65f",
    "state": "withdrawn",
-   "steward": "security-engineering"
+   "steward": "security-engineering",
+   "decision_ref": "rel-anchor-rsys-4",
+   "decision_sha256": "4dd2e9456c5404600cc160dbe51a428215ea759bb73b8ef34681fba7e5e3ffa2"
   },
   {
    "name": "rsys",
    "version": 5,
    "artifact_sha256": "0dd1867fbb04321ce3042710e9c16fa026079c4a7442047fa1358fe13a8ed313",
    "state": "active",
-   "steward": "security-engineering"
+   "steward": "security-engineering",
+   "decision_ref": "rel-anchor-rsys-5",
+   "decision_sha256": "2ab3253832273fe4a632cdd6d65c67c055ae980e46ec25e9b43898a41dd76a75"
   }
  ]
 }

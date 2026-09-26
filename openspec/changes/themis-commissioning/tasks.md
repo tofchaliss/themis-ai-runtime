@@ -5,12 +5,12 @@ runtime half lands in I-M1, the Themis half in I-M3
 (`themis-integration/tasks.md`). Gate 1 notes go to
 `themis-v0/RESUME-HERE.md`.
 
-## Runtime (into I-M1)
-- [ ] `skills.Request.Commission` (UUID syntax; empty allowed) → L9 writes
+## Runtime (into I-M1) — LANDED 2026-09-26
+- [x] `skills.Request.Commission` (UUID syntax; empty allowed) → L9 writes
       `origin["commission"]`; `themis-instantiate --commission`
-- [ ] Test: the key lands in CREATED as `origin:commission`; absence leaves
-      no key; a non-UUID refuses at instantiation; the model never sees it
-      (not in payload, not in any L2 composition)
+- [x] Test: the key lands in the envelope's sealed origin (L7 records every
+      origin key as `origin:<key>`); absence leaves no key; a non-UUID
+      refuses at instantiation; the commission is not in the payload
 
 ## Themis (into I-M3, under the Themis EDR)
 - [ ] Domain: `Commission` on the Finding aggregate (D-C-2 fields; `open` →

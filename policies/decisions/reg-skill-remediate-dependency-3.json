@@ -1,0 +1,16 @@
+{
+ "id": "reg-skill-remediate-dependency-3",
+ "kind": "registration",
+ "target": {
+  "name": "remediate-dependency",
+  "version": 3,
+  "hash": "17aa6cfa8e2f932687ab24b7750916a3b903717261dd1be144e9d00c919e4703"
+ },
+ "evidence": [],
+ "rationale": "Themis v0 T-M2 revision adding the read door (get_finding, get_product); recorded in themis-v0 RESUME-HERE Gate 1 T-M2. No L11 comparison.",
+ "decided_at": "2026-09-25",
+ "actor": {
+  "kind": "commit",
+  "id": "tofchaliss"
+ }
+}

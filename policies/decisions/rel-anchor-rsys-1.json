@@ -1,0 +1,16 @@
+{
+ "id": "rel-anchor-rsys-1",
+ "kind": "reliance",
+ "target": {
+  "name": "rsys",
+  "version": 1,
+  "hash": "04fcdfaf609457d76b7be467cea91eded7318bf575d6c224e16ad586b8909b30"
+ },
+ "evidence": [],
+ "rationale": "rsys@1 minted on the host; withdrawn on re-mint (deployment-signoff-rsys).",
+ "decided_at": "2026-09-14",
+ "actor": {
+  "kind": "commit",
+  "id": "tofchaliss"
+ }
+}

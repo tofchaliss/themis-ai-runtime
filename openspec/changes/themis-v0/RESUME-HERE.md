@@ -13,10 +13,11 @@ needs its own grill before implementation. I-M0 LANDED 2026-09-26 (module
 rename, hashes pinned). Row 4 grill CLOSED (D-C-1..6,
 `themis-commissioning/`); Row 11 grill CLOSED (D-L-1..3,
 `l8-themis-surface/`); Row 12 grill CLOSED (D-R-1..4,
-`l11-governance-promotion/`). ALL 🔴 ROWS DECIDED. W-M1 and W-M2 LANDED
-2026-09-26 (L6 hash 1df0e285…; L5 witnesses on every edge and op; this
-commit cannot open rsys@5 by design). Next: I-M1 on the owner's go, then
-I-M2, I-M3, I-M4, I-M5.**
+`l11-governance-promotion/`). ALL 🔴 ROWS DECIDED. W-M1, W-M2, I-M1 LANDED
+2026-09-26 (L6 hash 1df0e285…; L5 witnesses; HTTP read door with
+`themis_contract`; catalog/anchors v2 with decision records; this
+commit cannot open rsys@5 by design). Next: I-M2 (fixture), I-M3
+(Themis repo), I-M4 (dissolve), I-M5 (host).**
 
 **2026-09-25 (direction change, owner): Option A — the REAL Themis
 (`~/code/themis`, its own repo) is the system of record; no second Themis
@@ -272,7 +273,41 @@ now RATIFIED):
   by design; the five-link replay lands in the Themis repo (I-M3) and the
   stand-in dissolves in I-M4.
 
+## Gate 1 — I-M1 (harness read seam, contract pin, scope, commission, door provenance, 2026-09-26)
+
+- **Landed:** `integrations/themis/{contracts,client}` (HTTP read door,
+  projection by construction, identity check, seam-local key);
+  `themis_contract` anchor pin verified against the file AND the seam;
+  L4 `uuid` scope class; `remediate-dependency@4`; `Request.Commission`
+  → `origin:commission`; `decisions` package + catalog/anchors v2 with
+  two-way-bound decision records; D-R-4 walls; `themis-run`/status/
+  preflight/runbook on the contract; the JSON store and `src/themis/store`
+  removed. Six probes killed. Both suites green.
+- **Correction to D-I-4's wording, recorded:** `themis_scope` is a
+  GRANT-TEMPLATE value interpreted by L4, not a tool-registry field;
+  the `uuid` class needed no registry-v6. Registry-v5 stays pinned.
+  `rsys@6` still absorbs the catalog (v2, @4) and anchors (v2) moves.
+- **Decision records for existing entries** carry `actor: commit:tofchaliss`
+  (asserted, per D-R-2 §3) and `evidence: []` with rationales citing the
+  archived ratifications — the honest content of what those acts were.
+- **Anchors registry v2 and the host:** the governed tree's
+  `anchors.json`/`anchors.proposed.json` are now v2; the host's OBSERVED
+  copy is v1 and stays parseable (bytes-only parser; append-only check by
+  identity). The first Open under rsys@6 records a v2 observed copy.
+- **`themis_commit` in the contract** is `fb83e82…`, the Themis main at
+  integration time; the host check (D-I-8) compares the deployed estate
+  against it before the mint. The spec hashes were computed from that
+  commit's `api/*.openapi.yaml`.
+- **`THEMIS_API_KEY_READ`** is the read-door credential's environment
+  name; unset → the door presents no credential and preflight warns
+  (dev estates only).
+- **Not in I-M1:** the Themis-side pieces (I-M3), the fixture (I-M2),
+  dissolution of `src/themis/intake` and the stand-in tests (I-M4).
+
 ## Milestone log
+- [x] I-M1 — green 2026-09-26 (contracts, client, tools, skills,
+  deployment, decisions, orchestration walls; full hermetic harness;
+  Themis stand-in on the HTTP door; 6/6 probes killed)
 - [x] W-M2 — green 2026-09-26 (state, execution, orchestration suites;
   full hermetic harness; Themis stand-in incl. Register B; 6/6 probes killed)
 - [x] W-M1 — green 2026-09-26 (state suite; full hermetic harness suite;

@@ -24,7 +24,7 @@ import (
 	"github.com/tofchaliss/themis-app/intake"
 )
 
-const reportB = `{"finding": "FIND-2026-0001: vulnerable-dep v1 in go.mod", "remediation": "bump to v2 (revised after verification)", "evidence": "go.mod updated; tests green"}`
+const reportB = `{"finding": "vulnerable-dep v1 in go.mod (ADV-2026-1)", "remediation": "bump to v2 (revised after verification)", "evidence": "go.mod updated; tests green"}`
 
 func writeCall(id, path, content string) model.ToolCall {
 	args, _ := json.Marshal(map[string]string{"path": path, "content": content})
@@ -41,11 +41,11 @@ func verifyCall(id string) model.ToolCall {
 // id, the artifact-bound seq found in the record).
 func walk(t *testing.T, m *readingParent, task string) (*world, intake.Tuple) {
 	t.Helper()
-	w, err := newWorld(t, m, storeCopy(t, nil), "", nil)
+	w, err := newWorld(t, m, worldOpts{withDoor: true, serveFinding: true}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	res, err := w.o.SubmitTask(w.instantiate(t, task, "FIND-2026-0001"))
+	res, err := w.o.SubmitTask(w.instantiate(t, task, demoFindingID))
 	if err != nil {
 		t.Fatalf("walk: %v", err)
 	}
@@ -104,7 +104,7 @@ func mustRefuse(t *testing.T, err error, class error, link string) {
 // THE POSITIVE PATH: a real walk → tuple → admitted, with every
 // identity derived from the record, none from the caller.
 func TestIntakePositivePath(t *testing.T) {
-	m := &readingParent{finding: "FIND-2026-0001"}
+	m := &readingParent{finding: demoFindingID}
 	w, tuple := walk(t, m, "t-intake-ok")
 	r, err := intake.Resolve(w.sroot, w.checkout(), tuple)
 	if err != nil {
@@ -120,7 +120,7 @@ func TestIntakePositivePath(t *testing.T) {
 	if r.ContractName != "report-valid" || r.ContractVersion != 2 || r.ContractState != "active" {
 		t.Fatalf("contract: %s@%d %s", r.ContractName, r.ContractVersion, r.ContractState)
 	}
-	wantA := `{"finding": "FIND-2026-0001: vulnerable-dep v1 in go.mod", "remediation": "bump to v2", "evidence": "go.mod updated"}`
+	wantA := `{"finding": "` + demoFindingID + `: vulnerable-dep v1 in go.mod", "remediation": "bump to v2", "evidence": "go.mod updated"}`
 	if r.VerifiedPath != "report.json" || r.VerifiedHash != hex64([]byte(wantA)) {
 		t.Fatalf("verified member: %s %s", r.VerifiedPath, r.VerifiedHash)
 	}
@@ -155,7 +155,7 @@ func TestIntakePositivePath(t *testing.T) {
 // (its gate consumed the recorded PASS) and egresses B. Themis refuses:
 // the PASS is not about the bound bytes.
 func TestIntakeVerifiedBytesAreNotTheBoundArtifact(t *testing.T) {
-	m := &readingParent{finding: "FIND-2026-0001", tail: []model.ToolCall{writeCall("c8", "report.json", reportB)}}
+	m := &readingParent{finding: demoFindingID, tail: []model.ToolCall{writeCall("c8", "report.json", reportB)}}
 	w, tuple := walk(t, m, "t-verify-a-egress-b")
 	if tuple.ArtifactBoundSeq == 0 {
 		t.Fatal("fixture: the harness did not complete the walk")
@@ -176,7 +176,7 @@ func TestIntakeVerifiedBytesAreNotTheBoundArtifact(t *testing.T) {
 // THE INVERSE POSITIVE: verify A, write B, verify B → PASS, declare.
 // Admitted on the SECOND fact, which is about the bound bytes.
 func TestIntakeReverifiedAfterMutation(t *testing.T) {
-	m := &readingParent{finding: "FIND-2026-0001", tail: []model.ToolCall{writeCall("c8", "report.json", reportB), verifyCall("c9")}}
+	m := &readingParent{finding: demoFindingID, tail: []model.ToolCall{writeCall("c8", "report.json", reportB), verifyCall("c9")}}
 	w, tuple := walk(t, m, "t-verify-a-b-egress-b")
 	if got := recordedOutcomes(t, w, tuple.TaskID); len(got) != 2 {
 		t.Fatalf("fixture: recorded outcomes %v", got)
@@ -201,7 +201,7 @@ func TestIntakeReverifiedAfterMutation(t *testing.T) {
 }
 
 func TestIntakeRefusals(t *testing.T) {
-	m := &readingParent{finding: "FIND-2026-0001"}
+	m := &readingParent{finding: demoFindingID}
 	w, tuple := walk(t, m, "t-intake-neg")
 	ck := w.checkout()
 	if _, err := intake.Resolve(w.sroot, ck, tuple); err != nil {
@@ -333,12 +333,12 @@ func TestIntakeRefusals(t *testing.T) {
 // missing; record corrupt. Each mutates its OWN world.
 func TestIntakeUnavailabilityFailsClosed(t *testing.T) {
 	t.Run("task did not complete (report invalid, gate never satisfied)", func(t *testing.T) {
-		m := &readingParent{finding: "FIND-2026-0001", report: `{"finding": "x", "remediation": "y"}`}
-		w, err := newWorld(t, m, storeCopy(t, nil), "", nil)
+		m := &readingParent{finding: demoFindingID, report: `{"finding": "x", "remediation": "y"}`}
+		w, err := newWorld(t, m, worldOpts{withDoor: true, serveFinding: true}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
-		res, _ := w.o.SubmitTask(w.instantiate(t, "t-failed", "FIND-2026-0001"))
+		res, _ := w.o.SubmitTask(w.instantiate(t, "t-failed", demoFindingID))
 		if res.Status == state.StatusCompleted {
 			t.Fatal("fixture: an invalid report must not complete")
 		}
@@ -346,7 +346,7 @@ func TestIntakeUnavailabilityFailsClosed(t *testing.T) {
 		mustRefuse(t, rerr, intake.ErrNotReferencable, "not a completed execution")
 	})
 	t.Run("artifact object corrupted on disk", func(t *testing.T) {
-		w, tuple := walk(t, &readingParent{finding: "FIND-2026-0001"}, "t-art-corrupt")
+		w, tuple := walk(t, &readingParent{finding: demoFindingID}, "t-art-corrupt")
 		man, _ := w.sroot.ReadManifest(tuple.TaskID)
 		corruptObject(t, w, man.ArtifactAddrs[0])
 		_, err := intake.Resolve(w.sroot, w.checkout(), tuple)
@@ -358,7 +358,7 @@ func TestIntakeUnavailabilityFailsClosed(t *testing.T) {
 		}
 	})
 	t.Run("verification raw evidence removed", func(t *testing.T) {
-		w, tuple := walk(t, &readingParent{finding: "FIND-2026-0001"}, "t-ev-missing")
+		w, tuple := walk(t, &readingParent{finding: demoFindingID}, "t-ev-missing")
 		a := audits(t, w, tuple.TaskID)
 		removeObject(t, w, "sha256:"+a["verify_report"]["ResultHash"].(string))
 		_, err := intake.Resolve(w.sroot, w.checkout(), tuple)
@@ -370,7 +370,7 @@ func TestIntakeUnavailabilityFailsClosed(t *testing.T) {
 		}
 	})
 	t.Run("event stream torn", func(t *testing.T) {
-		w, tuple := walk(t, &readingParent{finding: "FIND-2026-0001"}, "t-torn")
+		w, tuple := walk(t, &readingParent{finding: demoFindingID}, "t-torn")
 		p := filepath.Join(w.base, "state", "tasks", tuple.TaskID, "events.log")
 		b, _ := os.ReadFile(p)
 		if err := os.WriteFile(p, b[:len(b)-7], 0o644); err != nil {
@@ -463,7 +463,7 @@ func forgeRecord(t *testing.T, w *world, from string, task string, f forge) inta
 
 	// The alteration.
 	if f.invalidRaw {
-		raw = []byte(`{"finding": "FIND-2026-0001: forged", "remediation": "none"}`) // no "evidence"
+		raw = []byte(`{"finding": "forged", "remediation": "none"}`) // no "evidence"
 		record["raw_object_id"] = hex64(raw)
 		ch := manifest["changes"].([]any)[0].(map[string]any)
 		ch["content"], ch["new_hash"], ch["size"] = string(raw), hex64(raw), len(raw)
@@ -522,7 +522,7 @@ func forgeRecord(t *testing.T, w *world, from string, task string, f forge) inta
 func itoa(n int64) string { return strconv.FormatInt(n, 10) }
 
 func TestIntakeRefusesClaims(t *testing.T) {
-	w, _ := walk(t, &readingParent{finding: "FIND-2026-0001"}, "t-real")
+	w, _ := walk(t, &readingParent{finding: demoFindingID}, "t-real")
 	ck := w.checkout()
 	t.Run("positive twin: the un-altered forge is admissible", func(t *testing.T) {
 		tuple := forgeRecord(t, w, "t-real", "t-forge-ok", forge{})
@@ -561,7 +561,7 @@ func TestIntakeRefusesClaims(t *testing.T) {
 // the RawObjectID precedent) and every L5 witness preceding the
 // binding and COMPLETED.
 func TestRealWalkCarriesL5Witnesses(t *testing.T) {
-	w, tuple := walk(t, &readingParent{finding: "FIND-2026-0001"}, "t-l5-witness")
+	w, tuple := walk(t, &readingParent{finding: demoFindingID}, "t-l5-witness")
 	evs, err := w.sroot.ReadEvents(tuple.TaskID)
 	if err != nil {
 		t.Fatal(err)

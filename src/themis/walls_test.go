@@ -19,7 +19,6 @@ const (
 	harnessModule = "github.com/tofchaliss/themis-ai-runtime/src/harness"
 	themisModule  = "github.com/tofchaliss/themis-app"
 	intakePkg     = themisModule + "/intake"
-	storePkg      = themisModule + "/store"
 )
 
 var harnessDir = filepath.Join("..", "harness")
@@ -71,24 +70,21 @@ func TestWall1HarnessGraphReachesNoThemis(t *testing.T) {
 	}
 }
 
-// Wall 2 — binary wall: cmd/themis-run may import store (the read
-// seam) and never intake. Asserted over the whole transitive graph of
-// that binary, once T-M2 wires the store.
-func TestWall2ThemisRunImportsStoreOnlyNeverIntake(t *testing.T) {
+// Wall 2 — binary wall: cmd/themis-run imports NOTHING of the Themis
+// module. Since D-I-3 the read door is an HTTP client inside the
+// harness (integrations/themis/client); the stand-in store is gone.
+func TestWall2ThemisRunImportsNoThemisPackage(t *testing.T) {
 	deps := goList(t, harnessDir, "-deps", "./cmd/themis-run")
 	for _, d := range deps {
-		if d == intakePkg || strings.HasPrefix(d, intakePkg+"/") {
-			t.Fatalf("cmd/themis-run reaches %s — the model's binary must never hold the Position writer (D-T-10)", d)
-		}
-		if strings.HasPrefix(d, themisModule) && d != storePkg {
-			t.Fatalf("cmd/themis-run reaches %s — only %s may be wired into the harness binary", d, storePkg)
+		if strings.HasPrefix(d, themisModule) {
+			t.Fatalf("cmd/themis-run reaches %s — the harness binary links no Themis code (D-I-7)", d)
 		}
 	}
 }
 
 // Wall 3 — writer wall: intake imports no execution or model
 // machinery and has at most one filesystem write site (the O_EXCL
-// Position append, T-M3); store has no writer at all.
+// Position append, T-M3).
 func TestWall3WriterBoundaries(t *testing.T) {
 	forbidden := map[string]bool{
 		`"` + harnessModule + `/tools"`:         true,
@@ -151,7 +147,6 @@ func TestWall3WriterBoundaries(t *testing.T) {
 			t.Errorf("%s: %d write sites, at most %d permitted", dir, sites, maxWriteSites)
 		}
 	}
-	check("store", 0)
 	check("intake", 1)
 }
 

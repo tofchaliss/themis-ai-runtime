@@ -1,0 +1,16 @@
+{
+ "id": "rel-anchor-local-dev-1",
+ "kind": "reliance",
+ "target": {
+  "name": "local-dev",
+  "version": 1,
+  "hash": "c34a7de9242a1c62d33548307e5fd0f14216494c69efa0fb94173b263373ab3e"
+ },
+ "evidence": [],
+ "rationale": "local-dev@1 minted for the G1 proof and withdrawn (deployment-signoff, Addendum A).",
+ "decided_at": "2026-09-13",
+ "actor": {
+  "kind": "commit",
+  "id": "tofchaliss"
+ }
+}

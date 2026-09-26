@@ -152,3 +152,28 @@ Themis never infers or merges.
 | Historical execution evidence | Runtime / L6 |
 | Whether an execution may support a new proposal | Themis |
 | Decision about the resulting security posture | Themis |
+
+## D-C-4 — No Finding-stage effect (LOCKED 2026-09-26, owner)
+
+> Commissioning does not constitute investigation progress. A
+> commission may exist at any non-terminal Finding stage, and only the
+> existing proposal/reopen domain operations may change the Finding's
+> investigation stage. Withdrawal has no stage consequence; D7 is not
+> amended.
+
+- Commissioning = "authorized to perform governed work"; Under
+  Investigation = "a proposal is in flight / flagged for review".
+  Different facts, kept different (otherwise authorization would read
+  as investigation progress, collapsing D-C-1).
+- **Archived is the only refusal** (`commission-refused: finding
+  archived`). Identified, Under Investigation, Position Established,
+  Monitoring, Resolved: all allowed. Re-examining a Resolved Finding
+  uses the existing governed reopen: Resolved → (commission, no stage
+  change) → execution → proposal raised → Under Investigation.
+- **A commission is a Finding-scoped fact, not a transition:**
+  `commissions[]` in the Finding read view; thin Governance-internal
+  events `FindingCommissioned` / `CommissionWithdrawn` on the outbox
+  (D8); Communication acquires no dependency.
+- **`premise.stage` is observational:** the stage observed when the
+  commission was created, never the stage resulting from it — a
+  historical snapshot, not a hidden lifecycle operation.

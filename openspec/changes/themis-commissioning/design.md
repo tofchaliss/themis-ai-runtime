@@ -52,3 +52,60 @@ rules (Q-C-2..6).
 **Invariant carried into Q-C-2 (owner):** no execution may establish
 commissioning retrospectively; commissioning must exist as an
 authoritative Themis fact before the governed work begins.
+
+## D-C-2 — Minimum identity and immutable content (LOCKED 2026-09-26, owner)
+
+> **A Commission is an authority record, not a runtime execution
+> record.** It is an immutable, pre-execution Governance fact
+> identifying one Finding, one commissioned method, one commissioned
+> deployment, and one commissioning principal, together with a
+> descriptive premise and rationale. It contains no execution state,
+> outcome, task identity, or runtime registry interpretation.
+
+| Field | Content | Disposition |
+|---|---|---|
+| `commission_id` | Themis-minted UUID v4 | LOCK — Themis identity and the pre-execution reference |
+| `finding_id` | exactly one Finding | LOCK |
+| `method` | skill `name@version` + `composition_sha256`, opaque | LOCK |
+| `deployment` | anchor `name@version` + `artifact_sha256`, opaque | LOCK |
+| `commissioned_by` | server-derived `key:<KeyID>` (D10) | LOCK |
+| `premise` | Finding stage + current Position version at commission | LOCK — descriptive snapshot, never authority, never a lock |
+| `rationale` | optional free text | LOCK — human intent only |
+| `raised_at` | UTC | LOCK — informational, never ordering or security evidence |
+
+**Ordering, stated precisely (owner):** the runtime cannot truthfully
+reference a commission before Themis has minted it, because the
+identifier does not exist before the Governance act; the runtime's
+CREATED event then records that identifier in its immutable,
+hash-chained history. This proves EXISTENCE-BEFORE-REFERENCE. UUID v4
+randomness serves identity, NOT temporal ordering; wall clocks are not
+consulted.
+
+```
+Themis mints commission_id → commission exists durably → runtime receives it
+   → runtime CREATED event records it → execution proceeds
+```
+
+**Premise is descriptive, not a concurrency lock:**
+`premise.position_version = 7` means "Position 7 existed when this
+commission was created", never "Themis guarantees Position 7 stays
+current throughout execution". What a moved premise means belongs to
+proposal validation / governance semantics.
+
+**Deliberate omissions (locked):** no task id (the task does not exist
+yet; Commission → Execution, the execution cites the commission, never
+the reverse — a later runtime object never becomes the source of
+authority); no skill inputs (runtime execution data; two competing
+descriptions of what executed would result); no outcome (a commission
+never mutates into a result; Q-C-3 owns lifecycle); no Finding stage
+transition (Q-C-4).
+
+**Registries are not validated at commission time (locked):** Themis
+records the IDENTITY of what was commissioned; the runtime validates
+method and deployment at execution time; Themis equality-checks the
+commissioned identity against the execution evidence at proposal time.
+Validating runtime registries in Themis would reverse the ownership
+model (Governance depending on the runtime's skill and deployment
+registries). Themis need not understand what `remediate-dependency@4`
+means; it establishes that the execution used exactly the method and
+deployment that were commissioned.

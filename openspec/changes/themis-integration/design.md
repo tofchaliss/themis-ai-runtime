@@ -115,3 +115,47 @@ anchor pins `themis_contract`, which identifies the authorized Themis
 endpoints and interface contract. Findings and Products are obtained
 from the live Themis authority and captured as execution-time governed
 records. Positions remain outside the pinned/read context.
+
+## D-I-4 — Finding identity and demo establishment (LOCKED 2026-09-26, owner)
+
+> Finding identity is UUID-based, never prefix-based. `themis_scope`
+> gains a `uuid` syntax; `remediate-dependency@4` uses UUID-scoped
+> `get_finding`. The security property is `requested Finding UUID →
+> exact governed-record identity`, not a prefix real identifiers cannot
+> satisfy. The tool-registry change is part of the rsys@6 deployment
+> state.
+
+- **`get_product` is removed from the demo skill.** The seam may keep
+  the capability for future workflows; `remediate-dependency@4` does not
+  receive authority it does not require — capability availability
+  follows workflow need, never implementation availability.
+- **The fix version is human-provided task input.** The projected
+  Finding does not expose Knowledge's `fixed_versions`. The demo task
+  carries `finding` = Themis Finding UUID, `dependency` = component from
+  the Finding, `advisory` = the Finding's CVE, `target-version` =
+  operator-supplied fix. The model's `get_finding` read corroborates
+  dependency/CVE against the governed record.
+
+```
+Knowledge → determines available fix information
+Human     → supplies the target version for this task
+Harness   → verifies governed Finding identity/context
+Model     → reasons about remediation
+```
+
+- **The demo Finding is established through the real Themis pipeline:**
+  real vulnerable Go module → CycloneDX SBOM → Evidence → Knowledge
+  correlation → Governance Finding → Finding UUID → harness demo task.
+  No manually inserted Finding JSON or database row. If OSV/NVD are
+  unreachable from the VM, a DOCUMENTED local fixture feed for the one
+  advisory is acceptable: the Finding still emerges through the normal
+  Evidence → Knowledge → Governance path.
+- **Required evidence:** the runbook preserves the exact Finding UUID and
+  its provenance (pipeline execution → Finding UUID → release/product →
+  CVE/component → demo task tuple), while the model still obtains the
+  Finding BYTES through the live read door — the runbook never becomes a
+  source of security truth.
+- **Kept separate (owner):** whether L9 may derive/narrow a capability
+  scope from task input, and what deterministic binding stops the model
+  from widening or substituting the target, is an L9 architectural
+  question with its own decision — Q-I-9, taken next; NOT folded here.

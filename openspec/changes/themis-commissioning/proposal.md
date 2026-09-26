@@ -49,7 +49,7 @@ Work / Task  →  Execution  →  Evidence  →  Proposal  →  Position
 
 | # | Question | Recommendation (facts-first; PROPOSED) | State |
 |---|---|---|---|
-| Q-C-1 | Is commissioning a durable Themis Governance act, or merely a runtime task binding attributed after the fact? | a durable, append-only Governance act on the Finding, created by an authenticated principal BEFORE work runs; the runtime carries its id as opaque attribution; the proposal evidence closes the loop | OPEN |
+| Q-C-1 | Is commissioning a durable Themis Governance act, or a runtime task binding? | **LOCKED 2026-09-26 → D-C-1:** a Themis-owned, authenticated, pre-execution, durable, append-only Governance act; runtime carries the id verbatim (`Origin`), never mints it; Themis verifies correspondence at proposal time; commissioning = authority, binding = claim; invariant: never retrospective. | LOCKED |
 | Q-C-2 | Minimum identity and immutable content of a commission | finding id · skill name@version + composition hash · deployment anchor hash · commissioning principal · commission id · raised-at; nothing about the outcome | OPEN |
 | Q-C-3 | Commission lifecycle: one execution or many; withdrawal; expiry | open → consumed-by-proposal(s) | withdrawn; many executions may cite one commission; withdrawal is forward-only and never rewrites history | OPEN |
 | Q-C-4 | Effect on the Finding's investigation stage | none by itself (Under Investigation stays "proposals in flight"); a stage change would be a D7 amendment and needs its own decision | OPEN |

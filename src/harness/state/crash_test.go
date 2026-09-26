@@ -56,7 +56,7 @@ func TestFaultPointSweepExhaustive(t *testing.T) {
 			if err != nil {
 				faulted = true
 			} else {
-				if _, err := tr.AppendEvent(EvL2Delivery, "l2", body("d"), Ref{ID: id, Class: ObjEvidencePayload}); err != nil {
+				if _, err := tr.AppendEvent(EvL2Delivery, "l7", body("d"), Ref{ID: id, Class: ObjEvidencePayload}); err != nil {
 					faulted = true
 				} else if err := tr.Transition(StatusCompleted, "done"); err != nil {
 					faulted = true

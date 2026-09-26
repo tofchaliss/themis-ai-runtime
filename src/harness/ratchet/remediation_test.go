@@ -670,7 +670,7 @@ func TestGroundFacts(t *testing.T) {
 		// A verification-class event does not witness execution
 		// records — and vice versa (the class IS the mechanism).
 		vBody, _ := json.Marshal(map[string]string{"contract": "x@1", "outcome": "PASS", "record": objID})
-		vev, err := task.AppendEvent(state.EvVerification, "l7", vBody)
+		vev, err := task.AppendEvent(state.EvVerification, "l10", vBody)
 		if err != nil {
 			t.Fatal(err)
 		}

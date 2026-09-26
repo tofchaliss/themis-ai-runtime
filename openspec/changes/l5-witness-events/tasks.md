@@ -6,21 +6,25 @@ killed, with a Gate 1 note in `RESUME-HERE.md` of `themis-v0` (the
 amendment is on Themis v0's critical path). No push unless the owner
 says so. `rsys@6` is a host act (W-M4), never minted from the laptop.
 
-## W-M1 — Constitutional writer invariant (Class 3/4: constitution change)
-- [ ] `state`: closed `eventWriters` table (every non-primitive class →
-      its owning layer; primitive-only classes keep their rule);
-      `append` refuses any `(class, writer)` pair outside it with
-      `ErrConstitution`
-- [ ] `eventWriters` folded into `state.ConstitutionHash()` as sorted
-      `writer:<class>><writer>` parts; the test pins the NEW value and
-      records the old (`33c6f6c5…`) as the historical one
-- [ ] `orchestration.ConstitutionHash()` asserted UNCHANGED by test (D-W-4)
-- [ ] Every existing emitter's pair admitted (l4, l7, l8, l10 tests
-      still green); forged pairs refused (each class × a wrong writer)
-- [ ] Fixtures that pin `constitution.state` compute it, never
-      hard-code it (audit every anchor fixture)
-- [ ] Register A/B; probes: drop the table check → killed; unfold from
-      the hash → killed (hash test)
+## W-M1 — Constitutional writer invariant (Class 3/4: constitution change) — LANDED 2026-09-26
+- [x] `state`: closed `eventWriters` table — every class → its closed SET
+      of owning writers (layer classes exactly one; `lifecycle` = {l6,
+      l6-recovery}, `recovery` = {l6-recovery}); `append` refuses any pair
+      outside it with `ErrConstitution` naming the pair; primitive-only
+      classes keep their rule
+- [x] Folded into `state.ConstitutionHash()` as `writer:<class>><writer>`
+      parts; pin test records NEW `1df0e285…` and historical `33c6f6c5…`
+- [x] `orchestration.ConstitutionHash()` asserted UNCHANGED by its pin test (D-W-4)
+- [x] Every production emitter's pair admitted; every class × every other
+      layer identity refused (`TestEventWriterInvariant`); the table covers
+      the whole vocabulary and nothing else
+- [x] Fixtures: no anchor fixture hard-codes the hash (all compute it);
+      four sink tests that used an arbitrary `l2`/`l7`/`forger` writer for
+      classes they do not own were corrected to the owner — the walk was
+      never wrong, the fixtures were
+- [x] Probes (restored after each): drop the sink check → killed; unfold
+      from the hash → killed; widen `l2-delivery` to a second writer →
+      killed (hash pin); let L7 write an L5 class → killed
 
 ## W-M2 — L5 emission handle and the witnesses (Class 3)
 - [ ] `TaskRecord.L5Sink()` → handle with `Transition(from, to, reason)`

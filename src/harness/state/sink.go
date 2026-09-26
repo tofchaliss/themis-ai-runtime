@@ -90,6 +90,12 @@ func (s *stream) append(class, writer string, body json.RawMessage, refs []Ref, 
 	if !eventClasses[class] {
 		return Event{}, fmt.Errorf("%w: unknown event class %q", ErrConstitution, class)
 	}
+	// The class→writer invariant (D-W-6): the record admits an event
+	// only under the writer identity that owns its class. A forged or
+	// convenience writer is a constitution violation, not a label.
+	if !eventWriters[class][writer] {
+		return Event{}, fmt.Errorf("%w: event class %q may not be written by %q", ErrConstitution, class, writer)
+	}
 	if !json.Valid(body) {
 		return Event{}, fmt.Errorf("%w: event body must be valid JSON", ErrStream)
 	}

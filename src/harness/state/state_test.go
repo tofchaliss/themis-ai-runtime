@@ -208,7 +208,7 @@ func TestStatusViewContentFree(t *testing.T) {
 	r := testRoot(t)
 	tr, _ := r.CreateTask("t-view", TaskOptions{RetryOf: "t-old"})
 	id, _ := tr.StoreObject(ObjEvidencePayload, []byte("evidence bytes"))
-	if _, err := tr.AppendEvent(EvL2Delivery, "l2", body("payload"), Ref{ID: id, Class: ObjEvidencePayload}); err != nil {
+	if _, err := tr.AppendEvent(EvL2Delivery, "l7", body("payload"), Ref{ID: id, Class: ObjEvidencePayload}); err != nil {
 		t.Fatal(err)
 	}
 	_ = tr.Transition(StatusRunning, "r")
@@ -480,7 +480,7 @@ func TestScanReachable(t *testing.T) {
 	orphan, _ := r.Store().StoreObject(ObjEvidencePayload, []byte("orphan"))
 	for _, id := range []string{"t-a", "t-b"} {
 		tr, _ := r.CreateTask(id, TaskOptions{})
-		if _, err := tr.AppendEvent(EvL2Delivery, "l2", body("d"), Ref{ID: shared, Class: ObjEvidencePayload}); err != nil {
+		if _, err := tr.AppendEvent(EvL2Delivery, "l7", body("d"), Ref{ID: shared, Class: ObjEvidencePayload}); err != nil {
 			t.Fatal(err)
 		}
 		_ = tr.Transition(StatusRunning, "r")

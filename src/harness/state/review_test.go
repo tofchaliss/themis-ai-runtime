@@ -169,7 +169,7 @@ func TestForgedFailedPartialBranch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := st.append(EvLifecycle, "forger", lifecycleBody(StatusFailedPartial, "forged"), nil, r.store); err != nil {
+	if _, err := st.append(EvLifecycle, "l6-recovery", lifecycleBody(StatusFailedPartial, "forged"), nil, r.store); err != nil {
 		t.Fatal(err)
 	}
 	st.close()
@@ -236,7 +236,7 @@ func TestLifecycleSequenceLegality(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := st.append(EvLifecycle, "forger", lifecycleBody(StatusRunning, "no-created"), nil, r.store); err != nil {
+	if _, err := st.append(EvLifecycle, "l6", lifecycleBody(StatusRunning, "no-created"), nil, r.store); err != nil {
 		t.Fatal(err)
 	}
 	st.close()

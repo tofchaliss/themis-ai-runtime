@@ -172,7 +172,7 @@ func TestLiveTaskReconstruction(t *testing.T) {
 		t.Fatal(err)
 	}
 	delivery, _ := json.Marshal(map[string]string{"payload": promptObj})
-	must(task.AppendEvent(EvL2Delivery, "l2", delivery, Ref{ID: promptObj, Class: ObjEvidencePayload}))
+	must(task.AppendEvent(EvL2Delivery, "l7", delivery, Ref{ID: promptObj, Class: ObjEvidencePayload}))
 
 	// --- Live model call driving the mutation.
 	mp := model.NewOllamaChat(endpoint)

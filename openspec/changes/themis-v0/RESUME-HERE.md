@@ -13,9 +13,9 @@ needs its own grill before implementation. I-M0 LANDED 2026-09-26 (module
 rename, hashes pinned). Row 4 grill CLOSED (D-C-1..6,
 `themis-commissioning/`); Row 11 grill CLOSED (D-L-1..3,
 `l8-themis-surface/`); Row 12 grill CLOSED (D-R-1..4,
-`l11-governance-promotion/`). ALL 🔴 ROWS DECIDED. Now: W-M1
-(constitutional writer invariant), then W-M2, I-M1, I-M2, I-M3, I-M4,
-I-M5.**
+`l11-governance-promotion/`). ALL 🔴 ROWS DECIDED. W-M1 LANDED
+2026-09-26 (L6 hash → 1df0e285…; this commit cannot open rsys@5 by
+design). Next: W-M2 on the owner's go, then I-M1, I-M2, I-M3, I-M4, I-M5.**
 
 **2026-09-25 (direction change, owner): Option A — the REAL Themis
 (`~/code/themis`, its own repo) is the system of record; no second Themis
@@ -206,7 +206,31 @@ now RATIFIED):
   wall by design (importing grants no call site); recorded so the
   wall is not later read as claiming more.
 
+## Gate 1 — W-M1 (constitutional writer invariant, 2026-09-26)
+
+- **What landed:** `state.eventWriters` (closed class → closed writer set),
+  enforced in `stream.append` before any other body check, folded into the
+  L6 constitution hash. New L6 hash `1df0e285…`; historical `33c6f6c5…`
+  recorded in the pin test. L7 hash `008be050…` unchanged, proven by its
+  pin test (D-W-4 exit proofs 1 and 2 hold; 3 and 4 are rsys@6 host acts).
+- **Consequence to act on:** a binary built from this commit REFUSES to
+  open `rsys@5` (its `constitution.state` is the historical value). This
+  is D-W-4 working as intended: do not deploy from this commit before the
+  single `rsys@6` mint (I-M5). `themis-preflight` will show the mismatch.
+- **Ownership fact to ratify (owner):** `l2-delivery` is written by L7 in
+  production (the delivering act is L7's; L2 is a pure composer with no
+  record handle), so the table maps `l2-delivery → l7`. Four sink tests
+  had used `l2` as an arbitrary writer and were corrected. If the owner
+  prefers L2 to own the class in name, that is a table change (hash
+  moves) — flagged, not decided here.
+- **Two writers for `lifecycle`:** `l6` and `l6-recovery` are both L6
+  primitives; the set keeps the recovery path distinguishable in the
+  record rather than collapsing it to `l6`.
+- **Not in W-M1:** the L5 handle and the witnesses (W-M2); any anchor.
+
 ## Milestone log
+- [x] W-M1 — green 2026-09-26 (state suite; full hermetic harness suite;
+  Themis stand-in suite; evidence tools build; 4/4 probes killed)
 - [x] T-M3 — green 2026-09-25 (`intake_test.go`: positive, key
   negative, inverse positive, 12 refusals + 2 proceed rows, 4
   unavailability rows, 4 forged-record cases; probes 8/9 killed)

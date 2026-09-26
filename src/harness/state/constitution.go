@@ -107,6 +107,38 @@ var eventClasses = map[string]bool{
 	EvVerification: true, EvL8Delegation: true,
 }
 
+// eventWriters is the closed class→writer invariant (D-W-6, W-M1): the
+// sink refuses any (class, writer) pair outside this table with
+// ErrConstitution, so a writer string is part of the record's
+// structural validity, never metadata a caller asserts. Each class
+// maps to the closed SET of writer identities that own it: every
+// layer-owned class has exactly one; the L6 primitives distinguish the
+// ordinary path (l6) from the recovery path (l6-recovery) for the two
+// classes recovery may write. The table is folded into
+// ConstitutionHash (D-W-4): changing it is a constitution change.
+//
+// l2-delivery is written by L7 (the delivering act is L7's; L2 is a
+// pure composer with no record handle) — recorded here as the
+// production truth; see the W-M1 Gate 1 note.
+var eventWriters = map[string]map[string]bool{
+	EvLifecycle:          {"l6": true, "l6-recovery": true},
+	EvRecovery:           {"l6-recovery": true},
+	EvVerdict:            {"l6": true},
+	EvContamination:      {"l6": true},
+	EvL1Conflict:         {"l1": true},
+	EvL2Delivery:         {"l7": true},
+	EvL3Selection:        {"l3": true},
+	EvL4Audit:            {"l4": true},
+	EvL5Transition:       {"l5": true},
+	EvL5Op:               {"l5": true},
+	EvArtifact:           {"l6": true},
+	EvWorkflowTransition: {"l7": true},
+	EvModelTurn:          {"l7": true},
+	EvL7Invariant:        {"l7": true},
+	EvVerification:       {"l10": true},
+	EvL8Delegation:       {"l8": true},
+}
+
 // primitiveOnlyEvents may be appended only by L6's own primitives
 // (recovery, verification, artifact binding, lifecycle) — never
 // through the caller-facing AppendEvent (Q-L6-4/6).
@@ -174,6 +206,11 @@ func ConstitutionHash() string {
 	for from, tos := range legalNext {
 		for to := range tos {
 			parts = append(parts, "edge:"+string(from)+">"+string(to))
+		}
+	}
+	for c, ws := range eventWriters {
+		for w := range ws {
+			parts = append(parts, "writer:"+c+">"+w)
 		}
 	}
 	parts = append(parts, "algo:"+hashAlgo, "retention:retain-all", "commit:fsync-local")

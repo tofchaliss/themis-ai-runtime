@@ -264,3 +264,13 @@ witnesses state transitions · D-W-3 witnesses governed operations and
 egress · D-W-6 makes writer attribution non-forgeable · D-W-4 makes it
 constitutional and re-anchors · D-W-5 makes the proof obligation
 constitution-versioned. The T-M3 boundary is unchanged.
+
+## W-M1 ratification — `l2-delivery → l7` (LOCKED 2026-09-26, owner)
+
+> `l2-delivery` records the delivery event performed by L7; therefore
+> L7 is its sole structural writer. L2 remains the semantic owner of
+> context composition, but not the durable event-writer authority. The
+> deciding principle is ownership of the WITNESSING ACT, not which layer
+> the event name mentions. The L6 hash is not reopened for a name match;
+> `rsys@5` is not made runnable — the refusal is the constitution pin
+> working (W-M1 → hash change → rsys@5 refused → I-M5 single rsys@6 mint).

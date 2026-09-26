@@ -177,3 +177,54 @@ Themis never infers or merges.
 - **`premise.stage` is observational:** the stage observed when the
   commission was created, never the stage resulting from it — a
   historical snapshot, not a hidden lifecycle operation.
+
+## D-C-5 — Transport and two-way correspondence (LOCKED 2026-09-26, owner)
+
+> The runtime may carry a commission identity but never establish its
+> authority. Themis may verify correspondence between commissioned and
+> executed identities but never derive the commission from execution
+> content. Intake extracts the commission solely from the immutable
+> CREATED event.
+
+```
+Themis Commission C1 → themis-instantiate --commission C1 → skills.Request.Commission (UUID syntax only)
+  → L7 sealed envelope Origin["commission"] → CREATED event (origin:commission)
+  → themis-intake EXTRACTS C1 from the record → Proposal
+  → Themis equality checks: Finding · state · method · deployment → Governance admission
+```
+
+1. **Transport via L9 → sealed Origin, never a skill input.** A skill
+   input is data supplied to the governed work; a commission is the
+   authority under which the work is permitted. The model may need
+   inputs; it never needs to see or manipulate authority. L9 validates
+   syntax only; it never decides whether the commission exists or is
+   valid in Themis. L7 and `themis-run` are unchanged (every origin key
+   is recorded verbatim; `stampOrigin` passes non-`submitter_*` keys).
+2. **Absence is a valid runtime state.** The runtime does not require a
+   commission; Governance use does: no `origin:commission` → valid
+   runtime execution, historical evidence, and
+   `proposal-refused: execution cites no commission`. L7/L9 never
+   enforce a Themis governance rule universally.
+3. **Intake must DERIVE, never accept (invariant):** the execution record
+   is the sole source of the execution's commission attribution; intake
+   may extract and verify it, never assign or relabel it. A human-
+   supplied override would recreate the retrospective binding D-C-1
+   rejected.
+4. **Themis performs the correspondence check, in causal order, first
+   failure named:** commission exists → belongs to this Finding → open →
+   `method` == (evidence `skill`, `skill_composition`) → `deployment` ==
+   (evidence anchor name@version, `deployment_anchor` hash). Equality,
+   never interpretation: Themis need not know how a composition hash or
+   an anchor is computed.
+5. **The proposal records the commission id;** the Position inherits it
+   through the accepted proposal; cold replay moves Position → accepted
+   Proposal → Commission + execution evidence → runtime record without
+   reconstructing authority from model assertions.
+
+| Question | Authority |
+|---|---|
+| What method / deployment actually executed? | runtime evidence |
+| What commission was actually cited? | runtime CREATED event |
+| What was commissioned? | Themis |
+| Did execution correspond to commission? | Themis equality check |
+| Can that execution support a proposal? | Themis |

@@ -1,7 +1,7 @@
 # Proposal: integrate the harness with the real Themis (one Themis, its own repo)
 
-Status: **OPEN 2026-09-25 — owner direction LOCKED, grill open (owner-led,
-one question per turn).** Owner: *"Option A is the way, but make sure we
+Status: **GRILL CLOSED 2026-09-26 — D-I-1..9 LOCKED (`design.md`); implementation
+milestones in `tasks.md` (I-M0..I-M5, interleaved with W-M1..W-M2).** Owner: *"Option A is the way, but make sure we
 don't create another repo for Themis inside themis-ai-runtime. We will
 pull the latest from the Themis repo and integrate it with
 themis-ai-runtime."*
@@ -83,7 +83,7 @@ which CLAUDE.md forbids. The real Themis exists: `~/code/themis`
 | Q-I-5 | The proposal act and its evidence payload | **LOCKED 2026-09-26 → D-I-5:** human proposer (authenticated principal) via `themis-intake`; Themis stances only; first-class immutable `evidence` field (`harness-execution/v1`), shape-validated, never re-resolved; refs from recorded Finding bytes; trust DERIVED deterministically and validated, never chosen; Themis EDR + phase3 change. | LOCKED |
 | Q-I-6 | The decision act and witness | **LOCKED 2026-09-26 → D-I-6:** `acceptProposal` as-is; decider server-derived `key:<KeyID>`; `THEMIS_AUTH_REQUIRED=1`; two distinct keys (operational separation of duties); D-T-8 observed witness RETIRED on this path; evidence by reference; `review_by` operator's choice. | LOCKED |
 | Q-I-7 | Walls across two repos | **LOCKED 2026-09-26 → D-I-7:** domain value type (no harness import), `adapters/harness` as the ONLY Themis package importing the harness (four read-only packages allowed, execution packages denied, no writer/exec), `cmd/themis-intake` via the adapter; harness Wall 1 = no import of `themis-project/themis`; tests split harness-side (httptest stand-in) / Themis-side (provenance-bearing fixtures + forged records); `src/themis` removed last, one mapped commit. | LOCKED |
-| Q-I-8 | Demo topology on the VM | Postgres + Registry + Governance (+ Evidence/Knowledge for Finding creation) beside the harness on the enterprise VM; rsys@6 pins the Themis contract | OPEN |
+| Q-I-8 | Demo topology on the VM | **LOCKED 2026-09-26 → D-I-8:** six nodes as deployed, four on the path; auth required, AI off; three keys/three holders; contract commit check before the single `rsys@6` mint; real Finding via the pipeline; Themis → harness → decision host sequence with evidence checkpoints. | LOCKED |
 | Q-I-9 | L9/L7: how does the human-supplied Finding UUID become an immutable, task-bound capability scope? | **LOCKED 2026-09-26 → D-I-9:** `@input:finding` in `themis_scope`; L9 validates form only; L7 binds at SubmitTask within the `uuid` class; L4 exact equality; sealed grant in L6; D-L9-4/D-L9-5 amended; implementation DEFERRED to post-integration hardening unless the demo needs subject-substitution resistance. | LOCKED (impl. deferred) |
 
 Owner facts: the harness and the Themis services run on the SAME

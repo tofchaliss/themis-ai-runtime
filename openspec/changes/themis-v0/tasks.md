@@ -83,7 +83,7 @@ anything not in Gate 0 stops implementation and is classified first.
 - [x] Landed 2026-09-25 (RESUME-HERE Gate 1 T-M3; probes 8/9 killed,
       the ninth structurally unreachable). Local only; no rsys@6.
 
-## 4. T-M4 — `themis-decide`, `themis-inspect`, walls (Class 3) — BLOCKED — `openspec/changes/l5-witness-events/` classified REQUIRED AMENDMENT (owner, 2026-09-25); unblocks on its seven exit conditions
+## 4. T-M4 — SUPERSEDED 2026-09-26 by `themis-integration/tasks.md` I-M3 (Themis-repo intake, no JSON Position) — was: `themis-decide`, `themis-inspect`, walls (Class 3) — BLOCKED — `openspec/changes/l5-witness-events/` classified REQUIRED AMENDMENT (owner, 2026-09-25); unblocks on its seven exit conditions
 - [ ] `cmd/themis-decide`: tuple + `--disposition` + `--rationale`;
       refuses `decision.*`; observes uid/user/host/time; records the
       Themis checkout commit and `observed-not-authenticated`; prints
@@ -100,7 +100,7 @@ anything not in Gate 0 stops implementation and is classified first.
       both ways on every wall and every D-T link
 - [ ] G2 row `themis_position` in `execution-chain.md`
 
-## 5. T-M5 — Anchor `rsys@6`, live proof, reviews, close (Class 3/4)
+## 5. T-M5 — SUPERSEDED 2026-09-26 by `themis-integration/tasks.md` I-M5 (single `rsys@6` mint with `themis_contract`) — was: Anchor `rsys@6`, live proof, reviews, close (Class 3/4)
 - [ ] `rsys@6` PROPOSED (pin `themis_store`, catalog with @3, skills
       `remediate-dependency@1..3`) — host act; VM procedure extended
 - [ ] Register E on the VM: live model reads the Finding, COMPLETED/PASS

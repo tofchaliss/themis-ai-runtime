@@ -7,8 +7,11 @@ Updated at every green milestone. If context was compacted, start here.
 (`~/code/themis`, its own repo) is the system of record; no second Themis
 inside this repo. `src/themis` is a stand-in to be DISSOLVED once
 `openspec/changes/themis-integration/` (grill open, Q-I-1..8) decides
-where each piece goes. D-T-1..8 stand; T-M4/T-M5 shape superseded;
-W-M1..W-M3 unaffected. Nothing deleted yet.**
+where each piece goes. Integration grill CLOSED 2026-09-26 (D-I-1..9);
+D-T-9 amended, D-T-8 retired on the integrated path; T-M4/T-M5
+SUPERSEDED by `themis-integration/tasks.md` I-M3/I-M5. Order: I-M0
+(module rename) → W-M1 → W-M2 → I-M1 → I-M2 → I-M3 → I-M4 → I-M5.
+Next: I-M0 on the owner's go. Nothing deleted yet.**
 
 2026-09-25 (latest): T-M3 LANDED (admissibility only, per owner) —
 `intake.Resolve` D-T-1 → D-T-2 → D-T-4 → D-T-5 under the D-T-6 table,

@@ -345,3 +345,58 @@ imports are renamed; both sides' walls pass; fixture provenance is
 established; every old `src/themis` reference is eliminated. Then one
 cleanup commit whose message maps each former component to its new
 owner.
+
+## D-I-8 — Demo VM topology and host sequence (LOCKED 2026-09-26, owner)
+
+> **Invariant: `rsys@6` is the ONLY demo deployment mint; no intermediate
+> anchor is created** (D-W-4's one-mint rule preserved; no `rsys@7` to
+> separate the integration changes).
+
+1. **Themis estate:** all six systemd nodes stay deployed (Registry 8082,
+   Governance 8083, Knowledge 8085, Intelligence 8086, Evidence and the
+   rest as deployed). The demo depends only on Registry → Evidence →
+   Knowledge → Governance; Communication and Intelligence are outside
+   the path. Governance and Registry run `THEMIS_AUTH_REQUIRED=1`;
+   `THEMIS_GOVERNANCE_AI_ENABLED` off — the demo's proposal comes from
+   the human-operated intake path, never Themis's AI mechanism.
+2. **Three credentials, three holders:** read key (harness read door,
+   harness environment only) · product-scoped write key (`themis-intake`,
+   intake operator) · separate write key (`acceptProposal`, decider).
+   Only key IDs enter the runbook/evidence; values never. No `dev:`
+   decision witness may appear.
+3. **Contract establishment before the mint:** Themis checkout →
+   `contract.json` → running Themis commit verified → contract/spec
+   hashes verified → eligible for `rsys@6` (the host-tree discipline).
+   The contract identifies loopback endpoints and pinned interface
+   specs; it does not pin live Finding data or attest the running
+   service binary.
+4. **Single mint `rsys@6`:** amended W-M1 constitution, `themis_contract`,
+   UUID `themis_scope`, `remediate-dependency@4`, required catalog state,
+   everything else inherited from `rsys@5`. `rsys@6` opens → validated →
+   `rsys@5` withdrawn.
+5. **Real Finding:** Product → Project → Release → CycloneDX SBOM →
+   Evidence → Knowledge correlation → Governance Finding; the documented
+   one-CVE fixture feed through Knowledge's injectable endpoint if OSV
+   is unreachable. Runbook records Finding UUID, Product/Project/Release
+   provenance, SBOM provenance, correlation source/fixture status. No
+   manual Finding row.
+6. **Host-act sequence:** THEMIS SIDE (auth configured; contract commit
+   verified; Finding established) → HARNESS SIDE (W-M1..W-M3 landed and
+   proven; module rename proven; `rsys@6` minted, opened, validated;
+   demo execution) → DECISION SIDE (human raises; separate human
+   accepts). Evidence checkpoints: vm-verify before/after, harness
+   phasec, Addendum G, Themis proposal/Position records.
+
+```
+Human ─▶ themis-intake ─ local ─▶ harness record plane ─▶ intake.Resolve ─▶ Proposal ─HTTP─▶ Themis (Registry/Evidence/Knowledge/Governance)
+                                                                                                   └─▶ human acceptance ─▶ Position
+```
+
+The harness supplies execution evidence, Themis supplies enterprise
+authority, the authenticated human supplies the decision.
+
+## Closure
+
+Integration grill CLOSED 2026-09-26: D-I-1..9 locked (Q-I-1..9). The
+remaining work is implementation milestones (`tasks.md`), not
+architecture, unless implementation exposes a genuine category-4 gap.

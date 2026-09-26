@@ -1,7 +1,6 @@
 # Proposal: workflow commissioning — where the Finding → work relationship becomes authoritative
 
-Status: **OPEN 2026-09-26 — grill open (owner-led, one question per
-turn).** Completion-matrix row 4 (`themis-integration/completion-matrix.md`).
+Status: **GRILL CLOSED 2026-09-26 — D-C-1..6 LOCKED (`design.md`); implementation folded into I-M1 (runtime) and I-M3 (Themis), `tasks.md`.** Completion-matrix row 4 (`themis-integration/completion-matrix.md`).
 Discipline (owner): **do not design this around the current demo
 workflow; design the general commissioning contract the demo can later
 instantiate.** The architecture determines the demo, never the reverse.
@@ -54,7 +53,7 @@ Work / Task  →  Execution  →  Evidence  →  Proposal  →  Position
 | Q-C-3 | Commission lifecycle | **LOCKED 2026-09-26 → D-C-3:** `open` → `withdrawn` forward-only with its own witness; many executions per commission; withdrawal evaluated at proposal time on Themis's sequence, never retroactive; no expiry; no uniqueness beyond the id. | LOCKED |
 | Q-C-4 | Effect on the Finding's investigation stage | **LOCKED 2026-09-26 → D-C-4:** none; refused only on Archived; visible as `commissions[]` + thin internal events; premise observational; D7 untouched. | LOCKED |
 | Q-C-5 | Transport and two-way verification | **LOCKED 2026-09-26 → D-C-5:** `skills.Request.Commission` → sealed `Origin["commission"]` → CREATED; absence valid for the runtime, refused for proposals; intake derives from the record, never accepts an override; Themis equality-checks Finding/state/method/deployment in causal order. | LOCKED |
-| Q-C-6 | Who may commission; separation from proposer and decider | product-scoped write key; commissioner may equal the proposer; decider must differ from both (operational, per D-I-6) | OPEN |
+| Q-C-6 | Who may commission; separation | **LOCKED 2026-09-26 → D-C-6:** authenticated write-capable human only; runtime cannot (read key); commissioner may = proposer; decider ≠ both, operationally; product-scope confinement recorded as a Themis gap (row 14); withdrawal = same authority class, any principal. | LOCKED |
 
 ## Not in scope
 

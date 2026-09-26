@@ -228,3 +228,59 @@ Themis Commission C1 → themis-instantiate --commission C1 → skills.Request.C
 | What was commissioned? | Themis |
 | Did execution correspond to commission? | Themis equality check |
 | Can that execution support a proposal? | Themis |
+
+## D-C-6 — Who may commission; separation of acts (LOCKED 2026-09-26, owner)
+
+> Operational separation of duties is NOT a Governance-enforced
+> authorization invariant. Q-C-6 establishes the required operating
+> procedure; it does not amend Governance authorization semantics.
+
+1. **Commissioning requires an authenticated, write-capable HUMAN**:
+   `commissioned_by = key:<KeyID>`, `actor_kind = human`. AI, policy,
+   and system actors cannot commission — automation authorizing the
+   very work whose output it later influences is an authority path
+   nothing has granted. `dev:` only where `dev:` decisions are (never
+   production).
+2. **The runtime cannot commission, by construction:** its credential
+   is read-only; commissioning is a Governance write. The wall is
+   Themis's authorization rule, asserted by a Themis test; no runtime
+   special case.
+3. **Commissioner may equal proposer** — separation of ACTS, not an
+   artificial separation of people; the security check is the
+   deterministic tie proposal → commission → execution (D-C-5).
+4. **Decider must differ from commissioner and proposer** —
+   OPERATIONAL, recorded in the runbook by `key:<KeyID>`; not enforced
+   by Governance (consistent with D-I-6). Commissioner = Proposer;
+   Commissioner ≠ Decider; Proposer ≠ Decider.
+5. **Product-scope confinement is a known Themis gap, recorded not
+   solved:** `AuthorizeWrite` accepts any write-capable key and does
+   not confine `product:<id>` to that product's Findings; commissioning
+   inherits this. Carried on completion-matrix row 14.
+
+**Withdrawal:** same class of authority as creation (authenticated
+human, write-capable); not restricted to the original commissioner —
+an authority-control operation, not an ownership right.
+
+| Act | Authority |
+|---|---|
+| Create / withdraw commission | human + Themis write authorization |
+| Carry / execute under commission | runtime |
+| Verify correspondence | Themis |
+| Raise proposal | existing proposal authority |
+| Accept / decide | a different authenticated human, operationally |
+| Enforce proposer ≠ decider | not yet a Governance invariant (future grill) |
+| Enforce `product:<id>` → Finding's product | known Themis gap (row 14) |
+
+## Closure — Row 4 contract (grill CLOSED 2026-09-26, D-C-1..6)
+
+> Themis authorizes governed work through an authenticated, immutable,
+> reusable commission; the runtime carries that authority reference
+> without interpreting it; execution evidence proves what actually
+> happened; Themis verifies correspondence before admitting a proposal;
+> withdrawal affects future admissibility without rewriting history;
+> and the final security decision remains a separate human Governance
+> act.
+
+Follow-ons kept visible, outside this grill: row 14 product-scoped
+write confinement; a future Governance grill on mandatory separation
+of duties.

@@ -33,6 +33,7 @@ I-M0 → W-M1 → W-M2 → I-M1 → I-M2 → I-M3 (absorbs W-M3) → I-M4 → I-
       hash against the pin and configures the seam from it; `absent` kept
 - [ ] Tool registry v6: `themis_scope` `uuid` syntax; `remediate-dependency@4`
       (UUID-scoped `get_finding`, no `get_product`); catalog entry
+- [ ] `skills.Request.Commission` → `origin:commission`; `themis-instantiate --commission` (D-C-5; `themis-commissioning/tasks.md`)
 - [ ] `themis-run`, `themis-status`, `themis-preflight`, runbook updated
 - [ ] Tests against an httptest Governance/Registry stand-in: projection,
       identity mismatch refused, pin mismatch refused, unavailable fails
@@ -59,7 +60,8 @@ I-M0 → W-M1 → W-M2 → I-M1 → I-M2 → I-M3 (absorbs W-M3) → I-M4 → I-
       (D-W-5) + deterministic trust derivation + Resolution → evidence
       mapping; depguard allow-list (four harness packages) and denies;
       no `os` writer / `os/exec`
-- [ ] `cmd/themis-intake`: tuple + `--stance` + `--rationale`
+- [ ] Commissioning (D-C-1..6): `Commission` on the Finding aggregate, migration, API, events, `raiseProposal` correspondence check (`themis-commissioning/tasks.md`)
+- [ ] `cmd/themis-intake`: tuple + `--stance` + `--rationale` (commission id DERIVED from CREATED, no flag)
       (+ `--review-by`); renders the evidence view; raises the proposal
       with the operator's key; Business Verification refs from the
       RECORDED Finding bytes; consumes the adapter only

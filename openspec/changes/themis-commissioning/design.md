@@ -109,3 +109,46 @@ model (Governance depending on the runtime's skill and deployment
 registries). Themis need not understand what `remediate-dependency@4`
 means; it establishes that the execution used exactly the method and
 deployment that were commissioned.
+
+## D-C-3 — Commission lifecycle (LOCKED 2026-09-26, owner)
+
+> **A commission is reusable authority, not consumable authorization.**
+> Multiple executions may cite it. Withdrawal is a forward-only
+> Governance transition that affects future proposal admissibility and
+> never rewrites or invalidates historical runtime evidence.
+
+1. **`open` → `withdrawn`, forward-only.** Withdrawal is itself a
+   Governance fact with its own authenticated witness and optional
+   rationale; the original commission stays immutable history.
+   `withdrawn` means "not admissible for future Governance use", never
+   "the authority never existed" — essential for reconstruction.
+2. **One commission may authorize many executions** (retries, `RetryOf`,
+   re-runs). The commission is the one authority fact; executions stay
+   independent runtime facts. Governance does not participate in
+   ordinary runtime retry behaviour.
+3. **Withdrawal is evaluated at PROPOSAL time, on Themis's own
+   sequence.** Themis can establish "C existed, then E cited C"; it
+   cannot establish `withdraw(C) < task-start(E)` — no shared sequence —
+   so retroactive invalidation would be a false temporal claim. Rule:
+   execution evidence remains historical; at proposal admission,
+   commission `open` → eligible, `withdrawn` → refused
+   (`proposal-refused: commission withdrawn`). An execution run while
+   the commission was open remains evidence even after withdrawal; a
+   later proposal cannot use the withdrawn commission.
+4. **No expiry.** Expiry would introduce a clock-based security
+   condition where the architecture deliberately uses none; withdrawal
+   is the explicit mechanism. Withdrawing because the premise moved is
+   governance practice, not mechanism.
+
+**No uniqueness beyond the id:** `C1 = A → F → M → D` and
+`C2 = B → F → M → D` are distinct legitimate authority facts; the
+execution chooses which it operates under and the proposal names it;
+Themis never infers or merges.
+
+| Concern | Owner |
+|---|---|
+| Commission exists / identity / withdrawal | Themis |
+| Execution under commission; retry / re-run | Runtime |
+| Historical execution evidence | Runtime / L6 |
+| Whether an execution may support a new proposal | Themis |
+| Decision about the resulting security posture | Themis |

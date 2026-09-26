@@ -200,3 +200,55 @@ not required for the core integration).
 Archive amendment recorded against D-L9-4 (task input may participate
 in the closed placeholder mechanism, scope fields only) and D-L9-5 (the
 grant template gains a formally bounded narrowing input).
+
+## D-I-5 — Decision Proposal integration (LOCKED 2026-09-26, owner)
+
+> The harness does not become the proposer. It produces evidence that a
+> HUMAN uses to create a Themis proposal.
+
+```
+Harness execution → intake.Resolve → Evidence View → human invokes themis-intake
+   → Governance Proposal (proposer_kind = human, proposer_id = authenticated principal)
+   → separate human acceptance → Position
+```
+
+- **Themis's stance vocabulary is authoritative** (`affected`,
+  `not_affected`, `under_investigation`, `mitigated`, `accepted_risk`,
+  `deferred`). D-T-7's four dispositions are NOT carried into the
+  proposal API; `remediation-planned` is not invented as a seventh
+  stance; any domain mapping is a separate Themis-domain decision.
+- **Evidence is a first-class proposal field**, never a rationale
+  suffix: `rationale` stays the human-readable explanation; `evidence`
+  is a separate immutable closed-schema `harness-execution/v1` object —
+  anchor hash; anchor name@version + lifecycle state; task id;
+  artifact-bound seq; artifact ObjectID; verified member path + hash;
+  verification contract name@version + hash + state; reconstruction
+  verdict; production witness; constitution hash; harness module
+  version. Governance validates the SHAPE; it never re-runs
+  `intake.Resolve` or reconstructs the harness record (D-I-1).
+- **Business Verification refs come from the RECORDED Finding bytes**
+  (dependency PURL + CVE the execution actually read): Finding read →
+  recorded bytes → dependency + CVE → Business Verification → human
+  proposal. The model never manufactures the identity being vouched.
+- **Trust is never an API default and never a CLI choice (owner
+  tightening):** `themis-intake` produces a DETERMINISTIC trust
+  classification from the established evidence facts, and Governance
+  validates that the submitted class is permitted for that evidence.
+  L10 PASS establishes admissibility of the artifact; it does not turn a
+  model-authored artifact into human-authored evidence — the class is
+  `inferred` by derivation, and the constitutional human-acceptance
+  boundary stays intact.
+- **Accepted evidence is durable Position provenance:** the Position
+  cites `AcceptedProposalID`, so the evidence must be immutable and
+  self-contained at proposal creation.
+- **Themis-side change, under Themis's own governance:** this closes
+  EDR-TRUST-01's deferred Decision Proposal payload → an EDR, a
+  `phase3-*` OpenSpec change, Themis's existing proposal/acceptance
+  semantics, immutable evidence persistence, no second Position model
+  in the harness.
+
+Final authority chain: Model → Harness (verifies + reconstructs) →
+themis-intake (human invokes; deterministic evidence) → Themis Proposal
+(authenticated human proposer) → Business Verification → human
+acceptance → Position. The model is never the decision-maker; the
+harness is never a Governance actor.

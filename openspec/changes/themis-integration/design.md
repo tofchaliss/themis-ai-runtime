@@ -159,3 +159,44 @@ Model     → reasons about remediation
   scope from task input, and what deterministic binding stops the model
   from widening or substituting the target, is an L9 architectural
   question with its own decision — Q-I-9, taken next; NOT folded here.
+
+## D-I-9 — Subject-bound capability scope (LOCKED 2026-09-26, owner; amends D-L9-4 and D-L9-5; implementation DEFERRED)
+
+> The human-supplied Finding UUID becomes authorization state ONLY
+> through deterministic L7 binding; it never becomes procedure text or
+> model-controlled grant content.
+
+- **L9** permits a grant template to reference a declared task input:
+  `themis_scope: ["@input:finding"]`. L9 validates that `finding` is a
+  declared, required, string input. L9 does not resolve the value and
+  mints no scope.
+- **L7** binds at SubmitTask: validated task input → `@input:finding` →
+  exact Finding UUID → effective grant → sealed composition/hash. Before
+  accepting the task, L7 verifies the value against the registry's
+  `uuid` syntax class.
+- **Strictly narrowing:** registry ceiling `themis_scope = uuid`; task
+  binding `themis_scope = exactly UUID-X`; `UUID-X ⊂ uuid`. The model
+  cannot widen to another UUID.
+- **L4** permits `get_finding` only when `call.id == bound_finding_uuid`;
+  any other id is denied deterministically and audited.
+- **The grant is model-inaccessible:** the model cannot edit the grant,
+  substitute or add a Finding, modify the scope, or regenerate the
+  authorization hash.
+- **L6** records the sealed effective grant, so the execution
+  establishes "this execution was AUTHORIZED to access Finding X", not
+  merely "the model was told to work on Finding X".
+
+Ownership preserved: L9 declares the allowable binding form · L7 binds
+validated task input · L4 enforces · L6 records · the model alters none
+of them. No new scope interpreter.
+
+**Sequencing (owner):** architecture LOCKED, implementation DEFERRED as
+hardening after the integration lands. D-I-4's `uuid` registry scope is
+sufficient for the demo; the demo depends on D-I-9 only if its explicit
+objective includes "even if the model attempts to substitute another
+Finding, L4 prevents it" (a hostile-control demonstration, valuable but
+not required for the core integration).
+
+Archive amendment recorded against D-L9-4 (task input may participate
+in the closed placeholder mechanism, scope fields only) and D-L9-5 (the
+grant template gains a formally bounded narrowing input).

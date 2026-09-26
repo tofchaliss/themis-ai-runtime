@@ -84,7 +84,7 @@ which CLAUDE.md forbids. The real Themis exists: `~/code/themis`
 | Q-I-6 | The decision act and witness | `acceptProposal` as-is; D-T-8 satisfied by EDR-SECURITY-01 D10; `dev:` deciders allowed only outside production | OPEN |
 | Q-I-7 | Walls across two repos | harness: no Themis import (wall 1 trivially true, kept as a test); Themis: `internal/governance/adapters/harness` may import only `state`, `deployment`, `verification`, `verification/seam` (depguard) + arch test; `src/themis` removed with its walls re-homed | OPEN |
 | Q-I-8 | Demo topology on the VM | Postgres + Registry + Governance (+ Evidence/Knowledge for Finding creation) beside the harness on the enterprise VM; rsys@6 pins the Themis contract | OPEN |
-| Q-I-9 | L9/L7: how does the human-supplied Finding UUID become an immutable, task-bound capability scope the model cannot widen or substitute? (Follow-on the owner split from Q-I-4; taken next.) | see the turn record; PROPOSED | OPEN |
+| Q-I-9 | L9/L7: how does the human-supplied Finding UUID become an immutable, task-bound capability scope? | **LOCKED 2026-09-26 → D-I-9:** `@input:finding` in `themis_scope`; L9 validates form only; L7 binds at SubmitTask within the `uuid` class; L4 exact equality; sealed grant in L6; D-L9-4/D-L9-5 amended; implementation DEFERRED to post-integration hardening unless the demo needs subject-substitution resistance. | LOCKED (impl. deferred) |
 
 Owner facts: the harness and the Themis services run on the SAME
 enterprise VM (confirmed 2026-09-25). Still needed: confirmation the

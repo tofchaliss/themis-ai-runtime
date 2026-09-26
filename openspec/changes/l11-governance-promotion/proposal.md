@@ -1,7 +1,6 @@
 # Proposal: L11 ↔ Governance — the promotion boundary
 
-Status: **OPEN 2026-09-26 — grill open (owner-led, one question per
-turn).** Completion-matrix row 12. Not a re-grill of L11 (D-L11-1..20,
+Status: **GRILL CLOSED 2026-09-26 — D-R-1..4 LOCKED (`design.md`); implementation folded into I-M1 (`tasks.md`).** Completion-matrix row 12. Not a re-grill of L11 (D-L11-1..20,
 archived 2026-09-13) nor of L9 (D-L9-16). Starting material: D-L9-16's
 two gates and D-L11-1's ownership split.
 
@@ -68,7 +67,7 @@ establishes this rather than assuming it.
 | Q-R-1 | Where is the promotion act; does Themis hold it? | **LOCKED 2026-09-26 → D-R-1:** the two existing doors (registration = executable, reliance = relied upon) remain the acts; no Themis approved-methods registry; the gap is provenance of the human act. | LOCKED |
 | Q-R-2 | Door witness and L11 citation | **LOCKED 2026-09-26 → D-R-2:** `policies/decisions/<id>.json` per act (registration/withdrawal/reliance), two-way bound via `decision_ref`, loaders refuse on mismatch, version 2 requires it everywhere; `actor` = `commit:<author>` (asserted) or `key:<KeyID>` (authenticated); L11 evidence by reference; empty evidence explicit. | LOCKED |
 | Q-R-3 | Must a commissioned method be registered/relied upon? | **LOCKED 2026-09-26 → D-R-3:** no Themis check; runtime admission alone decides executability; a commission that cannot execute stays a valid authority record and yields no proposal-eligible execution. | LOCKED |
-| Q-R-4 | Does any automation path from L11 evidence to a door exist or get created? | none, by D-L9-16 and D-L11-14; the integration adds a way to CITE evidence in the human act, never a trigger; a test asserts no code path writes catalog or anchors | OPEN |
+| Q-R-4 | Any automation path from L11 to a door? | **LOCKED 2026-09-26 → D-R-4:** none exists, none created; read-only decision loader; ratchet forbidden from `skills`/`deployment`; one-way evidence reference; no-side-effect test; no preparation helper. | LOCKED |
 
 ## Not in scope
 

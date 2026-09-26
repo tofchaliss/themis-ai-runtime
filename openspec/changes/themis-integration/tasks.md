@@ -34,6 +34,7 @@ I-M0 → W-M1 → W-M2 → I-M1 → I-M2 → I-M3 (absorbs W-M3) → I-M4 → I-
 - [ ] Tool registry v6: `themis_scope` `uuid` syntax; `remediate-dependency@4`
       (UUID-scoped `get_finding`, no `get_product`); catalog entry
 - [ ] `skills.Request.Commission` → `origin:commission`; `themis-instantiate --commission` (D-C-5; `themis-commissioning/tasks.md`)
+- [ ] Door provenance (D-R-2/4): `policies/decisions/`, catalog + anchors `version: 2` with `decision_ref`, read-only loader, wall tests (`l11-governance-promotion/tasks.md`)
 - [ ] `themis-run`, `themis-status`, `themis-preflight`, runbook updated
 - [ ] Tests against an httptest Governance/Registry stand-in: projection,
       identity mismatch refused, pin mismatch refused, unavailable fails

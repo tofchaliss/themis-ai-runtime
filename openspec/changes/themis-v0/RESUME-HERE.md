@@ -12,8 +12,10 @@ record, L8 × Themis scope/evidence, L11 ↔ Governance promotion — each
 needs its own grill before implementation. I-M0 LANDED 2026-09-26 (module
 rename, hashes pinned). Row 4 grill CLOSED (D-C-1..6,
 `themis-commissioning/`); Row 11 grill CLOSED (D-L-1..3,
-`l8-themis-surface/`); Row 12 grill OPEN (`l11-governance-promotion/`,
-Q-R-1..4). Then W-M1.**
+`l8-themis-surface/`); Row 12 grill CLOSED (D-R-1..4,
+`l11-governance-promotion/`). ALL 🔴 ROWS DECIDED. Now: W-M1
+(constitutional writer invariant), then W-M2, I-M1, I-M2, I-M3, I-M4,
+I-M5.**
 
 **2026-09-25 (direction change, owner): Option A — the REAL Themis
 (`~/code/themis`, its own repo) is the system of record; no second Themis

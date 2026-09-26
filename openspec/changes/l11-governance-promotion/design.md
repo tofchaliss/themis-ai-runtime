@@ -120,3 +120,39 @@ withdrawal is governance practice).
 | Commission | Was this method authorized for this Finding? | Themis |
 | Admission | Can this method execute in this deployment? | Runtime |
 | Proposal admission | Does this execution correspond to the commission and satisfy evidence requirements? | Themis |
+
+## D-R-4 — No automation path from L11 to a door exists or is created (LOCKED 2026-09-26, owner)
+
+> No L11 or ratchet execution path may write, select, register,
+> withdraw, or prepare a runtime skill/deployment door. L11 produces
+> evidence only. Runtime doors remain human-governed acts. Decision
+> records may reference L11 evidence, but L11 artifacts never reference
+> or mutate the doors.
+
+```
+L11 ─ evidence ─▶ Human ─ decision ─▶ Decision Record ─ provenance ─▶ existing runtime door
+L11 ────X────▶ runtime door   (prohibited)
+```
+
+1. **The decision-record loader is read-only** (beside the catalog and
+   registry loaders); a filesystem-writer AST wall covers `skills`,
+   `deployment`, and the decision loader.
+2. **L11 cannot reach the doors:** `ratchet` and `themis-ratchet` import
+   only `confine` and `state`; the closed-importer test is extended to
+   name `skills` and `deployment` as forbidden, so the first half of an
+   automation path cannot appear by convenience import.
+3. **Evidence reference is one-way:** decision → L11 package; never L11
+   package → decision/catalog/anchor. A no-side-effect test: producing
+   L11 evidence leaves the governed tree unchanged (D-L11-8 restated).
+4. **No "preparation" automation:** no helper turns an L11 result into a
+   draft catalog entry — that would be an automated promotion path with
+   a human merely clicking commit. The human decision record is the
+   stopping point.
+
+## Closure (grill CLOSED 2026-09-26, D-R-1..4)
+
+L11 informs human runtime governance decisions but cannot promote or
+mutate runtime doors; runtime owns registration and reliance; Themis
+owns commissioning and downstream security governance; neither becomes
+the other's registry. With Rows 4, 11, and 12 decided, no 🔴 row
+remains; implementation proceeds with W-M1.

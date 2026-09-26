@@ -295,10 +295,15 @@ now RATIFIED):
   `anchors.json`/`anchors.proposed.json` are now v2; the host's OBSERVED
   copy is v1 and stays parseable (bytes-only parser; append-only check by
   identity). The first Open under rsys@6 records a v2 observed copy.
-- **`themis_commit` in the contract** is `fb83e82…`, the Themis main at
-  integration time; the host check (D-I-8) compares the deployed estate
-  against it before the mint. The spec hashes were computed from that
-  commit's `api/*.openapi.yaml`.
+- **`themis_commit` in the contract** is `1414997…`, the Themis
+  `feat/harness-integration` head carrying EDR-HARNESS-01 (commission door,
+  harness-evidence proposals, `themis-intake`), re-pinned 2026-09-26 after
+  both repos were published (was `fb83e82…`, main at integration time);
+  the host check (D-I-8) compares the deployed estate against it before
+  the mint. The spec hashes were computed from that commit's
+  `api/*.openapi.yaml`: the Governance spec moved (commissions, evidence
+  on proposals — additive to the six fields the read door projects), the
+  Registry spec did not.
 - **`THEMIS_API_KEY_READ`** is the read-door credential's environment
   name; unset → the door presents no credential and preflight warns
   (dev estates only).

@@ -44,3 +44,46 @@ Finding".
 
 **No runtime amendment:** the runtime already holds the authoritative
 `l8-delegation` witness.
+
+## D-L-2 — No delegation-specific proposal-admissibility rule (LOCKED 2026-09-26, owner)
+
+> Delegation affects proposal evidence and human review, but creates
+> no independent Themis admissibility condition while delegates remain
+> tool-less and without Governance access. Themis admits on the
+> existing commission, production, verification, and trust contracts;
+> it does not evaluate runtime reasoning structure.
+
+```
+Commission {Finding, skill@version + composition, deployment anchor}
+   → runtime governs delegation reachability (grant; anchor-pinned template registry)
+   → execution record {production chain, verification}
+   → proposal admissibility
+```
+
+Three decisive reasons:
+1. **Delegation permission is already inside the commissioned
+   identities** (method → grant → `delegate`; deployment → anchor →
+   template registry). A Themis rule "verify template X was permitted"
+   would duplicate runtime governance in Themis.
+2. **Invalid delegation is already observable runtime evidence:** the
+   seam refuses and `l8-delegation` records the outcome; visible in the
+   D-L-1 rendering. Visible ≠ an automatic admissibility condition.
+3. **Themis must not interpret runtime reasoning structure.** Themis
+   establishes what was commissioned, what executed, whether the
+   production chain exists, whether verification is reproducible, and
+   the evidence class. It never establishes "the model reasoned
+   correctly because delegate X saw evidence Y".
+
+Explicitly NOT rules: `delegate failed → proposal refused`;
+`delegate received Finding evidence → proposal refused`. Both would
+turn an execution detail or a reasoning path into Governance policy
+without an established decision. Instead: runtime evidence → D-L-1
+rendering → human proposer/decider → human judgment (B-T-2:
+admissibility mechanical, correctness human).
+
+**Forward-compatibility invariant (owner, explicit):** D-L-2 is valid
+only while the locked L8 tool-less / no-Governance-access boundary is
+in force. If a future L8 architecture grants delegates Themis or other
+governed capabilities, D-L-2 must be revisited, because commission
+correspondence alone would no longer characterize the delegate's
+authority surface. Not a reopening of L8 now.

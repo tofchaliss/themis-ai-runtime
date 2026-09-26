@@ -42,7 +42,7 @@ delegation, against the stable parent established by Row 4 (D-C-1..6).
 | # | Question | Recommendation (PROPOSED) | State |
 |---|---|---|---|
 | Q-L-1 | How do delegations appear in the evidence view and proposal evidence? | **LOCKED 2026-09-26 → D-L-1:** within the model-reasoning fact (seq, parent call seq, template, model identity, evidence refs + class, output id, outcome); `harness-execution/v1.delegations {count, seqs}` by reference only; wording: which execution received which authorized refs, never "who saw"; no runtime change. | LOCKED |
-| Q-L-2 | Does Themis need any delegation-specific admissibility rule at proposal time? | no: the commissioned method and deployment already cover the `delegate` grant and the template registry; a delegation that violated its template would have failed in the runtime record (outcome ≠ completed) and is visible in Q-L-1's rendering; adding a Themis rule would make Themis interpret runtime reasoning structure | OPEN |
+| Q-L-2 | Delegation-specific admissibility rule? | **LOCKED 2026-09-26 → D-L-2:** none; permission is inside the commissioned identities, invalid delegation is witnessed evidence, Themis never interprets reasoning structure; valid only while delegates stay tool-less. | LOCKED |
 | Q-L-3 | What must be recorded as the prohibition that keeps rows 3 and 11 stable? | "a tool-capable L8 is the decision that reopens Themis scope inheritance"; until then Themis scope reaches a delegate only through the parent's authorized reads (D-I-4/D-I-9 stay intact by construction) | OPEN |
 
 ## Not in scope

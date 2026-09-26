@@ -17,15 +17,15 @@ import (
 	"sort"
 	"strings"
 
-	l2 "github.com/tofchaliss/themis/context"
-	"github.com/tofchaliss/themis/deployment"
-	"github.com/tofchaliss/themis/execution"
-	"github.com/tofchaliss/themis/instructions"
-	"github.com/tofchaliss/themis/internal/strictjson"
-	"github.com/tofchaliss/themis/runtime/model"
-	"github.com/tofchaliss/themis/skills"
-	"github.com/tofchaliss/themis/state"
-	"github.com/tofchaliss/themis/tools"
+	l2 "github.com/tofchaliss/themis-ai-runtime/src/harness/context"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/deployment"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/execution"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/instructions"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/internal/strictjson"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/skills"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/tools"
 )
 
 // Config is the governance-side wiring an operator supplies once per

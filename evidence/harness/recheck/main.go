@@ -28,9 +28,9 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/tofchaliss/themis/deployment"
-	"github.com/tofchaliss/themis/ratchet"
-	"github.com/tofchaliss/themis/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/deployment"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/ratchet"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
 )
 
 func main() {

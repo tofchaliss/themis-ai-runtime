@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tofchaliss/themis/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
 )
 
 // Live operational proof (Q-L4-9, owner-authorized qwen2.5:7b after

@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/tofchaliss/themis/internal/llm"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/internal/llm"
 )
 
 // WriteRun writes the run envelope for one benchmark to

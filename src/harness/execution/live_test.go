@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tofchaliss/themis/runtime/model"
-	"github.com/tofchaliss/themis/tools"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/tools"
 )
 
 // L5 operational proof (design.md §4 proof gate; owner-authorized

@@ -30,15 +30,15 @@ import (
 	"regexp"
 	"strings"
 
-	hctx "github.com/tofchaliss/themis/context"
-	"github.com/tofchaliss/themis/instructions"
-	"github.com/tofchaliss/themis/orchestration"
-	"github.com/tofchaliss/themis/runtime/model"
-	"github.com/tofchaliss/themis/skills"
-	"github.com/tofchaliss/themis/state"
-	dseam "github.com/tofchaliss/themis/subagents/delegation/seam"
-	"github.com/tofchaliss/themis/tools"
-	"github.com/tofchaliss/themis/verification/seam"
+	hctx "github.com/tofchaliss/themis-ai-runtime/src/harness/context"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/instructions"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/orchestration"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/skills"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
+	dseam "github.com/tofchaliss/themis-ai-runtime/src/harness/subagents/delegation/seam"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/tools"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/verification/seam"
 )
 
 type ctx struct {

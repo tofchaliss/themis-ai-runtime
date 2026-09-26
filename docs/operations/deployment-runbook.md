@@ -216,7 +216,7 @@ the program goes in a file):
 ```bash
 cat > /tmp/ceilingcheck.go <<'GO'
 package main
-import ("fmt";"os";"github.com/tofchaliss/themis/execution")
+import ("fmt";"os";"github.com/tofchaliss/themis-ai-runtime/src/harness/execution")
 func main(){ if _,err:=execution.LoadCeiling(os.Args[1]);err!=nil{fmt.Println("REFUSED:",err);os.Exit(1)}; fmt.Println("ceiling loads") }
 GO
 cd "$REPO/src/harness" && go run /tmp/ceilingcheck.go "$DEPLOY/execution-ceiling.json"
@@ -284,7 +284,7 @@ must never reach Governance:
 ```bash
 cat > /tmp/anchorcheck.go <<'GO'
 package main
-import ("fmt";"os";"github.com/tofchaliss/themis/deployment")
+import ("fmt";"os";"github.com/tofchaliss/themis-ai-runtime/src/harness/deployment")
 func main(){ b,_:=os.ReadFile(os.Args[1]); a,err:=deployment.ParseAnchor(b,os.Args[1])
  if err!=nil{fmt.Println("REFUSED:",err);os.Exit(1)}; fmt.Println("anchor ok:",a.Name,a.Deployment,a.SHA256) }
 GO
@@ -299,7 +299,7 @@ anchor has no authority:
 ```bash
 cat > /tmp/admitcheck.go <<'GO'
 package main
-import ("fmt";"os";"github.com/tofchaliss/themis/deployment")
+import ("fmt";"os";"github.com/tofchaliss/themis-ai-runtime/src/harness/deployment")
 func main(){ _,err:=deployment.AdmitAnchor(os.Args[1],os.Args[2],os.Args[3])
  fmt.Println("pre-activation admission:",err) }
 GO

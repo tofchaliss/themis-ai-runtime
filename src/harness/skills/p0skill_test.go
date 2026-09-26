@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tofchaliss/themis/tools"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/tools"
 )
 
 const (

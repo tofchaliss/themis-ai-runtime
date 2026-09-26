@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/tofchaliss/themis/internal/llm"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/internal/llm"
 )
 
 // EvaluateRun normalizes a single run file. Run files are runtime-

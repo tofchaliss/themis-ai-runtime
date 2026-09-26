@@ -19,7 +19,7 @@ import (
 	"io"
 	"net/url"
 
-	"github.com/tofchaliss/themis/internal/llm"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/internal/llm"
 )
 
 // Role identifies a conversation participant.

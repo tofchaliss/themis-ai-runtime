@@ -16,7 +16,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tofchaliss/themis/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
 )
 
 // l6Sources: fact kinds whose refs are L6 ObjectIDs and whose

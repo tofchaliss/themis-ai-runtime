@@ -107,7 +107,7 @@ export ANCHOR_SHA="$(sha256sum policies/deployment/rsys4.json | cut -d' ' -f1)";
 # parse + schema validation
 cat >| /tmp/anchorcheck.go <<'GO'
 package main
-import ("fmt";"os";"github.com/tofchaliss/themis/deployment")
+import ("fmt";"os";"github.com/tofchaliss/themis-ai-runtime/src/harness/deployment")
 func main(){ b,_:=os.ReadFile(os.Args[1]); a,err:=deployment.ParseAnchor(b,os.Args[1])
  if err!=nil{fmt.Println("REFUSED:",err);os.Exit(1)}; fmt.Println("anchor ok:",a.Name,a.Deployment,a.SHA256) }
 GO
@@ -138,7 +138,7 @@ PY
 # =====================================================================
 cat >| /tmp/admitcheck.go <<'GO'
 package main
-import ("fmt";"os";"github.com/tofchaliss/themis/deployment")
+import ("fmt";"os";"github.com/tofchaliss/themis-ai-runtime/src/harness/deployment")
 func main(){ _,err:=deployment.AdmitAnchor(os.Args[1],os.Args[2],os.Args[3])
  fmt.Println("admission:",err) }
 GO
@@ -213,9 +213,9 @@ grep -o '"class":"[a-z0-9-]*"' "$DEPLOY"/state/tasks/rsys4-deleg-1/*.log 2>/dev/
 cat >| /tmp/recon.go <<'GO'
 package main
 import ("encoding/json";"fmt";"os";"path/filepath"
- hctx "github.com/tofchaliss/themis/context";"github.com/tofchaliss/themis/state"
- "github.com/tofchaliss/themis/subagents/delegation/seam";"github.com/tofchaliss/themis/tools"
- vseam "github.com/tofchaliss/themis/verification/seam")
+ hctx "github.com/tofchaliss/themis-ai-runtime/src/harness/context";"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
+ "github.com/tofchaliss/themis-ai-runtime/src/harness/subagents/delegation/seam";"github.com/tofchaliss/themis-ai-runtime/src/harness/tools"
+ vseam "github.com/tofchaliss/themis-ai-runtime/src/harness/verification/seam")
 func main(){ root,err:=state.OpenRoot(os.Args[1]); if err!=nil{panic(err)}
  reg,err:=tools.LoadRegistry(filepath.Join(os.Args[3],"policies/tools/registry-v5.json")); if err!=nil{panic(err)}
  cfg:=seam.ReconstructConfig{RegistryHash:reg.Hash,ToolTrust:func(n string)(hctx.AuthorityClass,bool){for _,t:=range reg.Tools{if t.Name==n{return t.Trust,true}};return "",false}}

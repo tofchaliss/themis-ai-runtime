@@ -20,10 +20,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tofchaliss/themis/orchestration"
-	"github.com/tofchaliss/themis/runtime/model"
-	"github.com/tofchaliss/themis/state"
-	"github.com/tofchaliss/themis/tools"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/orchestration"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/tools"
 )
 
 type scripted struct {

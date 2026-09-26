@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tofchaliss/themis/instructions"
-	"github.com/tofchaliss/themis/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/instructions"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
 )
 
 // Operational proof (gate-0 decision): one live local-model run of a

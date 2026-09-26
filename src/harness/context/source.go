@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/tofchaliss/themis/confine"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/confine"
 )
 
 // SourceKind is a registered connector kind. Recognition never

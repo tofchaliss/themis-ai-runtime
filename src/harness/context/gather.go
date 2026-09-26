@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/tofchaliss/themis/instructions"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/instructions"
 )
 
 // Assignment binds one registered source to one contract slot — the

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tofchaliss/themis/internal/llm"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/internal/llm"
 )
 
 func TestResolve(t *testing.T) {

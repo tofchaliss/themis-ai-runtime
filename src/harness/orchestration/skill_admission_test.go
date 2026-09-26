@@ -19,10 +19,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tofchaliss/themis/deployment"
-	"github.com/tofchaliss/themis/runtime/model"
-	"github.com/tofchaliss/themis/skills"
-	"github.com/tofchaliss/themis/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/deployment"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/skills"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
 )
 
 // D-SA-5 coherence matrix at LoadEnvelope: the load-bearing `skill`

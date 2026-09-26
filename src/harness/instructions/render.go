@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tofchaliss/themis/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
 )
 
 // ErrRenderViolation marks a rendered EIS that failed final

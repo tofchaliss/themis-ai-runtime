@@ -3,7 +3,7 @@ package context
 import (
 	"testing"
 
-	"github.com/tofchaliss/themis/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
 )
 
 // C-L8-7: the provider-response ceiling (P-L8-1) never exceeds L2's

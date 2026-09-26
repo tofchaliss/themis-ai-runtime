@@ -18,9 +18,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tofchaliss/themis/runtime/model"
-	"github.com/tofchaliss/themis/skills"
-	"github.com/tofchaliss/themis/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/skills"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
 )
 
 // instantiateP0 compiles the authored investigate-cve@1 composition

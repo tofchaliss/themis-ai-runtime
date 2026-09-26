@@ -2,13 +2,13 @@ package tools
 
 import (
 	"encoding/json"
-	hctx "github.com/tofchaliss/themis/context"
+	hctx "github.com/tofchaliss/themis-ai-runtime/src/harness/context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/tofchaliss/themis/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
 )
 
 func mkCall(name, args string) model.ToolCall {

@@ -6,7 +6,7 @@ package context
 // the exported L2 contract; ErrConfinement is the same error value,
 // so errors.Is holds across the delegation.
 
-import "github.com/tofchaliss/themis/confine"
+import "github.com/tofchaliss/themis-ai-runtime/src/harness/confine"
 
 // ConfineCreatePath validates a mutation target under root
 // (CreateMode). See confine.CreatePath for the locked rules.

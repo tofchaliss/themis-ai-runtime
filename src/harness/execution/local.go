@@ -15,7 +15,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/tofchaliss/themis/confine"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/confine"
 )
 
 var (

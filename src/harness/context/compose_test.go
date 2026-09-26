@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tofchaliss/themis/instructions"
-	"github.com/tofchaliss/themis/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/instructions"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
 )
 
 // eisFixture resolves a small real EIS through the L1 seam.

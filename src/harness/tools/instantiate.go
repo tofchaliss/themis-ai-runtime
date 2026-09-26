@@ -21,7 +21,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/tofchaliss/themis/internal/strictjson"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/internal/strictjson"
 )
 
 // skillRefSyntax: an exact delegation-template reference, name@version

@@ -1,6 +1,6 @@
 package model
 
-import "github.com/tofchaliss/themis/internal/llm"
+import "github.com/tofchaliss/themis-ai-runtime/src/harness/internal/llm"
 
 // The model layer's shared types are re-exported here so an external
 // consumer needs only this package: the implementation lives in

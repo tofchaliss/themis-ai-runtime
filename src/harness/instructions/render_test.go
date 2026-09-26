@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tofchaliss/themis/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
 )
 
 func renderFixture(t *testing.T) (*EffectiveSet, *Policy) {

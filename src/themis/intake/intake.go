@@ -47,10 +47,10 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/tofchaliss/themis/deployment"
-	"github.com/tofchaliss/themis/state"
-	"github.com/tofchaliss/themis/verification"
-	vseam "github.com/tofchaliss/themis/verification/seam"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/deployment"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/verification"
+	vseam "github.com/tofchaliss/themis-ai-runtime/src/harness/verification/seam"
 )
 
 // Tuple is the referencable execution tuple (D-T-1): the ADMISSIBILITY

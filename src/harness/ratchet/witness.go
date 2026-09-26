@@ -19,7 +19,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/tofchaliss/themis/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
 )
 
 // witnessClasses maps each L6-plane fact kind to the event class

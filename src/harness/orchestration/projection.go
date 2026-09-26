@@ -9,10 +9,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/tofchaliss/themis/execution"
-	"github.com/tofchaliss/themis/runtime/model"
-	"github.com/tofchaliss/themis/state"
-	"github.com/tofchaliss/themis/tools"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/execution"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/tools"
 )
 
 // ProjectDelegationMessage re-derives the paired tool message for the

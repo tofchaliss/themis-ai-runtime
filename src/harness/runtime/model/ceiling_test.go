@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tofchaliss/themis/internal/llm"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/internal/llm"
 )
 
 func serve(t *testing.T, body string) *httptest.Server {

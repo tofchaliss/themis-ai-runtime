@@ -12,11 +12,13 @@ word. `rsys@6` is a host act (I-M5), never minted from the laptop.
 I-M0 → W-M1 → W-M2 → I-M1 → I-M2 → I-M3 (absorbs W-M3) → I-M4 → I-M5 (absorbs W-M4).
 `themis-v0` T-M4/T-M5 are SUPERSEDED by I-M3/I-M5.
 
-## I-M0 — Harness module rename (D-I-2; Class 2, mechanical)
-- [ ] `github.com/tofchaliss/themis` → `github.com/tofchaliss/themis-ai-runtime/src/harness`
-      in one commit: 104 Go files, 3 `go.mod`, `go.work`, ~10 doc/procedure refs
-- [ ] Both constitution hashes asserted UNCHANGED by test; anchors untouched
-- [ ] Hermetic suites green in both modules; evidence tools build
+## I-M0 — Harness module rename (D-I-2; Class 2, mechanical) — LANDED 2026-09-26
+- [x] `github.com/tofchaliss/themis` → `github.com/tofchaliss/themis-ai-runtime/src/harness`
+      in one commit: 110 Go files, 3 `go.mod` (`go.work` needs no change: it lists directories), 7 doc/procedure refs;
+      openspec decision records keep the old name as history
+- [x] Both constitution hashes asserted UNCHANGED by new pin tests
+      (`state/constitution_pin_test.go` 33c6f6c5…, `orchestration/constitution_pin_test.go` 008be050…); anchors untouched
+- [x] Hermetic suites green in both modules (live Ollama proofs skipped via unreachable endpoint); evidence tools build with `GOWORK=off`
 
 ## W-M1, W-M2 — see `openspec/changes/l5-witness-events/tasks.md` (harness-only)
 

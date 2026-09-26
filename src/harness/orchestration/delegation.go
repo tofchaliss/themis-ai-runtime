@@ -15,11 +15,11 @@ import (
 	"fmt"
 	"time"
 
-	hctx "github.com/tofchaliss/themis/context"
-	"github.com/tofchaliss/themis/instructions"
-	"github.com/tofchaliss/themis/runtime/model"
-	"github.com/tofchaliss/themis/state"
-	"github.com/tofchaliss/themis/tools"
+	hctx "github.com/tofchaliss/themis-ai-runtime/src/harness/context"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/instructions"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/tools"
 )
 
 // Delegator is the one-way L8 seam. Three entry points, each a pure

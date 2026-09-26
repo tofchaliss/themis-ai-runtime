@@ -52,7 +52,7 @@ reformat it after this point.
 ```bash
 cat > /tmp/anchorcheck.go <<'GO'
 package main
-import ("fmt";"os";"github.com/tofchaliss/themis/deployment")
+import ("fmt";"os";"github.com/tofchaliss/themis-ai-runtime/src/harness/deployment")
 func main(){ b,_:=os.ReadFile(os.Args[1]); a,err:=deployment.ParseAnchor(b,os.Args[1])
  if err!=nil{fmt.Println("REFUSED:",err);os.Exit(1)}; fmt.Println("anchor ok:",a.Name,a.Deployment,a.SHA256) }
 GO
@@ -108,7 +108,7 @@ PY
 cd "$REPO" && ANCHOR_SHA=$(shasum -a 256 policies/deployment/rsys4.json | cut -d' ' -f1); echo "$ANCHOR_SHA"
 cat > /tmp/admitcheck.go <<'GO'
 package main
-import ("fmt";"os";"github.com/tofchaliss/themis/deployment")
+import ("fmt";"os";"github.com/tofchaliss/themis-ai-runtime/src/harness/deployment")
 func main(){ _,err:=deployment.AdmitAnchor(os.Args[1],os.Args[2],os.Args[3])
  fmt.Println("pre-activation admission:",err) }
 GO

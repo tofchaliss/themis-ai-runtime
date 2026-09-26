@@ -16,8 +16,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/tofchaliss/themis/state"
-	"github.com/tofchaliss/themis/verification"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/verification"
 )
 
 // ReconstructTask reconstructs every committed evaluation of a task

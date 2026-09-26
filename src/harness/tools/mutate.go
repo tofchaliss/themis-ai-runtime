@@ -15,7 +15,7 @@ import (
 	"os"
 	"strings"
 
-	cfn "github.com/tofchaliss/themis/confine"
+	cfn "github.com/tofchaliss/themis-ai-runtime/src/harness/confine"
 )
 
 // ErrWriteRefused joins the bounded executor error vocabulary for the

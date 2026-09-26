@@ -22,12 +22,12 @@ import (
 	"fmt"
 	"time"
 
-	hctx "github.com/tofchaliss/themis/context"
-	"github.com/tofchaliss/themis/instructions"
-	"github.com/tofchaliss/themis/orchestration"
-	"github.com/tofchaliss/themis/runtime/model"
-	"github.com/tofchaliss/themis/state"
-	"github.com/tofchaliss/themis/subagents/delegation"
+	hctx "github.com/tofchaliss/themis-ai-runtime/src/harness/context"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/instructions"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/orchestration"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/subagents/delegation"
 )
 
 // Seam holds the registry in force (loaded once at construction —

@@ -16,12 +16,12 @@ import (
 	"strings"
 	"testing"
 
-	hctx "github.com/tofchaliss/themis/context"
-	"github.com/tofchaliss/themis/orchestration"
-	"github.com/tofchaliss/themis/runtime/model"
-	"github.com/tofchaliss/themis/state"
-	"github.com/tofchaliss/themis/subagents/delegation"
-	"github.com/tofchaliss/themis/tools"
+	hctx "github.com/tofchaliss/themis-ai-runtime/src/harness/context"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/orchestration"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/subagents/delegation"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/tools"
 )
 
 func trustFor(t *testing.T, w *world) ReconstructConfig {

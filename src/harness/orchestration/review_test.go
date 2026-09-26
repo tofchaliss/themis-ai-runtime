@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tofchaliss/themis/runtime/model"
-	"github.com/tofchaliss/themis/state"
-	"github.com/tofchaliss/themis/tools"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/tools"
 )
 
 // Test review HIGH: phase capability sets narrow the grant at the

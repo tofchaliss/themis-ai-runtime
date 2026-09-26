@@ -18,13 +18,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tofchaliss/themis/deployment"
-	"github.com/tofchaliss/themis/orchestration"
-	"github.com/tofchaliss/themis/ratchet"
-	"github.com/tofchaliss/themis/runtime/model"
-	"github.com/tofchaliss/themis/state"
-	"github.com/tofchaliss/themis/tools"
-	seam "github.com/tofchaliss/themis/verification/seam"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/deployment"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/orchestration"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/ratchet"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/tools"
+	seam "github.com/tofchaliss/themis-ai-runtime/src/harness/verification/seam"
 )
 
 const repoRoot = "../../.."

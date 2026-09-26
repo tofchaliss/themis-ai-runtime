@@ -15,7 +15,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tofchaliss/themis/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
 )
 
 func toolCallOf(id, name string, a json.RawMessage) model.ToolCall {

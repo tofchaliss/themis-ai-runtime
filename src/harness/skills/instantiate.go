@@ -18,10 +18,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/tofchaliss/themis/confine"
-	"github.com/tofchaliss/themis/execution"
-	"github.com/tofchaliss/themis/state"
-	"github.com/tofchaliss/themis/tools"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/confine"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/execution"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/tools"
 )
 
 // sealedComposition builds the commitment L7 verifies against: the

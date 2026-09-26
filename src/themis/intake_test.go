@@ -19,9 +19,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
 	"github.com/tofchaliss/themis-app/intake"
-	"github.com/tofchaliss/themis/runtime/model"
-	"github.com/tofchaliss/themis/state"
 )
 
 const reportB = `{"finding": "FIND-2026-0001: vulnerable-dep v1 in go.mod", "remediation": "bump to v2 (revised after verification)", "evidence": "go.mod updated; tests green"}`

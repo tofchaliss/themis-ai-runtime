@@ -10,7 +10,7 @@ package ratchet
 import (
 	"fmt"
 
-	"github.com/tofchaliss/themis/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
 )
 
 // StoreInstance persists any L11 instance artifact (comparison

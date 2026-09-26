@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/tofchaliss/themis/benchmarks/internal/evaluator"
-	"github.com/tofchaliss/themis/benchmarks/internal/validator"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/benchmarks/internal/evaluator"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/benchmarks/internal/validator"
 )
 
 // LoadResponses loads evaluated responses together with their validation

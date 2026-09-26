@@ -3,7 +3,7 @@ package model
 import (
 	"fmt"
 
-	"github.com/tofchaliss/themis/internal/llm"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/internal/llm"
 )
 
 // Resolve returns the chat runtime, wire model identifier, and

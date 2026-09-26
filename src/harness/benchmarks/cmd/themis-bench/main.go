@@ -10,12 +10,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/tofchaliss/themis/benchmarks/internal/benchmark"
-	"github.com/tofchaliss/themis/benchmarks/internal/evaluator"
-	"github.com/tofchaliss/themis/benchmarks/internal/gate"
-	"github.com/tofchaliss/themis/benchmarks/internal/report"
-	"github.com/tofchaliss/themis/benchmarks/internal/validator"
-	"github.com/tofchaliss/themis/internal/llm"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/benchmarks/internal/benchmark"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/benchmarks/internal/evaluator"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/benchmarks/internal/gate"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/benchmarks/internal/report"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/benchmarks/internal/validator"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/internal/llm"
 )
 
 const defaultEndpoint = "http://localhost:11434"

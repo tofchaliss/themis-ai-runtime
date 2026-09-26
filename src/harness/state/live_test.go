@@ -20,10 +20,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tofchaliss/themis/execution"
-	"github.com/tofchaliss/themis/instructions"
-	"github.com/tofchaliss/themis/runtime/model"
-	"github.com/tofchaliss/themis/tools"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/execution"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/instructions"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/tools"
 )
 
 func TestLiveTaskReconstruction(t *testing.T) {

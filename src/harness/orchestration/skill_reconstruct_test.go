@@ -16,10 +16,10 @@ import (
 	"strings"
 	"testing"
 
-	l2 "github.com/tofchaliss/themis/context"
-	"github.com/tofchaliss/themis/execution"
-	"github.com/tofchaliss/themis/skills"
-	"github.com/tofchaliss/themis/state"
+	l2 "github.com/tofchaliss/themis-ai-runtime/src/harness/context"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/execution"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/skills"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
 )
 
 // From record + catalog + bytes alone: which reviewed composition ran?

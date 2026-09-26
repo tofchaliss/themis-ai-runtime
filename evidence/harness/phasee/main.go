@@ -26,8 +26,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/tofchaliss/themis/ratchet"
-	"github.com/tofchaliss/themis/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/ratchet"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
 )
 
 func main() {

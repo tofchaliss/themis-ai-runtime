@@ -19,8 +19,8 @@ import (
 	"strings"
 	"testing"
 
-	hctx "github.com/tofchaliss/themis/context"
-	"github.com/tofchaliss/themis/instructions"
+	hctx "github.com/tofchaliss/themis-ai-runtime/src/harness/context"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/instructions"
 )
 
 var repoRoot = filepath.Join("..", "..", "..", "..")

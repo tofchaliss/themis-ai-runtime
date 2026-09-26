@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/tofchaliss/themis/benchmarks/internal/evaluator"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/benchmarks/internal/evaluator"
 )
 
 // ValidateAll validates all evaluated benchmark responses. It keeps going

@@ -14,7 +14,7 @@ Nothing here grants any execution authority.
 
 | Surface | Form | Notes |
 |---|---|---|
-| Governed harness (L1–L11) | **Go library**, module `github.com/tofchaliss/themis` | entered through `orchestration.Open` / `SubmitTask`; no production entry binary ships |
+| Governed harness (L1–L11) | **Go library**, module `github.com/tofchaliss/themis-ai-runtime/src/harness` | entered through `orchestration.Open` / `SubmitTask`; no production entry binary ships |
 | `themis-ratchet` | binary, `src/harness/cmd/themis-ratchet` | L11 comparative-evidence CLI (`compare`, `set`, `reconstruct`, `derive`, `candidate`, `plan`) |
 | `themis-bench` | binary, `src/harness/benchmarks/cmd/themis-bench` | deterministic model benchmark suite |
 | model router | package `src/harness/internal/service` | verdict-gated selection among admitted models (D-L11-8 Class 2) |

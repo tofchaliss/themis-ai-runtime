@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	hctx "github.com/tofchaliss/themis/context"
-	"github.com/tofchaliss/themis/runtime/model"
+	hctx "github.com/tofchaliss/themis-ai-runtime/src/harness/context"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
 )
 
 // unframeResult strips the D-L4-7 result frame, returning the payload

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tofchaliss/themis/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
 )
 
 // --- Loader refusal expansion (test review §1).

@@ -1,4 +1,4 @@
-module github.com/tofchaliss/themis
+module github.com/tofchaliss/themis-ai-runtime/src/harness
 
 go 1.24
 

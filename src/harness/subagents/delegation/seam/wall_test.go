@@ -35,8 +35,8 @@ func parsePkg(t *testing.T, dir string) (*token.FileSet, map[string]*ast.File) {
 func TestSeamIsNotASecondL7(t *testing.T) {
 	fset, files := parsePkg(t, ".")
 	forbidden := map[string]bool{
-		`"github.com/tofchaliss/themis/tools"`:     true,
-		`"github.com/tofchaliss/themis/execution"`: true,
+		`"github.com/tofchaliss/themis-ai-runtime/src/harness/tools"`:     true,
+		`"github.com/tofchaliss/themis-ai-runtime/src/harness/execution"`: true,
 		`"os/exec"`: true, `"net"`: true, `"net/http"`: true, `"math/rand"`: true,
 	}
 	modelLiteral := regexp.MustCompile(`(?i)(qwen|gpt|llama|mistral|deepseek|claude)`)
@@ -119,10 +119,10 @@ func TestSeamIsNotASecondL7(t *testing.T) {
 func TestDelegationPackageWall(t *testing.T) {
 	_, files := parsePkg(t, "..")
 	forbidden := map[string]bool{
-		`"github.com/tofchaliss/themis/orchestration"`: true,
-		`"github.com/tofchaliss/themis/tools"`:         true,
-		`"github.com/tofchaliss/themis/execution"`:     true,
-		`"github.com/tofchaliss/themis/runtime/model"`: true,
+		`"github.com/tofchaliss/themis-ai-runtime/src/harness/orchestration"`: true,
+		`"github.com/tofchaliss/themis-ai-runtime/src/harness/tools"`:         true,
+		`"github.com/tofchaliss/themis-ai-runtime/src/harness/execution"`:     true,
+		`"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"`: true,
 	}
 	for name, f := range files {
 		for _, imp := range f.Imports {

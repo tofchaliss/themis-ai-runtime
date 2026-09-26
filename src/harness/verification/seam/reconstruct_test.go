@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/tofchaliss/themis/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
 )
 
 func seedTask(t *testing.T, tamperOutcome bool) (*state.Root, string) {

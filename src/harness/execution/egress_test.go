@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tofchaliss/themis/runtime/model"
-	"github.com/tofchaliss/themis/tools"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/tools"
 )
 
 func provisioned(t *testing.T) (*Env, *WorkspaceExecutionCeiling, *ProvisionSpec, string) {

@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/tofchaliss/themis/execution"
-	"github.com/tofchaliss/themis/runtime/model"
-	"github.com/tofchaliss/themis/tools"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/execution"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/tools"
 )
 
 func TestStaticExecutionBoundWithDelegate(t *testing.T) {

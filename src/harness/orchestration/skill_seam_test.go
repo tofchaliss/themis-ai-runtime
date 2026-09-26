@@ -14,8 +14,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tofchaliss/themis/runtime/model"
-	"github.com/tofchaliss/themis/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
 )
 
 // withEnvelopeFields rewrites an envelope, adding or overriding

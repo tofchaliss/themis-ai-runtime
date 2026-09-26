@@ -16,9 +16,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/tofchaliss/themis/confine"
-	hctx "github.com/tofchaliss/themis/context"
-	"github.com/tofchaliss/themis/internal/strictjson"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/confine"
+	hctx "github.com/tofchaliss/themis-ai-runtime/src/harness/context"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/internal/strictjson"
 )
 
 // Pin is a {path, sha256} reference to a governed byte artifact,

@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	harnessModule = "github.com/tofchaliss/themis"
+	harnessModule = "github.com/tofchaliss/themis-ai-runtime/src/harness"
 	themisModule  = "github.com/tofchaliss/themis-app"
 	intakePkg     = themisModule + "/intake"
 	storePkg      = themisModule + "/store"

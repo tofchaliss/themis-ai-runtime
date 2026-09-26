@@ -21,8 +21,8 @@ import (
 	"regexp"
 	"strings"
 
-	hctx "github.com/tofchaliss/themis/context"
-	"github.com/tofchaliss/themis/internal/strictjson"
+	hctx "github.com/tofchaliss/themis-ai-runtime/src/harness/context"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/internal/strictjson"
 )
 
 var (

@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/tofchaliss/themis/internal/llm"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/internal/llm"
 )
 
 // OpenAIChat speaks the OpenAI-compatible /chat/completions protocol

@@ -290,7 +290,7 @@ func TestRatchetImportersAreClosed(t *testing.T) {
 			return nil // non-building fixtures are not importers
 		}
 		for _, imp := range f.Imports {
-			if strings.Trim(imp.Path.Value, `"`) == "github.com/tofchaliss/themis/ratchet" {
+			if strings.Trim(imp.Path.Value, `"`) == "github.com/tofchaliss/themis-ai-runtime/src/harness/ratchet" {
 				rel, rerr := filepath.Rel(root, filepath.Dir(path))
 				if rerr != nil || !allowedImporters[filepath.ToSlash(rel)] {
 					t.Errorf("%s imports the ratchet package — L11 output is terminal and enters no other plane", path)

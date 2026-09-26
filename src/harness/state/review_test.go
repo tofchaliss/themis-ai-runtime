@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tofchaliss/themis/tools"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/tools"
 )
 
 // Security HIGH-1: recovery must never launder a record Verify would

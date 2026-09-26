@@ -1,6 +1,6 @@
 # Architecture-to-Code Map — Baseline · Mapping · Gap Analysis · Sequence
 
-**Date:** 2026-09-04 · **Method:** full read-only inspection of all 54 Go files in `src/harness` (module `github.com/tofchaliss/themis`, Go 1.24, sole dependency `spf13/cobra`). No code was changed. Complements `harness-layer-baseline.md` (the summary pass) with code-level evidence and determined statuses.
+**Date:** 2026-09-04 · **Method:** full read-only inspection of all 54 Go files in `src/harness` (module `github.com/tofchaliss/themis-ai-runtime/src/harness`, Go 1.24, sole dependency `spf13/cobra`). No code was changed. Complements `harness-layer-baseline.md` (the summary pass) with code-level evidence and determined statuses.
 
 **Status vocabulary:** `REUSE` (as-is) · `EXTEND` (grow in place) · `EVOLVE` (reshape, behavior-compatible where possible) · `BUILD` (greenfield) · `DEFER` (post-P0).
 

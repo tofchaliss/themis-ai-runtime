@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	hctx "github.com/tofchaliss/themis/context"
-	"github.com/tofchaliss/themis/runtime/model"
+	hctx "github.com/tofchaliss/themis-ai-runtime/src/harness/context"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
 )
 
 // confine delegates to the single confinement implementation (L2's) —

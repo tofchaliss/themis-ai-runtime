@@ -14,7 +14,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/tofchaliss/themis/skills"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/skills"
 )
 
 type kv map[string]any

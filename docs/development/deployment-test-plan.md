@@ -389,8 +389,8 @@ go run ./cmd/themis-run -deploy "$DEPLOY" -governed-root "$REPO" \
 cat > /tmp/recon.go <<'GO'
 package main
 import ("encoding/json";"fmt";"os";"path/filepath"
- hctx "github.com/tofchaliss/themis/context";"github.com/tofchaliss/themis/state"
- "github.com/tofchaliss/themis/subagents/delegation/seam";"github.com/tofchaliss/themis/tools")
+ hctx "github.com/tofchaliss/themis-ai-runtime/src/harness/context";"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
+ "github.com/tofchaliss/themis-ai-runtime/src/harness/subagents/delegation/seam";"github.com/tofchaliss/themis-ai-runtime/src/harness/tools")
 func main(){ root,err:=state.OpenRoot(os.Args[1]); if err!=nil{panic(err)}
  reg,err:=tools.LoadRegistry(filepath.Join(os.Args[3],"policies/tools/registry-v5.json")); if err!=nil{panic(err)}
  cfg:=seam.ReconstructConfig{RegistryHash:reg.Hash,ToolTrust:func(n string)(hctx.AuthorityClass,bool){for _,t:=range reg.Tools{if t.Name==n{return t.Trust,true}};return "",false}}

@@ -63,7 +63,7 @@ Two cross-layer boundaries hold the chain together:
 
 | Component | Form | Purpose |
 |---|---|---|
-| [`src/harness/`](src/harness/) | Go library (`github.com/tofchaliss/themis`) | the governed chain L1–L11 + G1; entered via `orchestration.Open` / `SubmitTask` |
+| [`src/harness/`](src/harness/) | Go library (`github.com/tofchaliss/themis-ai-runtime/src/harness`) | the governed chain L1–L11 + G1; entered via `orchestration.Open` / `SubmitTask` |
 | `src/harness/cmd/themis-ratchet/` | `themis-ratchet` | L11 comparative-evidence CLI: `compare`, `set`, `reconstruct`, `derive`, `candidate`, `plan` |
 | [`src/harness/benchmarks/`](src/harness/benchmarks/) | `themis-bench` | 20 security benchmarks: run, evaluate, validate, report, compare, gate |
 | `src/harness/internal/service/` | package | model router — benchmark-verdict-gated selection among admitted models (D-L11-8 Class 2) |

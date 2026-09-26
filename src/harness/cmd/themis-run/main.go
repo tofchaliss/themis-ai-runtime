@@ -35,13 +35,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/instructions"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/orchestration"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
+	dseam "github.com/tofchaliss/themis-ai-runtime/src/harness/subagents/delegation/seam"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/tools"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/verification/seam"
 	tstore "github.com/tofchaliss/themis-app/store"
-	"github.com/tofchaliss/themis/instructions"
-	"github.com/tofchaliss/themis/orchestration"
-	"github.com/tofchaliss/themis/runtime/model"
-	dseam "github.com/tofchaliss/themis/subagents/delegation/seam"
-	"github.com/tofchaliss/themis/tools"
-	"github.com/tofchaliss/themis/verification/seam"
 )
 
 func main() {

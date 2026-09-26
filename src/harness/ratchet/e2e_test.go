@@ -15,7 +15,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tofchaliss/themis/state"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
 )
 
 func TestRatchetEndToEndSlice(t *testing.T) {

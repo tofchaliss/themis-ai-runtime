@@ -18,8 +18,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tofchaliss/themis/confine"
-	"github.com/tofchaliss/themis/internal/strictjson"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/confine"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/internal/strictjson"
 )
 
 const (

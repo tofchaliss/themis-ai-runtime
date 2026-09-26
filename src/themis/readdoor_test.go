@@ -22,16 +22,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/deployment"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/instructions"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/orchestration"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/runtime/model"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/skills"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
+	dseam "github.com/tofchaliss/themis-ai-runtime/src/harness/subagents/delegation/seam"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/tools"
+	vseam "github.com/tofchaliss/themis-ai-runtime/src/harness/verification/seam"
 	"github.com/tofchaliss/themis-app/store"
-	"github.com/tofchaliss/themis/deployment"
-	"github.com/tofchaliss/themis/instructions"
-	"github.com/tofchaliss/themis/orchestration"
-	"github.com/tofchaliss/themis/runtime/model"
-	"github.com/tofchaliss/themis/skills"
-	"github.com/tofchaliss/themis/state"
-	dseam "github.com/tofchaliss/themis/subagents/delegation/seam"
-	"github.com/tofchaliss/themis/tools"
-	vseam "github.com/tofchaliss/themis/verification/seam"
 )
 
 func repoRoot(t *testing.T) string {

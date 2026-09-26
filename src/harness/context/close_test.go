@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tofchaliss/themis/instructions"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/instructions"
 )
 
 // The REAL chooseFence present-closure: candidate 0 embedded in

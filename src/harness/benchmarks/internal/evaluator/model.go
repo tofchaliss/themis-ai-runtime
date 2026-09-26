@@ -1,6 +1,6 @@
 package evaluator
 
-import "github.com/tofchaliss/themis/internal/llm"
+import "github.com/tofchaliss/themis-ai-runtime/src/harness/internal/llm"
 
 // Metrics is the normalized execution metrics of a run.
 type Metrics = llm.Metrics

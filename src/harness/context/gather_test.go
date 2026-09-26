@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tofchaliss/themis/instructions"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/instructions"
 )
 
 func writeFile(t *testing.T, dir, name, content string) {

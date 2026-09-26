@@ -12,7 +12,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/tofchaliss/themis/benchmarks/internal/validator"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/benchmarks/internal/validator"
 )
 
 // Delta is the score change of one benchmark between two dates.

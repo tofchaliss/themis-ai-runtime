@@ -26,6 +26,7 @@ func provisioned(t *testing.T) (*Env, *WorkspaceExecutionCeiling, *ProvisionSpec
 	if err != nil {
 		t.Fatal(err)
 	}
+	mustWitness(t, env)
 	return env, ceiling, spec, sha
 }
 
@@ -139,6 +140,7 @@ func TestEgressObservedBreachRefuses(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	mustWitness(t, env)
 	ws := env.Workspace()
 	if err := os.WriteFile(filepath.Join(ws.Root, "big.go"), []byte("well over eight bytes\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -238,6 +240,7 @@ func TestEgressEncodedArtifactBound(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	mustWitness(t, env)
 	// 600 source bytes: under the 700 total, but the encoded manifest
 	// (provenance + hashes + escaped content) exceeds it.
 	if err := os.WriteFile(filepath.Join(env.Workspace().Root, "big.txt"), []byte(strings.Repeat("x", 600)), 0o644); err != nil {
@@ -313,6 +316,7 @@ func TestEgressCountAndTotalBounds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	mustWitness(t, env)
 	ws := env.Workspace()
 	for _, f := range []string{"a.txt", "b.txt"} {
 		if err := os.WriteFile(filepath.Join(ws.Root, f), []byte(strings.Repeat("y", 20)), 0o644); err != nil {
@@ -339,6 +343,7 @@ func TestEgressCountAndTotalBounds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	mustWitness(t, env2)
 	for _, f := range []string{"c.txt", "d.txt", "e.txt"} {
 		if err := os.WriteFile(filepath.Join(env2.Workspace().Root, f), []byte("z"), 0o644); err != nil {
 			t.Fatal(err)
@@ -466,6 +471,7 @@ func TestEgressMemObservedGate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	mustWitness(t, env)
 	store, _ := NewArtifactStore(filepath.Join(t.TempDir(), "s"))
 	if err := env.Seal(SealTaskComplete); err != nil {
 		t.Fatal(err)
@@ -542,7 +548,7 @@ func TestArtifactStoreImmutability(t *testing.T) {
 // capability exists in registry-v2, and the env carries no credential
 // variables.
 func TestNoPushStructuralProof(t *testing.T) {
-	e := &Env{state: StateActive, remaining: 1 << 40}
+	e := &Env{witness: &recWitness{}, state: StateActive, remaining: 1 << 40}
 	for _, sub := range []string{"push", "commit", "fetch", "pull", "remote"} {
 		if _, err := e.ExecGit(1, sub); err == nil || !strings.Contains(err.Error(), "outside the active invocation vocabulary") {
 			t.Errorf("%q must be outside the vocabulary: %v", sub, err)
@@ -558,7 +564,7 @@ func TestNoPushStructuralProof(t *testing.T) {
 			t.Errorf("registry-v2 must not declare %q", td.Name)
 		}
 	}
-	for _, kv := range (&Env{homeDir: "/h", tmpDir: "/t"}).allowEnv() {
+	for _, kv := range (&Env{witness: &recWitness{}, homeDir: "/h", tmpDir: "/t"}).allowEnv() {
 		k := strings.SplitN(kv, "=", 2)[0]
 		switch k {
 		case "HOME", "TMPDIR", "LC_ALL", "GIT_CONFIG_GLOBAL", "GIT_CONFIG_SYSTEM", "GIT_CONFIG_NOSYSTEM", "GIT_TERMINAL_PROMPT":
@@ -604,7 +610,7 @@ func TestManifestBuildRefusedOutsideEgressing(t *testing.T) {
 	// precedes any dereference of its arguments — nil is safe here
 	// precisely because nothing has been touched yet.
 	for _, st := range []State{StateProvisioning, StateSealed, StateDestroyed} {
-		e := &Env{state: st}
+		e := &Env{witness: &recWitness{}, state: st}
 		if _, nerr := e.buildManifest(nil, nil); nerr == nil {
 			t.Errorf("state %s: a manifest was built outside EGRESSING", st)
 		} else if !strings.Contains(nerr.Error(), "manifest build refused in state") {

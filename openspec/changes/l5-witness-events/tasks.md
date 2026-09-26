@@ -26,27 +26,40 @@ says so. `rsys@6` is a host act (W-M4), never minted from the laptop.
       from the hash → killed; widen `l2-delivery` to a second writer →
       killed (hash pin); let L7 write an L5 class → killed
 
-## W-M2 — L5 emission handle and the witnesses (Class 3)
-- [ ] `TaskRecord.L5Sink()` → handle with `Transition(from, to, reason)`
-      and `Op(...)`/`Egress(...)` only; writer fixed inside `state`; no
-      class or writer parameter; refuses after terminal like AppendEvent
-- [ ] `execution`: `Provision` requires the handle (an `Env` cannot exist
-      without it); `transitionLocked` emits `l5-transition` per edge with
-      the per-edge ordering table (seal after-effect, EGRESSING
-      before-effect, others decided per edge and recorded); `record()`
-      emits `l5-op` on all four subprocess paths; egress emits the
-      egress `l5-op` after the store acknowledges and BEFORE returning
-      to L7 (so it precedes StoreObject/BindArtifact by construction)
-- [ ] `execution` may import `state`'s handle TYPE only — no
-      `AppendEvent`, no `TaskRecord` methods beyond the handle (AST wall:
-      only `state` names the L5 writer constant; no package but
-      `execution` calls the handle's methods; D-W-6 precision)
-- [ ] Failed/refused egress witnessed with typed outcome and no address
-- [ ] Secret scan proven on `argv` (a marker in argv refuses the event
-      and the op fails closed — decide and record the L5 behaviour)
-- [ ] Register B: a real walk's stream shows the full machine and every
-      op; ordering asserted; probes: omit an edge → killed; emit through
-      AppendEvent with writer l5 → refused; L7 emits an L5 class → refused
+## W-M2 — L5 emission handle and the witnesses (Class 3) — LANDED 2026-09-26
+- [x] `state.L5Sink` (`TaskRecord.L5Sink()`): `Transition`, `Op`, `Egress`
+      only; writer `l5` named in exactly one place; L5 classes are
+      handle-only — `AppendEvent` refuses them under every identity;
+      refuses after terminal; exported-API closure extended deliberately
+- [x] `execution.Witness` interface declared by the consumer (execution
+      imports nothing of `state`); `Env.Attach` once; pre-record
+      emissions buffered and replayed in exact order at attach
+- [x] Per-edge ordering table: PROVISIONING→ACTIVE after effect; seal
+      after effect (workspace read-only first); SEALED→EGRESSING before
+      effect; egress op after the store acknowledged and before return;
+      →ACKNOWLEDGED after; →TEARDOWN before; terminal edge after
+- [x] `l5-op` on all four subprocess paths (endpoint-refused,
+      budget-exhausted, start-failed, completed incl. timeout/exit-error);
+      egress `l5-op` acknowledged with address and totals; refused/failed
+      egress witnessed with no address
+- [x] Unwitnessed environment: ACTIVE-phase ops, clean seal, and egress
+      refuse (`ErrUnwitnessed`); teardown always proceeds; a teardown-phase
+      witness failure is kept in `Trace.WitnessErr`
+- [x] Witness refusal on a completed op fails the op closed (output
+      discarded); the sink's secret scan is the refusing case
+- [x] Orchestrator attaches `task.L5Sink()` immediately after `CreateTask`
+- [x] AST wall (`orchestration/l5_wall_test.go`): execution imports no
+      state; no `"l5"` AppendEvent writer literal outside state; `L5Sink()`
+      constructed only at the record boundary
+- [x] Register B: a real walk's stream shows the full machine
+      (PROVISIONING→ACTIVE→SEALED→EGRESSING→ACKNOWLEDGED→TEARDOWN→DESTROYED),
+      provisioning and egress ops, the egress acknowledgement naming the
+      bound address (`"sha256:"+addr` = binding ref), all before
+      `artifact-bound` and COMPLETED (`src/themis/intake_test.go`)
+- [x] Constitution hash UNCHANGED by W-M2 (pin test); probes: omit an
+      edge, drop the egress witness, drop the unwitnessed guard, ignore a
+      refused witness, never attach, drop the refused-egress witness —
+      6/6 killed
 
 ## W-M3 — Themis five-link replay and the compatibility rule (Class 3)
 - [ ] `intake`: closed `witnessingConstitutions` table seeded with the

@@ -132,7 +132,19 @@ func (e *Env) Egress(ceiling *WorkspaceExecutionCeiling, spec *ProvisionSpec, st
 	e.mu.Lock()
 	e.trace.ArtifactAddress = addr
 	e.trace.EgressOutcome = "acknowledged"
+	// The egress op is witnessed AFTER the store acknowledged and
+	// BEFORE this call returns to L7 (D-W-3): L5's acknowledgement of
+	// the address precedes, by construction, L7's StoreObject and L6's
+	// artifact-bound. Only this witness can satisfy production.
+	if werr := e.witnessEgressLocked("acknowledged", addr, manifest.ObservedTotalBytes, manifest.ObservedFileCount); werr != nil {
+		e.trace.EgressOutcome = "witness-refused"
+		e.mu.Unlock()
+		return "", fmt.Errorf("%w: egress witness refused: %v", ErrEgress, werr)
+	}
 	err = e.transitionLocked(StateAcknowledged, "artifact "+addr[:12])
+	if err == nil {
+		err = e.witnessTransitionLocked() // after effect
+	}
 	e.mu.Unlock()
 	if err != nil {
 		return "", err
@@ -143,6 +155,10 @@ func (e *Env) Egress(ceiling *WorkspaceExecutionCeiling, spec *ProvisionSpec, st
 func (e *Env) setEgress(outcome string) {
 	e.mu.Lock()
 	e.trace.EgressOutcome = outcome
+	// A refused or failed egress is witnessed too, with no address, so
+	// "no artifact" is a recorded fact rather than an absence (D-W-3);
+	// it can never satisfy production.
+	_ = e.witnessEgressLocked(outcome, "", 0, 0)
 	e.mu.Unlock()
 }
 

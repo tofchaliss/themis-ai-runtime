@@ -142,6 +142,9 @@ func (t *TaskRecord) AppendEvent(class, writer string, body json.RawMessage, ref
 	if primitiveOnlyEvents[class] {
 		return Event{}, fmt.Errorf("%w: event class %q is recovery-owned or primitive-owned", ErrConstitution, class)
 	}
+	if handleOnlyEvents[class] {
+		return Event{}, fmt.Errorf("%w: event class %q is appendable only through its layer's emission handle", ErrConstitution, class)
+	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if terminal(t.man.Status) {

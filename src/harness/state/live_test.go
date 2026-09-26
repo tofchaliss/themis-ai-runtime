@@ -236,9 +236,13 @@ func TestLiveTaskReconstruction(t *testing.T) {
 	if err := task.BindArtifact(artObj); err != nil {
 		t.Fatal(err)
 	}
+	// L5's own transitions enter through its emission handle (W-M2);
+	// the caller-facing door refuses the class.
+	sink := task.L5Sink()
 	for _, trn := range env.Trace().Transitions {
-		tb, _ := json.Marshal(trn)
-		must(task.AppendEvent(EvL5Transition, "l5", tb))
+		if err := sink.Transition(string(trn.From), string(trn.To), trn.Reason); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if st := env.Teardown(); st != execution.StateDestroyed {
 		t.Fatalf("teardown: %s", st)

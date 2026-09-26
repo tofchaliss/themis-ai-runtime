@@ -26,6 +26,7 @@ func TestL4DecisionTableInsideEnvironment(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	mustWitness(t, env)
 	defer func() { _ = env.Seal(SealCallerAbort); env.Teardown() }()
 	ws := env.Workspace()
 

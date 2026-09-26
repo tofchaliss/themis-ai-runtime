@@ -355,6 +355,8 @@ func TestExportedAPIClosure(t *testing.T) {
 		"Event": true, "Ref": true, "Manifest": true, "StatusView": true,
 		"VerifyResult": true, "ScanResult": true, "RecoveryOutcome": true,
 		"TaskStatus": true, "Verdict": true,
+		// W-M2 (D-W-6 Wall B): the L5-scoped emission handle.
+		"L5Sink": true,
 	}
 	allowMethods := map[string]bool{
 		"Root.CreateTask": true, "Root.Store": true, "Root.Recover": true,
@@ -362,7 +364,9 @@ func TestExportedAPIClosure(t *testing.T) {
 		"Root.ReadEvents": true, "Root.Resolve": true, "Root.ReadManifest": true,
 		"TaskRecord.AppendEvent": true, "TaskRecord.StoreObject": true,
 		"TaskRecord.Transition": true, "TaskRecord.BindArtifact": true,
-		"TaskRecord.Close":        true,
+		"TaskRecord.Close":  true,
+		"TaskRecord.L5Sink": true,
+		"L5Sink.Transition": true, "L5Sink.Op": true, "L5Sink.Egress": true,
 		"ObjectStore.StoreObject": true, "ObjectStore.GetObject": true, "ObjectStore.HasObject": true,
 	}
 	fset := token.NewFileSet()

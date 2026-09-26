@@ -127,4 +127,8 @@ type Trace struct {
 	// TeardownVerified: true only when post-teardown host-cleanliness
 	// assertions passed. DESTROYED is never declared without it.
 	TeardownVerified bool
+	// WitnessErr records a teardown-phase witness failure (W-M2): the
+	// teardown proceeded — host cleanliness first — and the record is
+	// known to be missing that edge. Empty when every edge was witnessed.
+	WitnessErr string
 }

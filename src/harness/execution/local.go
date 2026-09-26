@@ -264,6 +264,12 @@ func (p *LocalProvider) Provision(ceiling *WorkspaceExecutionCeiling, spec *Prov
 	if err := e.transition(StateActive, "provisioned"); err != nil {
 		return fail(err)
 	}
+	e.mu.Lock()
+	werr := e.witnessTransitionLocked() // after effect: the workspace exists
+	e.mu.Unlock()
+	if werr != nil {
+		return fail(werr)
+	}
 	return e, nil
 }
 
@@ -363,15 +369,21 @@ var spawnOverride func() (string, []string)
 // convenient path.
 func (e *Env) runGit(phase string, deadline time.Duration, dir string, args ...string) (string, error) {
 	argv := append([]string{"-c", "core.hooksPath=" + e.hooksDir}, args...)
+	if phase == "active" && !e.Witnessed() {
+		// Governed work in an unwitnessed environment would leave the
+		// record with a gap where an op ran (W-M2). Provisioning and
+		// teardown ops buffer until L7 attaches the handle.
+		return "", ErrUnwitnessed
+	}
 	if err := refuseEndpoints(argv); err != nil {
-		e.record(OpRecord{Phase: phase, Argv: argv, Exit: -1, Outcome: "endpoint-refused"})
+		_ = e.record(OpRecord{Phase: phase, Argv: argv, Exit: -1, Outcome: "endpoint-refused"})
 		return "", err
 	}
 	if rem := e.budget(); deadline > rem {
 		deadline = rem
 	}
 	if deadline <= 0 {
-		e.record(OpRecord{Phase: phase, Argv: argv, Exit: -1, Outcome: "budget-exhausted"})
+		_ = e.record(OpRecord{Phase: phase, Argv: argv, Exit: -1, Outcome: "budget-exhausted"})
 		return "", fmt.Errorf("%w: environment wall-clock budget exhausted", ErrExec)
 	}
 	bin, cargv := e.provider.GitPath, argv
@@ -387,7 +399,7 @@ func (e *Env) runGit(phase string, deadline time.Duration, dir string, args ...s
 
 	start := time.Now()
 	if err := cmd.Start(); err != nil {
-		e.record(OpRecord{Phase: phase, Argv: argv, Exit: -1, Outcome: "start-failed"})
+		_ = e.record(OpRecord{Phase: phase, Argv: argv, Exit: -1, Outcome: "start-failed"})
 		return "", fmt.Errorf("%w: %v", ErrExec, err)
 	}
 	done := make(chan error, 1)
@@ -418,15 +430,19 @@ func (e *Env) runGit(phase string, deadline time.Duration, dir string, args ...s
 	switch {
 	case timedOut:
 		rec.Outcome = "timeout"
-		e.record(rec)
+		_ = e.record(rec)
 		return "", fmt.Errorf("%w: timeout after %s: git %s", ErrExec, deadline, strings.Join(args, " "))
 	case werr != nil:
 		rec.Outcome = "exit-error"
-		e.record(rec)
+		_ = e.record(rec)
 		return "", fmt.Errorf("%w: git %s: %v: %s", ErrExec, strings.Join(args, " "), werr, firstLineOf(errb.String()))
 	default:
 		rec.Outcome = "ok"
-		e.record(rec)
+		if werr := e.record(rec); werr != nil {
+			// The command succeeded but its witness was refused: the op
+			// fails closed (W-M2); its output is discarded.
+			return "", fmt.Errorf("%w: witness refused for git %s: %v", ErrExec, strings.Join(args, " "), werr)
+		}
 		return out.String(), nil
 	}
 }
@@ -486,10 +502,15 @@ func (e *Env) unsealWorkspace() {
 	})
 }
 
-func (e *Env) record(op OpRecord) {
+func (e *Env) record(op OpRecord) error {
 	e.mu.Lock()
+	defer e.mu.Unlock()
 	e.trace.Ops = append(e.trace.Ops, op)
-	e.mu.Unlock()
+	// Every governed subprocess op is witnessed after effect, on all
+	// four paths (D-W-3). A refused witness (e.g. the record's secret
+	// scan) fails the op closed even when the command succeeded: the
+	// record must never hold a gap where an op ran.
+	return e.witnessOpLocked(op)
 }
 
 func firstLineOf(s string) string {
@@ -526,6 +547,13 @@ func (e *Env) Teardown() State {
 			e.mu.Unlock()
 			return st
 		}
+		// TEARDOWN is witnessed BEFORE the effect (D-W-2): it announces
+		// destruction about to occur. A witness failure never stops
+		// teardown — host cleanliness comes first — it is kept in the
+		// trace as a witness discrepancy.
+		if werr := e.witnessTransitionLocked(); werr != nil {
+			e.trace.WitnessErr = werr.Error()
+		}
 	}
 	e.mu.Unlock()
 	return e.teardown()
@@ -549,12 +577,16 @@ func (e *Env) teardown() State {
 	if verified {
 		e.trace.TeardownVerified = true
 		_ = e.transitionLocked(StateDestroyed, "verified-clean")
-		return e.state
+	} else {
+		reason := "host-state-unverified"
+		if removeErr != nil {
+			reason += ": " + removeErr.Error()
+		}
+		_ = e.transitionLocked(StateTeardownAnomalous, reason)
 	}
-	reason := "host-state-unverified"
-	if removeErr != nil {
-		reason += ": " + removeErr.Error()
+	// Terminal edges are witnessed AFTER the effect (host state verified).
+	if werr := e.witnessTransitionLocked(); werr != nil {
+		e.trace.WitnessErr = werr.Error()
 	}
-	_ = e.transitionLocked(StateTeardownAnomalous, reason)
 	return e.state
 }

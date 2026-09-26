@@ -29,10 +29,12 @@ func TestEventWriterInvariant(t *testing.T) {
 	layers := []string{"l1", "l2", "l3", "l4", "l5", "l6", "l6-recovery", "l7", "l8", "l10", "forger", ""}
 	callerClasses := 0
 	for class, owners := range eventWriters {
-		if primitiveOnlyEvents[class] {
-			for w := range owners {
+		if primitiveOnlyEvents[class] || handleOnlyEvents[class] {
+			// Owned by a primitive or a layer handle: AppendEvent refuses
+			// under EVERY identity, the owner's included (D-W-6 Wall B).
+			for _, w := range layers {
 				if _, err := tr.AppendEvent(class, w, []byte(`{}`)); !errors.Is(err, ErrConstitution) {
-					t.Errorf("%s/%s: primitive-only class admitted through AppendEvent: %v", class, w, err)
+					t.Errorf("%s/%q: primitive- or handle-only class admitted through AppendEvent: %v", class, w, err)
 				}
 			}
 			continue

@@ -72,6 +72,11 @@ type Env struct {
 	provider *LocalProvider
 	// env-owned dirs (workspace root lives in trace.Workspace)
 	homeDir, tmpDir, hooksDir, baseDir string
+
+	// The L5 witness handle (W-M2, D-W-6): nil until L7 attaches the
+	// task-bound handle; emissions before that are buffered in order.
+	witness Witness
+	pending []pendingEmission
 }
 
 // State returns the current lifecycle state.
@@ -150,6 +155,11 @@ func (e *Env) Seal(reason SealReason) error {
 }
 
 func (e *Env) sealLocked(reason SealReason) error {
+	if reason == SealTaskComplete && e.witness == nil {
+		// A clean seal leads to egress and a production claim; an
+		// unwitnessed environment cannot make one (W-M2).
+		return ErrUnwitnessed
+	}
 	if err := e.transitionLocked(StateSealed, string(reason)); err != nil {
 		return err
 	}
@@ -159,7 +169,9 @@ func (e *Env) sealLocked(reason SealReason) error {
 	// mutation through ANY channel — L4 executor dispatch included —
 	// fails at the filesystem, not merely at ExecGit's state check.
 	e.sealWorkspace()
-	return nil
+	// Seal is witnessed AFTER the effect (D-W-2): the OS-level
+	// read-only transition is the fact; the witness records it done.
+	return e.witnessTransitionLocked()
 }
 
 // CleanlySealed reports whether the environment sealed clean —
@@ -179,5 +191,14 @@ func (e *Env) beginEgress() error {
 	if e.state != StateSealed || e.trace.SealReason != SealTaskComplete {
 		return fmt.Errorf("%w: egress requires a cleanly sealed environment (state=%s seal=%s)", ErrLifecycle, e.state, e.trace.SealReason)
 	}
-	return e.transitionLocked(StateEgressing, "egress")
+	if e.witness == nil {
+		return ErrUnwitnessed
+	}
+	if err := e.transitionLocked(StateEgressing, "egress"); err != nil {
+		return err
+	}
+	// EGRESSING is witnessed BEFORE the effect (D-W-2): the event
+	// establishes that the governed egress operation is being entered;
+	// the read follows. A refused witness stops the egress here.
+	return e.witnessTransitionLocked()
 }

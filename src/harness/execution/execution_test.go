@@ -236,7 +236,7 @@ func TestProviderConstructionFailsClosed(t *testing.T) {
 
 func TestLifecycleReachability(t *testing.T) {
 	// No ACTIVE->EGRESSING edge; no ACTIVE->TEARDOWN without seal.
-	e := &Env{state: StateActive}
+	e := &Env{witness: &recWitness{}, state: StateActive}
 	if err := e.transition(StateEgressing, "x"); !errors.Is(err, ErrLifecycle) {
 		t.Fatalf("ACTIVE->EGRESSING must be illegal: %v", err)
 	}
@@ -259,7 +259,7 @@ func TestLifecycleReachability(t *testing.T) {
 		t.Fatalf("double seal must refuse: %v", err)
 	}
 	// Clean seal egresses; EGRESSING cannot return to ACTIVE.
-	e2 := &Env{state: StateActive}
+	e2 := &Env{witness: &recWitness{}, state: StateActive}
 	if e2.CleanlySealed() {
 		t.Fatal("ACTIVE is not cleanly sealed")
 	}
@@ -276,14 +276,14 @@ func TestLifecycleReachability(t *testing.T) {
 		t.Fatalf("no backward transitions: %v", err)
 	}
 	// ACKNOWLEDGED without EGRESSING is unreachable.
-	e3 := &Env{state: StateSealed}
+	e3 := &Env{witness: &recWitness{}, state: StateSealed}
 	if err := e3.transition(StateAcknowledged, "x"); !errors.Is(err, ErrLifecycle) {
 		t.Fatalf("SEALED->ACKNOWLEDGED must be illegal: %v", err)
 	}
 	// Teardown() is never refusable in a way that retains a
 	// workspace: from ACTIVE it force-seals as caller-abort and
 	// proceeds (M1 security review MED-5).
-	eA := &Env{state: StateActive}
+	eA := &Env{witness: &recWitness{}, state: StateActive}
 	if st := eA.Teardown(); st != StateDestroyed {
 		t.Fatalf("Teardown from ACTIVE must force-seal and destroy, got %s", st)
 	}
@@ -296,7 +296,7 @@ func TestLifecycleReachability(t *testing.T) {
 	}
 	// Terminal states have no exits.
 	for _, term := range []State{StateDestroyed, StateTeardownAnomalous} {
-		e4 := &Env{state: term}
+		e4 := &Env{witness: &recWitness{}, state: term}
 		for _, to := range []State{StateActive, StateTeardown, StateProvisioning, StateEgressing} {
 			if err := e4.transition(to, "x"); !errors.Is(err, ErrLifecycle) {
 				t.Fatalf("%s must be terminal, allowed -> %s", term, to)
@@ -322,7 +322,7 @@ func TestLifecycleEdgeProductExhaustive(t *testing.T) {
 	}
 	for _, from := range all {
 		for _, to := range all {
-			e := &Env{state: from}
+			e := &Env{witness: &recWitness{}, state: from}
 			err := e.transition(to, "probe")
 			if legal[from][to] {
 				if err != nil {
@@ -370,6 +370,7 @@ func TestBudgetMidDrainAutoSeals(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	mustWitness(t, env)
 	defer env.Teardown()
 
 	spawnOverride = func() (string, []string) { return shBin, []string{"-c", sleepBin + " 5"} }
@@ -472,7 +473,7 @@ func TestEndpointRefusal(t *testing.T) {
 // The ACTIVE seam is a closed vocabulary, not a general git CLI
 // (MED-2): unknown subcommands and ALL caller flags refuse typed.
 func TestExecVocabularyClosed(t *testing.T) {
-	e := &Env{state: StateActive, remaining: time.Minute}
+	e := &Env{witness: &recWitness{}, state: StateActive, remaining: time.Minute}
 	for _, sub := range []string{"clone", "fetch", "push", "config", "submodule", "remote"} {
 		if _, err := e.ExecGit(time.Second, sub); err == nil || !strings.Contains(err.Error(), "outside the active invocation vocabulary") {
 			t.Errorf("subcommand %q must be outside the vocabulary: %v", sub, err)
@@ -488,7 +489,7 @@ func TestExecVocabularyClosed(t *testing.T) {
 // SEALED means stable by mechanism: Seal refuses while an execution
 // is in flight (MED-4).
 func TestSealRefusesInflight(t *testing.T) {
-	e := &Env{state: StateActive, inflight: 1}
+	e := &Env{witness: &recWitness{}, state: StateActive, inflight: 1}
 	if err := e.Seal(SealTaskComplete); !errors.Is(err, ErrLifecycle) || !strings.Contains(err.Error(), "in flight") {
 		t.Fatalf("seal with in-flight execution must refuse: %v", err)
 	}
@@ -501,7 +502,7 @@ func TestSealRefusesInflight(t *testing.T) {
 // The wall-clock budget is enforced at the envelope: exhaustion
 // seals the environment with the typed deadline reason (MED-3).
 func TestBudgetExhaustionSeals(t *testing.T) {
-	e := &Env{state: StateActive, remaining: 0}
+	e := &Env{witness: &recWitness{}, state: StateActive, remaining: 0}
 	if _, err := e.ExecGit(time.Second, "status"); err == nil || !strings.Contains(err.Error(), "budget exhausted") {
 		t.Fatalf("exhausted budget must refuse typed: %v", err)
 	}
@@ -513,7 +514,7 @@ func TestBudgetExhaustionSeals(t *testing.T) {
 // The trace is a copy: consumers cannot mutate the provider
 // declaration or recorded argv through it (LOW).
 func TestTraceIsDeepCopy(t *testing.T) {
-	e := &Env{state: StateActive}
+	e := &Env{witness: &recWitness{}, state: StateActive}
 	e.trace.Provider = LocalDeclaration()
 	e.trace.Ops = []OpRecord{{Argv: []string{"status"}}}
 	e.trace.Transitions = []Transition{{From: StateProvisioning, To: StateActive, Reason: "provisioned"}}
@@ -529,7 +530,7 @@ func TestTraceIsDeepCopy(t *testing.T) {
 }
 
 func TestNoPATHInEnvironment(t *testing.T) {
-	e := &Env{homeDir: "/h", tmpDir: "/t"}
+	e := &Env{witness: &recWitness{}, homeDir: "/h", tmpDir: "/t"}
 	for _, kv := range e.allowEnv() {
 		if strings.HasPrefix(kv, "PATH=") {
 			t.Fatal("the execution environment must not contain PATH")
@@ -551,6 +552,7 @@ func TestLocalProvisionLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("provision failed: %v", err)
 	}
+	mustWitness(t, env)
 	if env.State() != StateActive {
 		t.Fatalf("expected ACTIVE, got %s", env.State())
 	}
@@ -667,6 +669,7 @@ func TestExecTimeoutGroupKill(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	mustWitness(t, env)
 	defer func() { _ = env.Seal(SealCallerAbort); env.Teardown() }()
 
 	// The grandchild would create the marker well after the deadline
@@ -723,6 +726,7 @@ func TestObservedRSSIsInBytes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	mustWitness(t, env)
 	defer func() { _ = env.Seal(SealCallerAbort); env.Teardown() }()
 
 	var peak int64
@@ -797,6 +801,7 @@ func TestTeardownAnomalous(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		mustWitness(t, env)
 		if err := os.Chmod(providerDir, 0o555); err != nil {
 			t.Fatal(err)
 		}
@@ -823,6 +828,7 @@ func TestTeardownAnomalous(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		mustWitness(t, env)
 		pinned := filepath.Join(env.Workspace().Root, "pinned")
 		if err := os.WriteFile(pinned, []byte("x"), 0o644); err != nil {
 			t.Fatal(err)
@@ -869,6 +875,7 @@ func TestProvisionPostConditionRefusesHeadNotAtPin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the canonical pin must provision, or this proves nothing: %v", err)
 	}
+	mustWitness(t, ok)
 	ok.Teardown()
 
 	s := testSpec(t, "themis-demo", sha, "")
@@ -984,7 +991,7 @@ func TestAttestationRefusesNonRegularFile(t *testing.T) {
 // work it could never finish.
 func TestBudgetExhaustionAtBothDoors(t *testing.T) {
 	t.Run("envelope: no budget to begin with — seals", func(t *testing.T) {
-		e := &Env{state: StateActive, remaining: 0}
+		e := &Env{witness: &recWitness{}, state: StateActive, remaining: 0}
 		_, err := e.ExecGit(time.Second, "status")
 		if err == nil || !strings.Contains(err.Error(), "budget exhausted") {
 			t.Fatalf("exhausted budget must refuse typed: %v", err)
@@ -1013,7 +1020,7 @@ func TestBudgetExhaustionAtBothDoors(t *testing.T) {
 		if perr != nil {
 			t.Fatal(perr)
 		}
-		e := &Env{state: StateActive, remaining: 0, provider: p}
+		e := &Env{witness: &recWitness{}, state: StateActive, remaining: 0, provider: p}
 		_, err := e.runGit("active", time.Second, t.TempDir(), "status")
 		if err == nil || !strings.Contains(err.Error(), "budget exhausted") {
 			t.Fatalf("a non-positive effective deadline must refuse typed: %v", err)

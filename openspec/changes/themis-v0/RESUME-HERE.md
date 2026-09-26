@@ -13,9 +13,10 @@ needs its own grill before implementation. I-M0 LANDED 2026-09-26 (module
 rename, hashes pinned). Row 4 grill CLOSED (D-C-1..6,
 `themis-commissioning/`); Row 11 grill CLOSED (D-L-1..3,
 `l8-themis-surface/`); Row 12 grill CLOSED (D-R-1..4,
-`l11-governance-promotion/`). ALL 🔴 ROWS DECIDED. W-M1 LANDED
-2026-09-26 (L6 hash → 1df0e285…; this commit cannot open rsys@5 by
-design). Next: W-M2 on the owner's go, then I-M1, I-M2, I-M3, I-M4, I-M5.**
+`l11-governance-promotion/`). ALL 🔴 ROWS DECIDED. W-M1 and W-M2 LANDED
+2026-09-26 (L6 hash 1df0e285…; L5 witnesses on every edge and op; this
+commit cannot open rsys@5 by design). Next: I-M1 on the owner's go, then
+I-M2, I-M3, I-M4, I-M5.**
 
 **2026-09-25 (direction change, owner): Option A — the REAL Themis
 (`~/code/themis`, its own repo) is the system of record; no second Themis
@@ -228,7 +229,52 @@ now RATIFIED):
   record rather than collapsing it to `l6`.
 - **Not in W-M1:** the L5 handle and the witnesses (W-M2); any anchor.
 
+## Gate 1 — W-M2 (L5 emission handle and the witnesses, 2026-09-26)
+
+- **Landed:** `state.L5Sink` (Wall B), `execution.Witness` +
+  `Env.Attach`, witnesses on every edge and every subprocess op, the
+  egress witness, the AST wall, Register B over a real walk. L6 hash
+  unchanged (still `1df0e285…`); no anchor moves in W-M2.
+- **Sequencing fact, implemented as-recorded — owner to ratify:** L7
+  provisions the L5 environment BEFORE it creates the L6 task record
+  (the effective grant depends on the workspace path, and CREATED
+  carries it). The provisioning ops and the PROVISIONING→ACTIVE edge
+  therefore happen before any handle can exist. Implementation: the
+  environment buffers those emissions in exact order and replays them
+  through the handle at `Attach`, which L7 performs immediately after
+  `CreateTask`, before any materialization, model turn, or active op.
+  Every later edge is witnessed live at its boundary. D-W-2's "at
+  `transitionLocked`" holds for every post-record edge; the provisioning
+  edge is witnessed after-effect with a bounded delay. The alternative
+  (create the record before provisioning) changes the CREATED contract
+  and recovery attribution and was not taken. Category: implementation
+  ordering under D-W-2's per-edge latitude; flagged, not decided.
+- **Address correspondence:** the artifact store address is bare hex;
+  the L6 egress-artifact id is `sha256:<hex>` of the same bytes — the
+  RawObjectID precedent. The five-link replay (D-W-5, I-M3) compares
+  `"sha256:"+egress.artifact_address` with the binding's ref id.
+- **Witness refusal semantics (D-W-3 secret scan):** a completed op whose
+  witness the sink refuses fails closed with its output discarded; the
+  sink has already appended `contamination-suspected`. A refused clean
+  seal or egress witness refuses the seal/egress. A teardown-phase
+  witness failure never stops teardown (host cleanliness first) and is
+  recorded in `Trace.WitnessErr`.
+- **Unwitnessed environments:** the runtime does not require Themis, but
+  it does require its own witness for governed work: ACTIVE ops, clean
+  seal, and egress refuse `ErrUnwitnessed`; teardown always works (a
+  provisioning failure before the record exists must still destroy the
+  workspace, unwitnessed by definition).
+- **ACTIVE-phase subprocess count may be zero** for a skill whose ACTIVE
+  tools are in-process (file read/write); the witness covers
+  subprocesses, not tool calls (D-W-3). Register B asserts provisioning
+  and egress ops instead.
+- **The stand-in intake (`src/themis/intake`) still replays three links**
+  by design; the five-link replay lands in the Themis repo (I-M3) and the
+  stand-in dissolves in I-M4.
+
 ## Milestone log
+- [x] W-M2 — green 2026-09-26 (state, execution, orchestration suites;
+  full hermetic harness; Themis stand-in incl. Register B; 6/6 probes killed)
 - [x] W-M1 — green 2026-09-26 (state suite; full hermetic harness suite;
   Themis stand-in suite; evidence tools build; 4/4 probes killed)
 - [x] T-M3 — green 2026-09-25 (`intake_test.go`: positive, key

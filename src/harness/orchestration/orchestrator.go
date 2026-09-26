@@ -972,6 +972,15 @@ func (o *Orchestrator) SubmitTask(envelopePath string) (TaskResult, error) {
 		return res, err
 	}
 	defer task.Close()
+	// W-M2 (D-W-6 Wall B): the environment receives its L5-scoped
+	// witness handle the moment the record exists — before any
+	// materialization, model turn, or active op. The provisioning
+	// edges and ops that preceded the record replay through the handle
+	// in order. L7 constructs the handle; it never writes an L5 class.
+	if err := envn.Attach(task.L5Sink()); err != nil {
+		envn.Teardown()
+		return res, fmt.Errorf("%w: attaching the L5 witness: %v", ErrAssembly, err)
+	}
 
 	// Record-before-effect extends to authority: the grant handed to the
 	// walk must be the one whose authority was just recorded. Any

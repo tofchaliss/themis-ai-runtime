@@ -89,3 +89,34 @@ was exercised; it does not determine whether a method is executable or
 relied upon. The catalog determines registration; the anchor
 determines reliance; the record establishes provenance; L11 supplies
 evidence; Themis does not become the runtime registry.
+
+## D-R-3 — Commission validity is independent of runtime registration and reliance (LOCKED 2026-09-26, owner)
+
+> Commission validity is independent of runtime method registration or
+> deployment reliance. Runtime admission alone determines whether the
+> commissioned method can execute; Themis never consults those runtime
+> registries. A commission that cannot currently execute remains a
+> valid authority record but produces no proposal-eligible execution
+> until runtime admission succeeds.
+
+A commission identifies what was AUTHORIZED; runtime admission
+determines whether that method can actually EXECUTE (registered +
+active; composition matches; in the anchor's `skills[]` — all enforced
+fail-closed before any model runs). An invalid commissioned method
+cannot silently produce a valid execution: refusal → no completed
+execution → no resolvable tuple → no proposal. The commission stays a
+legitimate Governance fact.
+
+A commission created before registration is not invalid; when the
+doors later admit the method, it becomes usable with no Themis
+mutation — commissioning is a pure authority record, never a cached
+snapshot of runtime registry state. What happens when a commissioned
+method is later withdrawn stays under D-C-3 (historical commission,
+current runtime admission, no retrospective rewriting; proactive
+withdrawal is governance practice).
+
+| Layer | Question | Owner |
+|---|---|---|
+| Commission | Was this method authorized for this Finding? | Themis |
+| Admission | Can this method execute in this deployment? | Runtime |
+| Proposal admission | Does this execution correspond to the commission and satisfy evidence requirements? | Themis |

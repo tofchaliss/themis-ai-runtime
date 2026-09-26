@@ -1,0 +1,583 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Themis AI Runtime — Demo Architecture and Use Cases</title><style>
+@page { size: A4; margin: 16mm 14mm; }
+body { font-family: Helvetica, Arial, sans-serif; color: #111827; font-size: 11.5pt; line-height: 1.42; margin: 0; }
+h1 { font-size: 24pt; margin: 0 0 4pt; }
+h2 { font-size: 16pt; margin: 22pt 0 8pt; border-bottom: 1.5px solid #1f2937; padding-bottom: 3pt; }
+h3 { font-size: 12.5pt; margin: 14pt 0 6pt; }
+p { margin: 5pt 0; }
+.meta { color: #4b5563; font-size: 10pt; }
+.fig { margin: 8pt 0 4pt; page-break-inside: avoid; }
+.cap { font-size: 9.5pt; color: #4b5563; margin: 2pt 0 10pt; }
+table { border-collapse: collapse; width: 100%; font-size: 10pt; margin: 6pt 0 10pt; page-break-inside: auto; }
+th, td { border: 1px solid #9ca3af; padding: 4pt 6pt; vertical-align: top; text-align: left; }
+th { background: #f3f4f6; }
+tr { page-break-inside: avoid; }
+pre { background: #f8fafc; border: 1px solid #d1d5db; padding: 6pt 8pt; font-size: 8.8pt; line-height: 1.3; white-space: pre-wrap; page-break-inside: avoid; }
+code { font-family: Menlo, Consolas, monospace; font-size: 9.5pt; }
+.pb { page-break-before: always; }
+ul { margin: 4pt 0 6pt 18pt; padding: 0; }
+li { margin: 2pt 0; }
+.callout { border-left: 4px solid #3730a3; background: #eef2ff; padding: 6pt 10pt; margin: 8pt 0; }
+</style></head><body>
+<h1>Themis AI Runtime — Demo Architecture and Use Cases</h1>
+<p class="meta">Themis at the core, the AI harness as bounded execution infrastructure. Prepared 2026-09-26 from the locked decision records
+(<code>openspec/changes/themis-v0</code> D-T-1..8, <code>l5-witness-events</code> D-W-1..6, <code>themis-integration</code> D-I-1..9). Status: architecture locked; implementation milestones I-M0..I-M5 pending.</p>
+
+<div class="callout"><strong>The claim the demo defends.</strong> Themis remains the authority for security truth while the harness remains bounded execution infrastructure.
+A real Finding in Themis is remediated by governed AI execution; the execution is verified and independently reconstructed; a human proposes and a different human decides; the model never touches the decision and the harness never writes security truth.</div>
+
+<h2>1. System context</h2>
+<p>Themis is the system of record: six bounded-context services over PostgreSQL, deployed on the enterprise VM. The harness is the eleven-layer governed execution chain with one deployment anchor.
+They meet at exactly two doors: a <em>read door</em> (the harness reads a projected Finding over HTTP) and a <em>decision door</em> (a Themis-owned CLI reads the harness record locally and raises a Proposal to Governance).</p>
+<div class="fig"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 640" width="100%" font-family="Helvetica, Arial, sans-serif" role="img" aria-label="System context"><defs><marker id="ah" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#1f2937"/></marker></defs>
+<rect x="20" y="20" width="940" height="600" rx="6" fill="#fbfbfb" stroke="#9ca3af" stroke-width="1.4" stroke-dasharray="6,4"/>
+<text x="490.0" y="324.0" text-anchor="middle" font-size="12" font-weight="600"></text>
+<text x="34" y="44" text-anchor="start" font-size="12" fill="#6b7280" font-weight="600">Enterprise VM (same host: Themis estate and the AI harness)</text>
+<rect x="330" y="90" width="320" height="300" rx="14" fill="#eef2ff" stroke="#3730a3" stroke-width="1.4"/>
+<text x="490.0" y="244.0" text-anchor="middle" font-size="12" font-weight="600"></text>
+<text x="490" y="114" text-anchor="middle" font-size="14" fill="#312e81" font-weight="600">THEMIS — system of record for security truth</text>
+<rect x="350" y="128" width="130" height="44" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="415.0" y="146.2" text-anchor="middle" font-size="11" font-weight="600">Registry</text>
+<text x="415.0" y="161.2" text-anchor="middle" font-size="11">Products · Releases</text>
+<rect x="500" y="128" width="130" height="44" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="565.0" y="146.2" text-anchor="middle" font-size="11" font-weight="600">Evidence</text>
+<text x="565.0" y="161.2" text-anchor="middle" font-size="11">SBOM intake</text>
+<rect x="350" y="190" width="130" height="46" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="415.0" y="209.2" text-anchor="middle" font-size="11" font-weight="600">Knowledge</text>
+<text x="415.0" y="224.2" text-anchor="middle" font-size="11">CVE correlation</text>
+<rect x="500" y="190" width="130" height="46" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="565.0" y="202.3" text-anchor="middle" font-size="10" font-weight="600">Governance</text>
+<text x="565.0" y="216.3" text-anchor="middle" font-size="10">Findings · Proposals</text>
+<text x="565.0" y="230.3" text-anchor="middle" font-size="10">Positions</text>
+<line x1="565" y1="172" x2="565" y2="190" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<line x1="415" y1="172" x2="415" y2="190" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<line x1="480" y1="213" x2="500" y2="213" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="490" y="205" text-anchor="middle" font-size="9" fill="#1f2937">events</text>
+<rect x="350" y="288" width="130" height="36" rx="6" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.4"/>
+<text x="415.0" y="302.3" text-anchor="middle" font-size="10" font-weight="600">Communication</text>
+<text x="415.0" y="316.3" text-anchor="middle" font-size="10">(not on demo path)</text>
+<rect x="500" y="288" width="130" height="36" rx="6" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.4"/>
+<text x="565.0" y="302.3" text-anchor="middle" font-size="10" font-weight="600">Intelligence</text>
+<text x="565.0" y="316.3" text-anchor="middle" font-size="10">(AI off for demo)</text>
+<rect x="350" y="334" width="280" height="44" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="490.0" y="352.3" text-anchor="middle" font-size="10" font-weight="600">PostgreSQL, one database per context</text>
+<text x="490.0" y="366.3" text-anchor="middle" font-size="10">auth: API keys · scopes admin | read | product:&lt;id&gt;</text>
+<rect x="40" y="90" width="250" height="300" rx="14" fill="#ecfdf5" stroke="#065f46" stroke-width="1.4"/>
+<text x="165.0" y="244.0" text-anchor="middle" font-size="12" font-weight="600"></text>
+<text x="165" y="114" text-anchor="middle" font-size="13" fill="#064e3b" font-weight="600">AI HARNESS (themis-ai-runtime)</text>
+<text x="165" y="130" text-anchor="middle" font-size="11" fill="#065f46" font-style="italic">bounded execution infrastructure</text>
+<rect x="55" y="142" width="220" height="40" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="165.0" y="158.3" text-anchor="middle" font-size="10" font-weight="600">L1–L11 governed chain</text>
+<text x="165.0" y="172.3" text-anchor="middle" font-size="10">instructions → ratchet</text>
+<rect x="55" y="190" width="220" height="40" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="165.0" y="206.3" text-anchor="middle" font-size="10" font-weight="600">G1 deployment anchor rsys@6</text>
+<text x="165.0" y="220.3" text-anchor="middle" font-size="10">pins policy, skills, themis_contract</text>
+<rect x="55" y="245" width="220" height="40" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="165.0" y="261.3" text-anchor="middle" font-size="10" font-weight="600">L4 read seam → Themis API</text>
+<text x="165.0" y="275.3" text-anchor="middle" font-size="10">get_finding (governed-record)</text>
+<rect x="55" y="293" width="220" height="40" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="165.0" y="309.3" text-anchor="middle" font-size="10" font-weight="600">L5 execution · L6 record plane</text>
+<text x="165.0" y="323.3" text-anchor="middle" font-size="10">events + objects, hash-chained</text>
+<rect x="55" y="341" width="220" height="40" rx="6" fill="#fff" stroke="#9ca3af" stroke-width="1.4"/>
+<text x="165.0" y="357.3" text-anchor="middle" font-size="10" font-weight="600">Model: local Ollama, tool-calling</text>
+<text x="165.0" y="371.3" text-anchor="middle" font-size="10">output = advisory data, never authority</text>
+<path d="M 275,265 L 565,265 L 565,238" fill="none" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="430" y="258" text-anchor="middle" font-size="9.5" fill="#1f2937">READ DOOR: HTTP, read-scope key, projected Finding only</text>
+<rect x="55" y="420" width="220" height="60" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="165.0" y="439.3" text-anchor="middle" font-size="10" font-weight="600">Harness record plane</text>
+<text x="165.0" y="453.3" text-anchor="middle" font-size="10">/srv/themis/rsys/state</text>
+<text x="165.0" y="467.3" text-anchor="middle" font-size="10">manifest · events.log · objects/</text>
+<rect x="330" y="420" width="320" height="60" rx="6" fill="#fef3c7" stroke="#92400e" stroke-width="1.4"/>
+<text x="490.0" y="439.3" text-anchor="middle" font-size="10" font-weight="600">themis-intake (Themis-owned CLI)</text>
+<text x="490.0" y="453.3" text-anchor="middle" font-size="10">tuple → intake.Resolve → Evidence View → Proposal</text>
+<text x="490.0" y="467.3" text-anchor="middle" font-size="10">reads the record locally, read-only</text>
+<line x1="275" y1="450" x2="330" y2="450" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="302" y="443" text-anchor="middle" font-size="11" fill="#1f2937">local</text>
+<line x1="165" y1="390" x2="165" y2="420" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="205" y="409" text-anchor="middle" font-size="9.5" fill="#1f2937">L6 writes</text>
+<path d="M 650,440 L 700,440 L 700,226 L 632,226" fill="none" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="708" y="300" text-anchor="start" font-size="9.5" fill="#111827">Proposal over the</text>
+<text x="708" y="312" text-anchor="start" font-size="9.5" fill="#111827">authenticated API</text>
+<text x="708" y="324" text-anchor="start" font-size="9.5" fill="#111827">(product write key)</text>
+<circle cx="880" cy="110" r="9" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="880" y1="119" x2="880" y2="144" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="866" y1="128" x2="894" y2="128" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="880" y1="144" x2="868" y2="162" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="880" y1="144" x2="892" y2="162" stroke="#1f2937" stroke-width="1.4"/>
+<text x="880" y="176" text-anchor="middle" font-size="11" fill="#111827" font-weight="600">Decider</text>
+<text x="880" y="190" text-anchor="middle" font-size="10" fill="#111827">acceptProposal</text>
+<text x="880" y="203" text-anchor="middle" font-size="10" fill="#111827">(separate write key)</text>
+<line x1="862" y1="140" x2="632" y2="200" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="770" y="160" text-anchor="middle" font-size="11" fill="#1f2937">accept → Position vN</text>
+<circle cx="880" cy="340" r="9" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="880" y1="349" x2="880" y2="374" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="866" y1="358" x2="894" y2="358" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="880" y1="374" x2="868" y2="392" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="880" y1="374" x2="892" y2="392" stroke="#1f2937" stroke-width="1.4"/>
+<text x="880" y="406" text-anchor="middle" font-size="11" fill="#111827" font-weight="600">Operator</text>
+<text x="880" y="420" text-anchor="middle" font-size="10" fill="#111827">instantiates the task;</text>
+<text x="880" y="433" text-anchor="middle" font-size="10" fill="#111827">runs themis-intake</text>
+<line x1="858" y1="372" x2="652" y2="462" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="770" y="410" text-anchor="middle" font-size="11" fill="#1f2937">runs</text>
+<rect x="40" y="510" width="920" height="90" rx="6" fill="#fff" stroke="#9ca3af" stroke-width="1.4"/>
+<text x="500.0" y="559.0" text-anchor="middle" font-size="12" font-weight="600"></text>
+<text x="55" y="532" text-anchor="start" font-size="12" fill="#111827" font-weight="600">Boundary summary</text>
+<text x="55" y="550" text-anchor="start" font-size="11" fill="#111827">• The harness reaches Themis only through one HTTP read door; it never imports Themis and never initiates a Governance act.</text>
+<text x="55" y="566" text-anchor="start" font-size="11" fill="#111827">• Themis never reads the harness record plane; only the Themis-owned themis-intake CLI does, locally, read-only.</text>
+<text x="55" y="582" text-anchor="start" font-size="11" fill="#111827">• Security truth (Findings, Proposals, Positions) exists only inside Themis; the model&#x27;s output is advisory data at every step.</text>
+</svg></div><div class="cap">Figure 1. System context on the enterprise VM: Themis at the core, the harness beside it, humans on the outside, two doors between them.</div>
+
+<h2 class="pb">2. Harness architecture and where Themis plugs in</h2>
+<p>Every layer already exists and is operationally proven under anchors rsys@3..@5. The integration adds no layer: it fills the seams the harness left for Themis and adds L5-owned witnesses to the record so that production can be replayed by the layer that executed it.</p>
+<div class="fig"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 560" width="100%" font-family="Helvetica, Arial, sans-serif" role="img" aria-label="Harness layers"><defs><marker id="ah" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#1f2937"/></marker></defs>
+<rect x="180" y="60" width="480" height="36" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="420.0" y="82.0" text-anchor="middle" font-size="12" font-weight="600"></text>
+<text x="190" y="82" text-anchor="start" font-size="12" fill="#111827" font-weight="600">L1 Instructions</text>
+<text x="338" y="82" text-anchor="start" font-size="9.5" fill="#111827">governed instruction roots, directive policy</text>
+<rect x="180" y="100" width="480" height="36" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="420.0" y="122.0" text-anchor="middle" font-size="12" font-weight="600"></text>
+<text x="190" y="122" text-anchor="start" font-size="12" fill="#111827" font-weight="600">L2 Context delivery</text>
+<text x="338" y="122" text-anchor="start" font-size="9.5" fill="#111827">four-class authority framing; Themis bytes never via L2</text>
+<rect x="180" y="140" width="480" height="36" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="420.0" y="162.0" text-anchor="middle" font-size="12" font-weight="600"></text>
+<text x="190" y="162" text-anchor="start" font-size="12" fill="#111827" font-weight="600">L3 Context mgmt</text>
+<text x="338" y="162" text-anchor="start" font-size="9.5" fill="#111827">selection, budgets</text>
+<rect x="180" y="180" width="480" height="36" rx="6" fill="#ecfdf5" stroke="#1f2937" stroke-width="1.4"/>
+<text x="420.0" y="202.0" text-anchor="middle" font-size="12" font-weight="600"></text>
+<text x="190" y="202" text-anchor="start" font-size="12" fill="#111827" font-weight="600">L4 Tool interface</text>
+<text x="338" y="202" text-anchor="start" font-size="9.5" fill="#111827">registry-v6, grants, uuid themis_scope; seam → governed-record</text>
+<rect x="180" y="220" width="480" height="36" rx="6" fill="#ecfdf5" stroke="#1f2937" stroke-width="1.4"/>
+<text x="420.0" y="242.0" text-anchor="middle" font-size="12" font-weight="600"></text>
+<text x="190" y="242" text-anchor="start" font-size="12" fill="#111827" font-weight="600">L5 Execution</text>
+<text x="338" y="242" text-anchor="start" font-size="9.5" fill="#111827">sealed workspace; l5-transition / l5-op witnesses (W-M2)</text>
+<rect x="180" y="260" width="480" height="36" rx="6" fill="#ecfdf5" stroke="#1f2937" stroke-width="1.4"/>
+<text x="420.0" y="282.0" text-anchor="middle" font-size="12" font-weight="600"></text>
+<text x="190" y="282" text-anchor="start" font-size="12" fill="#111827" font-weight="600">L6 Durable state</text>
+<text x="338" y="282" text-anchor="start" font-size="9.5" fill="#111827">hash-chained events, addressed objects, class→writer invariant (W-M1)</text>
+<rect x="180" y="300" width="480" height="36" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="420.0" y="322.0" text-anchor="middle" font-size="12" font-weight="600"></text>
+<text x="190" y="322" text-anchor="start" font-size="12" fill="#111827" font-weight="600">L7 Orchestration</text>
+<text x="338" y="322" text-anchor="start" font-size="9.5" fill="#111827">workflow δ, phase gates, seal → egress → bind → COMPLETED</text>
+<rect x="180" y="340" width="480" height="36" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="420.0" y="362.0" text-anchor="middle" font-size="12" font-weight="600"></text>
+<text x="190" y="362" text-anchor="start" font-size="12" fill="#111827" font-weight="600">L8 Subagents</text>
+<text x="338" y="362" text-anchor="start" font-size="9.5" fill="#111827">delegation templates, record-ref furniture</text>
+<rect x="180" y="380" width="480" height="36" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="420.0" y="402.0" text-anchor="middle" font-size="12" font-weight="600"></text>
+<text x="190" y="402" text-anchor="start" font-size="12" fill="#111827" font-weight="600">L9 Skills</text>
+<text x="338" y="402" text-anchor="start" font-size="9.5" fill="#111827">remediate-dependency@4 = pinned composition, L9 mints no scope</text>
+<rect x="180" y="420" width="480" height="36" rx="6" fill="#ecfdf5" stroke="#1f2937" stroke-width="1.4"/>
+<text x="420.0" y="442.0" text-anchor="middle" font-size="12" font-weight="600"></text>
+<text x="190" y="442" text-anchor="start" font-size="12" fill="#111827" font-weight="600">L10 Verification</text>
+<text x="338" y="442" text-anchor="start" font-size="9.5" fill="#111827">report-valid@2 contract; reconstructable PASS</text>
+<rect x="180" y="460" width="480" height="36" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="420.0" y="482.0" text-anchor="middle" font-size="12" font-weight="600"></text>
+<text x="190" y="482" text-anchor="start" font-size="12" fill="#111827" font-weight="600">L11 Ratchet</text>
+<text x="338" y="482" text-anchor="start" font-size="9.5" fill="#111827">criteria, regression sets</text>
+<rect x="30" y="60" width="130" height="436" rx="6" fill="#fef3c7" stroke="#1f2937" stroke-width="1.4"/>
+<text x="95.0" y="221.7" text-anchor="middle" font-size="11" font-weight="600">G1</text>
+<text x="95.0" y="236.7" text-anchor="middle" font-size="11">Deployment</text>
+<text x="95.0" y="251.7" text-anchor="middle" font-size="11">anchor</text>
+<text x="95.0" y="266.7" text-anchor="middle" font-size="11">rsys@6</text>
+<text x="95.0" y="281.7" text-anchor="middle" font-size="11"></text>
+<text x="95.0" y="296.7" text-anchor="middle" font-size="11">pins every</text>
+<text x="95.0" y="311.7" text-anchor="middle" font-size="11">governed</text>
+<text x="95.0" y="326.7" text-anchor="middle" font-size="11">artifact incl.</text>
+<text x="95.0" y="341.7" text-anchor="middle" font-size="11">themis_contract</text>
+<rect x="720" y="60" width="230" height="436" rx="6" fill="#eef2ff" stroke="#3730a3" stroke-width="1.4"/>
+<text x="835.0" y="282.0" text-anchor="middle" font-size="12" font-weight="600"></text>
+<text x="835" y="84" text-anchor="middle" font-size="13" fill="#312e81" font-weight="600">THEMIS</text>
+<text x="835" y="100" text-anchor="middle" font-size="10" fill="#111827" font-style="italic">(its own repo and estate)</text>
+<rect x="735" y="120" width="200" height="56" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="835.0" y="137.3" text-anchor="middle" font-size="10" font-weight="600">Governance API</text>
+<text x="835.0" y="151.3" text-anchor="middle" font-size="10">GET /findings/{id}</text>
+<text x="835.0" y="165.3" text-anchor="middle" font-size="10">POST proposals / accept</text>
+<rect x="735" y="190" width="200" height="44" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="835.0" y="208.3" text-anchor="middle" font-size="10" font-weight="600">Registry API</text>
+<text x="835.0" y="222.3" text-anchor="middle" font-size="10">GET /products/{id}</text>
+<rect x="735" y="250" width="200" height="70" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="835.0" y="267.3" text-anchor="middle" font-size="10" font-weight="600">Governance adapter: harness</text>
+<text x="835.0" y="281.3" text-anchor="middle" font-size="10">intake.Resolve (D-T-1..6)</text>
+<text x="835.0" y="295.3" text-anchor="middle" font-size="10">five-link replay (D-W-5)</text>
+<text x="835.0" y="309.3" text-anchor="middle" font-size="10">imports 4 read-only harness pkgs</text>
+<rect x="735" y="335" width="200" height="56" rx="6" fill="#fef3c7" stroke="#92400e" stroke-width="1.4"/>
+<text x="835.0" y="352.3" text-anchor="middle" font-size="10" font-weight="600">cmd/themis-intake</text>
+<text x="835.0" y="366.3" text-anchor="middle" font-size="10">human-operated bridge</text>
+<text x="835.0" y="380.3" text-anchor="middle" font-size="10">tuple in → Proposal out</text>
+<rect x="735" y="405" width="200" height="80" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="835.0" y="420.3" text-anchor="middle" font-size="10" font-weight="600">Walls</text>
+<text x="835.0" y="434.3" text-anchor="middle" font-size="10">exactly ONE Themis package</text>
+<text x="835.0" y="448.3" text-anchor="middle" font-size="10">imports the harness;</text>
+<text x="835.0" y="462.3" text-anchor="middle" font-size="10">harness imports no Themis;</text>
+<text x="835.0" y="476.3" text-anchor="middle" font-size="10">no writer, no exec</text>
+<path d="M 660,198 L 698,198 L 698,148 L 735,148" fill="none" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="698" y="174" text-anchor="middle" font-size="9" fill="#111827" font-weight="600">READ</text>
+<text x="698" y="185" text-anchor="middle" font-size="9" fill="#111827" font-weight="600">DOOR</text>
+<path d="M 660,278 L 698,278 L 698,285 L 735,285" fill="none" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="698" y="300" text-anchor="middle" font-size="9" fill="#111827" font-weight="600">DECISION</text>
+<text x="698" y="311" text-anchor="middle" font-size="9" fill="#111827" font-weight="600">DOOR</text>
+<text x="698" y="323" text-anchor="middle" font-size="8" fill="#111827">record read by</text>
+<text x="698" y="333" text-anchor="middle" font-size="8" fill="#111827">themis-intake only</text>
+<text x="490" y="528" text-anchor="middle" font-size="11" fill="#111827" font-style="italic">G2 fact table: every fact names its establishing mechanism; the Themis row is the Position, established by acceptProposal.</text>
+</svg></div><div class="cap">Figure 2. Harness layers L1–L11 with the G1 anchor; the read door leaves through L4, the decision door enters the record plane from Themis&#x27;s side only.</div>
+<h3>2.1 Locked boundaries that shape the diagram</h3>
+<ul>
+<li><strong>Read door (D-I-3).</strong> <code>ThemisSeam.Read</code> is an HTTP client. <code>get_finding</code> serves id, release, faultline, CVE, stage, components; positions and proposals are stripped. The anchor pins <code>themis_contract</code> (endpoints, two OpenAPI spec hashes, Themis commit), never live data. The read-scope key lives only in the harness environment.</li>
+<li><strong>Decision door (D-I-1, D-I-5, D-I-6).</strong> <code>cmd/themis-intake</code> is Themis-owned, runs on the same host, takes the execution tuple only, resolves it through D-T-1..6, and raises a Governance Proposal as an authenticated human. <code>acceptProposal</code> by a separate authenticated key creates the Position.</li>
+<li><strong>Witnesses (D-W-2, D-W-3, D-W-6).</strong> L5 writes one <code>l5-transition</code> per state-machine edge and one <code>l5-op</code> per subprocess and per egress through a writer-fixed handle; the sink enforces a closed class→writer table, folded into the constitution hash (D-W-4).</li>
+<li><strong>Walls (D-I-7).</strong> Exactly one Themis package imports four read-only harness packages; the harness imports no Themis code; neither side can execute or write through the other.</li>
+</ul>
+
+<h2 class="pb">3. Demo use cases</h2>
+<p>Six primary use cases form the happy path; three hostile use cases are the refusals a reviewer can ask for live. Actors: the Operator (commissions work, runs intake), the Decider (accepts), the Model (advisory only), the Themis pipeline, and the Reviewer.</p>
+<div class="fig"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 520" width="100%" font-family="Helvetica, Arial, sans-serif" role="img" aria-label="Use case diagram"><defs><marker id="ah" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#1f2937"/></marker></defs>
+<rect x="200" y="20" width="600" height="480" rx="6" fill="#fbfbfb" stroke="#9ca3af" stroke-width="1.4" stroke-dasharray="6,4"/>
+<text x="500.0" y="264.0" text-anchor="middle" font-size="12" font-weight="600"></text>
+<text x="500" y="44" text-anchor="middle" font-size="12" fill="#6b7280" font-weight="600">Demo system boundary: Themis + AI harness on the enterprise VM</text>
+<circle cx="80" cy="90" r="9" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="80" y1="99" x2="80" y2="124" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="66" y1="108" x2="94" y2="108" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="80" y1="124" x2="68" y2="142" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="80" y1="124" x2="92" y2="142" stroke="#1f2937" stroke-width="1.4"/>
+<text x="80" y="156" text-anchor="middle" font-size="11" fill="#111827" font-weight="600">Operator</text>
+<circle cx="80" cy="250" r="9" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="80" y1="259" x2="80" y2="284" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="66" y1="268" x2="94" y2="268" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="80" y1="284" x2="68" y2="302" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="80" y1="284" x2="92" y2="302" stroke="#1f2937" stroke-width="1.4"/>
+<text x="80" y="316" text-anchor="middle" font-size="11" fill="#111827" font-weight="600">Decider</text>
+<circle cx="80" cy="400" r="9" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="80" y1="409" x2="80" y2="434" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="66" y1="418" x2="94" y2="418" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="80" y1="434" x2="68" y2="452" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="80" y1="434" x2="92" y2="452" stroke="#1f2937" stroke-width="1.4"/>
+<text x="80" y="466" text-anchor="middle" font-size="11" fill="#111827" font-weight="600">Model</text>
+<circle cx="910" cy="120" r="9" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="910" y1="129" x2="910" y2="154" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="896" y1="138" x2="924" y2="138" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="910" y1="154" x2="898" y2="172" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="910" y1="154" x2="922" y2="172" stroke="#1f2937" stroke-width="1.4"/>
+<text x="910" y="186" text-anchor="middle" font-size="11" fill="#111827" font-weight="600">Themis pipeline</text>
+<text x="910" y="200" text-anchor="middle" font-size="9" fill="#111827">(Evidence → Knowledge</text>
+<text x="910" y="212" text-anchor="middle" font-size="9" fill="#111827">→ Governance)</text>
+<circle cx="910" cy="330" r="9" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="910" y1="339" x2="910" y2="364" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="896" y1="348" x2="924" y2="348" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="910" y1="364" x2="898" y2="382" stroke="#1f2937" stroke-width="1.4"/>
+<line x1="910" y1="364" x2="922" y2="382" stroke="#1f2937" stroke-width="1.4"/>
+<text x="910" y="396" text-anchor="middle" font-size="11" fill="#111827" font-weight="600">Reviewer</text>
+<ellipse cx="350" cy="90" rx="120" ry="26" fill="#f8fafc" stroke="#1f2937" stroke-width="1.3"/>
+<text x="350" y="86.7" text-anchor="middle" font-size="11">UC1 Establish a real Finding</text>
+<text x="350" y="100.7" text-anchor="middle" font-size="11">SBOM → correlation → Finding UUID</text>
+<ellipse cx="350" cy="160" rx="120" ry="26" fill="#f8fafc" stroke="#1f2937" stroke-width="1.3"/>
+<text x="350" y="156.7" text-anchor="middle" font-size="11">UC2 Commission governed work</text>
+<text x="350" y="170.7" text-anchor="middle" font-size="11">instantiate remediate-dependency@4</text>
+<ellipse cx="620" cy="160" rx="120" ry="26" fill="#f8fafc" stroke="#1f2937" stroke-width="1.3"/>
+<text x="620" y="156.7" text-anchor="middle" font-size="11">UC3 Execute under anchor rsys@6</text>
+<text x="620" y="170.7" text-anchor="middle" font-size="11">read door · edit · report · L10 PASS</text>
+<ellipse cx="350" cy="240" rx="120" ry="26" fill="#f8fafc" stroke="#1f2937" stroke-width="1.3"/>
+<text x="350" y="236.7" text-anchor="middle" font-size="11">UC4 Resolve the execution</text>
+<text x="350" y="250.7" text-anchor="middle" font-size="11">themis-intake: tuple → evidence view</text>
+<ellipse cx="620" cy="240" rx="120" ry="26" fill="#f8fafc" stroke="#1f2937" stroke-width="1.3"/>
+<text x="620" y="236.7" text-anchor="middle" font-size="11">UC5 Raise a Proposal</text>
+<text x="620" y="250.7" text-anchor="middle" font-size="11">human, evidence attached, trust inferred</text>
+<ellipse cx="570" cy="320" rx="120" ry="26" fill="#f8fafc" stroke="#1f2937" stroke-width="1.3"/>
+<text x="570" y="316.7" text-anchor="middle" font-size="11">UC6 Accept the Proposal</text>
+<text x="570" y="330.7" text-anchor="middle" font-size="11">authenticated key → Position vN</text>
+<ellipse cx="350" cy="410" rx="120" ry="26" fill="#fee2e2" stroke="#1f2937" stroke-width="1.3"/>
+<text x="350" y="406.7" text-anchor="middle" font-size="11">UC7 Substitute another Finding</text>
+<text x="350" y="420.7" text-anchor="middle" font-size="11">→ L4 denies (uuid scope / D-I-9)</text>
+<ellipse cx="650" cy="410" rx="120" ry="26" fill="#fee2e2" stroke="#1f2937" stroke-width="1.3"/>
+<text x="650" y="406.7" text-anchor="middle" font-size="11">UC8 Verify A, egress B</text>
+<text x="650" y="420.7" text-anchor="middle" font-size="11">→ intake refuses, link-named</text>
+<ellipse cx="480" cy="470" rx="120" ry="26" fill="#dcfce7" stroke="#1f2937" stroke-width="1.3"/>
+<text x="480" y="466.7" text-anchor="middle" font-size="11">UC9 Replay any Position cold</text>
+<text x="480" y="480.7" text-anchor="middle" font-size="11">record plane → same evidence</text>
+<line x1="100" y1="120" x2="230" y2="100" stroke="#4b5563" stroke-width="1.4" marker-end="url(#ah)"/>
+<line x1="100" y1="125" x2="230" y2="160" stroke="#4b5563" stroke-width="1.4" marker-end="url(#ah)"/>
+<line x1="100" y1="128" x2="230" y2="240" stroke="#4b5563" stroke-width="1.4" marker-end="url(#ah)"/>
+<line x1="100" y1="280" x2="450" y2="320" stroke="#4b5563" stroke-width="1.4" marker-end="url(#ah)"/>
+<line x1="100" y1="430" x2="230" y2="410" stroke="#4b5563" stroke-width="1.4" marker-end="url(#ah)"/>
+<line x1="890" y1="150" x2="470" y2="95" stroke="#4b5563" stroke-width="1.4" marker-end="url(#ah)"/>
+<line x1="890" y1="360" x2="600" y2="470" stroke="#4b5563" stroke-width="1.4" marker-end="url(#ah)"/>
+<line x1="890" y1="355" x2="770" y2="410" stroke="#4b5563" stroke-width="1.4" marker-end="url(#ah)"/>
+<line x1="470" y1="160" x2="500" y2="160" stroke="#4b5563" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="485" y="150" text-anchor="middle" font-size="9" fill="#4b5563">«include»</text>
+<line x1="470" y1="240" x2="500" y2="240" stroke="#4b5563" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="485" y="230" text-anchor="middle" font-size="9" fill="#4b5563">«include»</text>
+<line x1="620" y1="186" x2="620" y2="214" stroke="#4b5563" stroke-width="1.4" marker-end="url(#ah)" stroke-dasharray="5,4"/>
+<text x="660" y="203" text-anchor="middle" font-size="9" fill="#4b5563">«precedes»</text>
+<line x1="600" y1="266" x2="580" y2="294" stroke="#4b5563" stroke-width="1.4" marker-end="url(#ah)" stroke-dasharray="5,4"/>
+<text x="548" y="285" text-anchor="middle" font-size="9" fill="#4b5563">«precedes»</text>
+<line x1="720" y1="384" x2="720" y2="266" stroke="#b91c1c" stroke-width="1.4" marker-end="url(#ah)" stroke-dasharray="5,4"/>
+<text x="768" y="330" text-anchor="middle" font-size="9" fill="#b91c1c">«extends» (hostile)</text>
+<line x1="300" y1="384" x2="540" y2="186" stroke="#b91c1c" stroke-width="1.4" marker-end="url(#ah)" stroke-dasharray="5,4"/>
+<text x="300" y="300" text-anchor="middle" font-size="9" fill="#b91c1c">«extends» (hostile)</text>
+</svg></div><div class="cap">Figure 3. Use case diagram for the thirty-minute live demo. Red: hostile demonstrations that must refuse. Green: cold replay of a Position from the record.</div>
+<table>
+<tr><th>UC</th><th>Actor</th><th>Goal</th><th>Enforced by</th><th>Locked in</th></tr>
+<tr><td>UC1</td><td>Operator, Themis pipeline</td><td>A real Finding exists for a real vulnerable Go module (no manual row)</td><td>Evidence → Knowledge → Governance</td><td>D-I-4, D-I-8</td></tr>
+<tr><td>UC2</td><td>Operator</td><td>Commission <code>remediate-dependency@4</code> with finding UUID, dependency, CVE, target version</td><td>L9 instantiation, catalog pin</td><td>D-I-4</td></tr>
+<tr><td>UC3</td><td>Harness, Model</td><td>Execute under rsys@6: read Finding as governed record, edit, report, L10 PASS, seal, egress, bind, COMPLETED</td><td>L1–L11, G1, L5 witnesses</td><td>D-I-3, D-W-2/3</td></tr>
+<tr><td>UC4</td><td>Operator</td><td>Resolve the tuple: anchor registered, five-link production chain, reproducible PASS over egressed bytes; evidence view</td><td><code>themis-intake</code>, <code>intake.Resolve</code></td><td>D-T-1..6, D-W-5</td></tr>
+<tr><td>UC5</td><td>Operator</td><td>Raise a Proposal with immutable <code>harness-execution/v1</code> evidence, trust derived as inferred</td><td>Governance API, Business Verification</td><td>D-I-5</td></tr>
+<tr><td>UC6</td><td>Decider</td><td>Accept → Position vN with decider <code>key:&lt;KeyID&gt;</code></td><td><code>acceptProposal</code>, EDR-SECURITY-01 D10</td><td>D-I-6</td></tr>
+<tr><td>UC7</td><td>Model (hostile)</td><td>Ask for another Finding</td><td>L4 uuid scope; exact subject with D-I-9</td><td>D-I-4, D-I-9</td></tr>
+<tr><td>UC8</td><td>Model (hostile)</td><td>Verify report A, rewrite to B, egress B</td><td>intake refuses "verified bytes are not the bound artifact"</td><td>D-T-5 (proven T-M3)</td></tr>
+<tr><td>UC9</td><td>Reviewer</td><td>Replay any Position cold from the record plane and get the same evidence</td><td>Position → AcceptedProposalID → tuple → record</td><td>D-I-6, D-T-4</td></tr>
+</table>
+
+<h2 class="pb">4. The demo flow, step by step</h2>
+<div class="fig"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 900" width="100%" font-family="Helvetica, Arial, sans-serif" role="img" aria-label="Sequence diagram"><defs><marker id="ah" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#1f2937"/></marker></defs>
+<rect x="18" y="20" width="104" height="40" rx="6" fill="#f3f4f6" stroke="#1f2937" stroke-width="1.4"/>
+<text x="70.0" y="43.3" text-anchor="middle" font-size="10" font-weight="600">Operator</text>
+<line x1="70" y1="60" x2="70" y2="862" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+<rect x="138" y="20" width="104" height="40" rx="6" fill="#f3f4f6" stroke="#1f2937" stroke-width="1.4"/>
+<text x="190.0" y="43.3" text-anchor="middle" font-size="10" font-weight="600">Themis pipeline</text>
+<line x1="190" y1="60" x2="190" y2="862" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+<rect x="278" y="20" width="104" height="40" rx="6" fill="#f3f4f6" stroke="#1f2937" stroke-width="1.4"/>
+<text x="330.0" y="43.3" text-anchor="middle" font-size="10" font-weight="600">Harness L7 (rsys@6)</text>
+<line x1="330" y1="60" x2="330" y2="862" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+<rect x="398" y="20" width="104" height="40" rx="6" fill="#f3f4f6" stroke="#1f2937" stroke-width="1.4"/>
+<text x="450.0" y="43.3" text-anchor="middle" font-size="10" font-weight="600">Model</text>
+<line x1="450" y1="60" x2="450" y2="862" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+<rect x="528" y="20" width="104" height="40" rx="6" fill="#f3f4f6" stroke="#1f2937" stroke-width="1.4"/>
+<text x="580.0" y="43.3" text-anchor="middle" font-size="10" font-weight="600">Themis Governance</text>
+<line x1="580" y1="60" x2="580" y2="862" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+<rect x="648" y="20" width="104" height="40" rx="6" fill="#f3f4f6" stroke="#1f2937" stroke-width="1.4"/>
+<text x="700.0" y="43.3" text-anchor="middle" font-size="10" font-weight="600">Record plane (L6)</text>
+<line x1="700" y1="60" x2="700" y2="862" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+<rect x="768" y="20" width="104" height="40" rx="6" fill="#f3f4f6" stroke="#1f2937" stroke-width="1.4"/>
+<text x="820.0" y="43.3" text-anchor="middle" font-size="10" font-weight="600">themis-intake</text>
+<line x1="820" y1="60" x2="820" y2="862" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+<rect x="878" y="20" width="104" height="40" rx="6" fill="#f3f4f6" stroke="#1f2937" stroke-width="1.4"/>
+<text x="930.0" y="43.3" text-anchor="middle" font-size="10" font-weight="600">Decider</text>
+<line x1="930" y1="60" x2="930" y2="862" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+<line x1="70" y1="90" x2="190" y2="90" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="130.0" y="84" text-anchor="middle" font-size="9.5" fill="#1f2937">1. register Product/Project/Release; upload CycloneDX SBOM</text>
+<line x1="190" y1="125" x2="580" y2="125" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="385.0" y="119" text-anchor="middle" font-size="9.5" fill="#1f2937">2. Knowledge correlates CVE → Governance opens Finding (UUID)</text>
+<line x1="580" y1="160" x2="70" y2="160" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)" stroke-dasharray="5,4"/>
+<text x="325.0" y="154" text-anchor="middle" font-size="9.5" fill="#1f2937">3. Finding UUID + provenance (runbook)</text>
+<line x1="70" y1="195" x2="330" y2="195" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="200.0" y="189" text-anchor="middle" font-size="9.5" fill="#1f2937">4. instantiate remediate-dependency@4 {finding, dependency, advisory, target-version}</text>
+<line x1="330" y1="230" x2="700" y2="230" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="515.0" y="224" text-anchor="middle" font-size="9.5" fill="#1f2937">5. CREATED; materialized anchor bytes; governed hashes</text>
+<line x1="330" y1="265" x2="450" y2="265" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="390.0" y="259" text-anchor="middle" font-size="9.5" fill="#1f2937">6. compose phase ANALYZE (Finding UUID in context as data)</text>
+<line x1="450" y1="300" x2="330" y2="300" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="390.0" y="294" text-anchor="middle" font-size="9.5" fill="#1f2937">7. tool call get_finding(id=UUID)</text>
+<line x1="330" y1="335" x2="580" y2="335" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="455.0" y="329" text-anchor="middle" font-size="9.5" fill="#1f2937">8. L4 authorizes (uuid scope) → HTTP GET /findings/{id} (read key)</text>
+<line x1="580" y1="370" x2="330" y2="370" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)" stroke-dasharray="5,4"/>
+<text x="455.0" y="364" text-anchor="middle" font-size="9.5" fill="#1f2937">9. FindingView → projected (no positions/proposals) → governed-record</text>
+<line x1="330" y1="405" x2="700" y2="405" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="515.0" y="399" text-anchor="middle" font-size="9.5" fill="#1f2937">10. l4-audit, model-turn, l2-delivery events</text>
+<line x1="450" y1="440" x2="330" y2="440" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="390.0" y="434" text-anchor="middle" font-size="9.5" fill="#1f2937">11. write_file go.mod / report.json; verify_report(report-valid@2)</text>
+<line x1="330" y1="475" x2="700" y2="475" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="515.0" y="469" text-anchor="middle" font-size="9.5" fill="#1f2937">12. l10-verification PASS (evaluation record, raw + canonical bytes)</text>
+<line x1="330" y1="510" x2="700" y2="510" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="515.0" y="504" text-anchor="middle" font-size="9.5" fill="#1f2937">13. l5-transition SEALED(task-complete) → EGRESSING; l5-op egress acknowledged A</text>
+<line x1="330" y1="545" x2="700" y2="545" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="515.0" y="539" text-anchor="middle" font-size="9.5" fill="#1f2937">14. artifact-bound A; lifecycle COMPLETED</text>
+<line x1="70" y1="580" x2="820" y2="580" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="445.0" y="574" text-anchor="middle" font-size="9.5" fill="#1f2937">15. themis-intake (anchor, task, seq) --stance --rationale</text>
+<line x1="820" y1="615" x2="700" y2="615" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="760.0" y="609" text-anchor="middle" font-size="9.5" fill="#1f2937">16. local read-only: manifest, events, objects</text>
+<text x="965" y="642" text-anchor="end" font-size="9.5" fill="#374151" font-style="italic">17. Resolve: D-T-1..6, five-link replay, reproducible PASS over the egressed bytes</text>
+<line x1="820" y1="674" x2="70" y2="674" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)" stroke-dasharray="5,4"/>
+<text x="445.0" y="668" text-anchor="middle" font-size="9.5" fill="#1f2937">18. Evidence View: model turns | artifact | verification (three facts)</text>
+<line x1="820" y1="709" x2="580" y2="709" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="700.0" y="703" text-anchor="middle" font-size="9.5" fill="#1f2937">19. POST proposals {stance, rationale, evidence: harness-execution/v1, trust: inferred} (write key)</text>
+<line x1="580" y1="744" x2="820" y2="744" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)" stroke-dasharray="5,4"/>
+<text x="700.0" y="738" text-anchor="middle" font-size="9.5" fill="#1f2937">20. proposal_id</text>
+<line x1="930" y1="779" x2="580" y2="779" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="755.0" y="773" text-anchor="middle" font-size="9.5" fill="#1f2937">21. POST proposals/{id}/accept (separate write key)</text>
+<text x="580" y="806" text-anchor="middle" font-size="9.5" fill="#374151" font-style="italic">22. decider = key:&lt;KeyID&gt;; Position vN cites AcceptedProposalID</text>
+<line x1="580" y1="838" x2="930" y2="838" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)" stroke-dasharray="5,4"/>
+<text x="755.0" y="832" text-anchor="middle" font-size="9.5" fill="#1f2937">23. Position established</text>
+<text x="490" y="884" text-anchor="middle" font-size="10" fill="#111827" font-style="italic">Every numbered step leaves a durable record either in Themis (Postgres) or in the harness record plane; step 17 is recomputed, never read as a claim.</text>
+</svg></div><div class="cap">Figure 4. Sequence of the live demo. Solid arrows are acts; dashed arrows are returns. Steps 1–3 are done before the session and shown as evidence; steps 4–23 run live.</div>
+
+<h2 class="pb">5. Authority chain and the three facts</h2>
+<div class="fig"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 300" width="100%" font-family="Helvetica, Arial, sans-serif" role="img" aria-label="Authority chain"><defs><marker id="ah" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#1f2937"/></marker></defs>
+<rect x="20" y="40" width="124" height="70" rx="6" fill="#f3f4f6" stroke="#1f2937" stroke-width="1.4"/>
+<text x="82.0" y="64.7" text-anchor="middle" font-size="9.5" font-weight="600">Model</text>
+<text x="82.0" y="78.2" text-anchor="middle" font-size="9.5">produces the</text>
+<text x="82.0" y="91.7" text-anchor="middle" font-size="9.5">work / artifact</text>
+<line x1="144" y1="75" x2="158" y2="75" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<rect x="158" y="40" width="124" height="70" rx="6" fill="#ecfdf5" stroke="#1f2937" stroke-width="1.4"/>
+<text x="220.0" y="64.7" text-anchor="middle" font-size="9.5" font-weight="600">Harness</text>
+<text x="220.0" y="78.2" text-anchor="middle" font-size="9.5">verifies, records;</text>
+<text x="220.0" y="91.7" text-anchor="middle" font-size="9.5">reconstructable</text>
+<line x1="282" y1="75" x2="296" y2="75" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<rect x="296" y="40" width="124" height="70" rx="6" fill="#fef3c7" stroke="#1f2937" stroke-width="1.4"/>
+<text x="358.0" y="64.7" text-anchor="middle" font-size="9.5" font-weight="600">themis-intake</text>
+<text x="358.0" y="78.2" text-anchor="middle" font-size="9.5">human invokes;</text>
+<text x="358.0" y="91.7" text-anchor="middle" font-size="9.5">derived evidence</text>
+<line x1="420" y1="75" x2="434" y2="75" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<rect x="434" y="40" width="124" height="70" rx="6" fill="#eef2ff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="496.0" y="64.7" text-anchor="middle" font-size="9.5" font-weight="600">Themis Proposal</text>
+<text x="496.0" y="78.2" text-anchor="middle" font-size="9.5">proposer =</text>
+<text x="496.0" y="91.7" text-anchor="middle" font-size="9.5">authenticated human</text>
+<line x1="558" y1="75" x2="572" y2="75" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<rect x="572" y="40" width="124" height="70" rx="6" fill="#eef2ff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="634.0" y="64.7" text-anchor="middle" font-size="9.5" font-weight="600">Business Verif.</text>
+<text x="634.0" y="78.2" text-anchor="middle" font-size="9.5">refs vouched</text>
+<text x="634.0" y="91.7" text-anchor="middle" font-size="9.5">by the Finding</text>
+<line x1="696" y1="75" x2="710" y2="75" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<rect x="710" y="40" width="124" height="70" rx="6" fill="#eef2ff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="772.0" y="64.7" text-anchor="middle" font-size="9.5" font-weight="600">Human acceptance</text>
+<text x="772.0" y="78.2" text-anchor="middle" font-size="9.5">separate</text>
+<text x="772.0" y="91.7" text-anchor="middle" font-size="9.5">authenticated key</text>
+<line x1="834" y1="75" x2="848" y2="75" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<rect x="848" y="40" width="124" height="70" rx="6" fill="#c7d2fe" stroke="#1f2937" stroke-width="1.4"/>
+<text x="910.0" y="64.7" text-anchor="middle" font-size="9.5" font-weight="600">Position</text>
+<text x="910.0" y="78.2" text-anchor="middle" font-size="9.5">Themis</text>
+<text x="910.0" y="91.7" text-anchor="middle" font-size="9.5">security truth</text>
+<text x="490" y="30" text-anchor="middle" font-size="12" fill="#111827" font-weight="600">Authority chain (D-I-5): the model is never the decision-maker; the harness is never a Governance actor.</text>
+<rect x="20" y="140" width="300" height="130" rx="6" fill="#ecfdf5" stroke="#1f2937" stroke-width="1.4"/>
+<text x="170.0" y="186.2" text-anchor="middle" font-size="11" font-weight="600">HARNESS FACT</text>
+<text x="170.0" y="201.2" text-anchor="middle" font-size="11">this task bound this artifact</text>
+<text x="170.0" y="216.2" text-anchor="middle" font-size="11">artifact-bound (l6) after</text>
+<text x="170.0" y="231.2" text-anchor="middle" font-size="11">l5 seal + egress witnesses</text>
+<rect x="340" y="140" width="300" height="130" rx="6" fill="#ecfdf5" stroke="#1f2937" stroke-width="1.4"/>
+<text x="490.0" y="186.2" text-anchor="middle" font-size="11" font-weight="600">VERIFICATION FACT</text>
+<text x="490.0" y="201.2" text-anchor="middle" font-size="11">L10 evaluated the exact bytes</text>
+<text x="490.0" y="216.2" text-anchor="middle" font-size="11">l10-verification + evaluation record;</text>
+<text x="490.0" y="231.2" text-anchor="middle" font-size="11">re-run by Themis, never trusted</text>
+<rect x="660" y="140" width="300" height="130" rx="6" fill="#eef2ff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="810.0" y="186.2" text-anchor="middle" font-size="11" font-weight="600">GOVERNANCE FACT</text>
+<text x="810.0" y="201.2" text-anchor="middle" font-size="11">an authorized human accepted it</text>
+<text x="810.0" y="216.2" text-anchor="middle" font-size="11">Position vN → AcceptedProposalID →</text>
+<text x="810.0" y="231.2" text-anchor="middle" font-size="11">harness-execution/v1 evidence</text>
+<text x="490" y="292" text-anchor="middle" font-size="11" fill="#111827" font-style="italic">Three facts, never collapsed into one &quot;approved report&quot; object.</text>
+</svg></div><div class="cap">Figure 5. Who may do what (D-I-5), and the three facts the evidence view keeps separate (proposal §Why).</div>
+
+<h2>6. Expected outputs, per step</h2>
+<p>What the audience sees on screen, and what durable record it corresponds to. Identifiers below are illustrative shapes, not real values.</p>
+<table>
+<tr><th>Step</th><th>Command / act</th><th>Visible output</th><th>Durable record</th></tr>
+<tr><td>UC1</td><td><code>vm-verify.sh &lt;release&gt;</code>; <code>GET /findings?release=…&amp;faultline=…</code></td><td>Finding <code>id</code> (UUID), <code>cve</code>, <code>components[]</code> with the vulnerable PURL, <code>stage: identified</code>, no positions</td><td>Governance DB; runbook provenance (SBOM hash, release id, feed source)</td></tr>
+<tr><td>UC2</td><td><code>themis-instantiate remediate-dependency@4 …</code></td><td>Envelope path; composition hash; grant with <code>themis_scope: [uuid]</code></td><td>Envelope file; L6 CREATED event with governed hashes</td></tr>
+<tr><td>UC3</td><td><code>themis-run -deploy /srv/themis/rsys …</code></td><td><code>status=COMPLETED verdict=VERIFIED artifact=sha256:…</code>; audit lines for <code>get_finding authorized</code>, <code>verify_report authorized</code></td><td>events.log: l2-delivery, l4-audit, model-turn, l10-verification PASS, l5-transition ×N, l5-op ×N incl. egress acknowledged, artifact-bound, lifecycle COMPLETED</td></tr>
+<tr><td>UC4</td><td><code>themis-intake --anchor … --task … --seq …</code></td><td>Evidence view (below); <code>production_witness: l5-witnessed</code>; <code>reconstructed_outcome: PASS</code></td><td>None written by Themis at this step; the CLI's rendering is presentation</td></tr>
+<tr><td>UC5</td><td>same command with <code>--stance --rationale</code></td><td><code>proposal_id</code>; evidence echoed back by <code>GET /findings/{id}</code> with <code>proposer_kind: human</code>, <code>evidence_trust: inferred</code></td><td><code>finding_proposals</code> row with immutable <code>evidence</code> JSONB</td></tr>
+<tr><td>UC6</td><td><code>POST …/accept</code> with the decider's key</td><td><code>current_position.version: 1</code>, <code>actor_kind: human</code>, <code>actor_id: key:…</code>, inputs cite the proposal</td><td>Position v1 row; outbox event for Communication</td></tr>
+<tr><td>UC7</td><td>model calls <code>get_finding</code> with another UUID</td><td>Tool result: deterministic denial (class-only); walk continues or fails per workflow</td><td>l4-audit <code>Decision: denied</code></td></tr>
+<tr><td>UC8</td><td>walk that verifies A then writes B; then <code>themis-intake</code></td><td><code>verification-refused: verified bytes are not the bound artifact (no member of egress … has hash …)</code></td><td>Harness record COMPLETED; no Proposal exists</td></tr>
+<tr><td>UC9</td><td><code>themis-intake --inspect &lt;position&gt;</code> (or the tuple again)</td><td>Same evidence view, byte-for-byte identities</td><td>Read-only</td></tr>
+</table>
+
+<h3>6.1 Evidence view, as rendered by themis-intake (shape)</h3>
+<pre>{
+  "execution": { "anchor_hash": "0d…", "anchor_name": "rsys", "anchor_version": 6, "anchor_state_at_intake": "active",
+                  "task_id": "demo-remediate-0001", "constitution_hash": "…", "harness_module": "…/src/harness v0.0.0-…" },
+  "model_turns": [ { "seq": 7, "object_id": "sha256:…" }, { "seq": 12, "object_id": "sha256:…" } ],
+  "artifact":  { "object_id": "sha256:…", "artifact_bound_seq": 41, "completed_seq": 44,
+                  "verified_member_path": "report.json", "verified_member_sha256": "…",
+                  "production_witness": "l5-witnessed",
+                  "l5": { "sealed_seq": 36, "seal_reason": "task-complete", "egressing_seq": 37, "egress_op_seq": 39, "egress_outcome": "acknowledged" } },
+  "verification": { "seq": 31, "contract": "report-valid@2", "contract_sha256": "bbc1…", "contract_state_at_intake": "active",
+                     "verifier_audit_seq": 30, "reconstructed_outcome": "PASS", "reconstruction_consistent": true, "checks": 9 },
+  "trust_class": "inferred",
+  "business_verification_refs": [ "pkg:golang/…@v1.x", "CVE-20xx-xxxx" ]
+}</pre>
+
+<h3>6.2 Refusals the audience may ask to see</h3>
+<table>
+<tr><th>Ask</th><th>Refusal text (class)</th><th>Where</th></tr>
+<tr><td>Tuple names a different anchor</td><td><code>execution not referencable: the record identifies deployment anchor …</code></td><td>intake D-T-1</td></tr>
+<tr><td>Anchor never registered on Themis's checkout</td><td><code>deployment-refused: … no longer registered</code></td><td>intake D-T-2</td></tr>
+<tr><td>Anchor withdrawn after the run</td><td>proceeds; <code>anchor_state_at_intake: withdrawn</code></td><td>intake D-T-6</td></tr>
+<tr><td>Missing or forged L5 witness</td><td><code>artifact-provenance-refused: missing l5-op egress witness …</code> (first failed link)</td><td>intake D-W-5</td></tr>
+<tr><td>Verify A, egress B</td><td><code>verification-refused: verified bytes are not the bound artifact</code></td><td>intake D-T-5</td></tr>
+<tr><td>Event claims PASS over invalid bytes</td><td><code>verification-refused: no reproducible PASS (reconstruction inconsistent: canonicalization)</code></td><td>intake D-T-5</td></tr>
+<tr><td>Model requests another Finding</td><td>L4 denial, audited</td><td>L4 D-I-4 / D-I-9</td></tr>
+<tr><td>Accept without a principal</td><td>recorded as <code>dev:</code>; the demo asserts none exist</td><td>Governance D-I-6</td></tr>
+</table>
+
+<h2 class="pb">7. Deployment topology for the demo</h2>
+<div class="fig"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 460" width="100%" font-family="Helvetica, Arial, sans-serif" role="img" aria-label="Deployment topology"><defs><marker id="ah" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#1f2937"/></marker></defs>
+<rect x="20" y="20" width="940" height="420" rx="6" fill="#fbfbfb" stroke="#9ca3af" stroke-width="1.4" stroke-dasharray="6,4"/>
+<text x="490.0" y="234.0" text-anchor="middle" font-size="12" font-weight="600"></text>
+<text x="34" y="44" text-anchor="start" font-size="12" fill="#6b7280" font-weight="600">Enterprise Linux VM</text>
+<rect x="40" y="70" width="420" height="330" rx="6" fill="#eef2ff" stroke="#3730a3" stroke-width="1.4"/>
+<text x="250.0" y="239.0" text-anchor="middle" font-size="12" font-weight="600"></text>
+<text x="250" y="94" text-anchor="middle" font-size="11" fill="#111827" font-weight="600">Themis estate (~/code/themis checkout, systemd units themis@&lt;ctx&gt;)</text>
+<rect x="55" y="110" width="185" height="40" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="147.5" y="126.3" text-anchor="middle" font-size="10" font-weight="600">themis@registry</text>
+<text x="147.5" y="140.3" text-anchor="middle" font-size="10">:8082  · on demo path</text>
+<rect x="255" y="110" width="185" height="40" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="347.5" y="126.3" text-anchor="middle" font-size="10" font-weight="600">themis@evidence</text>
+<text x="347.5" y="140.3" text-anchor="middle" font-size="10">:8081  · on demo path</text>
+<rect x="55" y="162" width="185" height="40" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="147.5" y="178.3" text-anchor="middle" font-size="10" font-weight="600">themis@knowledge</text>
+<text x="147.5" y="192.3" text-anchor="middle" font-size="10">:8085  · on demo path</text>
+<rect x="255" y="162" width="185" height="40" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="347.5" y="178.3" text-anchor="middle" font-size="10" font-weight="600">themis@governance</text>
+<text x="347.5" y="192.3" text-anchor="middle" font-size="10">:8083  · on demo path</text>
+<rect x="55" y="214" width="185" height="40" rx="6" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.4"/>
+<text x="147.5" y="230.3" text-anchor="middle" font-size="10" font-weight="600">themis@communication</text>
+<text x="147.5" y="244.3" text-anchor="middle" font-size="10">:8084  · not on path</text>
+<rect x="255" y="214" width="185" height="40" rx="6" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.4"/>
+<text x="347.5" y="230.3" text-anchor="middle" font-size="10" font-weight="600">themis@intelligence</text>
+<text x="347.5" y="244.3" text-anchor="middle" font-size="10">:8086  · not on path</text>
+<rect x="55" y="272" width="385" height="40" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="247.5" y="295.3" text-anchor="middle" font-size="10" font-weight="600">PostgreSQL: one database per context (+ bus, auth)</text>
+<rect x="55" y="322" width="385" height="64" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="247.5" y="343.3" text-anchor="middle" font-size="10" font-weight="600">THEMIS_AUTH_REQUIRED=1 on governance + registry; AI off</text>
+<text x="247.5" y="357.3" text-anchor="middle" font-size="10">keys (authadmin): read (harness) · product write (operator) · write (decider)</text>
+<text x="247.5" y="371.3" text-anchor="middle" font-size="10">deployed commit == commit named in themis_contract</text>
+<rect x="500" y="70" width="440" height="330" rx="6" fill="#ecfdf5" stroke="#065f46" stroke-width="1.4"/>
+<text x="720.0" y="239.0" text-anchor="middle" font-size="12" font-weight="600"></text>
+<text x="720" y="94" text-anchor="middle" font-size="11" fill="#111827" font-weight="600">Harness (~/code/themis-ai-runtime checkout, themis-run)</text>
+<rect x="515" y="110" width="410" height="56" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="720.0" y="134.3" text-anchor="middle" font-size="10" font-weight="600">Governed root: the checkout at the rsys@6 commit</text>
+<text x="720.0" y="148.3" text-anchor="middle" font-size="10">policies/ · instructions/ · policies/themis/contract.json</text>
+<rect x="515" y="176" width="410" height="66" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="720.0" y="198.3" text-anchor="middle" font-size="10" font-weight="600">Deployment root /srv/themis/rsys</text>
+<text x="720.0" y="212.3" text-anchor="middle" font-size="10">anchor rsys@6 (ACTIVE) · anchors.json (append-only; rsys@5 withdrawn)</text>
+<text x="720.0" y="226.3" text-anchor="middle" font-size="10">state/ (record plane) · artifacts/ · provider/ · mirror</text>
+<rect x="515" y="252" width="410" height="56" rx="6" fill="#fef3c7" stroke="#92400e" stroke-width="1.4"/>
+<text x="720.0" y="276.3" text-anchor="middle" font-size="10" font-weight="600">rsys@6 pins: constitution.state (W-M1) · tool_registry v6 · skill_catalog (@4)</text>
+<text x="720.0" y="290.3" text-anchor="middle" font-size="10">themis_contract = sha256(contract.json): URLs, spec hashes, Themis commit</text>
+<rect x="515" y="318" width="410" height="68" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
+<text x="720.0" y="341.3" text-anchor="middle" font-size="10" font-weight="600">Demo module mirror: real Go module with a real CVE</text>
+<text x="720.0" y="355.3" text-anchor="middle" font-size="10">CycloneDX SBOM of the same module fed to Evidence</text>
+<text x="720.0" y="369.3" text-anchor="middle" font-size="10">themis-intake binary (built from the Themis repo, pinned harness dep)</text>
+<line x1="500" y1="206" x2="462" y2="206" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="481" y="196" text-anchor="middle" font-size="9" fill="#1f2937">loopback</text>
+<text x="490" y="424" text-anchor="middle" font-size="11" fill="#111827" font-style="italic">Same host: the record plane is local to themis-intake; only the Proposal and the reads cross a socket, on loopback.</text>
+</svg></div><div class="cap">Figure 6. One VM, two checkouts, one anchor (rsys@6), three keys. The contract pins the interface; the data is live.</div>
+<h3>7.1 Host-act order (D-I-8)</h3>
+<ol>
+<li><strong>Themis side:</strong> auth required on Governance and Registry; three keys issued with <code>authadmin</code>; deployed commit checked against <code>contract.json</code>; demo Finding established through the pipeline (fixture feed if OSV is unreachable).</li>
+<li><strong>Harness side:</strong> W-M1..W-M3 and the module rename landed and proven hermetically; rsys@6 minted on the host from the host's tree; opened and validated; rsys@5 withdrawn; demo execution.</li>
+<li><strong>Decision side:</strong> operator raises through <code>themis-intake</code>; decider accepts; no <code>dev:</code> witness.</li>
+</ol>
+
+<h2>8. Deliberately out of scope</h2>
+<ul>
+<li>Vulnerability-feed ingestion beyond the one demo advisory; Knowledge Builder; CVE enrichment.</li>
+<li>Themis's Intelligence Gateway (AI proposals) — off for the demo so the only proposal is the human's.</li>
+<li>Automated acceptance; any Position created by the harness or the model.</li>
+<li>Multi-skill pipelines; harness-to-Themis traffic other than the single read door.</li>
+<li>Process authentication and key custody beyond Themis's authentication administration.</li>
+</ul>
+
+<h2>9. Milestones to reach the demo</h2>
+<table>
+<tr><th>Milestone</th><th>Repo</th><th>Lands</th></tr>
+<tr><td>I-M0</td><td>harness</td><td>Module rename to <code>github.com/tofchaliss/themis-ai-runtime/src/harness</code>; constitution hashes asserted unchanged</td></tr>
+<tr><td>W-M1</td><td>harness</td><td>Sink-enforced class→writer invariant folded into the L6 constitution hash</td></tr>
+<tr><td>W-M2</td><td>harness</td><td>L5 emission handle; full-machine <code>l5-transition</code>; two-form <code>l5-op</code>; AST wall</td></tr>
+<tr><td>I-M1</td><td>harness</td><td>HTTP read seam with projection; <code>themis_contract</code>; registry v6 uuid scope; <code>remediate-dependency@4</code></td></tr>
+<tr><td>I-M2</td><td>harness</td><td>Real five-link record fixture with provenance metadata</td></tr>
+<tr><td>I-M3</td><td>Themis</td><td>EDR + phase3 change; evidence on proposals; <code>adapters/harness</code> with intake and five-link replay; <code>cmd/themis-intake</code>; walls; fixture tests</td></tr>
+<tr><td>I-M4</td><td>harness</td><td><code>src/themis</code> dissolved; Wall 1 rewritten</td></tr>
+<tr><td>I-M5</td><td>host</td><td>Keys, Finding via pipeline, single rsys@6 mint, demo execution, two human acts, Addendum G, reviews, archive</td></tr>
+</table>
+<p class="meta">Source: <code>docs/demo/themis-demo-architecture.html</code> (generated); decisions in <code>openspec/changes/{themis-v0,l5-witness-events,themis-integration}/design.md</code>.</p>
+</body></html>

@@ -61,6 +61,7 @@ I-M0 → W-M1 → W-M2 → I-M1 → I-M2 → I-M3 (absorbs W-M3) → I-M4 → I-
       mapping; depguard allow-list (four harness packages) and denies;
       no `os` writer / `os/exec`
 - [ ] Commissioning (D-C-1..6): `Commission` on the Finding aggregate, migration, API, events, `raiseProposal` correspondence check (`themis-commissioning/tasks.md`)
+- [ ] L8 surface (D-L-1..3): delegations in the evidence view, `delegations {count, seqs}` in the evidence, `premises` on the witnessing table (`l8-themis-surface/tasks.md`)
 - [ ] `cmd/themis-intake`: tuple + `--stance` + `--rationale` (commission id DERIVED from CREATED, no flag)
       (+ `--review-by`); renders the evidence view; raises the proposal
       with the operator's key; Business Verification refs from the

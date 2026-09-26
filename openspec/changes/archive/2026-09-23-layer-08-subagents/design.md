@@ -148,6 +148,8 @@ Supporting detail (implementer, consistent with the above):
   authority.
 
 ### D-L8-2 — The unit: one isolated, tool-less, single-call model execution (LOCKED 2026-09-22, Q-L8-2; owner refinement on the result wrapper)
+> **Integration premise recorded 2026-09-26 (owner, `openspec/changes/l8-themis-surface/design.md` D-L-3):** the tool-less / no-Governance-access invariant is the premise `l8-delegates-tool-less` that Themis re-affirms on every witnessing-constitution entry. A future tool-capable L8 is ONE decision that reopens together: Themis scope inheritance (integration row 3 / D-I-9), delegation admissibility (D-L-2), and the read-door projection (D-I-3). It cannot be absorbed by a constitution hash bump. Not an amendment of D-L8-2.
+
 
 > An L8 delegation is one isolated, tool-less model execution over a
 > parent-supplied L2 context composition, using the parent's model

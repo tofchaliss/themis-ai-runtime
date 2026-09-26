@@ -87,3 +87,43 @@ in force. If a future L8 architecture grants delegates Themis or other
 governed capabilities, D-L-2 must be revisited, because commission
 correspondence alone would no longer characterize the delegate's
 authority surface. Not a reopening of L8 now.
+
+## D-L-3 — The premise is a mechanical re-affirmation requirement (LOCKED 2026-09-26, owner)
+
+> Every runtime constitution admitted into Themis's witnessing-
+> constitution table must explicitly re-affirm the
+> `l8-delegates-tool-less` premise. A change that removes that premise
+> cannot be absorbed by merely registering a new constitution hash; it
+> necessarily reopens the linked L8/Themis decisions. This is a
+> re-affirmation requirement, NOT a new runtime authorization rule.
+
+1. **One reopening condition, recorded where the change would be
+   considered** (here and in the L8 archive): a tool-capable L8 reopens
+   Row 3 (scope inheritance), D-L-2 (delegation admissibility), and
+   D-I-3 (read-door projection) TOGETHER — one decision, not three; it
+   does not exist yet.
+2. **Premise on every witnessing-constitution entry:** `{constitution
+   hash, witnessing contract, premises: [l8-delegates-tool-less, …]}`; a
+   test asserts every entry names the premise. A hash alone says "a
+   different constitution"; the premise says "the assumptions under
+   which Themis integrated still hold". An architectural assumption
+   becomes a required governance artifact, never stale documentation.
+3. **The runtime proves its own premise.** Themis never inspects L8
+   implementation details; the harness's L8 wall tests (no capability
+   interface, no Governance access) are the enforcement. Runtime proves
+   runtime invariants; Themis records the premises under which it
+   trusts the governed identity; a changed identity requires deliberate
+   re-affirmation.
+
+```
+change L8 capability surface → constitution changes → new entry requires premise declaration
+   ├── premise still true → re-affirm
+   └── premise false → reopen Row 3 + D-L-2 + D-I-3
+```
+
+## Closure (grill CLOSED 2026-09-26, D-L-1..3)
+
+Row 11 does not merely say "delegates cannot access Themis today"; it
+establishes a change-detection mechanism that prevents that assumption
+from silently becoming false. No D-L8-* decision reopened. Row
+dependency: Row 4 → Row 11 → Row 12.

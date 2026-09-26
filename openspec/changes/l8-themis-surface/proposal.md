@@ -1,7 +1,6 @@
 # Proposal: L8 × Themis — the integration surface of subagent delegation
 
-Status: **OPEN 2026-09-26 — grill open (owner-led, one question per
-turn).** Completion-matrix row 11. **Not a re-grill of L8**: D-L8-1..21
+Status: **GRILL CLOSED 2026-09-26 — D-L-1..3 LOCKED (`design.md`); Themis-side implementation folded into I-M3 (`tasks.md`).** Completion-matrix row 11. **Not a re-grill of L8**: D-L8-1..21
 and C-L8-1..21 are locked, archived (2026-09-23), and live-proven
 (Addendum F). This change asks only what Themis integration needs from
 delegation, against the stable parent established by Row 4 (D-C-1..6).
@@ -43,7 +42,7 @@ delegation, against the stable parent established by Row 4 (D-C-1..6).
 |---|---|---|---|
 | Q-L-1 | How do delegations appear in the evidence view and proposal evidence? | **LOCKED 2026-09-26 → D-L-1:** within the model-reasoning fact (seq, parent call seq, template, model identity, evidence refs + class, output id, outcome); `harness-execution/v1.delegations {count, seqs}` by reference only; wording: which execution received which authorized refs, never "who saw"; no runtime change. | LOCKED |
 | Q-L-2 | Delegation-specific admissibility rule? | **LOCKED 2026-09-26 → D-L-2:** none; permission is inside the commissioned identities, invalid delegation is witnessed evidence, Themis never interprets reasoning structure; valid only while delegates stay tool-less. | LOCKED |
-| Q-L-3 | What must be recorded as the prohibition that keeps rows 3 and 11 stable? | "a tool-capable L8 is the decision that reopens Themis scope inheritance"; until then Themis scope reaches a delegate only through the parent's authorized reads (D-I-4/D-I-9 stay intact by construction) | OPEN |
+| Q-L-3 | Keeping the premise mechanically in force | **LOCKED 2026-09-26 → D-L-3:** one reopening condition recorded here and in the L8 archive; `premises` on every witnessing-constitution entry (`l8-delegates-tool-less`), test-enforced re-affirmation; the runtime proves its own premise. | LOCKED |
 
 ## Not in scope
 

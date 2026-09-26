@@ -41,7 +41,7 @@ delegation, against the stable parent established by Row 4 (D-C-1..6).
 
 | # | Question | Recommendation (PROPOSED) | State |
 |---|---|---|---|
-| Q-L-1 | How do delegations appear in the intake evidence view and the proposal evidence? Today D-T-7's "model turns" lists `model-turn` events only. | render delegations as part of the MODEL-REASONING fact (never the harness or verification fact): per delegation — seq, parent call seq, template name@version, model identity, evidence refs with the class each carried, output object id, outcome; `harness-execution/v1` gains `delegations` (count + seqs); Themis interprets none of it | OPEN |
+| Q-L-1 | How do delegations appear in the evidence view and proposal evidence? | **LOCKED 2026-09-26 → D-L-1:** within the model-reasoning fact (seq, parent call seq, template, model identity, evidence refs + class, output id, outcome); `harness-execution/v1.delegations {count, seqs}` by reference only; wording: which execution received which authorized refs, never "who saw"; no runtime change. | LOCKED |
 | Q-L-2 | Does Themis need any delegation-specific admissibility rule at proposal time? | no: the commissioned method and deployment already cover the `delegate` grant and the template registry; a delegation that violated its template would have failed in the runtime record (outcome ≠ completed) and is visible in Q-L-1's rendering; adding a Themis rule would make Themis interpret runtime reasoning structure | OPEN |
 | Q-L-3 | What must be recorded as the prohibition that keeps rows 3 and 11 stable? | "a tool-capable L8 is the decision that reopens Themis scope inheritance"; until then Themis scope reaches a delegate only through the parent's authorized reads (D-I-4/D-I-9 stay intact by construction) | OPEN |
 

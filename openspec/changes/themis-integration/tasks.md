@@ -69,12 +69,16 @@ I-M0 → W-M1 → W-M2 → I-M1 → I-M2 → I-M3 (absorbs W-M3) → I-M4 → I-
       prefixed id → L4 scope denial, class minting, L2 unwired
 - [x] Hermetic suites green in both modules; evidence tools build
 
-## I-M2 — Fixture with provenance (D-I-7; Class 2)
-- [ ] A harness test generates a REAL completed record (post-W-M2, five-link)
-      into `evidence/harness/fixtures/themis-intake/<constitution12>/` with
-      provenance metadata (harness commit, constitution hash, anchor hash,
-      task id, artifact-bound seq, generator test name)
-- [ ] Documented regeneration rule: whenever the constitution hash moves
+## I-M2 — Fixture with provenance (D-I-7; Class 2) — LANDED 2026-09-26
+- [x] `evidence/harness/fixtures/themis-intake/1df0e28548a4/`: a real
+      `remediate-dependency@4` walk (test anchor `test-rsys@6`, HTTP read
+      door, commission `c0a8e3d6-…` cited in origin, report verified once
+      and egressed unchanged) — `state/` (36 files, 160 KB), `anchors.json`,
+      `verification/`, `contract.json`, `provenance.json`
+- [x] Generator + verifier `src/themis/fixture_test.go` (moves to the
+      harness integration suite in I-M4): default mode fails loudly on a
+      stale constitution hash, an unverified record, or a missing link
+- [x] Regeneration rule in the fixtures README
 
 ## I-M3 — Themis repo: intake, evidence, walls (D-I-1, D-I-5..7, D-W-5; Class 3 there)
 - [ ] EDR (Decision Proposal payload — closes EDR-TRUST-01's deferral) +

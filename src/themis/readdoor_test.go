@@ -349,10 +349,16 @@ func newWorld(t *testing.T, m model.Interface, opts worldOpts, mutate func(map[s
 }
 
 func (w *world) instantiate(t *testing.T, task, finding string) string {
+	return w.instantiateWith(t, task, finding, "")
+}
+
+// instantiateWith cites a Themis commission (D-C-5) in the envelope's
+// sealed origin; "" cites none.
+func (w *world) instantiateWith(t *testing.T, task, finding, commission string) string {
 	t.Helper()
 	_ = os.MkdirAll(filepath.Join(w.base, "state"), 0o755)
 	path, err := skills.Instantiate(filepath.Join(w.root, "policies/skills/catalog.json"), "remediate-dependency@4", skills.Request{
-		TaskID: task, Repo: "demo-vuln-app", PinnedSHA: w.sha,
+		TaskID: task, Repo: "demo-vuln-app", PinnedSHA: w.sha, Commission: commission,
 		Inputs:        map[string]any{"finding": finding, "dependency": "vulnerable-dep", "advisory": "ADV-2026-1"},
 		WallDeadlineS: 300,
 		Deployment: skills.Deployment{Model: "scripted", TurnTimeoutSec: 180,

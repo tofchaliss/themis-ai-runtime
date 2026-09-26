@@ -13,10 +13,10 @@ needs its own grill before implementation. I-M0 LANDED 2026-09-26 (module
 rename, hashes pinned). Row 4 grill CLOSED (D-C-1..6,
 `themis-commissioning/`); Row 11 grill CLOSED (D-L-1..3,
 `l8-themis-surface/`); Row 12 grill CLOSED (D-R-1..4,
-`l11-governance-promotion/`). ALL 🔴 ROWS DECIDED. W-M1, W-M2, I-M1 LANDED
+`l11-governance-promotion/`). ALL 🔴 ROWS DECIDED. W-M1, W-M2, I-M1, I-M2 LANDED
 2026-09-26 (L6 hash 1df0e285…; L5 witnesses; HTTP read door with
 `themis_contract`; catalog/anchors v2 with decision records; this
-commit cannot open rsys@5 by design). Next: I-M2 (fixture), I-M3
+commit cannot open rsys@5 by design). Next: I-M3
 (Themis repo), I-M4 (dissolve), I-M5 (host).**
 
 **2026-09-25 (direction change, owner): Option A — the REAL Themis
@@ -304,7 +304,15 @@ now RATIFIED):
 - **Not in I-M1:** the Themis-side pieces (I-M3), the fixture (I-M2),
   dissolution of `src/themis/intake` and the stand-in tests (I-M4).
 
+## Gate 1 — I-M2 (fixture with provenance, 2026-09-26)
+- The fixture's `harness_commit` is the parent of the commit that
+  contains it (a fixture cannot name the commit that carries it) and
+  `tree_dirty_at_generation` is true — recorded, not hidden. The
+  generator test asserts the fixture is not stale on every run.
+
 ## Milestone log
+- [x] I-M2 — green 2026-09-26 (fixture generated and verified; no
+  credential in any file; 160 KB)
 - [x] I-M1 — green 2026-09-26 (contracts, client, tools, skills,
   deployment, decisions, orchestration walls; full hermetic harness;
   Themis stand-in on the HTTP door; 6/6 probes killed)

@@ -287,3 +287,61 @@ harness is never a Governance actor.
 Two-actor path: Human A (authenticated proposal) → Themis Proposal
 (immutable harness evidence) → Human B (authenticated `acceptProposal`)
 → Themis Position. The harness is outside both acts.
+
+## D-I-7 — Cross-repository placement and walls (LOCKED 2026-09-26, owner)
+
+> Themis may consume a narrow, read/reconstruction-only harness surface;
+> the harness never imports Themis; Governance never depends on the
+> harness adapter; `themis-intake` is the human-operated integration
+> boundary.
+
+**Placement in Themis:**
+```
+internal/governance/domain            harness-execution/v1 value type (plain data, no harness import)
+internal/governance/adapters/harness  intake.Resolve adapter; Resolution → domain evidence + derived trust
+cmd/themis-intake                     CLI; Governance HTTP client; human-provided proposal arguments
+```
+The Governance service never links the harness adapter.
+
+**Themis-side wall (adapter):** allow-list stdlib, kernel, governance
+domain/app, and exactly `state`, `deployment`, `verification`,
+`verification/seam`; deny `orchestration`, `tools`, `execution`,
+`runtime/model`, `instructions`, `context`. No `os` writer, no
+`os/exec` (arch test). The transitive reach through `verification/seam`
+is documented as intentional (the T-M3 Wall 3 clarification). Property:
+Themis intake can reconstruct evidence; it cannot acquire harness
+execution authority.
+
+**Whole-repository wall (owner strengthening):** EXACTLY ONE Themis
+package may import the harness module —
+`internal/governance/adapters/harness`. `cmd/themis-intake` consumes
+the adapter's interface and never imports harness packages itself; a
+transitive-dependency test covers the binary because `tests/architecture`
+ignores `cmd/`.
+
+**Harness-side wall:** Wall 1 becomes "no harness package, whole graph,
+imports `github.com/themis-project/themis`". The Themis-facing seam is
+an HTTP client (`net/http` → Themis API), never a Go dependency.
+
+**Test split:**
+- Harness repo: the live execution-side seam — projection, response
+  identity, contract pin, unavailable/404, the HTTP boundary — against
+  an httptest Governance stand-in, never a running Themis.
+- Themis repo: fixture reconstruction, mapping to
+  `harness-execution/v1`, refusal cases, domain persistence, dependency
+  walls. The fixture's constitution hash must equal the expected
+  witnessing constitution, so a constitution change makes the fixture
+  visibly stale.
+- **Fixture provenance (owner):** a fixture is not "checked in" until
+  its provenance is explicit — real harness walk → fixture generation →
+  fixture committed WITH provenance metadata → Themis fixture test.
+  Forged-record tests stay separate and deliberately use L6 primitives.
+  Bytes are not established merely because a fixture contains them (G2):
+  the fixture proves Themis's mapping/reconstruction; the harness-side
+  test proves the production walk.
+
+**`src/themis` removal** only after: the Themis adapter compiles; harness
+imports are renamed; both sides' walls pass; fixture provenance is
+established; every old `src/themis` reference is eliminated. Then one
+cleanup commit whose message maps each former component to its new
+owner.

@@ -11,8 +11,9 @@ reference. Three matrix rows are undecided (🔴): Themis commissioning
 record, L8 × Themis scope/evidence, L11 ↔ Governance promotion — each
 needs its own grill before implementation. I-M0 LANDED 2026-09-26 (module
 rename, hashes pinned). Row 4 grill CLOSED (D-C-1..6,
-`themis-commissioning/`); Row 11 grill OPEN (`l8-themis-surface/`,
-Q-L-1..3); Row 12 next. Then W-M1.**
+`themis-commissioning/`); Row 11 grill CLOSED (D-L-1..3,
+`l8-themis-surface/`); Row 12 grill OPEN (`l11-governance-promotion/`,
+Q-R-1..4). Then W-M1.**
 
 **2026-09-25 (direction change, owner): Option A — the REAL Themis
 (`~/code/themis`, its own repo) is the system of record; no second Themis

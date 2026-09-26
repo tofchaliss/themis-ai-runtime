@@ -68,3 +68,50 @@ anchor identifies the governed executable artifact. Never conflated.**
 Sequencing (locked): D-I-2 → mechanical rename → T-M3 intake imports
 move → harness tests + CI → Themis requires the pinned commit → Themis
 intake implementation. The rename lands BEFORE any Themis-repo change.
+
+## D-I-3 — The Themis read door and contract pinning (LOCKED 2026-09-25, owner; amends D-T-9)
+
+> The harness reads LIVE Themis authority through the existing seam.
+> `ThemisSeam.Read(kind, id)` remains the boundary. `get_finding`
+> exposes only id, release, faultline, CVE, stage, components —
+> `current_position`, `positions[]`, `proposals[]` are excluded.
+> `get_product` exposes id and name. L4 verifies response identity
+> before minting `governed-record`.
+
+**`themis_store` becomes `themis_contract`**: the anchor pins the hash
+of `policies/themis/contract.json` — Governance base URL, Registry base
+URL, SHA-256 of the two OpenAPI specifications, and the Themis commit
+identifying them. Open verifies the contract hash and configures the
+seam from it.
+
+**The contract pins the interface, not the live data.** `themis_contract`
+establishes the authorized endpoint and interface contract; it does not
+establish the runtime Themis binary identity or pin Finding/Product
+bytes. The harness intentionally reads CURRENT Themis state, never a
+snapshot.
+
+The API credential is seam-local: the read-scope key comes from the
+environment and is never exposed through the anchor, registry data,
+model context, or governed-record content. HTTP failure and 404 remain
+`ErrUnavailable`, fail-closed.
+
+**Execution-time data becomes immutable evidence once captured:**
+
+```
+EXECUTION       Live Themis → ThemisSeam.Read → L4 governed-record → L6 record
+RECONSTRUCTION  L6 record plane → intake.Resolve → Evidence View
+```
+
+`intake.Resolve` never calls Themis again; it reconstructs from the
+recorded bytes. Freshness is deliberately Themis's property: two
+executions against the same tuple may observe different Finding
+bytes, and each records exactly what it observed rather than
+pretending a live mutable authority was immutable. The two paths
+never merge, so historical evidence is never replaced by whatever
+Themis returns today.
+
+**D-T-9 amended (visible in `themis-v0/design.md`):** the deployment
+anchor pins `themis_contract`, which identifies the authorized Themis
+endpoints and interface contract. Findings and Products are obtained
+from the live Themis authority and captured as execution-time governed
+records. Positions remain outside the pinned/read context.

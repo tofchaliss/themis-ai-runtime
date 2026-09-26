@@ -404,6 +404,16 @@ Themis Finding → governed read → model reasoning → governed execution
 
 ### D-T-9 — The read door (LOCKED 2026-09-25, owner; Q-T-9)
 
+> **AMENDED 2026-09-25 (owner, `themis-integration` D-I-3):** the
+> deployment anchor pins `themis_contract` (the authorized Themis
+> endpoints and interface contract: Governance/Registry base URLs, the
+> two OpenAPI spec hashes, the Themis commit), NOT a Findings/Products
+> byte store. Findings and Products are obtained from the LIVE Themis
+> authority and captured as execution-time governed records; Positions
+> remain outside the pinned/read context. The original text below is
+> retained as decision history; where it says `themis_store` pins the
+> registries' bytes, D-I-3 governs.
+
 > The Themis store is a governed, anchor-pinned, read-only registry
 > family under `policies/themis/`: `findings.json` and `products.json`
 > (append-only registries of immutable records: `id`, fields, `state`

@@ -252,3 +252,38 @@ themis-intake (human invokes; deterministic evidence) → Themis Proposal
 (authenticated human proposer) → Business Verification → human
 acceptance → Position. The model is never the decision-maker; the
 harness is never a Governance actor.
+
+## D-I-6 — Decision act and witness (LOCKED 2026-09-26, owner; retires D-T-8's observed witness on the Themis-integrated path)
+
+> `acceptProposal` remains the decision door; no new decision
+> capability. Themis derives the decider from the authenticated request
+> (`key:<KeyID>`, server-derived; `actor_id` cannot override it when a
+> principal is present) → accepted proposal → Position.
+
+- **Production requires authenticated Themis operation.** The demo VM
+  runs `THEMIS_AUTH_REQUIRED=1` (auth database required). Two distinct
+  write-capable credentials: the proposer key raises; the decider key
+  accepts. The runbook records that they are distinct principals.
+- **Separation of duties is operational, not a Governance invariant.**
+  The integration does not amend Themis to enforce proposer ≠ decider;
+  mandatory enforcement would be a separate Themis-domain decision.
+- **Witness vocabulary:** `key:<KeyID>` when a principal exists;
+  `dev:<actor_id>` only in development/no-principal operation — a
+  production demo must never produce it. D-T-8's
+  `decider_authentication: observed-not-authenticated` is RETIRED for
+  the Themis-integrated decision path (not retained beside a stronger,
+  contradictory witness model).
+- **Evidence is referenced, not duplicated:** Position →
+  `AcceptedProposalID` → immutable `harness-execution/v1` → harness
+  record plane. `themis-intake` may render the evidence view for the
+  human/runbook; that rendering is presentation, not a security record.
+- **`review_by` is an explicit operator choice** (useful for `deferred`
+  and `accepted_risk`), never imposed by the integration.
+- **Boundary:** Themis proves WHICH authenticated key accepted the
+  proposal; the integration does not prove the person controlling that
+  key is the intended human. Key issuance, ownership, rotation, and
+  revocation stay within Themis's authentication administration.
+
+Two-actor path: Human A (authenticated proposal) → Themis Proposal
+(immutable harness evidence) → Human B (authenticated `acceptProposal`)
+→ Themis Position. The harness is outside both acts.

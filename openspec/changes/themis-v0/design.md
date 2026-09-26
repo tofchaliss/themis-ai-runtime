@@ -371,6 +371,17 @@ Themis Finding → governed read → model reasoning → governed execution
 
 ### D-T-8 — The decision witness (LOCKED 2026-09-25, owner; Q-T-8)
 
+> **AMENDED / RETIRED ON THE THEMIS-INTEGRATED PATH 2026-09-26 (owner,
+> `themis-integration` D-I-6):** the decision witness is Themis's
+> server-derived authenticated principal (`key:<KeyID>`; `dev:<actor_id>`
+> only outside production) recorded by `acceptProposal` under
+> EDR-SECURITY-01 D10. The observed witness and the marker
+> `decider_authentication: observed-not-authenticated` below are RETIRED
+> for that path, so the record holds one definition of the decision
+> witness, not two. The evidence view is recorded by reference (Position
+> → AcceptedProposalID → immutable `harness-execution/v1`), never copied.
+> The original text is retained as decision history.
+
 > The Position record itself is the durable decision witness. Its
 > `decision` block is OBSERVED by `themis-decide` from its own process,
 > never asserted by an argument: observed OS username, uid, host; UTC

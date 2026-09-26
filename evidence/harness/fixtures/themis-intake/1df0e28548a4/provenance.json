@@ -1,10 +1,10 @@
 {
  "generator": "src/themis TestThemisIntakeFixture (THEMIS_FIXTURE_GENERATE=1)",
- "generated_at": "2026-09-26T12:38:13Z",
- "harness_commit": "4f1ee717a93ce8dbac2be87c3f3fb3b43bd4acb6",
+ "generated_at": "2026-09-26T12:58:28Z",
+ "harness_commit": "5ea73d92228e4f0fbcf308554d0e8ea1d7cef94d",
  "tree_dirty_at_generation": true,
  "constitution_hash": "1df0e28548a48b373e779dce8f00ea906c7f98afc009d573afccdf1009d77685",
- "anchor_hash": "d9d0e741516e0df5c102dd6ca81d35a6b352761d1a08f62ab17ebc29d7160cc8",
+ "anchor_hash": "7489bbaa2c289ef7323ea1891ec652506f8fb72a59dc3eebe67faa6231cc1e7f",
  "anchor_name": "test-rsys",
  "anchor_version": 6,
  "task_id": "fx-remediate-0001",

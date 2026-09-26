@@ -13,11 +13,12 @@ needs its own grill before implementation. I-M0 LANDED 2026-09-26 (module
 rename, hashes pinned). Row 4 grill CLOSED (D-C-1..6,
 `themis-commissioning/`); Row 11 grill CLOSED (D-L-1..3,
 `l8-themis-surface/`); Row 12 grill CLOSED (D-R-1..4,
-`l11-governance-promotion/`). ALL 🔴 ROWS DECIDED. W-M1, W-M2, I-M1, I-M2 LANDED
+`l11-governance-promotion/`). ALL 🔴 ROWS DECIDED. W-M1, W-M2, I-M1, I-M2, I-M4 LANDED here; I-M3 IMPLEMENTED in the
+Themis repo (branch feat/harness-integration, uncommitted by that repo's rule)
 2026-09-26 (L6 hash 1df0e285…; L5 witnesses; HTTP read door with
 `themis_contract`; catalog/anchors v2 with decision records; this
-commit cannot open rsys@5 by design). Next: I-M3
-(Themis repo), I-M4 (dissolve), I-M5 (host).**
+commit cannot open rsys@5 by design). `src/themis` is GONE (I-M4). Next: owner's push of this repo → Themis
+go.mod pin + commit there → I-M5 (host).**
 
 **2026-09-25 (direction change, owner): Option A — the REAL Themis
 (`~/code/themis`, its own repo) is the system of record; no second Themis
@@ -310,7 +311,25 @@ now RATIFIED):
   `tree_dirty_at_generation` is true — recorded, not hidden. The
   generator test asserts the fixture is not stale on every run.
 
+## Gate 1 — I-M3 / I-M4 (2026-09-26)
+- **I-M3 lives in the Themis repository** (`~/code/themis`, branch
+  `feat/harness-integration`), uncommitted because that repository
+  commits only on an explicit ask. Gates run there: Governance +
+  architecture tests, lint (0 issues), tagged vet, `make clean-arch`,
+  store integration under embedded Postgres. The runtime `go.mod` pin is
+  the one thing that cannot land before this repository is pushed: the
+  pseudo-version must be resolvable. A local, untracked `go.work` (in
+  `.git/info/exclude`) makes it build meanwhile.
+- **The mismatch fixture** (`…-verify-a-egress-b`) carries the owner's
+  T-M3 key negative into the consumer as a REAL record; the Themis
+  adapter test asserts the link-named refusal over it.
+- **I-M4**: the stand-in is gone; the harness's only Themis-facing code
+  is the HTTP read door; the two surviving walls are tests in
+  `src/harness/integration`.
+
 ## Milestone log
+- [x] I-M4 — green 2026-09-26 (integration suite; full hermetic harness; evidence tools)
+- [x] I-M3 — implemented 2026-09-26 in the Themis repo (all gates green there; commit and pin pending)
 - [x] I-M2 — green 2026-09-26 (fixture generated and verified; no
   credential in any file; 160 KB)
 - [x] I-M1 — green 2026-09-26 (contracts, client, tools, skills,

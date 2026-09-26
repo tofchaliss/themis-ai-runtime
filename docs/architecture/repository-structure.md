@@ -71,11 +71,11 @@ themis-ai-runtime/
 ## Decisions recorded with this map
 
 - **No `pyproject.toml`** — a Python-era perception; the backend is Go (DEC-01). Python returns only with a concrete, recorded requirement.
-- **Modules:** working default is `go.work` + per-component Go modules (`src/harness` today; `src/themis` keeps `github.com/themis-project/themis` on arrival — no import-path rewrites). Consolidating into a single root module is a recorded architecture decision if ever taken.
+- **Modules:** `go.work` + the one Go module `src/harness` (`github.com/tofchaliss/themis-ai-runtime/src/harness`, renamed 2026-09-26). Themis is NOT a module of this repository: it lives in its own repository and consumes the harness's read-only record contracts as a pinned Go dependency (D-I-2); the harness consumes Themis over HTTP only (D-I-3, D-I-7).
 - **Existing-code destinations** (relocation is its own reviewed step, not part of skeleton creation):
   - `src/harness/internal/llm` → `src/harness/runtime/model/`
   - `src/harness/benchmarks` (Go pipeline) → `src/harness/ratchet/evaluations/`; benchmark definitions/prompts/expected → `evaluations/`
   - `src/harness/internal/service` → `src/harness/integrations/themis/` — the Themis-facing seam. **Partly settled 2026-09-13:** the `themis-serve` HTTP surface was retired outright (audit R1); what remains to relocate is the model router alone.
 - **Go tests** live beside their packages (Go idiom, existing 2,000 test LOC); `tests/` holds only cross-cutting integration and evaluation suites.
-- **`src/themis/` interior** is not scaffolded — the application arrives with its own tree.
+- **`src/themis/`** does not exist: the 2026-09-25 stand-in was dissolved on 2026-09-26 (I-M4) once the real Themis repository carried the integration.
 - Layer documents follow `docs/architecture/harness/NN-<layer>.md` (01–11).

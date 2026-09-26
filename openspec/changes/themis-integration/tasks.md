@@ -80,33 +80,24 @@ I-M0 → W-M1 → W-M2 → I-M1 → I-M2 → I-M3 (absorbs W-M3) → I-M4 → I-
       stale constitution hash, an unverified record, or a missing link
 - [x] Regeneration rule in the fixtures README
 
-## I-M3 — Themis repo: intake, evidence, walls (D-I-1, D-I-5..7, D-W-5; Class 3 there)
-- [ ] EDR (Decision Proposal payload — closes EDR-TRUST-01's deferral) +
-      `phase3-*` OpenSpec change
-- [ ] `internal/governance/domain`: `harness-execution/v1` evidence value
-      type (plain data); proposal gains immutable evidence; migration
-      `finding_proposals.evidence JSONB`; API `RaiseProposalRequest.evidence`
-      (shape-validated); trust class validated against the derivation rule
-- [ ] `internal/governance/adapters/harness`: moved `intake.Resolve`
-      (D-T-1..6) + five-link replay + witnessing-constitution table
-      (D-W-5) + deterministic trust derivation + Resolution → evidence
-      mapping; depguard allow-list (four harness packages) and denies;
-      no `os` writer / `os/exec`
-- [ ] Commissioning (D-C-1..6): `Commission` on the Finding aggregate, migration, API, events, `raiseProposal` correspondence check (`themis-commissioning/tasks.md`)
-- [ ] L8 surface (D-L-1..3): delegations in the evidence view, `delegations {count, seqs}` in the evidence, `premises` on the witnessing table (`l8-themis-surface/tasks.md`)
-- [ ] `cmd/themis-intake`: tuple + `--stance` + `--rationale` (commission id DERIVED from CREATED, no flag)
-      (+ `--review-by`); renders the evidence view; raises the proposal
-      with the operator's key; Business Verification refs from the
-      RECORDED Finding bytes; consumes the adapter only
-- [ ] Arch tests: exactly one package imports the harness module; the
-      binary's transitive deps contain no harness execution package
-- [ ] Tests over the I-M2 fixture (constitution hash asserted) + forged
-      records via `state` primitives; `make check` green
+## I-M3 — Themis repo: intake, evidence, walls (D-I-1, D-I-5..7, D-W-5, D-C-*, D-L-*; Class 3 there) — IMPLEMENTED 2026-09-26, uncommitted there by that repository's rule
+Branch `feat/harness-integration` in `~/code/themis` (commit only on the owner's explicit ask).
+- [x] `docs/engineering/decisions/EDR-HARNESS-01.md` (D1–D9) + `openspec/changes/phase3-harness-integration/` + BACKLOG note
+- [x] Domain: `Commission` on the Finding aggregate (premise, forward-only withdrawal, human only, Archived refused, no stage change); `HarnessExecution` evidence (`Validate`, `DerivedTrust` = inferred, `Corresponds`); `NewHarnessProposal`; thin events
+- [x] App: `Commission`, `WithdrawCommission`, `RaiseHarnessProposal` (shape → trust → commission on this Finding → correspondence → Business Verification from recorded Finding refs → raise)
+- [x] Store: migration `000014_harness_commissions`; commissions and proposal evidence round-trip (integration test under embedded Postgres, green); both event types frozen with schemas (contract test green)
+- [x] API: commission paths, `HarnessExecutionEvidence`, `RaiseProposalRequest.evidence`+`evidence_trust`, views; regenerated; handler routing with problem statuses
+- [x] `internal/governance/adapters/harness`: moved intake (D-T-1..6) + five-link replay + witnessing-constitution table with `l8-delegates-tool-less` + evidence mapping; the ONLY importer of the harness (depguard allow-list of four read-only packages; `tests/architecture/harness_test.go`)
+- [x] `cmd/themis-intake`: tuple in, evidence view (three facts incl. delegations), proposal out with the derived trust; commission DERIVED from CREATED, no flag
+- [x] Tests over the copied fixtures: table guard, positive five-link resolve, refusals, historical branch, verify-A/egress-B refusal over the real mismatch fixture, forged records via L6 primitives (claimed PASS over invalid bytes, audit not the producer, egress witness omitted, wrong seal reason) — all green; lint 0 issues; `make clean-arch` green
+- [ ] `go.mod` pin `require …/src/harness v0.0.0-<pseudo>` — AFTER the harness push (until then the Themis repo builds only inside its local, untracked `go.work`)
+- [ ] `make check` end to end on a host with the pin resolvable
 
-## I-M4 — Dissolve `src/themis` (D-I-7; Class 2)
-- [ ] One commit mapping each former component to its new owner; harness
-      Wall 1 rewritten as "no import of `github.com/themis-project/themis`";
-      `go.work`, evidence tools, docs cleaned; hermetic suites green
+## I-M4 — Dissolve `src/themis` (D-I-7; Class 2) — LANDED 2026-09-26
+- [x] Moved into `src/harness/integration`: the Themis-door world and read-door tests (`themisdoor_test.go`), the L5 Register B walk test and walk helpers (`themisl5_test.go`), the fixture generator/verifier now producing the positive AND the verify-A/egress-B fixtures (`themisfixture_test.go`), and the two surviving walls — no harness package imports `github.com/themis-project/themis`; the capability wall (`themiswalls_test.go`)
+- [x] The stand-in's `intake` package, its Resolve tests, `themis-decide`/`themis-inspect` stubs, walls 2–3, `go.mod`: deleted; their consumer-side equivalents live in the Themis repository (I-M3)
+- [x] `go.work` lists `src/harness` only; harness `go.mod` carries no `themis-app`; CONTEXT-MAP, repository-structure, fixtures README updated
+- [x] Full hermetic harness suite green; evidence tools build
 
 ## I-M5 — Host acts, demo, reviews, archive (D-I-8, D-W-4; Class 4: host)
 - [ ] Themis side: keys (three holders), auth required, contract commit

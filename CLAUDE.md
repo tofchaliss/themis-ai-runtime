@@ -15,6 +15,7 @@ Themis is the security system of record. The AI Harness is an execution capabili
 - External-system access is policy-gated and local-first.
 - Do not infer architecture when it is unclear.
 - Do not bypass Themis-owned security workflows or establish competing security truth.
+- Architecture first, integration second, demonstration third: no demo-driven shortcuts, no demo-specific architecture; integration is complete only when `openspec/changes/themis-integration/completion-matrix.md` is green (owner rule, 2026-09-26).
 - When reporting information to me, be extermly concise and sarifice grammar for the sake of concision 
 
 Follow the authoritative documents rather than duplicating their rules here.

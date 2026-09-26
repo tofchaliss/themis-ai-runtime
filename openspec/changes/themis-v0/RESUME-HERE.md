@@ -3,6 +3,16 @@
 Updated at every green milestone. If context was compacted, start here.
 
 ## One-line status
+**2026-09-26 (direction, owner): ARCHITECTURE FIRST, INTEGRATION SECOND,
+DEMONSTRATION THIRD. No demo-driven shortcuts; no demo-specific
+architecture; completeness = `themis-integration/completion-matrix.md`
+all green, not `rsys@6` on one VM. The demo document is a design
+reference. Three matrix rows are undecided (🔴): Themis commissioning
+record, L8 × Themis scope/evidence, L11 ↔ Governance promotion — each
+needs its own grill before implementation. Next: the owner picks the
+first 🔴 grill; I-M0 (module rename) can proceed in parallel since no
+🔴 row changes it.**
+
 **2026-09-25 (direction change, owner): Option A — the REAL Themis
 (`~/code/themis`, its own repo) is the system of record; no second Themis
 inside this repo. `src/themis` is a stand-in to be DISSOLVED once

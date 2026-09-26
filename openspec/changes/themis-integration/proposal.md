@@ -1,7 +1,11 @@
 # Proposal: integrate the harness with the real Themis (one Themis, its own repo)
 
 Status: **GRILL CLOSED 2026-09-26 — D-I-1..9 LOCKED (`design.md`); implementation
-milestones in `tasks.md` (I-M0..I-M5, interleaved with W-M1..W-M2).** Owner: *"Option A is the way, but make sure we
+milestones in `tasks.md` (I-M0..I-M5, interleaved with W-M1..W-M2).
+DIRECTION 2026-09-26 (owner): architecture first, integration second,
+demonstration third — see `completion-matrix.md`. Three rows are 🔴 and
+need their own grill before code: workflow commissioning (row 4), L8 ×
+Themis (row 11), L11 ↔ Governance promotion (row 12).** Owner: *"Option A is the way, but make sure we
 don't create another repo for Themis inside themis-ai-runtime. We will
 pull the latest from the Themis repo and integrate it with
 themis-ai-runtime."*

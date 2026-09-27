@@ -1,0 +1,285 @@
+<title>Remediating CVE-2022-32149</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --ink:#17232d; --paper:#f4f6f7; --surface:#ffffff; --line:#d3dbe0; --muted:#5b6a75;
+  --accent:#0d6b67; --ok:#2a7a4a; --refuse:#9a5b12; --fail:#9b2f2f; --chip:#e4eeed;
+  --display:"Fraunces",Georgia,"Times New Roman",serif;
+  --body:"Source Sans 3","Segoe UI",Helvetica,Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ink:#e4eaee; --paper:#101820; --surface:#182430; --line:#2b3a47; --muted:#9aa8b2;
+  --accent:#56b8b2; --ok:#62b57f; --refuse:#d59b4f; --fail:#d9756d; --chip:#1f3a39;
+}}
+:root[data-theme="dark"]{
+  --ink:#e4eaee; --paper:#101820; --surface:#182430; --line:#2b3a47; --muted:#9aa8b2;
+  --accent:#56b8b2; --ok:#62b57f; --refuse:#d59b4f; --fail:#d9756d; --chip:#1f3a39;
+}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.55;margin:0;padding-block:40px 72px;padding-inline:clamp(16px,4vw,48px)}
+.wrap{max-width:900px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);font-weight:700;text-wrap:balance;margin:0}
+h1{font-size:clamp(34px,5vw,50px);line-height:1.05;letter-spacing:-.01em}
+h2{font-size:26px;margin-block:52px 14px}
+h3{font-size:21px;font-weight:500}
+p{max-width:66ch;margin:0 0 12px}
+.lead{font-size:19px;max-width:62ch;margin-top:14px}
+.eyebrow{font-family:var(--body);font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.ledger{display:grid;grid-template-columns:max-content 1fr;gap:6px 22px;margin-top:26px;padding:18px 20px;border:1px solid var(--line);background:var(--surface);font-size:15px}
+.ledger dt{color:var(--muted);font-weight:600}
+.ledger dd{margin:0;font-family:var(--mono);font-size:13.5px;overflow-wrap:anywhere}
+.step{display:grid;grid-template-columns:96px 1fr;gap:22px;padding-block:26px;border-top:1px solid var(--line)}
+.step:last-of-type{border-bottom:1px solid var(--line)}
+.rail{display:flex;flex-direction:column;gap:8px}
+.num{font-family:var(--display);font-size:34px;font-weight:500;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
+.actor{display:inline-block;font-size:11.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;background:var(--chip);color:var(--accent);padding:3px 8px;border-radius:3px;width:max-content}
+pre{margin:12px 0 0;padding:12px 14px;background:var(--surface);border:1px solid var(--line);font-family:var(--mono);font-size:13px;line-height:1.5;overflow-x:auto;white-space:pre}
+pre.out{border-left:3px solid var(--ok)}
+pre.ref{border-left:3px solid var(--refuse)}
+.rec{margin-top:10px;font-size:14.5px;color:var(--muted)}
+.rec b{color:var(--ink);font-weight:600}
+code{font-family:var(--mono);font-size:.92em}
+.timeline{margin-top:10px;border:1px solid var(--line);background:var(--surface);overflow-x:auto}
+.timeline table{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:12.5px}
+.timeline td{padding:4px 12px;vertical-align:top;border-top:1px solid var(--line);white-space:nowrap}
+.timeline td:first-child{color:var(--muted);text-align:right;font-variant-numeric:tabular-nums;width:3ch}
+.timeline tr.phase td{background:var(--chip);color:var(--accent);font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-family:var(--body);font-size:12px}
+.timeline .ok{color:var(--ok)} .timeline .err{color:var(--refuse)} .timeline .pass{color:var(--ok);font-weight:600}
+.twins{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:12px}
+.twin{padding:14px 16px;border:1px solid var(--line);background:var(--surface);font-size:15px}
+.twin .eyebrow{color:var(--refuse);margin-bottom:6px}
+.twin code{display:block;margin-top:8px;font-size:12.5px;overflow-wrap:anywhere}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px;margin-top:10px}
+.two h3{margin-bottom:8px}
+.two ul{margin:0;padding-left:18px;max-width:60ch}
+.two li{margin-bottom:6px}
+.src{margin-top:52px;padding-top:16px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
+.src code{overflow-wrap:anywhere}
+@media (max-width:640px){ .step{grid-template-columns:1fr;gap:10px} .rail{flex-direction:row;align-items:center;gap:14px} .ledger{grid-template-columns:1fr;gap:2px 0} .ledger dt{margin-top:8px} }
+@media (prefers-reduced-motion: no-preference){ .step{transition:background .2s} }
+</style>
+
+<div class="wrap">
+<div class="eyebrow">Themis AI Runtime · one use case, as it ran on the enterprise VM on 27 September 2026</div>
+<h1>Remediating CVE-2022-32149</h1>
+<p class="lead">A real Finding in Themis is remediated by a governed AI execution. Themis stays the system of record from the first byte to the last: it mints the commission, the harness runs inside it, the intake reconstructs the run from the record alone, and two different humans propose and decide. Every value on this page is copied from the record; none is illustrative.</p>
+
+<dl class="ledger">
+  <dt>Product / release</dt><dd>demo-xtext-app · 3e6e4269-9896-4062-a3fa-429c58cb1964 / 83df3b8b-ede6-4f8e-b915-938c27fc9acf</dd>
+  <dt>Finding</dt><dd>e72ae17c-8419-4544-8144-5aa36b453aef · CVE-2022-32149 · pkg:golang/golang.org/x/text@v0.3.7</dd>
+  <dt>Deployment anchor</dt><dd>rsys@7 · a5266c52398ea3ffcb7d25cd791320755b18f8a750e1edb285391395572fa7a4</dd>
+  <dt>Skill</dt><dd>remediate-dependency@6 · composition a797261e6832…</dd>
+  <dt>Commission</dt><dd>9e0e401b-8b37-49e6-a3a3-8437023c3711</dd>
+  <dt>Execution</dt><dd>task demo-remediate-0003 · artifact-bound seq 39 · model gpt-oss:20b</dd>
+  <dt>Artifact</dt><dd>sha256:d652d7ef92fee3a9b5477501e68586a1bc7d42aa5472b4e1bd3329566e6891a6</dd>
+  <dt>Proposal → Position</dt><dd>15984d78-6bad-4c77-80a6-88814af80134 → Position v1, mitigated</dd>
+  <dt>Three humans, three keys</dt><dd>harness door key-ba9a7da8… (read) · operator key-6a9e5861… (product:3e6e4269…) · decider key-ab144d23… (admin)</dd>
+</dl>
+
+<h2>The run</h2>
+
+<section class="step">
+  <div class="rail"><div class="num">1</div><span class="actor">Themis pipeline</span></div>
+  <div>
+    <h3>A Finding is born, not typed in</h3>
+    <p>The operator registers the module and uploads its CycloneDX SBOM. Evidence, Knowledge and Governance do the rest over the event bus: Knowledge asks live OSV about <code>golang.org/x/text@v0.3.7</code> and Governance opens the Finding.</p>
+<pre>./scripts/gf-upload-sbom.sh -f /tmp/demo-sbom.json -p demo-xtext-app -j demo -v 1.0.0
+curl -s -H "X-API-Key: $THEMIS_API_KEY_READ" localhost:8083/api/v1/findings/$FID \
+  | jq '{id,cve,stage,components:[.components[].purl],positions,commissions}'</pre>
+<pre class="out">{
+  "id": "e72ae17c-8419-4544-8144-5aa36b453aef",
+  "cve": "CVE-2022-32149",
+  "stage": "identified",
+  "components": ["pkg:golang/golang.org/x/text@v0.3.7"],
+  "positions": [],
+  "commissions": []
+}</pre>
+    <div class="rec"><b>In the record:</b> Governance row; feed source live OSV (fix 0.3.8); release posture score 70.</div>
+  </div>
+</section>
+
+<section class="step">
+  <div class="rail"><div class="num">2</div><span class="actor">Operator</span></div>
+  <div>
+    <h3>Themis commissions the work before anything runs</h3>
+    <p>A commission is authority, not a stage change. It names the method and the deployment by hash; correspondence later is equality, nothing looser. The Finding stays <code>identified</code>.</p>
+<pre>curl -s -H "X-API-Key: $THEMIS_API_KEY_WRITE" -H content-type:application/json \
+  localhost:8083/api/v1/findings/$FID/commissions \
+  -d '{"skill":"remediate-dependency@6","composition_sha256":"a797261e…",
+       "anchor":"rsys@7","artifact_sha256":"a5266c52…",
+       "rationale":"I-M5 demo under the phase-framing amendment"}'</pre>
+<pre class="out">{"commission_id":"9e0e401b-8b37-49e6-a3a3-8437023c3711"}</pre>
+    <div class="rec"><b>In the record:</b> <code>commissions[1]</code> state <code>open</code>, <code>commissioned_id key:key-6a9e5861…</code>, premise stage <code>identified</code>, position version 0.</div>
+  </div>
+</section>
+
+<section class="step">
+  <div class="rail"><div class="num">3</div><span class="actor">Operator · L9</span></div>
+  <div>
+    <h3>The skill is instantiated with the commission in its origin</h3>
+    <p>The envelope is produced from the governed catalog, never hand-written. The commission id travels in the sealed origin, not in the model-visible payload.</p>
+<pre>themis-instantiate -catalog $CATALOG -skill remediate-dependency@6 -task demo-remediate-0003 \
+  -repo demo-xtext-app -pinned-sha $PINNED_SHA -model gpt-oss:20b -commission $CID7 \
+  -input finding=$FID -input dependency=golang.org/x/text \
+  -input advisory=CVE-2022-32149 -input target-version=v0.3.8 …</pre>
+<pre class="out">/srv/themis/rsys/envelopes/demo-0003/envelope-demo-remediate-0003.json
+"commission": "9e0e401b-8b37-49e6-a3a3-8437023c3711"      ← in origin, not payload</pre>
+  </div>
+</section>
+
+<section class="step">
+  <div class="rail"><div class="num">4</div><span class="actor">Harness · Model</span></div>
+  <div>
+    <h3>Governed execution under rsys@7</h3>
+    <p>The anchor is verified on open (every pin, both constitution hashes, the contract file). The model reads the Finding through the read door as a governed record, works phase by phase, verifies its own report under a registered contract, and declares done through a capability. Text never completes a phase.</p>
+<pre>themis-run -deploy $DEPLOY -governed-root $REPO -anchor rsys7.json -anchor-sha256 $ANCHOR7 \
+  -anchors-registry anchors.json -envelope envelope-demo-remediate-0003.json -json</pre>
+<pre class="out">{
+ "task_id": "demo-remediate-0003",
+ "status": "COMPLETED",
+ "verdict": "VERIFIED",
+ "artifact": "sha256:d652d7ef92fee3a9b5477501e68586a1bc7d42aa5472b4e1bd3329566e6891a6",
+ "deployment_anchor": "a5266c52398ea3ffcb7d25cd791320755b18f8a750e1edb285391395572fa7a4"
+}</pre>
+    <p class="rec" style="margin-top:14px"><b>What the model wrote and egressed</b> (the artifact's two members):</p>
+<pre>--- go.mod
+module demo
+
+go 1.22
+
+require golang.org/x/text v0.3.8
+
+--- report.json  (sha256 5148617270ff…)
+{
+  "finding": "golang.org/x/text v0.3.7 was vulnerable to CVE-2022-32149",
+  "remediation": "Updated golang.org/x/text to v0.3.8 in go.mod",
+  "evidence": "go.mod now contains require golang.org/x/text v0.3.8"
+}</pre>
+    <p class="rec" style="margin-top:14px"><b>The record, all 43 events.</b> Each phase starts a fresh conversation; the harness tells the model where it is with a fact derived from the record itself (the <code>phase-state</code> lines).</p>
+    <div class="timeline"><table>
+      <tr><td>0</td><td>lifecycle</td><td>CREATED · constitution 1df0e285… · anchor a5266c52…</td></tr>
+      <tr><td>1–4</td><td>l5-op ×3, l5-transition</td><td>provision: clone, checkout, rev-parse → ACTIVE</td></tr>
+      <tr><td>6</td><td>lifecycle</td><td>RUNNING</td></tr>
+      <tr class="phase"><td></td><td colspan="2">ANALYZE</td></tr>
+      <tr><td>7</td><td>l2-delivery</td><td>phase-state {"phase":"ANALYZE","completed":[],"capabilities":["get_finding","read_file","list_directory","search_code","delegate","declare_done"]}</td></tr>
+      <tr><td>9</td><td>l4-audit</td><td><span class="ok">authorized</span> get_finding e72ae17c-8419-4544-8144-5aa36b453aef</td></tr>
+      <tr><td>11</td><td>l4-audit</td><td><span class="ok">authorized</span> list_directory .</td></tr>
+      <tr><td>13</td><td>l4-audit</td><td><span class="ok">authorized</span> read_file go.mod</td></tr>
+      <tr><td>15</td><td>l4-audit</td><td><span class="ok">authorized</span> declare_done</td></tr>
+      <tr><td>16</td><td>workflow-transition</td><td>ANALYZE → REMEDIATE · signal:phase-completion-requested · cause_seq 15</td></tr>
+      <tr class="phase"><td></td><td colspan="2">REMEDIATE</td></tr>
+      <tr><td>17</td><td>l2-delivery</td><td>phase-state {"phase":"REMEDIATE","completed":["ANALYZE"],"capabilities":["read_file","write_file","verify_report","declare_done"]}</td></tr>
+      <tr><td>19</td><td>l4-audit</td><td><span class="err">error</span> read_file . (a directory; the model corrected itself)</td></tr>
+      <tr><td>21</td><td>l4-audit</td><td><span class="ok">authorized</span> read_file go.mod</td></tr>
+      <tr><td>23</td><td>l4-audit</td><td><span class="ok">authorized</span> write_file go.mod</td></tr>
+      <tr><td>25</td><td>l4-audit</td><td><span class="ok">authorized</span> write_file report.json</td></tr>
+      <tr><td>27</td><td>l4-audit</td><td><span class="ok">authorized</span> verify_report report.json</td></tr>
+      <tr><td>28</td><td>l10-verification</td><td><span class="pass">report-valid@2 PASS</span> · record sha256:ac96eada…</td></tr>
+      <tr><td>30</td><td>l4-audit</td><td><span class="ok">authorized</span> declare_done</td></tr>
+      <tr><td>31</td><td>workflow-transition</td><td>REMEDIATE → @complete · gate #g0: latest report-valid@2 = PASS</td></tr>
+      <tr class="phase"><td></td><td colspan="2">Seal · egress · bind</td></tr>
+      <tr><td>32–33</td><td>l5-transition</td><td>ACTIVE → SEALED (task-complete) → EGRESSING</td></tr>
+      <tr><td>34–37</td><td>l5-op ×4</td><td>egress ops · acknowledged</td></tr>
+      <tr><td>38</td><td>l5-transition</td><td>EGRESSING → ACKNOWLEDGED · artifact d652d7ef92fe</td></tr>
+      <tr><td>39</td><td>artifact-bound</td><td>sha256:d652d7ef92fee3a9b5477501e68586a1bc7d42aa5472b4e1bd3329566e6891a6</td></tr>
+      <tr><td>40–41</td><td>l5-transition</td><td>TEARDOWN → DESTROYED (verified-clean)</td></tr>
+      <tr><td>42</td><td>lifecycle</td><td>COMPLETED · workflow @complete</td></tr>
+    </table></div>
+  </div>
+</section>
+
+<section class="step">
+  <div class="rail"><div class="num">5</div><span class="actor">Operator · themis-intake</span></div>
+  <div>
+    <h3>Themis reconstructs the execution from the record alone</h3>
+    <p>The intake receives only the tuple (anchor hash, task id, artifact-bound seq). It re-derives everything else: the commission from the CREATED origin, the five production links, the verification re-run over the egressed bytes, the business references from the Finding bytes the model actually read. The model's output is never an input.</p>
+<pre>themis-intake -state-root $DEPLOY/state -anchors anchors.json -contracts contracts.json \
+  -anchor a5266c52… -task demo-remediate-0003 -seq 39</pre>
+<pre class="out">"execution":    { "anchor": "rsys@7", "anchor_state_at_intake": "active",
+                  "commission_id": "9e0e401b-8b37-49e6-a3a3-8437023c3711",
+                  "skill": "remediate-dependency@6", "task_id": "demo-remediate-0003" }
+"artifact":     { "object_id": "sha256:d652d7ef…", "production_witness": "l5-witnessed" }
+"verification": { "contract": "report-valid@2", "reconstructed_outcome": "PASS",
+                  "reconstruction_consistent": true }
+"trust_class":  "inferred"
+"business_verification_refs": ["CVE-2022-32149", "pkg:golang/golang.org/x/text@v0.3.7"]
+"delegations":  []</pre>
+    <div class="rec"><b>Nothing written by Themis yet.</b> The view is presentation; the proposal is the act.</div>
+  </div>
+</section>
+
+<section class="step">
+  <div class="rail"><div class="num">6</div><span class="actor">Operator</span></div>
+  <div>
+    <h3>A human proposes, with the execution as evidence</h3>
+    <p>The same command with a stance raises the proposal through the authenticated API. The trust class is derived, always <code>inferred</code> for a model-authored artifact; Governance refuses any other. Business Verification checks the references against the Finding's own truth.</p>
+<pre>themis-intake … -finding $FID -stance mitigated \
+  -rationale "golang.org/x/text bumped to v0.3.8; report-valid@2 PASS reproduced from the record"</pre>
+<pre class="out">proposal raised: 15984d78-6bad-4c77-80a6-88814af80134
+  (finding e72ae17c-8419-4544-8144-5aa36b453aef, commission 9e0e401b-8b37-49e6-a3a3-8437023c3711, trust inferred)</pre>
+    <div class="rec"><b>In the record:</b> stage <code>under_investigation</code>; proposal <code>proposed</code>, <code>proposer_id key:key-6a9e5861…</code>, <code>evidence_trust inferred</code>, immutable <code>harness-execution/v1</code> evidence.</div>
+  </div>
+</section>
+
+<section class="step">
+  <div class="rail"><div class="num">7</div><span class="actor">Decider</span></div>
+  <div>
+    <h3>A different human decides</h3>
+    <p>The decider holds a different key. Acceptance establishes the Position; the actor is derived from the key by the server, never from the request body.</p>
+<pre>curl -s -w 'accept: %{http_code}\n' -H "X-API-Key: $DECIDER_KEY" \
+  -X POST localhost:8083/api/v1/findings/$FID/proposals/$PROP/accept -d '{}'</pre>
+<pre class="out">accept: 204
+{
+  "stage": "position_established",
+  "positions": [{ "version": 1, "stance": "mitigated",
+                  "accepted_proposal_id": "15984d78-6bad-4c77-80a6-88814af80134",
+                  "actor_kind": "human", "actor_id": "key:key-ab144d23-14c7-46d7-95ff-bc73d9d80608" }],
+  "proposals": [{ "id": "15984d78-…", "status": "accepted", "evidence_trust": "inferred",
+                  "commission_id": "9e0e401b-…" }]
+}</pre>
+    <div class="rec"><b>No <code>dev:</code> actor anywhere.</b> Three authenticated humans, three keys, none of them the model's.</div>
+  </div>
+</section>
+
+<section class="step">
+  <div class="rail"><div class="num">8</div><span class="actor">Reviewer</span></div>
+  <div>
+    <h3>Cold replay, months later, from the Position alone</h3>
+    <p>Position → accepted proposal → its evidence → the tuple → the intake again. Same bytes. The same reconstruction was repeated on a laptop over a copy of the record plane with a freshly built intake: byte-identical.</p>
+<pre>read -r A T S &lt;&lt;&lt; "$(curl … findings/$FID | jq -r '.positions[0].accepted_proposal_id as $p
+   | .proposals[] | select(.id==$p) | .harness_evidence | "\(.anchor_hash) \(.task_id) \(.artifact_bound_seq)"')"
+themis-intake … -anchor $A -task $T -seq $S -out replay.json &amp;&amp; cmp view-0003.json replay.json</pre>
+<pre class="out">tuple from the Position: a5266c52398ea3ffcb7d25cd791320755b18f8a750e1edb285391395572fa7a4 demo-remediate-0003 39
+UC9: byte-identical evidence view</pre>
+  </div>
+</section>
+
+<h2>What refused along the way</h2>
+<p>Each refusal names its reason. None of them is an error; each is the boundary holding.</p>
+<div class="twins">
+  <div class="twin"><div class="eyebrow">Runtime key tries to commission</div>The harness's read key posts a commission.<code>HTTP 403 — a write-capable key is required</code></div>
+  <div class="twin"><div class="eyebrow">Wrong tuple</div>The intake is given seq 1 instead of the artifact-bound seq.<code>REFUSED: artifact-provenance-refused: event at seq 1 is l5-op, not artifact-bound · exit 1, nothing raised</code></div>
+  <div class="twin"><div class="eyebrow">Operator asserts a trust class</div>The same evidence posted with <code>evidence_trust: "asserted"</code>.<code>HTTP 400 — submitted asserted, derived inferred</code></div>
+  <div class="twin"><div class="eyebrow">A failed execution cited as evidence</div>The two earlier walks under rsys@6 that ended FAILED.<code>REFUSED: execution not referencable: not a completed execution (status FAILED)</code></div>
+  <div class="twin"><div class="eyebrow">Model calls a tool with an empty path</div><code>search_code {"path":"","query":"vulnerable-dep"}</code> during the gate run.<code>L4 target-refused (confinement); the walk continued</code></div>
+  <div class="twin"><div class="eyebrow">Model says a phase is done</div>An earlier capture: "ANALYZE phase complete." as prose, no <code>declare_done</code>.<code>Nothing happens; the phase exhausts governed. Text is never a control signal.</code></div>
+</div>
+
+<h2>What this proves, and what it does not</h2>
+<div class="two">
+  <div><h3>Established</h3><ul>
+    <li>Themis minted the authority (commission) before any execution and derived it back from the record, never from the caller.</li>
+    <li>The harness read the Finding as a governed record over the read door and never wrote security truth.</li>
+    <li>The execution reconstructs from the record alone, five links, verification re-run over egressed bytes, on two machines.</li>
+    <li>Proposal and decision are two humans with two keys; the model authored an artifact, not a decision.</li>
+    <li>The same walk failed twice under rsys@6 and the record showed why; the amendment was grilled, locked and gated before rsys@7 existed.</li>
+  </ul></div>
+  <div><h3>Not established</h3><ul>
+    <li>That the remediation is correct. The evidence class stays <code>inferred</code>; the decider owns that judgement.</li>
+    <li>Model quality. The gate proves gpt-oss:20b completes this skill; qwen2.5:7b does not, recorded as a capability observation.</li>
+    <li>Anything beyond one host: the two-VM topology, subject-bound scope (D-I-9) and product-scope write confinement have their own grills.</li>
+  </ul></div>
+</div>
+
+<div class="src">Sources: <code>docs/development/deployment-signoff-rsys.md</code> Addendum G; evidence bundle <code>themis-i-m5-20260927.tgz</code> sha256 <code>edf65681beb7ec334dffacf4138b90f3fd25634ce029c3eb1b3b02d34b29cd48</code>; decisions D-I-1..9, D-C-1..6, D-W-1..6, D-P-1..7 under <code>openspec/changes/archive/2026-09-27-*</code>. Every identifier above is copied from that record.</div>
+</div>

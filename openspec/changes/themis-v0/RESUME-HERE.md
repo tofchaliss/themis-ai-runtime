@@ -360,9 +360,12 @@ now RATIFIED):
 - **Known, not from this work:** Register E `TestLiveWalkProof` fails on
   the pushed tree — qwen2.5:7b answers no-action in the negative walk,
   so no denial exists to record; model nondeterminism, test untouched.
-- **Open Themis-side tests** (listed in `themis-commissioning/tasks.md`,
-  `l8-themis-surface/tasks.md`): read key cannot commission; cold replay
-  UC9; refused-delegation record admitted with the refusal visible.
+- **The three Themis-side tests landed 2026-09-27** (uncommitted there until
+  asked): read key cannot commission (403 at the middleware, nothing
+  recorded); UC9 cold replay in-memory and from persisted rows; a
+  refused delegation admitted and rendered. The last one exposed a
+  rendering defect — `delegationOf` decoded field names the runtime
+  never emits — fixed with the test. `make check` green.
 
 ## Milestone log
 - [ ] I-M5 — prepared 2026-09-27; host act pending (owner)

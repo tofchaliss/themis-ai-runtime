@@ -25,9 +25,12 @@ runtime half lands in I-M1, the Themis half in I-M3
       field `commission_id`; no override flag exists (D-C-5)
 - [x] `raiseProposal`: correspondence check in causal order with named
       refusals (D-C-5 §4); proposal records the commission id
-- [~] Tests: each refusal + positive twin 🟢; withdrawn-after-execution
-      (execution inspectable, proposal refused) 🟢; commissioner = proposer
-      admitted 🟢 (Themis `1414997`, domain/app/http suites). OPEN in the
-      Themis repo: read key cannot commission (an auth-middleware fact, no
-      commission-door test yet); cold replay Position → proposal →
-      commission (UC9) — both listed for I-M5's Themis records
+- [x] Tests: each refusal + positive twin; withdrawn-after-execution
+      (execution inspectable, proposal refused); commissioner = proposer
+      admitted (Themis `1414997`); read key cannot commission — 403 from
+      `RequireWriteScope` before the handler, nothing recorded, the
+      product-scoped operator admitted (`TestReadKeyCannotCommission`);
+      cold replay Position → AcceptedProposalID → proposal → evidence →
+      commission, in-memory (`TestHarnessPositionReplaysToCommission`) and
+      from persisted rows under embedded Postgres (store integration test)
+      — Themis 2026-09-27, uncommitted until asked

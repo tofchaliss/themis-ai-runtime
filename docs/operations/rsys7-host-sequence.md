@@ -3,7 +3,7 @@
 Delta page over `rsys6-host-sequence.md`: the host already carries the
 Themis estate, the three keys, the demo Finding, and `rsys@6` ACTIVE
 (act `f9b2c80` on the host). `rsys@7` carries the L7 phase-framing
-amendment (`openspec/changes/l7-phase-framing/`, D-P-1..7): the L1
+amendment (`openspec/changes/archive/2026-09-27-l7-phase-framing/`, D-P-1..7): the L1
 phase rule, the derived `phase-state` slot, capability-only completion (D-P-7), `remediate-dependency@6`.
 It is the deployment under which I-M5 steps 7–11 resume. Same rules:
 `$REPO=/opt/themis/themis-ai-runtime`, `$THEMIS=/opt/themis/themis-core`,
@@ -79,7 +79,7 @@ cat >| policies/decisions/rel-anchor-rsys-7.json <<'JSON'
   "hash": "a5266c52398ea3ffcb7d25cd791320755b18f8a750e1edb285391395572fa7a4"
  },
  "evidence": [],
- "rationale": "rsys@7 minted on the host for the L7 phase-framing amendment (openspec/changes/l7-phase-framing, D-P-1..6): the L1 phase rule, the derived phase-state slot, capability-only completion (D-P-7), skills [remediate-dependency@6] only — a clean allowlist: @1..@5 remain catalog history and cannot compose under D-P-1 (not a withdrawal). Everything else inherited from rsys@6. Gate: gpt-oss:20b COMPLETED remediate-dependency@6 under the test anchor on this host before the act.",
+ "rationale": "rsys@7 minted on the host for the L7 phase-framing amendment (openspec/changes/archive/2026-09-27-l7-phase-framing, D-P-1..6): the L1 phase rule, the derived phase-state slot, capability-only completion (D-P-7), skills [remediate-dependency@6] only — a clean allowlist: @1..@5 remain catalog history and cannot compose under D-P-1 (not a withdrawal). Everything else inherited from rsys@6. Gate: gpt-oss:20b COMPLETED remediate-dependency@6 under the test anchor on this host before the act.",
  "decided_at": "2026-09-27",
  "actor": {
   "kind": "commit",

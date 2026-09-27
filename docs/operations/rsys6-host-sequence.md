@@ -1,7 +1,7 @@
 # `rsys@6` — host sequence for I-M5 (prepared 2026-09-27; NOT an activation)
 
 I-M5 is the host act that closes the Themis integration
-(`openspec/changes/themis-integration/tasks.md`, D-I-8, D-W-4): the
+(`openspec/changes/archive/2026-09-27-themis-integration/tasks.md`, D-I-8, D-W-4): the
 Themis estate runs on the same host as the harness (D-I-1), the read
 door reads a real Finding (D-I-3), one mint of `rsys@6` carries the
 W-M1 constitution, the `themis_contract` pin and catalog @4, and a

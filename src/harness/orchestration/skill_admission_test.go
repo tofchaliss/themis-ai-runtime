@@ -41,20 +41,20 @@ func TestSkillFieldCoherence(t *testing.T) {
 		{"ordinary envelope", map[string]any{}, ""},
 		{"commitment without claim is Claim 1 only", map[string]any{"composition": commit}, ""},
 		{"claim + commitment + matching origin", map[string]any{
-			"skill": "investigate-cve@1", "composition": commit,
-			"origin": map[string]string{"skill": "investigate-cve@1", "skill_catalog": strings.Repeat("a", 64)}}, ""},
+			"skill": "investigate-cve@2", "composition": commit,
+			"origin": map[string]string{"skill": "investigate-cve@2", "skill_catalog": strings.Repeat("a", 64)}}, ""},
 		{"claim + commitment, no origin", map[string]any{
-			"skill": "investigate-cve@1", "composition": commit}, ""},
-		{"claim without commitment", map[string]any{"skill": "investigate-cve@1"},
+			"skill": "investigate-cve@2", "composition": commit}, ""},
+		{"claim without commitment", map[string]any{"skill": "investigate-cve@2"},
 			"must carry the composition commitment that claim refers to"},
 		{"origin attribution without the selector", map[string]any{
-			"composition": commit, "origin": map[string]string{"skill": "investigate-cve@1"}},
+			"composition": commit, "origin": map[string]string{"skill": "investigate-cve@2"}},
 			"load-bearing skill field"},
 		{"origin skill_ key without the selector", map[string]any{
 			"composition": commit, "origin": map[string]string{"skill_catalog": strings.Repeat("a", 64)}},
 			"load-bearing skill field"},
 		{"selector and attribution disagree", map[string]any{
-			"skill": "investigate-cve@1", "composition": commit,
+			"skill": "investigate-cve@2", "composition": commit,
 			"origin": map[string]string{"skill": "remediate-dependency@1"}},
 			"disagree"},
 		{"floating reference refused", map[string]any{
@@ -140,8 +140,8 @@ func TestAnchoredUnattributedProcedureRefused(t *testing.T) {
 	c := genuineCommitment(t, unattributed)
 	attributed := withEnvelopeFields(t, base, map[string]any{
 		"skill_procedure_path": proc, "skill_procedure_sha256": procSHA,
-		"skill": "investigate-cve@1", "composition": c,
-		"origin": map[string]string{"skill": "investigate-cve@1"},
+		"skill": "investigate-cve@2", "composition": c,
+		"origin": map[string]string{"skill": "investigate-cve@2"},
 	}, "envelope-unattr-3.json")
 	_, err = o.SubmitTask(attributed)
 	if err != nil && strings.Contains(err.Error(), "never from an unattributed envelope") {
@@ -158,7 +158,7 @@ func TestInstantiateEmitsSkillSelector(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if env.Skill != "investigate-cve@1" {
+	if env.Skill != "investigate-cve@2" {
 		t.Fatalf("skill selector = %q", env.Skill)
 	}
 	if env.Origin["skill"] != env.Skill {
@@ -224,7 +224,7 @@ func TestAnchoredSkillAllowlist(t *testing.T) {
 	}
 	base := f.verifEnvelope(t, "allow")
 	attributed := withEnvelopeFields(t, base, map[string]any{
-		"skill": "investigate-cve@1", "composition": genuineCommitment(t, base),
+		"skill": "investigate-cve@2", "composition": genuineCommitment(t, base),
 	}, "envelope-allow-2.json")
 
 	open := func(mutate func(m map[string]any)) *Orchestrator {
@@ -256,14 +256,14 @@ func TestAnchoredSkillAllowlist(t *testing.T) {
 	}
 	// Positive twin for THIS gate: listed → the allowlist message never
 	// appears; the later gates decide the rest.
-	_, err = open(func(m map[string]any) { m["skills"] = []any{"investigate-cve@1"} }).SubmitTask(attributed)
+	_, err = open(func(m map[string]any) { m["skills"] = []any{"investigate-cve@2"} }).SubmitTask(attributed)
 	if err != nil && strings.Contains(err.Error(), "not in the anchored skill allowlist") {
 		t.Fatalf("a listed skill must pass the allowlist gate: %v", err)
 	}
 }
 
 // anchoredSkillWorld opens an anchored deployment that pins the REAL
-// governed catalog and investigate-cve@1's bundle, and returns the
+// governed catalog and investigate-cve@2's bundle, and returns the
 // orchestrator plus a genuine L9-instantiated envelope for it. This is
 // the positive twin's world; negatives mutate one thing from here.
 func anchoredSkillWorld(t *testing.T, m model.Interface, mutateAnchor func(m map[string]any)) (*Orchestrator, *fixture, string) {
@@ -274,7 +274,7 @@ func anchoredSkillWorld(t *testing.T, m model.Interface, mutateAnchor func(m map
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, man, err := cat.Resolve("investigate-cve@1")
+	_, man, err := cat.Resolve("investigate-cve@2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -309,7 +309,7 @@ func anchoredSkillWorld(t *testing.T, m model.Interface, mutateAnchor func(m map
 			"workflow_ceiling": man.WorkflowCeiling.SHA256,
 			"context_contract": man.ContextContract.SHA256,
 		}}
-		a["skills"] = []any{"investigate-cve@1"}
+		a["skills"] = []any{"investigate-cve@2"}
 		a["skill_catalog"] = fileHash(catalogPath)
 		if mutateAnchor != nil {
 			mutateAnchor(a)
@@ -336,7 +336,7 @@ func p0Script() model.Interface {
 }
 
 // THE POSITIVE TWIN (Q-SA-12 / A-SA-11): a genuine L9-instantiated
-// investigate-cve@1 envelope is ADMITTED and EXECUTED under an anchored
+// investigate-cve@2 envelope is ADMITTED and EXECUTED under an anchored
 // deployment, with the correspondence evidence in the record. Before
 // this test, "refuse everything" satisfied every skill-admission test
 // in the repository.
@@ -354,7 +354,7 @@ func TestAnchoredSkillPositiveTwin(t *testing.T) {
 		t.Fatal(err)
 	}
 	// D-SA-5: the selector admission used, beside the attribution.
-	if man.GovernedHashes["skill"] != "investigate-cve@1" || man.GovernedHashes["origin:skill"] != "investigate-cve@1" {
+	if man.GovernedHashes["skill"] != "investigate-cve@2" || man.GovernedHashes["origin:skill"] != "investigate-cve@2" {
 		t.Fatalf("selector/attribution missing from the record: %v", man.GovernedHashes)
 	}
 	if man.GovernedHashes["deployment_anchor"] == "unanchored" || man.GovernedHashes["deployment_anchor"] == "" {
@@ -378,7 +378,7 @@ func TestAnchoredSkillPositiveTwin(t *testing.T) {
 		}
 	}
 	catHash, _ := deployment.HashFile(filepath.Join(repoRoot, "policies/skills/catalog.json"))
-	manHash, _ := deployment.HashFile(filepath.Join(repoRoot, "policies/skills/investigate-cve/skill.json"))
+	manHash, _ := deployment.HashFile(filepath.Join(repoRoot, "policies/skills/investigate-cve-2/skill.json"))
 	if objects["skill_catalog"] != "sha256:"+catHash || objects["skill_manifest"] != "sha256:"+manHash {
 		t.Fatalf("consumed Governance bytes not retained: catalog=%q manifest=%q (want %s / %s)", objects["skill_catalog"], objects["skill_manifest"], catHash, manHash)
 	}
@@ -497,19 +497,19 @@ func TestAnchoredSkillNegativeTwins(t *testing.T) {
 			"not in the anchored skill allowlist"},
 		// D-SA-2: all seven members, each its own refusal.
 		{"member substituted: workflow", member("neg-b", "workflow"),
-			"composition's workflow is not the workflow that investigate-cve@1 registers"},
+			"composition's workflow is not the workflow that investigate-cve@2 registers"},
 		{"member substituted: workflow ceiling", member("neg-b2", "workflow_ceiling"),
-			"composition's workflow_ceiling is not the workflow_ceiling that investigate-cve@1 registers"},
+			"composition's workflow_ceiling is not the workflow_ceiling that investigate-cve@2 registers"},
 		{"member substituted: context contract", member("neg-b3", "context_contract"),
-			"composition's context_contract is not the context_contract that investigate-cve@1 registers"},
+			"composition's context_contract is not the context_contract that investigate-cve@2 registers"},
 		{"member substituted: grant template", member("neg-c", "grant_template"),
-			"composition's grant_template is not the grant_template that investigate-cve@1 registers"},
+			"composition's grant_template is not the grant_template that investigate-cve@2 registers"},
 		{"member substituted: spec template", member("neg-c2", "spec_template"),
-			"composition's spec_template is not the spec_template that investigate-cve@1 registers"},
+			"composition's spec_template is not the spec_template that investigate-cve@2 registers"},
 		{"member substituted: input schema", member("neg-c3", "input_schema"),
-			"composition's input_schema is not the input_schema that investigate-cve@1 registers"},
+			"composition's input_schema is not the input_schema that investigate-cve@2 registers"},
 		{"member substituted: procedure", member("neg-c4", "procedure"),
-			"composition's procedure is not the procedure that investigate-cve@1 registers"},
+			"composition's procedure is not the procedure that investigate-cve@2 registers"},
 		// D-SA-4 grant clauses.
 		{"per-tool quota widened", withGrant("neg-d", func(g map[string]any) {
 			entries(g)[0]["max_calls"] = 9999
@@ -629,11 +629,11 @@ func TestAnchoredWithdrawnSkillRefused(t *testing.T) {
 		}
 	}
 	catRaw, _ := os.ReadFile(filepath.Join(src, "catalog.json"))
-	withdrawn := strings.Replace(string(catRaw), `"manifest_path": "investigate-cve/skill.json",
-   "state": "active"`, `"manifest_path": "investigate-cve/skill.json",
+	withdrawn := strings.Replace(string(catRaw), `"manifest_path": "investigate-cve-2/skill.json",
+   "state": "active"`, `"manifest_path": "investigate-cve-2/skill.json",
    "state": "withdrawn"`, 1)
 	if withdrawn == string(catRaw) {
-		t.Fatal("fixture: could not mark investigate-cve@1 withdrawn")
+		t.Fatal("fixture: could not mark investigate-cve@2 withdrawn")
 	}
 	catalogPath := filepath.Join(root, "catalog.json")
 	if err := os.WriteFile(catalogPath, []byte(withdrawn), 0o644); err != nil {
@@ -764,7 +764,7 @@ func TestLiveAnchoredSkillWalk(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if man.GovernedHashes["skill"] != "investigate-cve@1" || man.GovernedHashes["deployment_anchor"] == "unanchored" {
+	if man.GovernedHashes["skill"] != "investigate-cve@2" || man.GovernedHashes["deployment_anchor"] == "unanchored" {
 		t.Fatalf("anchored skill admission not in the record: %v", man.GovernedHashes)
 	}
 	t.Logf("live anchored skill walk: model=%s status=%s verdict=%s", modelName, res.Status, res.Verdict)
@@ -791,7 +791,7 @@ func TestAnchoredMixedBundleRefused(t *testing.T) {
 			"workflow_ceiling": rem.WorkflowCeiling.SHA256,
 			"context_contract": rem.ContextContract.SHA256,
 		})
-		a["skills"] = []any{"investigate-cve@1", "remediate-dependency@1"}
+		a["skills"] = []any{"investigate-cve@2", "remediate-dependency@1"}
 	})
 	swapped := withEnvelopeFields(t, env, map[string]any{
 		"skill": "remediate-dependency@1", "origin": map[string]string{"skill": "remediate-dependency@1"},

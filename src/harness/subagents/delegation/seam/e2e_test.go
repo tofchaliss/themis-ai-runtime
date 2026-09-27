@@ -234,7 +234,7 @@ func newWorld(t *testing.T, m model.Interface, registryPath string, wire bool) *
 		`{"version":1,"mirror_root":"`+mirror+`","max_wall_deadline_sec":600,"max_file_bytes":1048576,"max_total_bytes":10485760,"max_file_count":500,"max_mem_bytes":1073741824,"max_cpu_time_sec":600,"max_proc_count":64}`)
 	wj(t, w.envDir, "context-contract.json",
 		`{"version":1,"workflow":"triage-walk","slots":[
-		  {"name":"task-payload","kind":"task-brief","requirement":"required","classes":["external-untrusted"]}],
+		  {"name":"task-payload","kind":"task-brief","requirement":"required","classes":["external-untrusted"]},{"name":"phase-state","kind":"phase-state","requirement":"required","classes":["derived"]}],
 		  "sensitivity_ceiling":"public"}`)
 	sroot, err := state.OpenRoot(w.stateDir)
 	if err != nil {
@@ -975,7 +975,7 @@ func TestTemplateCeilingNarrowsEvidence(t *testing.T) {
 	// The parent contract ceiling is "internal" for this world.
 	wj(t, w.envDir, "context-contract.json",
 		`{"version":1,"workflow":"triage-walk","slots":[
-		  {"name":"task-payload","kind":"task-brief","requirement":"required","classes":["external-untrusted"]}],
+		  {"name":"task-payload","kind":"task-brief","requirement":"required","classes":["external-untrusted"]},{"name":"phase-state","kind":"phase-state","requirement":"required","classes":["derived"]}],
 		  "sensitivity_ceiling":"internal"}`)
 	const task = "t-ceiling"
 	m.parent = triageParent(w, task, func(seq int64, id string) string { return ref(seq, id) }, "triage")

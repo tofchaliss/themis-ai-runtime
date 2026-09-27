@@ -51,7 +51,7 @@ func TestLiveCapture(t *testing.T) {
 	}
 	skillName := os.Getenv("LIVECAPTURE_SKILL")
 	if skillName == "" {
-		skillName = "remediate-dependency@4"
+		skillName = "remediate-dependency@5"
 	}
 	lm := &loggingModel{inner: model.NewOllamaChat("http://localhost:11434"), dir: dir}
 	w, err := newWorld(t, lm, worldOpts{withDoor: true, serveFinding: true}, func(a map[string]any) { a["models"] = []any{name}; a["skills"] = []any{skillName} })

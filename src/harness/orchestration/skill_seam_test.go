@@ -60,9 +60,9 @@ func TestSkillProvenanceDoesNotChangeTheWalk(t *testing.T) {
 	f.o.cfg.Model = happyScript()
 	base := f.envelope(t, "t-skill")
 	attributed := withEnvelopeFields(t, base, map[string]any{
-		"skill": "investigate-cve@1", // D-SA-5: the selector; origin agrees
+		"skill": "investigate-cve@2", // D-SA-5: the selector; origin agrees
 		"origin": map[string]string{
-			"skill":             "investigate-cve@1",
+			"skill":             "investigate-cve@2",
 			"skill_composition": strings.Repeat("a", 64),
 			"skill_catalog":     strings.Repeat("b", 64),
 		},
@@ -144,8 +144,8 @@ func TestSkillProvenanceDoesNotChangeASaturatingWalk(t *testing.T) {
 	f.o.cfg.Model = script()
 	base := f.envelope(t, "t-sat-skill")
 	attributed := withEnvelopeFields(t, base, map[string]any{
-		"skill":       "investigate-cve@1",
-		"origin":      map[string]string{"skill": "investigate-cve@1", "skill_composition": strings.Repeat("a", 64)},
+		"skill":       "investigate-cve@2",
+		"origin":      map[string]string{"skill": "investigate-cve@2", "skill_composition": strings.Repeat("a", 64)},
 		"composition": genuineCommitment(t, base),
 	}, "envelope-t-sat-attributed.json")
 	skillRes, err := f.o.SubmitTask(attributed)
@@ -171,9 +171,9 @@ func TestSkillProvenancePreservedIntoAttribution(t *testing.T) {
 	env := withEnvelopeFields(t, base, map[string]any{
 		// D-SA-5: the load-bearing selector; origin repeats it as
 		// attribution.
-		"skill": "investigate-cve@1",
+		"skill": "investigate-cve@2",
 		"origin": map[string]string{
-			"skill":             "investigate-cve@1",
+			"skill":             "investigate-cve@2",
 			"skill_composition": strings.Repeat("c", 64),
 		},
 		// D-L9-11d: attribution requires a commitment.
@@ -186,7 +186,7 @@ func TestSkillProvenancePreservedIntoAttribution(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if man.GovernedHashes["origin:skill"] != "investigate-cve@1" {
+	if man.GovernedHashes["origin:skill"] != "investigate-cve@2" {
 		t.Fatalf("provenance must be preserved verbatim: %v", man.GovernedHashes)
 	}
 	if man.GovernedHashes["origin:skill_composition"] != strings.Repeat("c", 64) {
@@ -341,8 +341,8 @@ func TestSkillProvenanceDoesNotChangeATurnSaturatingWalk(t *testing.T) {
 	f.o.cfg.Model = script()
 	base := f.envelope(t, "t-turnsat-skill")
 	attributed := withEnvelopeFields(t, base, map[string]any{
-		"skill":       "investigate-cve@1",
-		"origin":      map[string]string{"skill": "investigate-cve@1", "skill_composition": strings.Repeat("a", 64)},
+		"skill":       "investigate-cve@2",
+		"origin":      map[string]string{"skill": "investigate-cve@2", "skill_composition": strings.Repeat("a", 64)},
 		"composition": genuineCommitment(t, base),
 	}, "envelope-t-turnsat-attributed.json")
 	skillRes, err := f.o.SubmitTask(attributed)

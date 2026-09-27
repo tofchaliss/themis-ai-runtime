@@ -50,6 +50,26 @@
    "steward": "security-engineering",
    "decision_ref": "reg-skill-remediate-dependency-4",
    "decision_sha256": "3d482ab732791fc39afdc6547e7a605482d91e2732ea92a83dd8ef64a0249999"
+  },
+  {
+   "name": "remediate-dependency",
+   "version": 5,
+   "composition_sha256": "12463c8f5dc71cd00445bf9a010a1925985bf6bd3fceb54e0854027265086623",
+   "manifest_path": "remediate-dependency-5/skill.json",
+   "state": "active",
+   "steward": "security-engineering",
+   "decision_ref": "reg-skill-remediate-dependency-5",
+   "decision_sha256": "a2a9153a4aa6d1cf108967aa817bcc97d9f70c55c0f54f3b930663860ffa0c17"
+  },
+  {
+   "name": "investigate-cve",
+   "version": 2,
+   "composition_sha256": "9ca1acb95607c9db7dc8a748135ce8530e1680cfca28c45696172ba71a2e3698",
+   "manifest_path": "investigate-cve-2/skill.json",
+   "state": "active",
+   "steward": "security-engineering",
+   "decision_ref": "reg-skill-investigate-cve-2",
+   "decision_sha256": "37ce3ccc9dc653691a81ac3e42b390b4216b75737bccba71187925c6387951cb"
   }
  ]
 }

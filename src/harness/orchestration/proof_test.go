@@ -214,7 +214,7 @@ func TestRealKillNoContinuation(t *testing.T) {
 	 "grant_path":`+jstr(filepath.Join(envAbs, "grant.json"))+`,
 	 "exec_ceiling_path":`+jstr(filepath.Join(envAbs, "eceiling.json"))+`,
 	 "spec_path":`+jstr(filepath.Join(envAbs, "spec.json"))+`,
-	 "context_contract_path":`+jstr(mustAbs(t, filepath.Join(repoRoot, "policies/context/task-contract-v1.json")))+`}`)
+	 "context_contract_path":`+jstr(mustAbs(t, filepath.Join(repoRoot, "policies/context/task-contract-v2.json")))+`}`)
 
 	cmd := exec.Command(os.Args[0], "-test.run", "TestRealKillNoContinuation")
 	cmd.Env = append(os.Environ(), "L7_CHILD_BASE="+base)

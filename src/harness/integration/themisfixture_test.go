@@ -89,13 +89,13 @@ func gitOut(t *testing.T, root string, args ...string) string {
 func TestThemisIntakeFixture(t *testing.T) {
 	dir := fixtureDir(t)
 	if os.Getenv("THEMIS_FIXTURE_GENERATE") == "1" {
-		generateFixture(t, dir, nil, "A real remediate-dependency@4 walk under a test anchor with the HTTP read door (httptest Governance/Registry serving the demo Finding). The report was verified once (report-valid@2 PASS) and egressed unchanged. The Themis repository's intake tests reconstruct this record; they must never edit it. Regenerate whenever the L6 constitution hash moves.")
+		generateFixture(t, dir, nil, "A real remediate-dependency@5 walk under a test anchor with the HTTP read door (httptest Governance/Registry serving the demo Finding). The report was verified once (report-valid@2 PASS) and egressed unchanged. The Themis repository's intake tests reconstruct this record; they must never edit it. Regenerate whenever the L6 constitution hash moves.")
 		// The owner's key negative (T-M3), preserved as a REAL record: the
 		// report is verified (PASS), rewritten, then egressed — the harness
 		// completes, and Themis must refuse "verified bytes are not the
 		// bound artifact". Lives beside the positive fixture so the consumer
 		// tests the refusal over a real walk, not a hand-made record.
-		generateFixture(t, dir+"-verify-a-egress-b", []model.ToolCall{writeCall("c8", "report.json", reportB)}, "A real remediate-dependency@4 walk in which report.json was verified (PASS), then rewritten, then egressed. The harness COMPLETED the task; the L10 PASS is about bytes that were not egressed. Themis's intake must refuse: verification-refused: verified bytes are not the bound artifact.")
+		generateFixture(t, dir+"-verify-a-egress-b", []model.ToolCall{writeCall("c8", "report.json", reportB)}, "A real remediate-dependency@5 walk in which report.json was verified (PASS), then rewritten, then egressed. The harness COMPLETED the task; the L10 PASS is about bytes that were not egressed. Themis's intake must refuse: verification-refused: verified bytes are not the bound artifact.")
 	}
 	verifyFixture(t, dir)
 	verifyFixture(t, dir+"-verify-a-egress-b")
@@ -142,7 +142,7 @@ func generateFixture(t *testing.T, dir string, tail []model.ToolCall, note strin
 		ArtifactBoundSeq: seq,
 		CommissionID:     fixtureCommission,
 		FindingID:        demoFindingID,
-		Skill:            "remediate-dependency@4",
+		Skill:            "remediate-dependency@5",
 		Note:             note,
 	}
 	pb, _ := json.MarshalIndent(prov, "", " ")

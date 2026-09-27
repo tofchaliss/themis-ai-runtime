@@ -1,0 +1,7 @@
+{
+ "version": 1,
+ "allowed_tools": ["read_file", "list_directory", "search_code", "write_file", "declare_done"],
+ "max_total_calls": 40,
+ "max_walk_length": 200,
+ "max_turns_per_phase": 10
+}

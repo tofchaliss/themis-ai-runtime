@@ -23,7 +23,7 @@ import (
 	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
 )
 
-// instantiateP0 compiles the authored investigate-cve@1 composition
+// instantiateP0 compiles the authored investigate-cve@2 composition
 // into an ordinary governed envelope for this fixture's deployment.
 func instantiateP0(t *testing.T, f *fixture, taskID string, req skills.Request) string {
 	t.Helper()
@@ -74,7 +74,7 @@ func instantiateP0(t *testing.T, f *fixture, taskID string, req skills.Request) 
 	}
 	path, err := skills.Instantiate(
 		mustAbs(t, filepath.Join(repoRoot, "policies/skills/catalog.json")),
-		"investigate-cve@1", req)
+		"investigate-cve@2", req)
 	if err != nil {
 		t.Fatalf("instantiating the authored skill must succeed: %v", err)
 	}
@@ -110,7 +110,7 @@ func TestP0SkillRunsThroughProductionLoop(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Skill provenance reached the record, verbatim.
-	if man.GovernedHashes["origin:skill"] != "investigate-cve@1" {
+	if man.GovernedHashes["origin:skill"] != "investigate-cve@2" {
 		t.Fatalf("skill attribution missing from the record: %v", man.GovernedHashes)
 	}
 	if man.GovernedHashes["origin:skill_composition"] == "" {
@@ -324,7 +324,7 @@ func TestLiveSkillWalk(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if man.GovernedHashes["origin:skill"] != "investigate-cve@1" {
+	if man.GovernedHashes["origin:skill"] != "investigate-cve@2" {
 		t.Fatalf("live walk must record its skill attribution: %v", man.GovernedHashes)
 	}
 }

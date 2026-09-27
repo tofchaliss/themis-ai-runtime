@@ -195,7 +195,7 @@ func (f *fixture) envelopeWith(t *testing.T, taskID, modelName, payload string) 
 	 "registry_path":`+jstr(mustAbs(t, filepath.Join(repoRoot, "policies/tools/registry-v3.json")))+`,
 	 "grant_path":`+jstr(abs(taskID+"-grant.json"))+`,"exec_ceiling_path":`+jstr(abs("eceiling.json"))+`,
 	 "spec_path":`+jstr(abs(taskID+"-spec.json"))+`,
-	 "context_contract_path":`+jstr(mustAbs(t, filepath.Join(repoRoot, "policies/context/task-contract-v1.json")))+`}`)
+	 "context_contract_path":`+jstr(mustAbs(t, filepath.Join(repoRoot, "policies/context/task-contract-v2.json")))+`}`)
 }
 
 func mustAbs(t *testing.T, p string) string {
@@ -733,7 +733,7 @@ func TestGrantCeilingAtAssembly(t *testing.T) {
 func TestExportedAPIClosure(t *testing.T) {
 	allowTypes := map[string]bool{
 		"Config": true, "StartupReport": true, "Orchestrator": true, "TaskResult": true,
-		"Envelope": true, "WorkflowDef": true, "WorkflowCeiling": true, "Edge": true, "Phase": true,
+		"Envelope": true, "WorkflowDef": true, "WorkflowCeiling": true, "Edge": true, "Phase": true, "PhaseState": true,
 		// CompositionCommitment is an envelope field type (D-L9-11a):
 		// artifact identities L7 verifies what it materialized against.
 		// It carries no name, version, or reference, so it cannot
@@ -760,7 +760,7 @@ func TestExportedAPIClosure(t *testing.T) {
 	}
 	allowFuncs := map[string]bool{
 		"Open": true, "LoadEnvelope": true, "LoadWorkflow": true, "LoadWorkflowCeiling": true,
-		"ConstitutionHash": true,
+		"ConstitutionHash": true, "DerivePhaseState": true,
 		// Register C fault injection for the seam's three points; SetFault
 		// is test wiring (production never installs a fault).
 		"FaultAt": true, "SetFault": true,

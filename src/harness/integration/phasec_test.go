@@ -135,7 +135,7 @@ func writeFixtureArtifacts(t *testing.T, envDir, mirror string) {
 		`{"version":1,"mirror_root":"`+mirror+`","max_wall_deadline_sec":600,"max_file_bytes":1048576,"max_total_bytes":10485760,"max_file_count":500,"max_mem_bytes":1073741824,"max_cpu_time_sec":600,"max_proc_count":64}`)
 	wj(t, envDir, "context-contract.json",
 		`{"version":1,"workflow":"remediate-dependency","slots":[
-		  {"name":"task-payload","kind":"task-brief","requirement":"required","classes":["external-untrusted"]}],
+		  {"name":"task-payload","kind":"task-brief","requirement":"required","classes":["external-untrusted"]},{"name":"phase-state","kind":"phase-state","requirement":"required","classes":["derived"]}],
 		  "sensitivity_ceiling":"public"}`)
 
 }
@@ -475,14 +475,14 @@ func TestPhaseCEndToEndChain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	admission, err := ratchet.ObserveAdmission("l9-catalog", catalogPath, "investigate-cve", 1, "2026-09-13T00:00:00Z")
+	admission, err := ratchet.ObserveAdmission("l9-catalog", catalogPath, "investigate-cve", 2, "2026-09-13T00:00:00Z")
 	if err != nil || admission == nil {
 		t.Fatalf("door resolution failed: %+v %v", admission, err)
 	}
 
 	// ---- The comparison: candidate walk vs baseline walk under the
 	// registered criterion (registry = test-fixture Governance act).
-	proposedContent := []byte(`{"skill":"investigate-cve","version":2,"change":"phase-c candidate"}`)
+	proposedContent := []byte(`{"skill":"investigate-cve","version":3,"change":"phase-c candidate"}`)
 	pkg, refusal, err := ratchet.Compare(ratchet.CompareInput{
 		CriterionRef:    "walk-report-score-delta@1",
 		Criterion:       criterion,

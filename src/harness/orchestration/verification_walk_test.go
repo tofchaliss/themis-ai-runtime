@@ -103,7 +103,7 @@ func setupVerif(t *testing.T, m model.Interface, ev VerificationEvaluator) *fixt
 		  {"tool":"declare_done","max_calls":6}]}`)
 	writeJSON(t, f.envDir, "context-contract.json",
 		`{"version":1,"workflow":"remediate-verify","slots":[
-		  {"name":"task-payload","kind":"task-brief","requirement":"required","classes":["external-untrusted"]}],
+		  {"name":"task-payload","kind":"task-brief","requirement":"required","classes":["external-untrusted"]},{"name":"phase-state","kind":"phase-state","requirement":"required","classes":["derived"]}],
 		  "sensitivity_ceiling":"public"}`)
 	return f
 }

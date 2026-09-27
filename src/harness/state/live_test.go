@@ -148,6 +148,11 @@ func TestLiveTaskReconstruction(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// W-M2 (D-W-2): an environment mutates only through its L5-scoped
+	// witness handle; an unwitnessed seal is refused by design.
+	if err := env.Attach(task.L5Sink()); err != nil {
+		t.Fatal(err)
+	}
 	if err := task.Transition(StatusRunning, "provisioned"); err != nil {
 		t.Fatal(err)
 	}

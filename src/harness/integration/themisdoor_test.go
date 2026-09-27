@@ -224,7 +224,7 @@ func newWorld(t *testing.T, m model.Interface, opts worldOpts, mutate func(map[s
 		}
 		return h
 	}
-	bundle := filepath.Join(root, "policies/skills/remediate-dependency-4")
+	bundle := filepath.Join(root, "policies/skills/remediate-dependency-5")
 	themisPin := "absent"
 	var seam tools.ThemisSeam
 	if opts.withDoor {
@@ -270,7 +270,7 @@ func newWorld(t *testing.T, m model.Interface, opts worldOpts, mutate func(map[s
 		"models":                       []any{"scripted"},
 		"model_registry":               "absent",
 		"skill_catalog":                hashFile(filepath.Join(root, "policies/skills/catalog.json")),
-		"skills":                       []any{"remediate-dependency@4"},
+		"skills":                       []any{"remediate-dependency@5"},
 		"contract_registry":            hashFile(filepath.Join(root, "policies/verification/contracts.json")),
 		"criteria_registry":            hashFile(filepath.Join(root, "policies/ratchet/criteria.json")),
 		"regression_set_registry":      hashFile(filepath.Join(root, "policies/ratchet/regression-sets.json")),
@@ -338,7 +338,7 @@ func (w *world) instantiate(t *testing.T, task, finding string) string {
 func (w *world) instantiateWith(t *testing.T, task, finding, commission string) string {
 	t.Helper()
 	_ = os.MkdirAll(filepath.Join(w.base, "state"), 0o755)
-	path, err := skills.Instantiate(filepath.Join(w.root, "policies/skills/catalog.json"), "remediate-dependency@4", skills.Request{
+	path, err := skills.Instantiate(filepath.Join(w.root, "policies/skills/catalog.json"), "remediate-dependency@5", skills.Request{
 		TaskID: task, Repo: "demo-vuln-app", PinnedSHA: w.sha, Commission: commission,
 		Inputs:        map[string]any{"finding": finding, "dependency": "vulnerable-dep", "advisory": "ADV-2026-1"},
 		WallDeadlineS: 300,
@@ -348,7 +348,7 @@ func (w *world) instantiateWith(t *testing.T, task, finding, commission string) 
 		OutDir: filepath.Join(w.base, "envelopes"),
 	})
 	if err != nil {
-		t.Fatalf("L9 instantiation of remediate-dependency@4: %v", err)
+		t.Fatalf("L9 instantiation of remediate-dependency@5: %v", err)
 	}
 	return path
 }
@@ -394,7 +394,7 @@ func TestReadDoorPositivePath(t *testing.T) {
 		t.Fatalf("the read must be authorized: %v", a["get_finding"])
 	}
 	if _, ok := a["get_product"]; ok {
-		t.Fatal("remediate-dependency@4 holds no get_product (D-I-4)")
+		t.Fatal("remediate-dependency@5 holds no get_product (D-I-4)")
 	}
 	if keySeen != demoReadKey {
 		t.Fatalf("the read key must reach the authority: %q", keySeen)
@@ -441,7 +441,7 @@ func TestReadDoorPositivePath(t *testing.T) {
 		t.Fatal("fixture: the restatement turn was not recorded")
 	}
 	man, _ := w.sroot.ReadManifest(task)
-	if man.GovernedHashes["skill"] != "remediate-dependency@4" || man.GovernedHashes["deployment_anchor"] != w.anchorSHA {
+	if man.GovernedHashes["skill"] != "remediate-dependency@5" || man.GovernedHashes["deployment_anchor"] != w.anchorSHA {
 		t.Fatalf("record: %v", man.GovernedHashes)
 	}
 }

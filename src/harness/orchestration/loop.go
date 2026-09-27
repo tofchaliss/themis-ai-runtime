@@ -627,7 +627,29 @@ func (w *walk) composePhase(p *Phase) ([]model.Message, error) {
 		Author: "task-submitter",
 		Items:  []l2.ContextItem{{Kind: taskPayloadKind, Evidence: []byte(w.env.Payload)}},
 	}
-	g, err := l2.Gather(w.contract, []l2.Assignment{{Slot: taskPayloadSlot, Source: src}})
+	// The phase fact (D-P-1): derived from the record as it stands,
+	// delivered through its own slot, refused at Gather when the contract
+	// does not declare it. The narrowed grant is what the model reads as
+	// its capabilities and what L4 will authorize (D-P-2).
+	events, err := w.o.root.ReadEvents(w.env.TaskID)
+	if err != nil {
+		return nil, err
+	}
+	caps := make([]string, 0)
+	for _, e := range w.phaseGrant(p).Entries {
+		caps = append(caps, e.Tool)
+	}
+	_, psRaw, entrySeq, err := DerivePhaseState(w.wf, events, p.Name, caps)
+	if err != nil {
+		return nil, err
+	}
+	phaseSrc := l2.Source{
+		Name: phaseStateSlot, Kind: l2.KindHarnessState,
+		Authority: l2.AuthorityDerived, Sensitivity: l2.SensitivityPublic,
+		Author: "harness",
+		Items:  []l2.ContextItem{{Kind: phaseStateKind, Version: fmt.Sprintf("seq:%d", entrySeq), Evidence: psRaw}},
+	}
+	g, err := l2.Gather(w.contract, []l2.Assignment{{Slot: taskPayloadSlot, Source: src}, {Slot: phaseStateSlot, Source: phaseSrc}})
 	if err != nil {
 		return nil, err
 	}

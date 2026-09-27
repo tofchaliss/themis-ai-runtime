@@ -1,0 +1,16 @@
+{
+ "id": "reg-skill-remediate-dependency-5",
+ "kind": "registration",
+ "target": {
+  "name": "remediate-dependency",
+  "version": 5,
+  "hash": "12463c8f5dc71cd00445bf9a010a1925985bf6bd3fceb54e0854027265086623"
+ },
+ "evidence": [],
+ "rationale": "Phase framing (openspec/changes/l7-phase-framing, D-P-1..D-P-4): the context contract declares the required derived phase-state slot and the procedure is phase-scoped (REMEDIATE works from its declared inputs; it never assumes a prior phase's get_finding result is present). Workflow, ceiling and grant bytes identical to v4. Evidence: host records demo-remediate-0001/0002 under rsys@6 (governed FAILED at the ANALYZE\u2192REMEDIATE boundary) and the laptop/host captures. v4 stays active as recognized history; rsys@7 does not admit it.",
+ "decided_at": "2026-09-27",
+ "actor": {
+  "kind": "commit",
+  "id": "tofchaliss"
+ }
+}

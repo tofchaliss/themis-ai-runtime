@@ -42,6 +42,14 @@ const (
 	// reader and verifies them against the address, so L2 pulls
 	// evidence under its own caps and the seam reads no bytes.
 	KindRecordObject SourceKind = "record-object"
+
+	// KindHarnessState (D-P-1, 2026-09-27): a fact the loop derives from
+	// the RECORDED workflow state — never caller-supplied, never
+	// model-authored. Its provenance is the record (the entering
+	// transition's seq travels as the item version), so it mints the
+	// derived class only: a registered computation with a bounded
+	// vocabulary and complete provenance.
+	KindHarnessState SourceKind = "harness-state"
 )
 
 // AbsentSource declares a slot empty (L8 seam usage): no reader, no
@@ -70,8 +78,9 @@ type ObjectReader interface {
 // allowedClasses is the registration constraint table: a source kind
 // can only mint the classes its provenance can actually prove.
 var allowedClasses = map[SourceKind][]AuthorityClass{
-	KindInline:     {AuthorityExternalUntrusted},
-	KindFilesystem: {AuthorityExternalUntrusted},
+	KindInline:       {AuthorityExternalUntrusted},
+	KindHarnessState: {AuthorityDerived},
+	KindFilesystem:   {AuthorityExternalUntrusted},
 	KindSearch:     {AuthorityExternalUntrusted},
 	KindThemis:     {AuthorityGovernedRecord, AuthorityGovernedExternal},
 	// The record-object kind carries whatever class the witnessing
@@ -169,8 +178,11 @@ func checkSource(s Source) error {
 // "unavailable".
 func (s Source) collect() (items []ContextItem, available bool, err error) {
 	origin := "external"
-	if s.Kind == KindThemis {
+	switch s.Kind {
+	case KindThemis:
 		origin = "themis"
+	case KindHarnessState:
+		origin = "harness"
 	}
 	stamp := func(it ContextItem, evidence []byte, version string) (ContextItem, error) {
 		if len(evidence) > MaxItemBytes {
@@ -226,7 +238,7 @@ func (s Source) collect() (items []ContextItem, available bool, err error) {
 		}
 		return []ContextItem{it}, true, nil
 
-	case KindInline:
+	case KindInline, KindHarnessState:
 		for _, raw := range s.Items {
 			it, err := stamp(ContextItem{Kind: raw.Kind, Version: raw.Version}, raw.Evidence, "")
 			if err != nil {

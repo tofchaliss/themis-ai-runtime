@@ -374,6 +374,24 @@ now RATIFIED):
   rendering defect — `delegationOf` decoded field names the runtime
   never emits — fixed with the test. `make check` green.
 
+## Gate 1 — P-M1 (phase framing: rule + derived phase-state, 2026-09-27)
+- L1 `instructions/global/system/phases.md` (the static rule; moves
+  `instruction_root_system`). L2 `KindHarnessState` mints `derived`
+  only. L7 fixed plan = `task-payload` + `phase-state`;
+  `DerivePhaseState` is pure over the record (entering transition seq
+  as provenance; RUNNING for the initial phase); a contract without the
+  slot refuses at Gather by name. Both constitution pins UNCHANGED.
+- Evidence: unit (derivation, refusal), L2 authority table, and a real
+  `@5` walk whose every `l2-delivery` payload contains the
+  record-re-derived fact byte-exact with `authority: derived` labels.
+- Live: with the fence delivered, qwen2.5:7b still restarts at
+  `get_finding` in REMEDIATE (captured) — the D-P-5 capability
+  observation; gpt-oss:20b is the host gate (P-M3).
+- Consequences: pre-D-P-1 skills un-composable (catalog history);
+  `investigate-cve@2` registered for the suites; `task-contract-v2`;
+  see `l7-phase-framing/tasks.md`. Owner call at the mint: `rsys@7`
+  skills `[@1,@2,@5]` as locked, or `[@5]` (the only composable one).
+
 ## Milestone log
 - [ ] I-M5 — prepared 2026-09-27; host act pending (owner)
 - [x] I-M4 — green 2026-09-26 (integration suite; full hermetic harness; evidence tools)

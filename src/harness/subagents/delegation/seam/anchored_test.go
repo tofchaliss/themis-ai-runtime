@@ -2,7 +2,7 @@ package seam
 
 // Register B under an ANCHORED deployment (design.md §5.5; M6): the
 // anchor pins the delegation-template registry; a genuine delegate
-// call from the proposed remediate-dependency@2 Skill, instantiated
+// call from the proposed remediate-dependency@5 Skill, instantiated
 // through L9, is admitted and executed; the model forms its evidence
 // reference from the record-ref furniture it saw. Then the anchor-side
 // negatives, each mutation-coupled both ways. Register E (live) at the
@@ -76,7 +76,7 @@ func newAnchoredWorld(t *testing.T, m model.Interface, modelName, registryPath s
 		}
 		return h
 	}
-	bundle := filepath.Join(root, "policies/skills/remediate-dependency-2")
+	bundle := filepath.Join(root, "policies/skills/remediate-dependency-5")
 	a := map[string]any{
 		"version": 1, "name": "test-rsys", "deployment_version": 4,
 		"instruction_root_safety": hashDir(filepath.Join(root, "instructions/global/safety")),
@@ -94,7 +94,7 @@ func newAnchoredWorld(t *testing.T, m model.Interface, modelName, registryPath s
 		"models":                       []any{modelName},
 		"model_registry":               "absent",
 		"skill_catalog":                hashFile(w.catalog),
-		"skills":                       []any{"remediate-dependency@2"},
+		"skills":                       []any{"remediate-dependency@5"},
 		"contract_registry":            hashFile(filepath.Join(root, "policies/verification/contracts.json")),
 		"criteria_registry":            hashFile(filepath.Join(root, "policies/ratchet/criteria.json")),
 		"regression_set_registry":      hashFile(filepath.Join(root, "policies/ratchet/regression-sets.json")),
@@ -156,15 +156,15 @@ func newAnchoredWorld(t *testing.T, m model.Interface, modelName, registryPath s
 	return w, nil
 }
 
-// instantiate runs the proposed remediate-dependency@2 Skill through
+// instantiate runs the proposed remediate-dependency@5 Skill through
 // L9 for this deployment and returns the envelope path.
 func (w *anchoredWorld) instantiate(t *testing.T, taskID, modelName string) string {
 	t.Helper()
 	// The state root must exist before L9's disjointness check.
 	_ = os.MkdirAll(filepath.Join(w.base, "state"), 0o755)
-	path, err := skills.Instantiate(w.catalog, "remediate-dependency@2", skills.Request{
+	path, err := skills.Instantiate(w.catalog, "remediate-dependency@5", skills.Request{
 		TaskID: taskID, Repo: "demo", PinnedSHA: w.sha,
-		Inputs:        map[string]any{"dependency": "vulnerable-dep", "advisory": "ADV-2026-1"},
+		Inputs:        map[string]any{"finding": "b1be6f86-2ecd-451f-9411-95f1f32fd501", "dependency": "vulnerable-dep", "advisory": "ADV-2026-1"},
 		WallDeadlineS: 300,
 		Deployment: skills.Deployment{Model: modelName, TurnTimeoutSec: 180,
 			RegistryPath: filepath.Join(w.root, "policies/tools/registry-v5.json"), ExecCeilingPath: w.ceiling,
@@ -173,7 +173,7 @@ func (w *anchoredWorld) instantiate(t *testing.T, taskID, modelName string) stri
 		OutDir: filepath.Join(w.base, "envelopes"),
 	})
 	if err != nil {
-		t.Fatalf("L9 instantiation of remediate-dependency@2: %v", err)
+		t.Fatalf("L9 instantiation of remediate-dependency@5: %v", err)
 	}
 	return path
 }
@@ -251,7 +251,7 @@ func TestAnchoredDelegationPositivePath(t *testing.T) {
 		t.Fatalf("the reference the model formed from the furniture must be the one witnessed: %q vs %+v", *usedRef, body.EvidenceRefs)
 	}
 	man, err := w.sroot.ReadManifest(task)
-	if err != nil || man.GovernedHashes["deployment_anchor"] == "unanchored" || man.GovernedHashes["skill"] != "remediate-dependency@2" {
+	if err != nil || man.GovernedHashes["deployment_anchor"] == "unanchored" || man.GovernedHashes["skill"] != "remediate-dependency@5" {
 		t.Fatalf("anchored, skill-attributed record expected: %v %v", err, man.GovernedHashes)
 	}
 	r, err := ReconstructDelegation(w.sroot, task, l8.Seq, trustForRegistry(t, w.root))

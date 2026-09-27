@@ -166,7 +166,7 @@ func e2eFixture(t *testing.T, m model.Interface) (*orchestration.Orchestrator, s
 		  {"tool":"declare_done","max_calls":6}]}`)
 	wj(t, envDir, "context-contract.json",
 		`{"version":1,"workflow":"remediate-dependency","slots":[
-		  {"name":"task-payload","kind":"task-brief","requirement":"required","classes":["external-untrusted"]}],
+		  {"name":"task-payload","kind":"task-brief","requirement":"required","classes":["external-untrusted"]},{"name":"phase-state","kind":"phase-state","requirement":"required","classes":["derived"]}],
 		  "sensitivity_ceiling":"public"}`)
 	js := func(s string) string { b, _ := json.Marshal(s); return string(b) }
 	env := wj(t, envDir, "envelope.json", `{

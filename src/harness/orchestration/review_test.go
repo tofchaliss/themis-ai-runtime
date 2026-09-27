@@ -477,12 +477,12 @@ func TestComposedDeliveryThroughL2(t *testing.T) {
 func TestContractWorkflowBindingRefused(t *testing.T) {
 	f := setup(t, happyScript(), "")
 	other := strings.Replace(
-		readFile(t, mustAbs(t, filepath.Join(repoRoot, "policies/context/task-contract-v1.json"))),
+		readFile(t, mustAbs(t, filepath.Join(repoRoot, "policies/context/task-contract-v2.json"))),
 		`"workflow": "analyze-verify"`, `"workflow": "other-lattice"`, 1)
 	otherPath := writeJSON(t, f.envDir, "other-contract.json", other)
 	env := readFile(t, f.envelope(t, "t-cbind"))
 	env = strings.Replace(env,
-		jstr(mustAbs(t, filepath.Join(repoRoot, "policies/context/task-contract-v1.json"))),
+		jstr(mustAbs(t, filepath.Join(repoRoot, "policies/context/task-contract-v2.json"))),
 		jstr(otherPath), 1)
 	p := writeJSON(t, f.envDir, "envelope-t-cbind-2.json", env)
 	if _, err := f.o.SubmitTask(p); !errors.Is(err, ErrAssembly) || !strings.Contains(err.Error(), "other-lattice") {

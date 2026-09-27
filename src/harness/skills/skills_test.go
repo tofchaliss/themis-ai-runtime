@@ -66,7 +66,7 @@ const (
     {"on":"turns-exhausted","to":"@fail"}]}
  ]}`
 	fxCeiling  = `{"version":1,"allowed_tools":["read_file","declare_done"],"max_total_calls":20,"max_walk_length":100,"max_turns_per_phase":10}`
-	fxContract = `{"version":1,"workflow":"analyze-verify","slots":[{"name":"task-payload","kind":"task-brief","requirement":"required","classes":["external-untrusted"]}],"sensitivity_ceiling":"public"}`
+	fxContract = `{"version":1,"workflow":"analyze-verify","slots":[{"name":"task-payload","kind":"task-brief","requirement":"required","classes":["external-untrusted"]},{"name":"phase-state","kind":"phase-state","requirement":"required","classes":["derived"]}],"sensitivity_ceiling":"public"}`
 	fxGrant    = `{"version":1,"task_id":"@task_id","total_max_calls":20,"entries":[{"tool":"read_file","max_calls":8,"workspace":"@workspace"},{"tool":"declare_done","max_calls":4}]}`
 	fxSpec     = `{"version":1,"task_id":"@task_id","repo":"@repo","pinned_sha":"@pinned_sha","limits":[{"dimension":"wall_deadline_s","value":90}]}`
 	fxSchema   = `{"version":1,"fields":[{"name":"cve-id","type":"string","required":true,"max_length":64},{"name":"depth","type":"integer"}]}`

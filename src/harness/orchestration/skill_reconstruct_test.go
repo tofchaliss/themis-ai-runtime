@@ -282,21 +282,21 @@ func TestGovernanceIdentityIsNotEstablishedBySelfDeclaredAttribution(t *testing.
 	base := f.envelope(t, "t-selfdecl")
 	// Consistent by construction: commit to the identities of the
 	// artifacts this envelope actually names, while CLAIMING to be the
-	// governed investigate-cve@1 composition.
+	// governed investigate-cve@2 composition.
 	catPath := mustAbs(t, filepath.Join(repoRoot, "policies/skills/catalog.json"))
 	cat, err := skills.LoadCatalog(catPath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, _, err := cat.Resolve("investigate-cve@1")
+	entry, _, err := cat.Resolve("investigate-cve@2")
 	if err != nil {
 		t.Fatal(err)
 	}
 	forged := withEnvelopeFields(t, base, map[string]any{
-		"skill":       "investigate-cve@1", // D-SA-5: the selector; origin agrees
+		"skill":       "investigate-cve@2", // D-SA-5: the selector; origin agrees
 		"composition": genuineCommitment(t, base),
 		"origin": map[string]string{
-			"skill":             "investigate-cve@1",
+			"skill":             "investigate-cve@2",
 			"skill_composition": entry.Composition,
 		},
 	}, "envelope-t-selfdecl-2.json")
@@ -336,14 +336,14 @@ func TestAttributionInconsistencyIsDetectable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, m, err := cat.Resolve("investigate-cve@1")
+	entry, m, err := cat.Resolve("investigate-cve@2")
 	if err != nil {
 		t.Fatal(err)
 	}
 	lying := withEnvelopeFields(t, base, map[string]any{
-		"skill": "investigate-cve@1", // D-SA-5: the selector; origin agrees
+		"skill": "investigate-cve@2", // D-SA-5: the selector; origin agrees
 		"origin": map[string]string{
-			"skill":             "investigate-cve@1",
+			"skill":             "investigate-cve@2",
 			"skill_composition": entry.Composition,
 			"skill_workflow":    m.Workflow.SHA256,
 		},
@@ -401,7 +401,7 @@ func TestSkillAttributionRequiresACommitment(t *testing.T) {
 	f := setup(t, happyScript(), "")
 	base := f.envelope(t, "t-elective")
 	naked := withEnvelopeFields(t, base, map[string]any{
-		"origin": map[string]string{"skill": "investigate-cve@1"},
+		"origin": map[string]string{"skill": "investigate-cve@2"},
 	}, "envelope-t-elective-2.json")
 	if _, err := f.o.SubmitTask(naked); err == nil || !errors.Is(err, ErrInvariant) {
 		t.Fatalf("skill attribution without a commitment must refuse: %v", err)
@@ -436,7 +436,7 @@ func TestInstantiationEmitsASealedCommitment(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, m, err := cat.Resolve("investigate-cve@1")
+	_, m, err := cat.Resolve("investigate-cve@2")
 	if err != nil {
 		t.Fatal(err)
 	}

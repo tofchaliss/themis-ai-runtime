@@ -42,7 +42,24 @@ schema — implementation questions. Fact that shaped it: the bus reader
 poison-halts a stream after 5 failed attempts; outward failures must
 never reach that path.
 
-## Q-N-3 — What a Jira defect mirrors and who closes it (OPEN)
+## D-N-3 — What a delivery intent contains (LOCKED 2026-09-27, owner: snapshot + references)
+
+> Every delivery intent contains immutable lineage references plus an
+> immutable snapshot of the Themis facts and the materialized
+> destination payload at intent creation. The intent identifies the
+> originating event and timestamp, references the Finding / release /
+> Position version, captures the applicable facts, and stores
+> content-addressed payload bytes for the destination. Destination is a
+> governed name/configuration, never a credential. Delivery types:
+> `jira_issue`, `ci_build`, `email`. Retries deliver the same snapshot;
+> they never reconstruct from current state. Payloads derive only from
+> Themis facts — never model output, keys, or workspace content.
+
+"Regenerable from the snapshot", not from the current Finding:
+deterministic reconstruction with the original bytes as the delivery
+artifact. Same shape as Communication's `Publication` (snapshot
+artifact + capped materialized payload + lineage + delivery outcome).
+
 ## Q-N-4 — The CI trigger and the result as evidence (OPEN)
 ## Q-N-5 — Mail: recipients, content, what it must never contain (OPEN)
 ## Q-N-6 — Credentials and the acting key holder (OPEN)

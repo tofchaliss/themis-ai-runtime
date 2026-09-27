@@ -129,7 +129,7 @@ observation, not a removal; no model admission/removal policy exists
 and this grill creates none. No `models.json` now (a separate
 architecture decision when model governance is a real requirement).
 
-## D-P-6 — The `search_code` denial at ANALYZE (LOCKED 2026-09-27, owner: option 1; classification pending the host line)
+## D-P-6 — The `search_code` denial at ANALYZE (LOCKED 2026-09-27, owner: option 1; CLOSED on the host line)
 
 Classify from the surviving raw call (`/tmp/cap-gptoss/turn-04-raw.json`)
 and close. Expected: a model-authored `search_code` call missing `path`,
@@ -141,12 +141,20 @@ declared done, so no boundary failed. Closure text once confirmed:
 argument error / L4 invalid-args (or target-refused). No architecture,
 registry, procedure, or tool-contract change required."
 
+Host line (capture-1, gpt-oss:20b, turn 4): `{"name":"search_code",
+"arguments":{"path":"","query":"vulnerable-dep"}}` — the required target
+`path` is present but EMPTY. L4's argument validation passes it (present,
+string), and workspace confinement of an empty target refuses it
+(`target-refused: confinement`). Closure: expected L4 refusal of a
+malformed model call; classified as model argument error / L4
+target-refused. No architecture, registry, procedure, or tool-contract
+change required.
+
 Rejected: rewording `search_code` to suit one model's call (a registry
 amendment on no evidence of a defective contract); ignoring the denial
 (every denial in a record is classified).
 
 ## Grill state (2026-09-27)
-Q-P-1..5 LOCKED; Q-P-6 LOCKED contingent on the host classification
-line. No architecture is opened from the denial. Implementation is
+Q-P-1..6 LOCKED and CLOSED (Q-P-6 classified from the host line). No architecture is opened from the denial. Implementation is
 P-M1..P-M3 in `tasks.md`.
 

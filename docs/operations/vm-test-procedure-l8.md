@@ -298,6 +298,12 @@ with `noclobber` need `>|`.
 | 8–9 | a typed terminal with the anchor in the record; C20+ reconstructs CONFIRMED | a refusal at submission is category 1 or 2; DISCREPANCY is a category-2 defect signal |
 | 10 | three fault points PASS | category 2 |
 | 11 | admitted, typed terminal, CONFIRMED for any delegation | a FAIL is real only when run in isolation as here |
+| I-M5 §2–§3 (`rsys6-host-sequence.md`) | `CONTRACT OK`; 401 / 200 / 403 with the three keys | a 2xx on a read-key write is a Themis security defect; a contract mismatch is category 1 |
+| I-M5 §4 | a Finding born through Evidence → Knowledge → Governance with the expected CVE and PURL, `positions []`, `commissions []` | a hand-made row is not evidence; a missing Finding is a pipeline cascade fault (see INSTALLATION.md §5) |
+| I-M5 §5–§6 / §3–§4 of page 7 | `PINS OK` with the constitution equal to the running binary; refused before the act; `<nil>` after | category 1 for a pin mismatch; category 2 if the proposal path admits |
+| D-P-5 gate (page 7 §2) | the intended model COMPLETES the skill under the test anchor with `l10-verification` PASS and an artifact bound; other models captured | a FAILED gate is a finding to read from the raw provider turns, never a reason to mint |
+| I-M5 §7–§9 | commission recorded with the human's `key:<id>` and no stage change; the walk COMPLETED under the anchor with the commission in origin; the intake resolves five links, `l5-witnessed`, `consistent-pass`, refs from the recorded Finding; proposal `inferred`; Position by a different key; no `dev:` | any `dev:` actor, any proposal with a non-derived trust class, any Position without an accepted proposal carrying the evidence |
+| UC9 | the tuple read from the Position re-resolves to a byte-identical evidence view, on the host and on another machine over the copied record plane | a differing view is a category-2 reconstruction defect |
 
 Nothing in this procedure authorizes production wiring. It produces
 the evidence the owner decides on.

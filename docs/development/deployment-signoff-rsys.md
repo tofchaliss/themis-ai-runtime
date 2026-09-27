@@ -859,3 +859,128 @@ deployment's own governed registration — G1 working as designed.
 remains admitted-not-delegated; the residual is recorded in the L8
 archive. Nothing here selects a model or authorizes production wiring;
 the evidence exists for the owner's decision.
+
+## Addendum G — I-M5: Themis integrated on the host, `rsys@6` → `rsys@7`, the first Position on a governed execution (2026-09-27)
+
+Executed on the `rsys` host (`/opt/themis/themis-ai-runtime`, `main`
+merged over the host acts; Themis at `/opt/themis/themis-core`,
+`feat/harness-integration` `b4dfaf0`) with `rsys@5` ACTIVE beforehand.
+Evidence archive: `~/evidence/themis-i-m5-20260927.tgz` (record plane,
+artifacts, envelopes, submissions, receipts, evidence views, the seven
+provider captures, vm-verify, status); the two Governance-act commits
+(`f9b2c80`, `81459cd` on the host) came back and were applied to origin
+content-identically (`ec4b323`, `53d3fbf`; decision-record hashes
+`6b8a7c80…`, `fbf427fe…` reproduced on the laptop).
+
+### The estate (Option A, D-I-1 reaffirmed)
+
+PostgreSQL 16 and the four pipeline services on the harness VM over
+loopback; Governance migration 14 (`finding_commissions`). Contract check
+`CONTRACT OK` (Themis `b4dfaf0`, both spec hashes). Three keys, ids only:
+`key-ba9a7da8…` (`read`, the harness door), `key-6a9e5861…`
+(`product:3e6e4269…`, operator), `key-ab144d23…` (`admin`, decider). The
+first three keys minted were revoked because their values had been
+pasted into a chat; nothing they signed exists. Wall: no key 401, read
+key GET 200, read key commission **403**.
+
+### The Finding (UC1)
+
+`demo-xtext-app` (`golang.org/x/text@v0.3.7`) registered as product
+`3e6e4269…`, release `83df3b8b…`; CycloneDX SBOM through
+`gf-upload-sbom.sh`; live OSV produced two Findings, the demo one
+`e72ae17c-8419-4544-8144-5aa36b453aef` (CVE-2022-32149, fix 0.3.8) plus
+CVE-2026-56852 (left as is). No manual row.
+
+### Governance act 1 — `rsys@6`
+
+Candidate reproduced byte-for-byte on the host (`795b364a…`, PINS OK,
+constitution equal to the running binary, admission refused); decision
+`rel-anchor-rsys-6` (`6b8a7c80…`); ACTIVE after the copy-and-commit;
+admission `<nil>`. Carries the W-M1 constitution `1df0e285…`,
+`themis_contract` `c6a95f49…`, catalog v2 with `remediate-dependency@4`.
+
+| Identity | Value |
+|---|---|
+| **Anchor `rsys@6`** | `795b364a36b787844aabcc682955d3921664e37461aa51dd5372cc4bb2275595` — ACTIVE; the evidence source below |
+| **Anchor `rsys@7`** | `a5266c52398ea3ffcb7d25cd791320755b18f8a750e1edb285391395572fa7a4` — ACTIVE; skills `[remediate-dependency@6]` |
+| Themis contract | `c6a95f49…` (`themis_commit` `b4dfaf0`) |
+| Commission (rsys@6) | `18338b28-e3ee-47f4-bf6d-05cf0096d21b` — `remediate-dependency@4`, open |
+| Commission (rsys@7) | `9e0e401b-8b37-49e6-a3a3-8437023c3711` — `remediate-dependency@6`, open |
+| Execution | `demo-remediate-0003`, artifact-bound seq 39, artifact `sha256:d652d7ef92fee3a9b5477501e68586a1bc7d42aa5472b4e1bd3329566e6891a6` |
+| Proposal | `15984d78-6bad-4c77-80a6-88814af80134` — proposer `key:key-6a9e5861…`, trust `inferred` |
+| Position | v1 `mitigated`, `actor key:key-ab144d23…`, `accepted_proposal_id` = the proposal |
+
+### The finding — two governed FAILED walks under `rsys@6`
+
+`demo-remediate-0001` (qwen2.5:7b, 24 events) and `demo-remediate-0002`
+(gpt-oss:20b, 23 events): `rsys@6` opened, the read door fetched the
+real Finding (`get_finding authorized`, loopback, read key), the
+commission rode in origin; both ended `FAILED / VERIFIED` at or near the
+ANALYZE → REMEDIATE boundary with clean seal and teardown. Cause,
+established by capture on laptop and host: each phase composes a fresh
+conversation (D-L7-11) and the model was never told which phase it was
+in; `@4`'s procedure opens with `get_finding`, which REMEDIATE does not
+grant. Grilled and locked the same day as `openspec/changes/l7-phase-
+framing/` D-P-1..7: the L1 phase rule, the derived `phase-state` L2 slot
+(Plan ⊆ Contract), capability-only completion, `remediate-dependency@6`.
+These two records are the amendment's evidence and are never rewritten.
+
+### Governance act 2 — `rsys@7`, after the D-P-5 gate
+
+Gate captures under the test anchor (raw provider turns archived):
+`@5` — gpt-oss:20b wrote "ANALYZE phase complete." as prose and never
+called `declare_done` (→ D-P-7); qwen2.5:7b called `declare_done` then
+stalled in REMEDIATE (capability observation); cyberpal20b-v3 emits a
+JSON template, no tool calls (not a tool-calling model in this framing).
+`@6` — **gpt-oss:20b COMPLETED / VERIFIED** (`report-valid@2` PASS,
+artifact bound); qwen2.5:7b FAILED as observed. Candidate reproduced on
+the host (`a5266c52…`, PINS OK, refused); decision `rel-anchor-rsys-7`
+(`fbf427fe…`); ACTIVE; admission `<nil>`. The allowlist drops `@1..@5`
+because they cannot compose under D-P-1 — an admission decision, not a
+withdrawal; the catalog keeps them.
+
+### Phase D — the governed path end to end (UC2–UC6, UC9)
+
+`demo-remediate-0003` under `rsys@7`, gpt-oss:20b, commission
+`9e0e401b…` in origin: 43 events — 10 `l4-audit`, 10 `model-turn`, 3
+`l2-delivery` (each carrying the record-derived `phase-state`), 6
+`l5-transition`, 7 `l5-op`, 1 `l10-verification` PASS, artifact bound;
+**COMPLETED / VERIFIED**. `themis-intake` (built from Themis `b4dfaf0`
+with the harness pinned at `331d326`) resolved the tuple: five links,
+`l5-witnessed`, reconstruction `consistent-pass`, commission derived from
+the record, business refs `CVE-2022-32149` and
+`pkg:golang/golang.org/x/text@v0.3.7` from the recorded Finding bytes,
+trust `inferred`. The operator raised the proposal with the operator
+key; the decider accepted with the admin key; Position v1 established;
+no `dev:` anywhere in the Finding. UC9: from the Position's
+`accepted_proposal_id` → the proposal's evidence → the tuple →
+`themis-intake` again: byte-identical evidence view. And on the laptop,
+a freshly built intake over the copied record plane and the
+reconstructed registries reproduced the host's evidence view
+byte-for-byte — cold reconstruction across machines (D-T-4).
+
+Twins, each refused by name: read-key commission 403; wrong seq
+`artifact-provenance-refused: event at seq 1 is l5-op, not artifact-bound`
+(exit 1, nothing raised); asserted trust class 400; both FAILED records
+`execution not referencable: not a completed execution (status FAILED)`;
+`search_code` with an empty target `target-refused` (a model argument
+error, D-P-6).
+
+### What Addendum G establishes, and what it does not
+
+**Established:** Themis is the security system of record for a
+governed AI execution end to end on one host — a real Finding, a
+Themis-minted commission, an execution the harness cannot author truth
+from, an intake that reconstructs it from the record alone, a human
+proposal with derived trust, a human decision, and a Position that
+replays cold. **Established:** the record plane exposed and then proved
+the phase-framing amendment on the same day, with every intermediate
+state kept. **Established:** `rsys@6` and `rsys@7` are both live
+deployment identities; `rsys@5`/`rsys@6` withdrawal remains the owner's
+separate act.
+
+**Not established:** that the remediation is correct (the evidence class
+stays `inferred`); model quality (the gate proves compatibility);
+anything about the two-VM topology (D-I-1 amendment, its own grill);
+D-I-9 subject-bound scope; the Themis product-scope write confinement
+(row 14, a Themis security EDR item).

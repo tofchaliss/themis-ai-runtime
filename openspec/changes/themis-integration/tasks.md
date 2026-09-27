@@ -103,14 +103,16 @@ Branch `feat/harness-integration` in `~/code/themis` (commit only on the owner's
 Prepared 2026-09-27 (laptop side, all inert): `docs/operations/rsys6-host-sequence.md`;
 `policies/deployment/rsys6.proposed.json` (candidate `795b364a…`, parse-verified, admission refused);
 contract re-pinned to Themis `b4dfaf0` (2026-09-27; first to `1414997` in `d977720`); Themis `go.mod` pins the harness at `331d326`.
-- [ ] Themis side: keys (three holders), auth required, contract commit
-      check, demo module + SBOM + Finding through the pipeline (fixture
-      feed if needed); provenance recorded
-- [ ] Harness side: `rsys@6` single mint (W-M1 constitution, `themis_contract`,
-      registry v6, catalog @4); opened, validated; `rsys@5` withdrawn;
-      demo execution under `rsys@6`
-- [ ] Decision side: `themis-intake` by the operator; `acceptProposal` by
-      the decider; no `dev:` witness
-- [ ] Evidence: vm-verify before/after, phasec, Addendum G, Themis records;
-      VM procedure extended; architecture/security/test reviews (worktrees);
-      archive `themis-v0`, `l5-witness-events`, `themis-integration`
+- [x] Themis side: keys (three holders), auth required, contract commit
+      check, demo module + SBOM + Finding through the pipeline (live OSV,
+      no fixture feed); provenance recorded (Addendum G, 2026-09-27)
+- [x] Harness side: `rsys@6` minted (W-M1 constitution, `themis_contract`,
+      registry-v5, catalog @4); opened, validated; demo execution under
+      `rsys@6` FAILED twice (the phase-framing finding) → `rsys@7` minted
+      after the amendment; COMPLETED under `rsys@7`. `rsys@5`/`rsys@6`
+      withdrawal: owner's separate act, not yet performed
+- [x] Decision side: `themis-intake` by the operator (`key:key-6a9e5861…`);
+      `acceptProposal` by the decider (`key:key-ab144d23…`); no `dev:` witness
+- [x] Evidence: vm-verify after, the bundle `themis-i-m5-20260927.tgz`,
+      Addendum G, VM procedure rows; laptop cold reconstruction byte-identical
+- [ ] Reviews (worktrees) and archive of the six changes — in progress

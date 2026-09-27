@@ -412,10 +412,25 @@ now RATIFIED):
   everywhere; `rsys@7` candidate `a5266c52…` admits `@6` only. Gate to be
   rerun on the host before the act.
 
+## Gate 1 — I-M5 / P-M3 (the host run, 2026-09-27)
+- Addendum G in `docs/development/deployment-signoff-rsys.md` is the
+  record: estate on the harness VM, three keys, the Finding from live
+  OSV, `rsys@6` ACTIVE → two governed FAILED walks → the phase-framing
+  amendment → the D-P-5 gate (gpt-oss:20b COMPLETED `@6`) → `rsys@7`
+  ACTIVE → `demo-remediate-0003` COMPLETED/VERIFIED → intake → proposal
+  `15984d78…` → Position v1 by the decider → UC9 byte-identical replay,
+  on the host and cold on the laptop over the copied record plane.
+- Host acts applied to origin content-identically (`ec4b323`, `53d3fbf`;
+  decision hashes reproduced). Evidence bundle
+  `themis-i-m5-20260927.tgz` (owner's `~/evidence`).
+- Matrix: every row 🟢 except row 3 (D-I-9, by decision). Reviews and
+  the archive of the six changes follow.
+
 ## Milestone log
 - [x] P-M1, P-M2, P-M2b — green 2026-09-27
-- [ ] P-M3 — host gate and act (owner)
-- [ ] I-M5 — prepared 2026-09-27; host act pending (owner)
+- [x] P-M3 / I-M5 — host run complete 2026-09-27 (Addendum G)
+- [x] P-M3 — gate passed, rsys@7 ACTIVE
+- [x] I-M5 — host run complete 2026-09-27 (Addendum G)
 - [x] I-M4 — green 2026-09-26 (integration suite; full hermetic harness; evidence tools)
 - [x] I-M3 — implemented 2026-09-26 in the Themis repo (all gates green there; commit and pin pending)
 - [x] I-M2 — green 2026-09-26 (fixture generated and verified; no

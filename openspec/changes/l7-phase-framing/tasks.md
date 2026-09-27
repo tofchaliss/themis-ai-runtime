@@ -46,13 +46,13 @@ host act is the owner's; no push without the owner's word.
       full hermetic sweep green; pins unchanged
 
 ## P-M3 — Host gate and act (Class 4: host)
-- [ ] `TestLiveCapture` with `@6` on the host under the test anchor:
+- [x] `TestLiveCapture` with `@6` on the host under the test anchor:
       gpt-oss:20b must COMPLETE; qwen2.5:7b and cyberpal20b-v3 captured
       as compatibility evidence (D-P-5); raw turns archived
-- [ ] Governance act 3: `rsys@7` ACTIVE (decision `rel-anchor-rsys-7`);
+- [x] Governance act 3: `rsys@7` ACTIVE (`81459cd` on the host, `53d3fbf` on origin) (decision `rel-anchor-rsys-7`);
       `rsys@6` stays active until a Position exists under `rsys@7`, then
       the owner decides `rsys@5`/`rsys@6` withdrawal as separate acts
-- [ ] I-M5 steps 7–11 resume under `rsys@7` (commission, walk, intake,
+- [x] I-M5 steps 7–11 done under `rsys@7` (Addendum G) (commission, walk, intake,
       proposal, decision, evidence, patch bundle)
 
 ## Consequences recorded while landing P-M1 (facts, not decisions)

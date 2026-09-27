@@ -81,14 +81,14 @@ says so. `rsys@6` is a host act (W-M4), never minted from the laptop.
       B, binding A) → all killed
 
 ## W-M4 — `rsys@6` host mint and Governance record (Class 4: host act)
-- [ ] Folded into T-M5's host sequence: ONE mint carrying the amended
-      `constitution.state`, `themis_store`, catalog/skills; `rsys@5`
-      withdrawn only after `rsys@6` ACTIVE and validated; registry
-      append-only
-- [ ] Host check: `constitution.state` in `rsys@6` == compiled
-      `state.ConstitutionHash()` of the binary RUNNING on the host
-- [ ] Signoff Addendum G; VM procedure extended with the five-link
-      proof rows
+- [x] Folded into I-M5's host sequence: `rsys@6` minted 2026-09-27 carrying
+      `constitution.state` `1df0e285…`, `themis_contract`, catalog/skills;
+      registry append-only (`rsys@7` followed the same day). `rsys@5`
+      withdrawal: owner's separate act, pending
+- [x] Host check: `constitution.state` in `rsys@6` and `rsys@7` == compiled
+      `state.ConstitutionHash()` of the binary running on the host (PINS OK)
+- [x] Signoff Addendum G; VM procedure extended with the five-link
+      proof rows (2026-09-27)
 - [ ] Exit conditions 1–7 of `proposal.md` ticked with evidence; then
       T-M4 UNBLOCKS
 

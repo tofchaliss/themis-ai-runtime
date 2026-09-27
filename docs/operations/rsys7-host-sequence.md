@@ -3,7 +3,7 @@
 Delta page over `rsys6-host-sequence.md`: the host already carries the
 Themis estate, the three keys, the demo Finding, and `rsys@6` ACTIVE
 (act `f9b2c80` on the host). `rsys@7` carries the L7 phase-framing
-amendment (`openspec/changes/l7-phase-framing/`, D-P-1..6): the L1
+amendment (`openspec/changes/l7-phase-framing/`, D-P-1..7): the L1
 phase rule, the derived `phase-state` slot, capability-only completion (D-P-7), `remediate-dependency@6`.
 It is the deployment under which I-M5 steps 7–11 resume. Same rules:
 `$REPO=/opt/themis/themis-ai-runtime`, `$THEMIS=/opt/themis/themis-core`,
@@ -18,8 +18,8 @@ the host cannot push.
 | `remediate-dependency@6` composition | `a797261e…` (the value the commission carries) |
 
 `@1`..`@5` and `investigate-cve@1` stay in the catalog as history and
-are not admitted: under D-P-1 their contracts lack `phase-state`, so
-admitting them would admit known Gather refusals (owner, D-P-4
+are not admitted: `@1`..`@4` and `investigate-cve@1` lack `phase-state`
+(known Gather refusals under D-P-1); `@5` declares it but predates D-P-7 (owner, D-P-4
 amendment). `rsys@6` stays the authoritative evidence source for the
 two pre-amendment FAILED records; they are never rewritten or
 reclassified because `rsys@7` fixes the framing.

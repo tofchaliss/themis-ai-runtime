@@ -643,6 +643,13 @@ func (w *walk) composePhase(p *Phase) ([]model.Message, error) {
 	if err != nil {
 		return nil, err
 	}
+	// D-P-1/D-P-4: the slot is never optional and carries the derived
+	// class only. Gather refuses absence, withholding and a wrong class;
+	// the requirement is the loop's to check, because the loop owns the
+	// plan that always supplies it.
+	if err := requirePhaseStateSlot(w.contract); err != nil {
+		return nil, err
+	}
 	phaseSrc := l2.Source{
 		Name: phaseStateSlot, Kind: l2.KindHarnessState,
 		Authority: l2.AuthorityDerived, Sensitivity: l2.SensitivityPublic,
@@ -677,6 +684,24 @@ func (w *walk) composePhase(p *Phase) ([]model.Message, error) {
 	}
 	w.lastSeq = ev.Seq
 	return composed.Messages, nil
+}
+
+// requirePhaseStateSlot: the contract must declare `phase-state` as
+// required with exactly the derived class (D-P-1, D-P-4 rejected
+// "optional": one composition identity must not run under two
+// framings). Absence is left to Gather so the refusal stays link-named
+// there; this check is about the declaration's shape.
+func requirePhaseStateSlot(c *l2.Contract) error {
+	for _, s := range c.Slots {
+		if s.Name != phaseStateSlot {
+			continue
+		}
+		if s.Requirement != l2.SlotRequired || len(s.Classes) != 1 || s.Classes[0] != l2.AuthorityDerived || s.Withhold {
+			return fmt.Errorf("%w: contract %s declares %q as %s with classes %v — the phase fact must be required with classes [derived] (D-P-4)", ErrInvariant, c.Workflow, phaseStateSlot, s.Requirement, s.Classes)
+		}
+		return nil
+	}
+	return nil
 }
 
 // toolDefs exposes exactly the phase's granted capability subset to

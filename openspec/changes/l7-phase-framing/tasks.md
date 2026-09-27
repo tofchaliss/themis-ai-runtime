@@ -1,6 +1,6 @@
 # Tasks — L7 phase framing (P-M1..P-M3)
 
-Grill closed 2026-09-27 (D-P-1..6; D-P-6 pending one host line). Same
+Grill closed 2026-09-27 (D-P-1..7; D-P-6 classified from the host line, D-P-7 from the first gate capture). Same
 rules as I-M*: each milestone lands hermetically green with a Gate 1
 note in `themis-v0/RESUME-HERE.md`; PROPOSED artifacts stay inert; the
 host act is the owner's; no push without the owner's word.

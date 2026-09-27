@@ -49,9 +49,16 @@ represented.
 
 Closed vocabulary: `{workflow: name@version, phase: <name>, completed:
 [<names in order>], capabilities: [<tool names of the NARROWED phase
-grant, Phase.capabilities ∩ task grant>]}`. Provenance: the `cause_seq`
-of the `workflow-transition` that entered the phase; the initial phase
-cites the RUNNING lifecycle seq. What the model reads as capabilities
+grant, Phase.capabilities ∩ task grant>]}`. Provenance: the seq of the
+`workflow-transition` EVENT that entered the phase (its body carries the
+`cause_seq` of what fired it); the initial phase cites the RUNNING
+lifecycle event's seq. Wording corrected 2026-09-27 after review: the
+lock text said "cause_seq", the code and the initial-phase rule both
+mean the entering event's own seq — the same reading in both cases;
+owner to confirm the wording, the code is unchanged. `completed` lists
+phases LEFT so far in order of leaving; on a countered backward
+re-entry a name repeats (no anchored workflow has such an edge). The
+phase must be the record's CURRENT position, else `ErrInvariant`. What the model reads as capabilities
 equals what L4 will authorize; L2 does not become an authorizer.
 
 Rejected: counters and verification outcome (L7/L10 facts under other
@@ -113,7 +120,21 @@ orchestration` and `constitution.state` are untouched (the fixed slot
 plan is code, not control vocabulary).
 
 Rejected: `phase-state` optional (one composition identity under two
-framings); mutating `@4` (immutable binding).
+framings; enforced by the loop: the slot must be `required` with
+classes exactly `[derived]`); mutating `@4` (immutable binding).
+
+Correction (review, 2026-09-27): the `rel-anchor-rsys-7` rationale and
+the first page-7 text say `@1..@5` lack `phase-state`. False for `@5`:
+its contract is byte-identical to `@6`'s and declares the slot; `@5`
+was dropped for D-P-7 (completion wording), not D-P-1. The decision
+record is immutable; this note is the correction. Two further review
+notes for a future anchor/skill revision, not acted on now: `rsys@7`
+keeps the `@1`/`@2` workflow bundles (pre-D-P-1 contract) beside the
+`@6` bundle — harmless under bundle ∧ allowlist, but "allowlist = only
+what composes" was not applied to the bundle set; and the procedures of
+`@5`/`@6`/`investigate-cve@2` repeat the L1 phase paragraph verbatim and
+still open with "Version 4 reads the Finding…" — one rule, one home is
+the minimum design for `@7`.
 
 > `rsys@6` remains the authoritative evidence source for the two
 > pre-amendment FAILED records (`demo-remediate-0001/0002`). They are
@@ -190,6 +211,17 @@ the positive control that the capability is usable.
 Rejected: procedure wording only (the ambiguity is a harness semantic,
 not this skill's); a prose parser in the loop (model output as a control
 channel — Day-0).
+
+## Evidence off the tree (labeled)
+
+Every claim in D-P-4, D-P-6, D-P-7 and the gate results that cites
+`/tmp/cap-*`, `demo-remediate-000N`, receipts or captures rests on the
+owner's evidence bundle, not on this tree: `themis-i-m5-20260927.tgz sha256 edf65681beb7ec334dffacf4138b90f3fd25634ce029c3eb1b3b02d34b29cd48`
+(host `~/evidence/`, copied to the laptop 2026-09-27 and used for the
+cross-machine cold reconstruction in Addendum G). In-tree evidence:
+candidate hashes, pins, skill and decision hashes, the hermetic suites.
+The registration records' `evidence: []` is honest: their evidence
+schema is L11's, not a bundle's.
 
 ## Grill state (2026-09-27)
 Q-P-1..7 LOCKED and CLOSED (Q-P-6 classified from the host line; Q-P-7 from the first gate capture). No architecture is opened from the denial. Implementation is

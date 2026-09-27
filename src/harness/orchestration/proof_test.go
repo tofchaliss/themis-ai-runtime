@@ -349,14 +349,33 @@ func TestLiveWalkProof(t *testing.T) {
 		t.Fatalf("ungranted declare_done must leave the walk to its governed failure: %+v", res2)
 	}
 	evs, _ := f.o.root.ReadEvents("t-live-neg")
-	sawNA := false
+	// Two governed outcomes are possible for a live model, and each is
+	// asserted by name (check-claims rule): (a) the model attempted the
+	// ungranted verb and L4 recorded `not-available`; (b) under the
+	// phase rule (D-P-1) an obedient model never calls a tool its
+	// phase-state does not list, so no declare_done audit exists and the
+	// phase exhausted on no-action. The L4 refusal itself is proven
+	// hermetically by TestPhaseCapabilityNarrowing; nothing here rests on
+	// model disobedience.
+	sawNA, sawAnyDeclare, exhausted := false, false, false
 	for _, ev := range evs {
-		if ev.Class == state.EvL4Audit && strings.Contains(string(ev.Body), "not-available") && strings.Contains(string(ev.Body), "declare_done") {
-			sawNA = true
+		if ev.Class == state.EvL4Audit && strings.Contains(string(ev.Body), "declare_done") {
+			sawAnyDeclare = true
+			if strings.Contains(string(ev.Body), "not-available") {
+				sawNA = true
+			}
+		}
+		if ev.Class == state.EvWorkflowTransition && strings.Contains(string(ev.Body), `"exhausted":true`) {
+			exhausted = true
 		}
 	}
-	if !sawNA {
-		t.Fatal("the denial must be in the record")
+	switch {
+	case sawNA:
+		t.Logf("negative outcome (a): the ungranted declare_done was attempted and denied not-available")
+	case !sawAnyDeclare && exhausted:
+		t.Logf("negative outcome (b): the model obeyed the phase rule — no declare_done attempted; the phase exhausted governed")
+	default:
+		t.Fatalf("the record shows neither a not-available denial nor an obedient exhaustion: declare audits=%v exhausted=%v", sawAnyDeclare, exhausted)
 	}
 	t.Logf("live L7 proof: model=%s completed=%s artifact=%s; negative: ungranted declare_done → %s",
 		modelName, res.Status, res.Artifact[:19], res2.Status)

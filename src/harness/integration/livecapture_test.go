@@ -4,9 +4,12 @@ package integration
 // REAL model endpoint, capturing every provider request and raw response
 // to a directory (the record plane stores a projection of the model turn,
 // never the raw provider bytes — D-L7-11 reconstructs what the MODEL SAW,
-// not what the provider returned). Diagnostic only; skipped unless
-// LIVECAPTURE_DIR is set. Never an evidence path: nothing here is anchored
-// by a production deployment. Added 2026-09-27 for the I-M5 finding.
+// not what the provider returned). Skipped unless LIVECAPTURE_DIR is set;
+// never fails on the walk's outcome. It is not a record-plane evidence
+// path (the test anchor governs nothing in production); its captures are
+// diagnostic artifacts that a host run archives in its evidence bundle,
+// which is how D-P-5 uses it as a mint gate and D-P-6/D-P-7 cite it.
+// Added 2026-09-27 for the I-M5 finding.
 
 import (
 	stdctx "context"

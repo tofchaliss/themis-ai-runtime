@@ -45,10 +45,12 @@ const (
 
 	// KindHarnessState (D-P-1, 2026-09-27): a fact the loop derives from
 	// the RECORDED workflow state — never caller-supplied, never
-	// model-authored. Its provenance is the record (the entering
-	// transition's seq travels as the item version), so it mints the
-	// derived class only: a registered computation with a bounded
-	// vocabulary and complete provenance.
+	// model-authored. It mints the derived class only. The trust model
+	// is the same as KindInline's: any in-process caller can build one;
+	// what makes the class honest is that the only producer is the
+	// loop's composePhase, and the fact reconstructs from the record
+	// (the entering event's seq travels as the item version; the
+	// capabilities half re-derives from the recorded grant).
 	KindHarnessState SourceKind = "harness-state"
 )
 
@@ -81,8 +83,8 @@ var allowedClasses = map[SourceKind][]AuthorityClass{
 	KindInline:       {AuthorityExternalUntrusted},
 	KindHarnessState: {AuthorityDerived},
 	KindFilesystem:   {AuthorityExternalUntrusted},
-	KindSearch:     {AuthorityExternalUntrusted},
-	KindThemis:     {AuthorityGovernedRecord, AuthorityGovernedExternal},
+	KindSearch:       {AuthorityExternalUntrusted},
+	KindThemis:       {AuthorityGovernedRecord, AuthorityGovernedExternal},
 	// The record-object kind carries whatever class the witnessing
 	// event derived (C-L8-5): the registration is the event, and the
 	// seam that read it is deterministic machinery, not a caller.

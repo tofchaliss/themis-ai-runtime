@@ -476,6 +476,9 @@ func TestPhaseCEndToEndChain(t *testing.T) {
 		t.Fatal(err)
 	}
 	admission, err := ratchet.ObserveAdmission("l9-catalog", catalogPath, "investigate-cve", 2, "2026-09-13T00:00:00Z")
+	if err == nil && !admission.CurrentActive {
+		t.Fatalf("the baseline must observe the CURRENT active investigate-cve (a newer registration moved it): %+v", admission)
+	}
 	if err != nil || admission == nil {
 		t.Fatalf("door resolution failed: %+v %v", admission, err)
 	}

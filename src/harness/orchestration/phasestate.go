@@ -25,7 +25,7 @@ const (
 type PhaseState struct {
 	Workflow     string   `json:"workflow"`     // name@version of the governed workflow
 	Phase        string   `json:"phase"`        // the phase being entered
-	Completed    []string `json:"completed"`    // phases left so far, in order
+	Completed    []string `json:"completed"`    // phases LEFT so far, in order of leaving (a countered re-entry repeats names)
 	Capabilities []string `json:"capabilities"` // the NARROWED phase grant: Phase.capabilities ∩ task grant
 }
 
@@ -33,10 +33,13 @@ type PhaseState struct {
 // record as it stands at composition time. `capabilities` is the
 // narrowed phase grant the loop will expose (what L4 authorizes).
 // Returns the fact, its canonical bytes, and the provenance seq: the
-// `workflow-transition` that entered the phase, or — for the initial
-// phase — the RUNNING lifecycle event (D-P-2). A record in which the
-// phase has no entering event is an invariant violation, not a
-// default.
+// seq of the `workflow-transition` EVENT that entered the phase (its
+// body carries the cause_seq of what fired it), or — for the initial
+// phase — the seq of the RUNNING lifecycle event (D-P-2). The phase
+// must be the record's CURRENT position: the latest non-`@` transition
+// target, or the initial phase when none has fired. A record that
+// disagrees with the loop's cursor is an invariant violation, never a
+// default (D-P-1: the fact comes from the record, not loop memory).
 func DerivePhaseState(wf *WorkflowDef, events []state.Event, phase string, capabilities []string) (PhaseState, []byte, int64, error) {
 	ps := PhaseState{
 		Workflow:     fmt.Sprintf("%s@%d", wf.Name, wf.Version),
@@ -46,6 +49,7 @@ func DerivePhaseState(wf *WorkflowDef, events []state.Event, phase string, capab
 	}
 	var entrySeq int64 = -1
 	var runningSeq int64 = -1
+	current := wf.Initial
 	for _, ev := range events {
 		switch ev.Class {
 		case state.EvLifecycle:
@@ -64,10 +68,14 @@ func DerivePhaseState(wf *WorkflowDef, events []state.Event, phase string, capab
 				continue
 			}
 			ps.Completed = append(ps.Completed, b.From)
+			current = b.To
 			if b.To == phase {
 				entrySeq = ev.Seq
 			}
 		}
+	}
+	if current != phase {
+		return ps, nil, 0, fmt.Errorf("%w: the record's current phase is %q, not %q", ErrInvariant, current, phase)
 	}
 	if entrySeq < 0 {
 		if phase != wf.Initial || runningSeq < 0 {

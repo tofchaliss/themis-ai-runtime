@@ -33,12 +33,13 @@ origin, read door over loopback with the read key, clean seal and
 teardown. The two records are inspectable governed failures, not
 errors.
 
-## Scope of this grill (Q-P-1..6)
+## Scope of this grill (Q-P-1..7)
 
 Q-P-1 where the phase fact lives · Q-P-2 what it says · Q-P-3 evidence
 continuity across phases (B) · Q-P-4 `remediate-dependency@5` and the
 anchor that follows · Q-P-5 the model allowlist for the demo · Q-P-6
-the `search_code` denial seen at ANALYZE turn 4 (minor).
+the `search_code` denial seen at ANALYZE turn 4 (minor) · Q-P-7 phase
+completion is capability-only (opened by the first gate capture).
 
 Out of this grill, tracked elsewhere: two-VM topology (D-I-1 amendment),
 D-I-9 subject-bound scope, Themis product-scope write confinement (row 14).

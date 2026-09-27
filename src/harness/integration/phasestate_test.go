@@ -3,11 +3,15 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/deployment"
 	"github.com/tofchaliss/themis-ai-runtime/src/harness/orchestration"
+	"github.com/tofchaliss/themis-ai-runtime/src/harness/skills"
 	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
 )
 
@@ -86,11 +90,85 @@ func TestPhaseStateIsDerivedFromTheRecordByteExact(t *testing.T) {
 		if !bytes.Contains(payload, []byte("authority: derived")) || !bytes.Contains(payload, []byte("kind: phase-state")) {
 			t.Fatalf("seq %d: phase-state must be fenced with its derived provenance labels", ev.Seq)
 		}
+		if !bytes.Contains(payload, []byte(fmt.Sprintf("version: seq:%d", entrySeq))) {
+			t.Fatalf("seq %d: the delivered fact must cite the record-derived provenance seq %d", ev.Seq, entrySeq)
+		}
 		if entrySeq >= ev.Seq {
 			t.Fatalf("seq %d: provenance %d must precede the delivery", ev.Seq, entrySeq)
+		}
+		// L4 twin (D-P-2): every tool L4 authorized in this phase is one
+		// the delivered fact listed — what the model read equals what L4
+		// let through.
+		listed := map[string]bool{}
+		for _, c := range caps {
+			listed[c] = true
+		}
+		for _, later := range evs[i+1:] {
+			if later.Class == state.EvL2Delivery {
+				break
+			}
+			if later.Class != state.EvL4Audit {
+				continue
+			}
+			var ab struct {
+				Tool, Decision string
+			}
+			_ = json.Unmarshal(later.Body, &ab)
+			if ab.Decision == "authorized" && !listed[ab.Tool] {
+				t.Fatalf("seq %d: L4 authorized %q in %s but the phase fact listed %v", later.Seq, ab.Tool, body.Phase, caps)
+			}
 		}
 	}
 	if deliveries < 2 || phases[0] != "ANALYZE" || phases[1] != "REMEDIATE" {
 		t.Fatalf("expected ANALYZE then REMEDIATE deliveries, got %v", phases)
+	}
+}
+
+// D-P-4: "registry = history, allowlist = only what composes" has a
+// deterministic witness — a REAL pre-D-P-1 catalog skill
+// (remediate-dependency@4, still active in the catalog) admitted by an
+// anchor still refuses at composition because its contract lacks the
+// slot; the record is sealed FAILED with no model turn.
+func TestPreFramingCatalogSkillRefusesAtComposition(t *testing.T) {
+	root := tdRepoRoot(t)
+	hf := func(p string) string {
+		h, err := deployment.HashFile(filepath.Join(root, "policies/skills/remediate-dependency-4", p))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return h
+	}
+	w, err := newWorld(t, &readingParent{finding: demoFindingID}, worldOpts{withDoor: true, serveFinding: true}, func(a map[string]any) {
+		// @4's bundle replaces @6's: the workflow bytes are identical and an
+		// anchor admits one bundle per workflow.
+		a["skills"] = []any{"remediate-dependency@4"}
+		a["workflows"] = []any{map[string]any{
+			"workflow": hf("workflow.json"), "workflow_ceiling": hf("ceiling.json"), "context_contract": hf("contract.json")}}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = os.MkdirAll(filepath.Join(w.base, "state"), 0o755)
+	path, err := skills.Instantiate(filepath.Join(w.root, "policies/skills/catalog.json"), "remediate-dependency@4", skills.Request{
+		TaskID: "t-rd4", Repo: "demo-vuln-app", PinnedSHA: w.sha,
+		Inputs:        map[string]any{"finding": demoFindingID, "dependency": "vulnerable-dep", "advisory": "ADV-2026-1"},
+		WallDeadlineS: 300,
+		Deployment: skills.Deployment{Model: "scripted", TurnTimeoutSec: 180,
+			RegistryPath: filepath.Join(w.root, "policies/tools/registry-v5.json"), ExecCeilingPath: filepath.Join(w.base, "execution-ceiling.json"),
+			StateRoot: filepath.Join(w.base, "state"), ArtifactDir: filepath.Join(w.base, "artifacts"), WorkspaceRoot: filepath.Join(w.base, "provider")},
+		OutDir: filepath.Join(w.base, "envelopes"),
+	})
+	if err != nil {
+		t.Fatalf("L9 still instantiates @4 (it is a registered composition): %v", err)
+	}
+	_, err = w.o.SubmitTask(path)
+	if err == nil || !strings.Contains(err.Error(), `no slot "phase-state"`) {
+		t.Fatalf("@4 must refuse at composition by name: %v", err)
+	}
+	evs, _ := w.sroot.ReadEvents("t-rd4")
+	for _, ev := range evs {
+		if ev.Class == state.EvModelTurn {
+			t.Fatal("a refused composition must not reach the model")
+		}
 	}
 }

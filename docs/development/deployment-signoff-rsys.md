@@ -865,7 +865,7 @@ the evidence exists for the owner's decision.
 Executed on the `rsys` host (`/opt/themis/themis-ai-runtime`, `main`
 merged over the host acts; Themis at `/opt/themis/themis-core`,
 `feat/harness-integration` `b4dfaf0`) with `rsys@5` ACTIVE beforehand.
-Evidence archive: `~/evidence/themis-i-m5-20260927.tgz` (record plane,
+Evidence archive: `~/evidence/themis-i-m5-20260927.tgz sha256 edf65681beb7ec334dffacf4138b90f3fd25634ce029c3eb1b3b02d34b29cd48` (record plane,
 artifacts, envelopes, submissions, receipts, evidence views, the seven
 provider captures, vm-verify, status); the two Governance-act commits
 (`f9b2c80`, `81459cd` on the host) came back and were applied to origin

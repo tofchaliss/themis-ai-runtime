@@ -389,8 +389,7 @@ now RATIFIED):
   observation; gpt-oss:20b is the host gate (P-M3).
 - Consequences: pre-D-P-1 skills un-composable (catalog history);
   `investigate-cve@2` registered for the suites; `task-contract-v2`;
-  see `l7-phase-framing/tasks.md`. Owner call at the mint: `rsys@7`
-  skills `[@1,@2,@5]` as locked, or `[@5]` (the only composable one).
+  see `l7-phase-framing/tasks.md`. (Superseded: the owner locked `[@5]`, then `[@6]` after D-P-7.)
 
 ## Gate 1 — P-M2 (rsys@7 candidate and the host page, 2026-09-27)
 - `rsys7.proposed.json` = `rsys6` bytes + `instruction_root_system`
@@ -423,8 +422,14 @@ now RATIFIED):
 - Host acts applied to origin content-identically (`ec4b323`, `53d3fbf`;
   decision hashes reproduced). Evidence bundle
   `themis-i-m5-20260927.tgz` (owner's `~/evidence`).
-- Matrix: every row 🟢 except row 3 (D-I-9, by decision). Reviews and
-  the archive of the six changes follow.
+- Matrix: every row 🟢 except row 3 (D-I-9, by decision). Three reviews
+  (architecture, security, test) ran in worktrees: no blocker; findings
+  fixed the same day (phase currency invariant, required/[derived]
+  enforcement, the precise live negative, provenance wording, off-tree
+  evidence labeled). Process fact from the test review: the Live suites
+  were red on the pushed tree from W-M2 until I-M5 because nothing runs
+  them before a push — run `go test ./orchestration/ ./state/ -run Live`
+  with Ollama up before any push that touches L5/L7.
 
 ## Milestone log
 - [x] P-M1, P-M2, P-M2b — green 2026-09-27

@@ -84,5 +84,25 @@ human PR first (the code path exists, it is just slower — kept as the
 fallback when a repository forbids machine branches); Themis pushing
 to git itself (Themis is not a code author and holds no repo write key).
 
-## Q-N-5 — Mail: recipients, content, what it must never contain (OPEN)
+## D-N-5 — Mail (LOCKED 2026-09-27, owner: option 1)
+
+> Mail uses governed Communication audiences and contains facts from
+> the immutable delivery snapshot only. Recipients are named
+> Communication audiences, resolved to addresses by the mail worker;
+> addresses and credentials are never carried in the intent. Mail
+> materializes the event, Finding identity, CVE/PURL, release, Position
+> version and verbatim stance, the applicable build result, dead-letter
+> status where applicable, and a Themis link. It contains no model
+> output, report text, workspace content, key identifiers/values, or
+> attachments. Delivery is plain text and idempotent by intent id.
+
+Event mapping: `finding_opened` → Jira; `proposal_accepted` → mail
+(decision notification); CI callback → mail (build result); delivery
+dead-letter → mail (operations audience). Position stance is carried
+verbatim; Communication never rewrites it. One mail per intent; a retry
+is a delivery retry, not a new communication event. Rejected: free-form
+mail with the model's report "for context" (model output would leave
+the sandbox as a message from Themis); per-user subscriptions (a
+separate product capability with its own grill).
+
 ## Q-N-6 — Credentials and the acting key holder (OPEN)

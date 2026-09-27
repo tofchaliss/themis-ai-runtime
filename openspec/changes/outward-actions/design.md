@@ -60,6 +60,29 @@ deterministic reconstruction with the original bytes as the delivery
 artifact. Same shape as Communication's `Publication` (snapshot
 artifact + capped materialized payload + lineage + delivery outcome).
 
-## Q-N-4 — The CI trigger and the result as evidence (OPEN)
+## D-N-4 — The CI trigger and the result as evidence (LOCKED 2026-09-27, owner: option 1)
+
+> `ci_build` delivery carries the accepted change artifact, not merely
+> references. For a `proposal_accepted` whose evidence is a harness
+> execution, the intent snapshot contains the recorded artifact members
+> and their hashes, the artifact identity, release and Finding lineage.
+> CI applies those bytes to a branch of the release repository and
+> builds from that branch. The branch is never automatically merged;
+> merge remains a human / repository-controlled act. CI returns
+> `{intent_id, build_id, image_digest, git_ref}`; Themis records the
+> callback as governed-external evidence on the delivery intent, not as
+> Finding truth. The image digest alone changes no Finding state; the
+> subsequent SBOM must be ingested and evaluated before security truth
+> changes.
+
+Boundaries made explicit: "CI applies those bytes" never means CI
+reinterprets the artifact — the snapshot names exactly what CI is
+authorized to materialize; CI is the build executor, not a security
+decision-maker. `image digest ≠ fixed Finding`. Branch creation is
+automated; merge is human-controlled. Rejected: references only with a
+human PR first (the code path exists, it is just slower — kept as the
+fallback when a repository forbids machine branches); Themis pushing
+to git itself (Themis is not a code author and holds no repo write key).
+
 ## Q-N-5 — Mail: recipients, content, what it must never contain (OPEN)
 ## Q-N-6 — Credentials and the acting key holder (OPEN)

@@ -55,6 +55,15 @@
    "steward": "security-engineering",
    "decision_ref": "rel-anchor-rsys-5",
    "decision_sha256": "2ab3253832273fe4a632cdd6d65c67c055ae980e46ec25e9b43898a41dd76a75"
+  },
+  {
+   "name": "rsys",
+   "version": 6,
+   "artifact_sha256": "795b364a36b787844aabcc682955d3921664e37461aa51dd5372cc4bb2275595",
+   "state": "active",
+   "steward": "security-engineering",
+   "decision_ref": "rel-anchor-rsys-6",
+   "decision_sha256": "6b8a7c80d2af6dee25e5e0f338179585dad461395a5b426a17b44a93a1aec525"
   }
  ]
 }

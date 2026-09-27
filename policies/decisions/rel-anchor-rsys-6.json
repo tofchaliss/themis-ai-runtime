@@ -1,0 +1,16 @@
+{
+ "id": "rel-anchor-rsys-6",
+ "kind": "reliance",
+ "target": {
+  "name": "rsys",
+  "version": 6,
+  "hash": "795b364a36b787844aabcc682955d3921664e37461aa51dd5372cc4bb2275595"
+ },
+ "evidence": [],
+ "rationale": "rsys@6 minted on the host for I-M5 (docs/operations/rsys6-host-sequence.md): W-M1 constitution 1df0e285…, themis_contract c6a95f49… (Themis b4dfaf0), catalog v2 with remediate-dependency@4; execution_ceiling and models inherited from rsys@5; PINS OK on the host, admission refused before this act.",
+ "decided_at": "2026-09-27",
+ "actor": {
+  "kind": "commit",
+  "id": "tofchaliss"
+ }
+}

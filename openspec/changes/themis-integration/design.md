@@ -39,6 +39,28 @@ basis for the EXISTING Proposal → authenticated acceptance → Position
 flow. The CLI boundary is `tuple → Resolve → Evidence View → Proposal`,
 never `file path → read files → manufacture proposal`.
 
+### D-I-1 reaffirmed for I-M5 (owner, 2026-09-27): Option A, sibling checkout
+
+The enterprise estate today runs the harness on one VM and Themis on
+another. For the host run the owner LOCKED Option A: the Themis estate
+(Registry, Evidence, Knowledge, Governance; PostgreSQL; auth) is
+installed on the harness VM and read over loopback, exactly as the
+contract pins (`governance_base_url` `127.0.0.1:8083`). The Themis
+checkout lives BESIDE the harness checkout — `/opt/themis` next to
+`/opt/themis-ai-runtime` — never under `src/themis` (the 2026-09-26
+rule; Wall 1 and a foreign `.git` inside the governed root both forbid
+it). `themis-intake` is built there and runs where the record plane is.
+The second VM is not on the demo path.
+
+Why not two VMs now: the intake opens the record plane by filesystem
+path (`state.OpenRoot`) and must run on the VM that holds it; the read
+door's URL is contract-pinned (a non-loopback URL re-pins the contract
+and re-derives `rsys@6`); Themis nodes speak plain HTTP with
+`X-API-Key`, so a cross-VM door needs a TLS terminator or a private
+network and its own security review. That is a deployment-topology
+decision (Class 4) with its own grill AFTER I-M5 — recorded as the
+open item "two-VM topology (D-I-1 amendment)".
+
 ## D-I-2 — Harness module identity (LOCKED 2026-09-25, owner)
 
 > Rename the harness module `github.com/tofchaliss/themis` →

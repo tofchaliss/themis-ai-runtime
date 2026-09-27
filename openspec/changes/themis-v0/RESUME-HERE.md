@@ -355,6 +355,12 @@ now RATIFIED):
   owner acts (rsys@6 ACTIVE; rsys@5 WITHDRAWN after validation),
   commission → execution → intake → proposal → decision, hostile twins,
   and the evidence/patch bundle to bring back.
+- **Topology locked for the host run (owner, 2026-09-27): Option A** —
+  the Themis estate on the harness VM over loopback; Themis checkout at
+  `/opt/themis` beside `/opt/themis-ai-runtime`, never under `src/`.
+  The two-VM topology is a post-I-M5 grill (D-I-1 amendment; TLS, key
+  transport, contract re-pin). Recorded under D-I-1 in
+  `themis-integration/design.md`.
 - **`themis-status`** renders `decision_ref` per anchor and registry
   entry and the Themis contract line (the stand-in store lines are gone).
 - **Known, not from this work:** Register E `TestLiveWalkProof` fails on

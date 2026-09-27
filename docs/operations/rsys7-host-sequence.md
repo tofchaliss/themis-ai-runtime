@@ -58,7 +58,7 @@ tool_calls}` lines as before; do not mint.
 cd $REPO/src/harness && sed -n "/rsys6check.go <<'GO'/,/^GO$/p" ../../docs/operations/rsys6-host-sequence.md | sed '1d;$d' \
   | sed 's/rsys6.proposed.json/rsys7.proposed.json/g' >| /tmp/rsys7check.go
 go run /tmp/rsys7check.go "$REPO" "$DEPLOY"
-# expect: PINS OK; candidate rsys 7 89b21580…   then   pre-activation admission: … not a Governance-registered deployment anchor
+# expect: PINS OK; candidate rsys 7 97599c96…   then   pre-activation admission: … not a Governance-registered deployment anchor
 ```
 
 ## 4. STOP — Governance act 3: `rsys@7` ACTIVE (owner)

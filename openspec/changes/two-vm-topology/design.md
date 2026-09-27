@@ -86,4 +86,37 @@ that narrower scope is NOT enforced today. Custody upgrade path, with
 mTLS: a secrets agent injecting keys into both CLIs — a later change.
 Rejected: one long-lived shared key.
 
-## Q-V-5 — Host procedure and evidence for a two-VM run (OPEN)
+## D-V-5 — The proof set and the identity refusal class (LOCKED 2026-09-27, owner: option 1)
+
+> A contract-v2 two-VM deployment must prove private-network
+> reachability, TLS server identity, authenticated read, authenticated
+> proposal, the negative identity/transport cases, credential-rotation
+> behaviour and certificate-renewal behaviour before the new anchor is
+> minted. The read-door client and `themis-intake` consume the same
+> `themis_tls` pins and ignore the system CA store. A
+> certificate/SAN/SPKI/CA mismatch is classified
+> `themis-identity-refused`, recorded in the L4 audit with the observed
+> SPKI, never retried as `seam-unavailable`; `seam-unavailable` is
+> reserved for genuine reachability failures.
+
+Proof set under a test anchor, then `rsys@8`: private-network
+reachability (route, the terminator refusing the public interface);
+positive HTTPS read; wrong SPKI → `themis-identity-refused`; `http` URL
+→ refused at contract/Open (v2 requires `https`); read from outside the
+allowlist → terminator refusal; HTTPS proposal from the intake with the
+operator key → succeeds; read-key rotation → no anchor change; same-SPKI
+certificate renewal → no anchor change. Evidence: handshake facts
+(observed SPKI, CA) in preflight output and Addendum H; the bundle as
+before. Classification boundary: cannot reach Themis →
+`seam-unavailable`; reached an endpoint that is not the identity the
+anchor names → `themis-identity-refused`. An impersonating endpoint must
+never look like an outage.
+
+## Grill state (2026-09-27)
+Q-V-1..5 LOCKED. Implementation: V-M1 (harness: contract v2, pinned
+TLS in the door, the refusal class, preflight), V-M2 (Themis: intake
+consumes the same pins; the terminator and allowlist on the Themis VM
+are deployment assets), V-M3 (host: the proof set, `rsys@8`, Addendum
+H). Sequenced after N-M0 where the operator-key blast radius is relied
+on. See `tasks.md`.
+

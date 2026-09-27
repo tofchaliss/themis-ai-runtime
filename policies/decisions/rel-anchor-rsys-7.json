@@ -1,0 +1,16 @@
+{
+ "id": "rel-anchor-rsys-7",
+ "kind": "reliance",
+ "target": {
+  "name": "rsys",
+  "version": 7,
+  "hash": "a5266c52398ea3ffcb7d25cd791320755b18f8a750e1edb285391395572fa7a4"
+ },
+ "evidence": [],
+ "rationale": "rsys@7 minted on the host for the L7 phase-framing amendment (openspec/changes/l7-phase-framing, D-P-1..7): the L1 phase rule, the derived phase-state slot, capability-only completion, skills [remediate-dependency@6] only — a clean allowlist: @1..@5 remain catalog history and cannot compose under D-P-1 (not a withdrawal). Everything else inherited from rsys@6. Gate: gpt-oss:20b COMPLETED remediate-dependency@6 under the test anchor on this host before the act.",
+ "decided_at": "2026-09-27",
+ "actor": {
+  "kind": "commit",
+  "id": "tofchaliss"
+ }
+}

@@ -41,6 +41,23 @@ un-anchored CA store); SPKI only (a same-key certificate for another
 name would pass); full certificate hash (every renewal a Governance
 act).
 
-## Q-V-3 — Where the intake runs; how its write reaches Governance (OPEN)
+## D-V-3 — Where the intake runs; how its write reaches Governance (LOCKED 2026-09-27, owner: option 1)
+
+> `themis-intake` runs on the harness VM and reads the local record
+> plane directly. Its only network action is the proposal POST to
+> Governance, which crosses the D-V-1 boundary using the D-V-2 pinned
+> Themis identity, with the operator's `product:<id>` key for that one
+> human-initiated write. No record-plane copy exists on the Themis VM;
+> the record plane is not exposed as a network seam. Intake provenance
+> (Themis commit, harness pin) stays in the evidence.
+
+Only the proposal crosses the boundary. The intake is an
+evidence-producing reader/proposer, not a general network client.
+Rejected: copying the task's record to the Themis VM (a second copy
+with no rule for which is authoritative); exposing the record plane
+read-only over the network (a new seam and contract for no gain).
+Consequence carried into Q-V-4: the operator's key is present on the
+harness VM at the moment of use.
+
 ## Q-V-4 — Stolen credentials across the boundary; rotation (OPEN)
 ## Q-V-5 — Host procedure and evidence for a two-VM run (OPEN)

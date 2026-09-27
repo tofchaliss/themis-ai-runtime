@@ -22,7 +22,25 @@ mandatory (makes production wait on an enterprise PKI decision that is
 not the harness's); plain HTTP on a private network (bearer secret in
 clear).
 
-## Q-V-2 — What the contract pins about the transport (OPEN)
+## D-V-2 — What the anchor pins for Themis server identity (LOCKED 2026-09-27, owner: option 1)
+
+> Themis server identity is anchored by DNS/SAN identity, SPKI pin and
+> issuing-CA pin. The contract URL host remains the expected DNS
+> identity and the certificate SAN must match it. `contract.json` schema
+> v2 carries `themis_tls.spki_sha256` (at most two entries, for staged
+> key rollover) plus `ca_sha256` for the required issuing CA. The VM
+> system CA store is not authoritative and is ignored for Themis
+> authentication. Certificate renewal with the same key needs no new
+> anchor; server-key rotation, a different CA, or a different hostname
+> is a new Governance anchor. Where Governance and Registry share a TLS
+> terminator one `themis_tls` block covers both, otherwise each URL has
+> its own pin set. The intake uses the same contract-pinned verification.
+
+Rejected: DNS/SAN with system chain validation (trust in an
+un-anchored CA store); SPKI only (a same-key certificate for another
+name would pass); full certificate hash (every renewal a Governance
+act).
+
 ## Q-V-3 — Where the intake runs; how its write reaches Governance (OPEN)
 ## Q-V-4 — Stolen credentials across the boundary; rotation (OPEN)
 ## Q-V-5 — Host procedure and evidence for a two-VM run (OPEN)

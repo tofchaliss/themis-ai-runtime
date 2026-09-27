@@ -28,4 +28,6 @@ Q-N-1 who triggers outward actions · Q-N-2 failure of an outward action
 · Q-N-3 what a Jira defect mirrors and who closes it · Q-N-4 what the CI
 trigger carries and how the result comes back as evidence · Q-N-5 mail:
 to whom, what, and what it must never contain · Q-N-6 where the
-credentials live and which key holder acts.
+credentials live and which key holder acts · Q-N-7 who tracks a fix that
+ships in another release, and the vocabulary (fix exists ≠ release fixed ≠
+Finding resolved).

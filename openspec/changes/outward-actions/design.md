@@ -131,8 +131,36 @@ architecture: the callback still enters only through the Communication
 boundary. Rejected: reusing an `admin` key for CI (a build system would
 hold the decider's power).
 
+## D-N-7 — Cross-release remediation tracking (LOCKED 2026-09-27, owner: option 1)
+
+> Cross-release remediation is tracked by Themis from the CI delivery
+> chain and the subsequent SBOM evaluation. The `ci_build` intent
+> retains lineage to the original Finding and release. CI returns the
+> produced release version, `git_ref` and image digest and registers
+> the release through the Registry process. The resulting image SBOM
+> cites the intent and is evaluated by Themis. Only the SBOM evaluation
+> can establish that the fault is absent from the new release. Themis
+> records `remediated_in` on the original Finding as governed-external
+> evidence (new release, image digest, intent, evaluation time). The
+> original release remains affected. A human performs the eventual
+> Finding resolution decision.
+
+> Terminology: `mitigated` in a Position means the governed remediation
+> decision was accepted; `fixed` is reserved for a release whose
+> evaluated SBOM demonstrates the fault is no longer present.
+
+Three states, never conflated: fix exists ≠ release is fixed ≠ Finding
+is resolved. R.x.y stays affected (its image never changed); the estate
+graph answers "which deployments still run R.x.y". A clean R.x.y+1
+SBOM establishes something about R.x.y+1 only. A failed attempt (z still
+matched) records the same field as an attempt, and F stays as it is.
+One more D-N-5 mail event: `remediated_in` written. Rejected:
+auto-resolving F (resolution is a decision about exposure, not about the
+existence of a fix); the link typed into Jira (Jira is a projection; the
+authoritative relationship lives in Themis).
+
 ## Grill state (2026-09-27)
-Q-N-1..6 LOCKED. Implementation is Themis-side under a new EDR
+Q-N-1..7 LOCKED. Implementation is Themis-side under a new EDR
 (`EDR-DELIVERY-01`) and a `phase3-outward-actions` change; the harness
 tree is untouched by design (D-N-1). Milestones in `tasks.md`.
 

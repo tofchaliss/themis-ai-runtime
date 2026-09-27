@@ -1,6 +1,6 @@
 # Tasks — outward actions (N-M0..N-M3)
 
-Grill closed 2026-09-27 (D-N-1..6). All code lands in the Themis
+Grill closed 2026-09-27 (D-N-1..7). All code lands in the Themis
 repository (`~/code/themis`, greenfield tree, EDR + `phase3-outward-
 actions` change, `make check`, commit/push only on explicit ask). The
 harness repository changes nothing: no network tool, no new seam.
@@ -44,7 +44,16 @@ harness repository changes nothing: no network tool, no new seam.
       `delivery:callback` or the HMAC variant; result stored as
       governed-external evidence on the intent; never a Finding change
 - [ ] Reference CI job (branch from the release repo, apply the artifact
-      bytes exactly, build, push, call back; never merge)
+      bytes exactly, build, push, register the new release version in
+      Registry, upload the image SBOM citing the intent id, call back with
+      `{intent_id, build_id, image_digest, git_ref, release_version}`;
+      never merge)
+- [ ] `remediated_in` on the original Finding (D-N-7): written by Themis
+      only from the new SBOM's evaluation (fault absent / still present),
+      as governed-external evidence with release, digest, intent,
+      evaluated_at; shown in the Finding view and release posture
+      ("affected, fixed in R.x.y+1"); `finding_resolved` stays a human act;
+      stance vocabulary note (`mitigated` ≠ `fixed`) in the API docs
 
 ## N-M3 — Host wiring and the extended demo (Class 4: host)
 - [ ] Destinations configured by name on the Communication node (Jira

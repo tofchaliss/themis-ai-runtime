@@ -59,5 +59,31 @@ read-only over the network (a new seam and contract for no gain).
 Consequence carried into Q-V-4: the operator's key is present on the
 harness VM at the moment of use.
 
-## Q-V-4 — Stolen credentials across the boundary; rotation (OPEN)
+## D-V-4 — Credential custody, blast radius, rotation (LOCKED 2026-09-27, owner: option 1)
+
+> Credentials are held per holder, presented per act, bounded by scope
+> and TTL, and identified in records by key id only. The harness read
+> key is deployment-held (mode 0600, the harness service's environment,
+> outside `$REPO`/`$DEPLOY`), usable only for reads and accepted by the
+> terminator only from the harness VM. The operator key is human-held,
+> supplied only for an individual `themis-intake` act, short-lived and
+> revocable. The decider key is never present on the harness VM and is
+> used only for Governance decision acts. Credential values never enter
+> records, evidence, bundles or shell history. Key rotation needs no
+> new anchor (credentials are not part of the anchored server
+> identity). Revocation is immediate at Themis.
+
+| Credential | Holder | Authority | If stolen |
+|---|---|---|---|
+| read key | harness service | read | estate read access until revoked |
+| operator key | human | product-scoped Governance acts after N-M0 | can commission / propose / withdraw as permitted, never decide |
+| decider key | human | Governance decision | never crosses onto the harness VM |
+
+Acknowledged, not hidden: until N-M0 lands, a non-read key can perform
+broader Governance writes than the post-hardening model; N-M0 is a
+prerequisite for relying on the narrowed operator-key blast radius, and
+that narrower scope is NOT enforced today. Custody upgrade path, with
+mTLS: a secrets agent injecting keys into both CLIs — a later change.
+Rejected: one long-lived shared key.
+
 ## Q-V-5 — Host procedure and evidence for a two-VM run (OPEN)

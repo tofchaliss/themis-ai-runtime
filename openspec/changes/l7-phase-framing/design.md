@@ -101,7 +101,11 @@ not admitted by the next anchor.
 
 `rsys@7` = `rsys@6` + new `instruction_root_system` (the L1 phase
 rule), new `skill_catalog`, the `@5` workflow bundle (new context
-contract hash), `skills: [@1, @2, @5]`. It is the first anchor whose
+contract hash), `skills: [@5]` (amended 2026-09-27 from `[@1, @2, @5]`:
+`@1`/`@2` are not merely superseded, they are known Gather refusals
+under D-P-1; an allowlist that admits artifacts guaranteed to fail
+weakens the meaning of "allowed" — registry = history + current,
+allowlist = only what composes). Candidate `97599c96…`. It is the first anchor whose
 allowlist drops `remediate-dependency@4` because the composition no
 longer satisfies the phase-framing contract — an anchor admission
 decision, NOT a withdrawal. No L7 constitution change: `constitution.
@@ -110,6 +114,12 @@ plan is code, not control vocabulary).
 
 Rejected: `phase-state` optional (one composition identity under two
 framings); mutating `@4` (immutable binding).
+
+> `rsys@6` remains the authoritative evidence source for the two
+> pre-amendment FAILED records (`demo-remediate-0001/0002`). They are
+> not rewritten or reclassified because `rsys@7` fixes the phase
+> framing; `rsys@6` is withdrawn only after a Position exists under
+> `rsys@7`, as a separate act.
 
 ## D-P-5 — Model allowlist and the demo's model (LOCKED 2026-09-27, owner: option 1)
 

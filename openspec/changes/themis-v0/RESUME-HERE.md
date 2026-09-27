@@ -395,7 +395,8 @@ now RATIFIED):
 ## Gate 1 — P-M2 (rsys@7 candidate and the host page, 2026-09-27)
 - `rsys7.proposed.json` = `rsys6` bytes + `instruction_root_system`
   `2377bcd8…`, `skill_catalog` `62a05ac5…`, the `@5` bundle (context
-  contract `28e91112…`), `skills [@1,@2,@5]`: `89b21580…`, parse-verified,
+  contract `28e91112…`), `skills [@5]` (owner: a clean allowlist, no known Gather refusal
+  admitted; was `[@1,@2,@5]` → `89b21580…`): `97599c96…`, parse-verified,
   admission refused. `docs/operations/rsys7-host-sequence.md` is the
   delta page: D-P-5 gate (three captures), act 3, then I-M5 §7–§11 under
   `rsys@7` with `@5` and a NEW commission (correspondence is equality).

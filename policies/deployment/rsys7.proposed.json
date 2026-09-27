@@ -22,8 +22,6 @@
  "regression_set_registry": "d5fe3e245a37d3d2fda9b459a3e3f6e49ec095840caebdd13fcd68e741b7f09c",
  "skill_catalog": "62a05ac5b947a479b8c5745b27fa1cc8408710c610ad6fa5db812f9588b076b0",
  "skills": [
-  "remediate-dependency@1",
-  "remediate-dependency@2",
   "remediate-dependency@5"
  ],
  "themis_contract": "c6a95f49590fba5276bcda86246e8dc70e0661541c6046af57cfa38c7e675b3a",

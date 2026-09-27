@@ -34,7 +34,7 @@ host act is the owner's; no push without the owner's word.
       grill and the two host records; `@4` stays active
 - [x] `policies/deployment/rsys7.proposed.json` derived from `rsys6.json`
       + new `instruction_root_system`, `skill_catalog`, the `@5` bundle,
-      `skills: [@1, @2, @5]`; parse-verified; admission refused (inert)
+      `skills: [@5]` (owner amendment 2026-09-27); parse-verified; admission refused (inert); `97599c96…`
 - [x] `docs/operations/rsys7-host-sequence.md`: delta page (checks,
       the D-P-5 gate, act 3, then I-M5 steps 7–11 under `rsys@7`);
       demo document regenerated; matrix and RESUME-HERE updated

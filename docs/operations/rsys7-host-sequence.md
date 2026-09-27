@@ -12,15 +12,17 @@ the host cannot push.
 
 | Item | Identity |
 |---|---|
-| Candidate anchor `rsys7.proposed.json` | `89b21580…` on the pushed tree with `rsys@6`'s ceiling and models; the host must reproduce it |
-| Delta from `rsys@6` | `deployment_version` 7; `instruction_root_system` `2377bcd8…` (adds `phases.md`); `skill_catalog` `62a05ac5…`; third bundle's `context_contract` `28e91112…` (`@5` declares `phase-state`); `skills: [@1, @2, @5]` |
+| Candidate anchor `rsys7.proposed.json` | `97599c96…` on the pushed tree with `rsys@6`'s ceiling and models; the host must reproduce it |
+| Delta from `rsys@6` | `deployment_version` 7; `instruction_root_system` `2377bcd8…` (adds `phases.md`); `skill_catalog` `62a05ac5…`; third bundle's `context_contract` `28e91112…` (`@5` declares `phase-state`); `skills: [@5]` (owner, 2026-09-27: a clean allowlist — no entry that is a known Gather refusal) |
 | Unchanged | both constitution pins; `themis_contract` `c6a95f49…`; registry-v5; ceiling; models |
 | `remediate-dependency@5` composition | `12463c8f…` (the value the commission carries) |
 
-`@1` and `@2` stay in the allowlist as locked (D-P-4) but cannot compose
-under the amended loop (their contracts lack the slot). Admission is
-not composability; the owner may prefer `skills: [@5]` at the act —
-that changes the bytes and the hash, which is fine.
+`@1`..`@4` and `investigate-cve@1` stay in the catalog as history and
+are not admitted: under D-P-1 their contracts lack `phase-state`, so
+admitting them would admit known Gather refusals (owner, D-P-4
+amendment). `rsys@6` stays the authoritative evidence source for the
+two pre-amendment FAILED records; they are never rewritten or
+reclassified because `rsys@7` fixes the framing.
 
 ## 1. Tree at the governed commit, on top of the host's act
 
@@ -65,7 +67,7 @@ Same shape as act 1, with `7`, decision `rel-anchor-rsys-7`:
 
 ```bash
 cd $REPO
-export ANCHOR7=89b21580ea2bbcf1cb80c618c28fd327ae2bceb5dba7653bb892c3dd57873415   # replace with the host's <sha> if skills differ
+export ANCHOR7=97599c9611b314ba3b07ae68a8df52e668263fd7947e275126806dbe4e145f58   # replace with the host's <sha> if skills differ
 cp policies/deployment/rsys7.proposed.json policies/deployment/rsys7.json
 cat >| policies/decisions/rel-anchor-rsys-7.json <<'JSON'
 {
@@ -74,10 +76,10 @@ cat >| policies/decisions/rel-anchor-rsys-7.json <<'JSON'
  "target": {
   "name": "rsys",
   "version": 7,
-  "hash": "89b21580ea2bbcf1cb80c618c28fd327ae2bceb5dba7653bb892c3dd57873415"
+  "hash": "97599c9611b314ba3b07ae68a8df52e668263fd7947e275126806dbe4e145f58"
  },
  "evidence": [],
- "rationale": "rsys@7 minted on the host for the L7 phase-framing amendment (openspec/changes/l7-phase-framing, D-P-1..6): the L1 phase rule, the derived phase-state slot, remediate-dependency@5 admitted (@4 no longer composes; not a withdrawal). Everything else inherited from rsys@6. Gate: gpt-oss:20b COMPLETED remediate-dependency@5 under the test anchor on this host before the act.",
+ "rationale": "rsys@7 minted on the host for the L7 phase-framing amendment (openspec/changes/l7-phase-framing, D-P-1..6): the L1 phase rule, the derived phase-state slot, skills [remediate-dependency@5] only — a clean allowlist: @1..@4 remain catalog history and cannot compose under D-P-1 (not a withdrawal). Everything else inherited from rsys@6. Gate: gpt-oss:20b COMPLETED remediate-dependency@5 under the test anchor on this host before the act.",
  "decided_at": "2026-09-27",
  "actor": {
   "kind": "commit",

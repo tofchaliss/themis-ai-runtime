@@ -26,7 +26,7 @@
   "remediate-dependency@2",
   "remediate-dependency@4"
  ],
- "themis_contract": "67c458e4ea79af35fd13b4dbd395dbb115fd793099b523b0e186cd0b13032e42",
+ "themis_contract": "c6a95f49590fba5276bcda86246e8dc70e0661541c6046af57cfa38c7e675b3a",
  "tool_registry": "7c489f9941884a7d1cf0fde0624f4ea040e0045135867e9a523d49da34d72902",
  "version": 1,
  "workflows": [

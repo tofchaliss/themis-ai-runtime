@@ -295,7 +295,7 @@ now RATIFIED):
   `anchors.json`/`anchors.proposed.json` are now v2; the host's OBSERVED
   copy is v1 and stays parseable (bytes-only parser; append-only check by
   identity). The first Open under rsys@6 records a v2 observed copy.
-- **`themis_commit` in the contract** is `1414997…`, the Themis
+- **`themis_commit` in the contract** is `b4dfaf0…` (2026-09-27; first `1414997…`), the Themis
   `feat/harness-integration` head carrying EDR-HARNESS-01 (commission door,
   harness-evidence proposals, `themis-intake`), re-pinned 2026-09-26 after
   both repos were published (was `fb83e82…`, main at integration time);
@@ -340,12 +340,12 @@ now RATIFIED):
   `v0.0.0-20260926130325-331d326a4172`. Themis `make check` green with
   the workspace off; coverage bars restored (domain 100, app 100, http
   95.5) with tests over the commission door.
-- **Contract re-pinned** to Themis `1414997` (`67c458e4…`); only the
+- **Contract re-pinned** to Themis `1414997` then `b4dfaf0` (pin now `c6a95f49…`); only the
   Governance spec hash moved (additive). Fixtures untouched (synthetic
   contract).
 - **`rsys6.proposed.json`** is the candidate anchor derived from the
-  pushed tree plus `rsys@5`'s ceiling and models: `33217e06…` on the
-  laptop; parse-verified; admission refused (inert). The binary from
+  pushed tree plus `rsys@5`'s ceiling and models: `795b364a…` on the
+  laptop (was `33217e06…` before the `b4dfaf0` re-pin); parse-verified; admission refused (inert). The binary from
   `d977720` refuses `rsys5.json` at parse (`themis_contract` not
   defaulted), so the mint is mandatory. `skills` proposes @1, @2, @4.
 - **`docs/operations/rsys6-host-sequence.md`** carries I-M5 end to end:

@@ -22,15 +22,15 @@ the host's `main` and origin agree before anything is derived.
 
 | Item | Where | Identity |
 |---|---|---|
-| Candidate anchor | `policies/deployment/rsys6.proposed.json` | `33217e06…` when derived over the pushed tree at `d977720` with `rsys@5`'s ceiling and models; the host re-derives and must reproduce it |
-| Themis contract | `policies/themis/contract.json` | pin `67c458e4…`; `themis_commit` `1414997b…` (Themis `feat/harness-integration`) |
-| Harness at | `main` `d977720` | L6 `1df0e285…`, L7 `008be050…` |
-| Themis at | `feat/harness-integration` `1414997` | pins the harness at `v0.0.0-20260926130325-331d326a4172` |
+| Candidate anchor | `policies/deployment/rsys6.proposed.json` | `795b364a…` when derived over the pushed tree at `b219ad5`+ with `rsys@5`'s ceiling and models; the host re-derives and must reproduce it |
+| Themis contract | `policies/themis/contract.json` | pin `c6a95f49…`; `themis_commit` `b4dfaf0…` (Themis `feat/harness-integration`) |
+| Harness at | `main` (the commit carrying this page) | L6 `1df0e285…`, L7 `008be050…` |
+| Themis at | `feat/harness-integration` `b4dfaf0` (I-M3 `1414997` + the intake decoder fix and the three walls) | pins the harness at `v0.0.0-20260926130325-331d326a4172` |
 
 The candidate differs from `rsys@5` in exactly: `deployment_version`
 6; `constitution.state` `1df0e285…` (W-M1: `eventWriters` folded in);
 `skill_catalog` `bc5625eb…` (catalog v2, decision-bound);
-`themis_contract` `67c458e4…` (was absent: the binary from `d977720`
+`themis_contract` `c6a95f49…` (was absent: the binary from `d977720`
 refuses `rsys5.json` at parse — "themis_contract … nothing is
 defaulted" — so `rsys@6` is mandatory, not optional); a third
 workflow bundle and `remediate-dependency@4` in `skills` (the demo
@@ -53,13 +53,13 @@ date -u; uname -a; id -un; go version                     # expect: go1.25.x (Th
 
 ```bash
 cd "$REPO" && git fetch -q origin && git status --short && git rev-parse HEAD origin/main
-# expect: clean; HEAD == origin/main == d977720dfd87c6986dcbbf49d33cb3f29189ae92 (or later on main)
+# expect: clean; HEAD == origin/main, at or after the commit that carries this page
 git log --oneline origin/main..HEAD                       # expect: empty — no unpushed host act
 scripts/themis-status | sed -n '/Code identity/,/Deployment anchors/p'
 # expect: l6 1df0e28548a4…  l7 008be050c297…
 
 cd "$THEMIS" && git fetch -q origin && git checkout -q feat/harness-integration && git status --short
-git rev-parse HEAD                                        # expect: 1414997bf4564978da5d1b046ddb4693839c063c
+git rev-parse HEAD                                        # expect: b4dfaf0d02d3e4c02756b1acc2b8ad035a4ddc88
 grep themis-ai-runtime go.mod                             # expect: …/src/harness v0.0.0-20260926130325-331d326a4172
 ```
 
@@ -212,12 +212,12 @@ go run /tmp/rsys6check.go "$REPO" "$DEPLOY"
 host carries (step 1) and the ceiling bytes the anchor inherits are
 the host's. The `CONSTITUTION` line compares against the binary being
 run **on the host** — the W-M4 host check. `<sha>` is the deployment
-identity; `33217e06…` only if `skills` and both inherited fields are
+identity; `795b364a…` only if `skills` and both inherited fields are
 exactly as prepared. **If admission does not refuse, stop**: the
 proposal path is not inert and that is a defect.
 
 Also confirm `scripts/themis-preflight` passes and prints
-`themis_contract pin: 67c458e4…` and `THEMIS_API_KEY_READ is set`.
+`themis_contract pin: c6a95f49…` and `THEMIS_API_KEY_READ is set`.
 
 ## 6. STOP — Governance act 1: `rsys@6` ACTIVE (owner)
 

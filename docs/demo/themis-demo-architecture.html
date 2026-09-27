@@ -20,8 +20,8 @@ li { margin: 2pt 0; }
 .callout { border-left: 4px solid #3730a3; background: #eef2ff; padding: 6pt 10pt; margin: 8pt 0; }
 </style></head><body>
 <h1>Themis AI Runtime — Demo Architecture and Use Cases</h1>
-<p class="meta">Themis at the core, the AI harness as bounded execution infrastructure. Prepared 2026-09-26 from the locked decision records
-(<code>openspec/changes/themis-v0</code> D-T-1..8, <code>l5-witness-events</code> D-W-1..6, <code>themis-integration</code> D-I-1..9). Status: architecture locked; implementation milestones I-M0..I-M5 pending.</p>
+<p class="meta">Themis at the core, the AI harness as bounded execution infrastructure. Prepared 2026-09-26, regenerated 2026-09-27 with the landed facts, from the locked decision records
+(<code>openspec/changes/themis-v0</code> D-T-1..8, <code>l5-witness-events</code> D-W-1..6, <code>themis-integration</code> D-I-1..9). Status: I-M0..I-M4 landed (harness <code>main</code> <code>1e8d948</code>; Themis <code>feat/harness-integration</code> <code>b4dfaf0</code>, pinning the harness at <code>331d326</code>); I-M5 prepared as <code>docs/operations/rsys6-host-sequence.md</code>; the host act is pending.</p>
 
 <div class="callout"><strong>The claim the demo defends.</strong> Themis remains the authority for security truth while the harness remains bounded execution infrastructure.
 A real Finding in Themis is remediated by governed AI execution; the execution is verified and independently reconstructed; a human proposes and a different human decides; the model never touches the decision and the harness never writes security truth.</div>
@@ -459,7 +459,7 @@ They meet at exactly two doors: a <em>read door</em> (the harness reads a projec
 <p>What the audience sees on screen, and what durable record it corresponds to. Identifiers below are illustrative shapes, not real values.</p>
 <table>
 <tr><th>Step</th><th>Command / act</th><th>Visible output</th><th>Durable record</th></tr>
-<tr><td>UC1</td><td><code>vm-verify.sh &lt;release&gt;</code>; <code>GET /findings?release=…&amp;faultline=…</code></td><td>Finding <code>id</code> (UUID), <code>cve</code>, <code>components[]</code> with the vulnerable PURL, <code>stage: identified</code>, no positions</td><td>Governance DB; runbook provenance (SBOM hash, release id, feed source)</td></tr>
+<tr><td>UC1</td><td><code>vm-verify.sh &lt;release&gt;</code>; <code>GET /findings?release=…&amp;faultline=…</code></td><td>Finding <code>id</code> (UUID), <code>cve: CVE-2022-32149</code>, <code>components[]</code> with <code>pkg:golang/golang.org/x/text@v0.3.7</code>, <code>stage: identified</code>, no positions, no commissions</td><td>Governance DB; runbook provenance (SBOM hash, release id, feed source)</td></tr>
 <tr><td>UC2</td><td><code>themis-instantiate remediate-dependency@4 …</code></td><td>Envelope path; composition hash; grant with <code>themis_scope: [uuid]</code></td><td>Envelope file; L6 CREATED event with governed hashes</td></tr>
 <tr><td>UC3</td><td><code>themis-run -deploy /srv/themis/rsys …</code></td><td><code>status=COMPLETED verdict=VERIFIED artifact=sha256:…</code>; audit lines for <code>get_finding authorized</code>, <code>verify_report authorized</code></td><td>events.log: l2-delivery, l4-audit, model-turn, l10-verification PASS, l5-transition ×N, l5-op ×N incl. egress acknowledged, artifact-bound, lifecycle COMPLETED</td></tr>
 <tr><td>UC4</td><td><code>themis-intake --anchor … --task … --seq …</code></td><td>Evidence view (below); <code>production_witness: l5-witnessed</code>; <code>reconstructed_outcome: PASS</code></td><td>None written by Themis at this step; the CLI's rendering is presentation</td></tr>
@@ -467,22 +467,23 @@ They meet at exactly two doors: a <em>read door</em> (the harness reads a projec
 <tr><td>UC6</td><td><code>POST …/accept</code> with the decider's key</td><td><code>current_position.version: 1</code>, <code>actor_kind: human</code>, <code>actor_id: key:…</code>, inputs cite the proposal</td><td>Position v1 row; outbox event for Communication</td></tr>
 <tr><td>UC7</td><td>model calls <code>get_finding</code> with another UUID</td><td>Tool result: deterministic denial (class-only); walk continues or fails per workflow</td><td>l4-audit <code>Decision: denied</code></td></tr>
 <tr><td>UC8</td><td>walk that verifies A then writes B; then <code>themis-intake</code></td><td><code>verification-refused: verified bytes are not the bound artifact (no member of egress … has hash …)</code></td><td>Harness record COMPLETED; no Proposal exists</td></tr>
-<tr><td>UC9</td><td><code>themis-intake --inspect &lt;position&gt;</code> (or the tuple again)</td><td>Same evidence view, byte-for-byte identities</td><td>Read-only</td></tr>
+<tr><td>UC9</td><td>From the Position: <code>accepted_proposal_id</code> → proposal <code>harness_evidence</code> → the tuple → <code>themis-intake</code> again</td><td>Same evidence view, byte-for-byte identities</td><td>Read-only</td></tr>
 </table>
 
 <h3>6.1 Evidence view, as rendered by themis-intake (shape)</h3>
 <pre>{
   "execution": { "anchor_hash": "0d…", "anchor_name": "rsys", "anchor_version": 6, "anchor_state_at_intake": "active",
-                  "task_id": "demo-remediate-0001", "constitution_hash": "…", "harness_module": "…/src/harness v0.0.0-…" },
-  "model_turns": [ { "seq": 7, "object_id": "sha256:…" }, { "seq": 12, "object_id": "sha256:…" } ],
+                  "task_id": "demo-remediate-0001", "constitution_hash": "…", "harness_module": "github.com/tofchaliss/themis-ai-runtime/src/harness@v0.0.0-20260926130325-331d326a4172" },
+  "model_reasoning": { "model_turns": [ { "seq": 7, "object_id": "sha256:…" } ],
+                       "delegations": [ { "seq": 19, "parent_call_seq": 17, "template": "dependency-triage@1", "model": "qwen2.5:7b", "evidence_refs": ["9:sha256:…"], "output_object_id": "sha256:…", "outcome": "completed" } ] },
   "artifact":  { "object_id": "sha256:…", "artifact_bound_seq": 41, "completed_seq": 44,
                   "verified_member_path": "report.json", "verified_member_sha256": "…",
                   "production_witness": "l5-witnessed",
-                  "l5": { "sealed_seq": 36, "seal_reason": "task-complete", "egressing_seq": 37, "egress_op_seq": 39, "egress_outcome": "acknowledged" } },
+                  "l5": { "sealed_seq": 36, "egressing_seq": 37, "egress_op_seq": 39 } },
   "verification": { "seq": 31, "contract": "report-valid@2", "contract_sha256": "bbc1…", "contract_state_at_intake": "active",
-                     "verifier_audit_seq": 30, "reconstructed_outcome": "PASS", "reconstruction_consistent": true, "checks": 9 },
+                     "verifier_audit_seq": 30, "reconstructed_outcome": "PASS", "reconstruction_consistent": true },
   "trust_class": "inferred",
-  "business_verification_refs": [ "pkg:golang/…@v1.x", "CVE-20xx-xxxx" ]
+  "business_verification_refs": [ "CVE-2022-32149", "pkg:golang/golang.org/x/text@v0.3.7" ]
 }</pre>
 
 <h3>6.2 Refusals the audience may ask to see</h3>
@@ -541,21 +542,21 @@ They meet at exactly two doors: a <em>read door</em> (the harness reads a projec
 <text x="720.0" y="212.3" text-anchor="middle" font-size="10">anchor rsys@6 (ACTIVE) · anchors.json (append-only; rsys@5 withdrawn)</text>
 <text x="720.0" y="226.3" text-anchor="middle" font-size="10">state/ (record plane) · artifacts/ · provider/ · mirror</text>
 <rect x="515" y="252" width="410" height="56" rx="6" fill="#fef3c7" stroke="#92400e" stroke-width="1.4"/>
-<text x="720.0" y="276.3" text-anchor="middle" font-size="10" font-weight="600">rsys@6 pins: constitution.state (W-M1) · tool_registry v6 · skill_catalog (@4)</text>
-<text x="720.0" y="290.3" text-anchor="middle" font-size="10">themis_contract = sha256(contract.json): URLs, spec hashes, Themis commit</text>
+<text x="720.0" y="276.3" text-anchor="middle" font-size="10" font-weight="600">rsys@6 candidate 795b364a…: constitution.state 1df0e285… (W-M1) · registry-v5 · catalog v2 (@4)</text>
+<text x="720.0" y="290.3" text-anchor="middle" font-size="10">themis_contract c6a95f49… = sha256(contract.json): URLs, spec hashes, Themis commit b4dfaf0</text>
 <rect x="515" y="318" width="410" height="68" rx="6" fill="#fff" stroke="#1f2937" stroke-width="1.4"/>
-<text x="720.0" y="341.3" text-anchor="middle" font-size="10" font-weight="600">Demo module mirror: real Go module with a real CVE</text>
+<text x="720.0" y="341.3" text-anchor="middle" font-size="10" font-weight="600">Mirror demo-xtext-app: golang.org/x/text@v0.3.7 (CVE-2022-32149, fixed v0.3.8)</text>
 <text x="720.0" y="355.3" text-anchor="middle" font-size="10">CycloneDX SBOM of the same module fed to Evidence</text>
-<text x="720.0" y="369.3" text-anchor="middle" font-size="10">themis-intake binary (built from the Themis repo, pinned harness dep)</text>
+<text x="720.0" y="369.3" text-anchor="middle" font-size="10">themis-intake (Themis repo, harness pinned at 331d326)</text>
 <line x1="500" y1="206" x2="462" y2="206" stroke="#1f2937" stroke-width="1.4" marker-end="url(#ah)"/>
 <text x="481" y="196" text-anchor="middle" font-size="9" fill="#1f2937">loopback</text>
 <text x="490" y="424" text-anchor="middle" font-size="11" fill="#111827" font-style="italic">Same host: the record plane is local to themis-intake; only the Proposal and the reads cross a socket, on loopback.</text>
 </svg></div><div class="cap">Figure 6. One VM, two checkouts, one anchor (rsys@6), three keys. The contract pins the interface; the data is live.</div>
 <h3>7.1 Host-act order (D-I-8)</h3>
 <ol>
-<li><strong>Themis side:</strong> auth required on Governance and Registry; three keys issued with <code>authadmin</code>; deployed commit checked against <code>contract.json</code>; demo Finding established through the pipeline (fixture feed if OSV is unreachable).</li>
-<li><strong>Harness side:</strong> W-M1..W-M3 and the module rename landed and proven hermetically; rsys@6 minted on the host from the host's tree; opened and validated; rsys@5 withdrawn; demo execution.</li>
-<li><strong>Decision side:</strong> operator raises through <code>themis-intake</code>; decider accepts; no <code>dev:</code> witness.</li>
+<li><strong>Themis side</strong> (sequence §2–§4): both trees at their governed commits with no unpushed host act; deployed commit <code>b4dfaf0</code> and both spec hashes equal <code>contract.json</code>; estate up with migration 000014; three keys with <code>authadmin</code> — <code>read</code> (harness door), <code>product:&lt;PID&gt;</code> (operator), <code>admin</code> (decider); the read key must get 403 on a commission; the Finding born through Evidence → Knowledge → Governance from a CycloneDX SBOM of <code>demo-xtext-app</code> (local OSV stub only if <code>api.osv.dev</code> is unreachable, recorded as such).</li>
+<li><strong>Harness side</strong> (sequence §5–§6, §8, §10): the candidate <code>rsys6.proposed.json</code> re-derived on the host — every pin equal to the host's tree, ceiling bytes equal, <code>constitution.state</code> equal to the running binary's, admission refused while unregistered; Governance act 1: decision record <code>rel-anchor-rsys-6</code>, registry entry, <code>rsys@6</code> ACTIVE, restart, admission <code>&lt;nil&gt;</code>; the walk under it; Governance act 2, only after the walk COMPLETED and a Position exists: <code>rsys@5</code> WITHDRAWN.</li>
+<li><strong>Decision side</strong> (sequence §7, §9): the operator commissions before the walk (commission id into <code>origin:commission</code>), then raises through <code>themis-intake</code> with the operator key; the decider accepts with the admin key; no <code>dev:</code> witness anywhere in the Finding; hostile twins run live (wrong trust class 400, read key 403, wrong seq refused). Evidence tarball and the Governance-act patch bundle come back (the host cannot push); Addendum G, VM procedure rows, matrix flips, reviews and archive follow on the laptop.</li>
 </ol>
 
 <h2>8. Deliberately out of scope</h2>
@@ -569,15 +570,15 @@ They meet at exactly two doors: a <em>read door</em> (the harness reads a projec
 
 <h2>9. Milestones to reach the demo</h2>
 <table>
-<tr><th>Milestone</th><th>Repo</th><th>Lands</th></tr>
-<tr><td>I-M0</td><td>harness</td><td>Module rename to <code>github.com/tofchaliss/themis-ai-runtime/src/harness</code>; constitution hashes asserted unchanged</td></tr>
-<tr><td>W-M1</td><td>harness</td><td>Sink-enforced class→writer invariant folded into the L6 constitution hash</td></tr>
-<tr><td>W-M2</td><td>harness</td><td>L5 emission handle; full-machine <code>l5-transition</code>; two-form <code>l5-op</code>; AST wall</td></tr>
-<tr><td>I-M1</td><td>harness</td><td>HTTP read seam with projection; <code>themis_contract</code>; registry v6 uuid scope; <code>remediate-dependency@4</code></td></tr>
-<tr><td>I-M2</td><td>harness</td><td>Real five-link record fixture with provenance metadata</td></tr>
-<tr><td>I-M3</td><td>Themis</td><td>EDR + phase3 change; evidence on proposals; <code>adapters/harness</code> with intake and five-link replay; <code>cmd/themis-intake</code>; walls; fixture tests</td></tr>
-<tr><td>I-M4</td><td>harness</td><td><code>src/themis</code> dissolved; Wall 1 rewritten</td></tr>
-<tr><td>I-M5</td><td>host</td><td>Keys, Finding via pipeline, single rsys@6 mint, demo execution, two human acts, Addendum G, reviews, archive</td></tr>
+<tr><th>Milestone</th><th>Repo</th><th>Lands</th><th>State (2026-09-27)</th></tr>
+<tr><td>I-M0</td><td>harness</td><td>Module rename to <code>github.com/tofchaliss/themis-ai-runtime/src/harness</code>; constitution hashes asserted unchanged</td><td>landed <code>3189b29</code></td></tr>
+<tr><td>W-M1</td><td>harness</td><td>Sink-enforced class→writer invariant folded into the L6 constitution hash; L6 → <code>1df0e285…</code>, L7 unchanged</td><td>landed <code>58697c0</code>, <code>ceafc9c</code></td></tr>
+<tr><td>W-M2</td><td>harness</td><td>L5 emission handle; full-machine <code>l5-transition</code>; two-form <code>l5-op</code>; AST wall</td><td>landed <code>c486bd5</code></td></tr>
+<tr><td>I-M1</td><td>harness</td><td>HTTP read seam with projection; <code>themis_contract</code>; <code>uuid</code> grant scope (registry-v5 unchanged); <code>remediate-dependency@4</code>; decision records bound at both doors</td><td>landed <code>4f1ee71</code></td></tr>
+<tr><td>I-M2</td><td>harness</td><td>Real five-link record fixture with provenance metadata</td><td>landed <code>5ea73d9</code></td></tr>
+<tr><td>I-M3</td><td>Themis</td><td>EDR + phase3 change; evidence on proposals; <code>adapters/harness</code> with intake and five-link replay; <code>cmd/themis-intake</code>; walls; fixture tests; commission door (D-C-1..6)</td><td>landed <code>1414997</code> + <code>b4dfaf0</code> (three walls as tests, delegation decoder fix); <code>make check</code> green</td></tr>
+<tr><td>I-M4</td><td>harness</td><td><code>src/themis</code> dissolved; Wall 1 rewritten</td><td>landed <code>331d326</code>; contract re-pinned <code>d977720</code>, <code>1e8d948</code></td></tr>
+<tr><td>I-M5</td><td>host</td><td>Keys, Finding via pipeline, single rsys@6 mint, demo execution, two human acts, Addendum G, reviews, archive</td><td>prepared <code>dae55bf</code>: <code>rsys6-host-sequence.md</code>, candidate <code>795b364a…</code> (inert); host act pending</td></tr>
 </table>
 <p class="meta">Source: <code>docs/demo/themis-demo-architecture.html</code> (generated); decisions in <code>openspec/changes/{themis-v0,l5-witness-events,themis-integration}/design.md</code>.</p>
 </body></html>

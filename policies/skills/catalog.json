@@ -70,6 +70,16 @@
    "steward": "security-engineering",
    "decision_ref": "reg-skill-investigate-cve-2",
    "decision_sha256": "37ce3ccc9dc653691a81ac3e42b390b4216b75737bccba71187925c6387951cb"
+  },
+  {
+   "name": "remediate-dependency",
+   "version": 6,
+   "composition_sha256": "a797261e68323ae8050c604269746decc7dde9ca422150c73da5c9a3a6c1618a",
+   "manifest_path": "remediate-dependency-6/skill.json",
+   "state": "active",
+   "steward": "security-engineering",
+   "decision_ref": "reg-skill-remediate-dependency-6",
+   "decision_sha256": "73e6f857635e467848ff9326886613dfc20a943583db57bd9ba7c21cc046d9ff"
   }
  ]
 }

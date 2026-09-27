@@ -403,8 +403,17 @@ now RATIFIED):
 - Full hermetic sweep green (`go test ./... -skip Live`); evidence tools
   build with `GOWORK=off`; both constitution pins asserted unchanged.
 
+## Gate 1 — P-M2b (D-P-7: completion is capability-only, 2026-09-27)
+- First host gate: gpt-oss:20b did the ANALYZE work then wrote "ANALYZE
+  phase complete." as prose — no `declare_done` — and exhausted; qwen
+  called `declare_done` (positive control); cyberpal20b-v3 emits a JSON
+  template, no tool calls (compatibility evidence). L1 `phases.md` now
+  states the mechanism; `remediate-dependency@6` names the capability
+  everywhere; `rsys@7` candidate `a5266c52…` admits `@6` only. Gate to be
+  rerun on the host before the act.
+
 ## Milestone log
-- [x] P-M1, P-M2 — green 2026-09-27
+- [x] P-M1, P-M2, P-M2b — green 2026-09-27
 - [ ] P-M3 — host gate and act (owner)
 - [ ] I-M5 — prepared 2026-09-27; host act pending (owner)
 - [x] I-M4 — green 2026-09-26 (integration suite; full hermetic harness; evidence tools)

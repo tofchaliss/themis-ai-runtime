@@ -11,7 +11,7 @@ import (
 	"github.com/tofchaliss/themis-ai-runtime/src/harness/state"
 )
 
-// D-P-1/D-P-2 over a real walk of remediate-dependency@5: every phase
+// D-P-1/D-P-2 over a real walk of remediate-dependency@6: every phase
 // entry's recorded l2-delivery payload contains, byte-exact, the
 // phase-state re-derived from the record as it stood at that seq; the
 // capabilities equal the narrowed grant; `completed` is the ordered
@@ -22,11 +22,11 @@ func TestPhaseStateIsDerivedFromTheRecordByteExact(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ceiling, err := orchestration.LoadWorkflowCeiling(filepath.Join(w.root, "policies/skills/remediate-dependency-5/ceiling.json"))
+	ceiling, err := orchestration.LoadWorkflowCeiling(filepath.Join(w.root, "policies/skills/remediate-dependency-6/ceiling.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	wf, err := orchestration.LoadWorkflow(filepath.Join(w.root, "policies/skills/remediate-dependency-5/workflow.json"), ceiling)
+	wf, err := orchestration.LoadWorkflow(filepath.Join(w.root, "policies/skills/remediate-dependency-6/workflow.json"), ceiling)
 	if err != nil {
 		t.Fatal(err)
 	}

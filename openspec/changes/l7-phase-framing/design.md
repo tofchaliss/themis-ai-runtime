@@ -105,7 +105,7 @@ contract hash), `skills: [@5]` (amended 2026-09-27 from `[@1, @2, @5]`:
 `@1`/`@2` are not merely superseded, they are known Gather refusals
 under D-P-1; an allowlist that admits artifacts guaranteed to fail
 weakens the meaning of "allowed" — registry = history + current,
-allowlist = only what composes). Candidate `97599c96…`. It is the first anchor whose
+allowlist = only what composes). Candidate `97599c96…`, then `a5266c52…` after D-P-7 (`@6`). It is the first anchor whose
 allowlist drops `remediate-dependency@4` because the composition no
 longer satisfies the phase-framing contract — an anchor admission
 decision, NOT a withdrawal. No L7 constitution change: `constitution.
@@ -164,7 +164,34 @@ Rejected: rewording `search_code` to suit one model's call (a registry
 amendment on no evidence of a defective contract); ignoring the denial
 (every denial in a record is classified).
 
+## D-P-7 — Phase completion is capability-only (LOCKED 2026-09-27, owner: option 1)
+
+> A phase completes only when the model calls the `declare_done`
+> capability; model text such as "ANALYZE phase complete." is ordinary
+> output and cannot cause a transition. The only completion path is
+> `declare_done` → L4 authorization → L7 `signal:phase-completion-requested`.
+
+Evidence: the host D-P-5 gate capture (`/tmp/cap5-gpt-oss`, turn 5):
+gpt-oss:20b reasoned correctly, then wrote "ANALYZE phase complete." as
+prose and never called the capability; turns 6–8 "No changes made.",
+empty. A different failure mode from Q-P-1 (orientation): the model
+knew its phase and did the work.
+
+Landed: (1) L1 `phases.md` gains the mechanism sentence — a harness
+control invariant, not a skill procedure; (2) `remediate-dependency@6`
+= `@5` with every completion instruction naming `declare_done` (contract,
+workflow, ceiling, grant bytes identical); `@5` stays active as history;
+`rsys@7` admits `@6` only (candidate re-derived: `a5266c52…`); (3) the
+capture world's mirror carries a real `require` line so the gate
+exercises the demo shape (test fixture, not architecture); (4) the gate
+is rerun before any mint. qwen2.5:7b's `declare_done` call under `@5` is
+the positive control that the capability is usable.
+
+Rejected: procedure wording only (the ambiguity is a harness semantic,
+not this skill's); a prose parser in the loop (model output as a control
+channel — Day-0).
+
 ## Grill state (2026-09-27)
-Q-P-1..6 LOCKED and CLOSED (Q-P-6 classified from the host line). No architecture is opened from the denial. Implementation is
+Q-P-1..7 LOCKED and CLOSED (Q-P-6 classified from the host line; Q-P-7 from the first gate capture). No architecture is opened from the denial. Implementation is
 P-M1..P-M3 in `tasks.md`.
 

@@ -10,7 +10,7 @@
  "execution_ceiling": "fd8fcdc19e23d2833e2efb5c5323d1b68b16b647826e4baf88d430e31b696f13",
  "instruction_policy": "2cfe5f336ba77a251cd2da2f0fc9ec5cd8a93de49f4aa5b7ea9a537e51324485",
  "instruction_root_safety": "2accb7bfe3043617be1d82e98fe28d06a69dcfe559fd8b5b1a98a7bf103b9f28",
- "instruction_root_system": "2377bcd81eb561cfd52e3f2877ed17f5c2858e9fde9616988d48385b5dc44946",
+ "instruction_root_system": "bab56f4aeef9c91c2fa366ddfa3ca71f47752cda2b09eb7cab7c11603a48e358",
  "instruction_root_themis": "c6efa6aa3d114981b01d318342d6315eaa75285855b3f4cd8cc8904201d3659b",
  "model_registry": "absent",
  "models": [
@@ -20,9 +20,9 @@
  ],
  "name": "rsys",
  "regression_set_registry": "d5fe3e245a37d3d2fda9b459a3e3f6e49ec095840caebdd13fcd68e741b7f09c",
- "skill_catalog": "62a05ac5b947a479b8c5745b27fa1cc8408710c610ad6fa5db812f9588b076b0",
+ "skill_catalog": "3a23b23f3f3bc26281413c9abf04da431844a81806fd445831bba73fa0b02067",
  "skills": [
-  "remediate-dependency@5"
+  "remediate-dependency@6"
  ],
  "themis_contract": "c6a95f49590fba5276bcda86246e8dc70e0661541c6046af57cfa38c7e675b3a",
  "tool_registry": "7c489f9941884a7d1cf0fde0624f4ea040e0045135867e9a523d49da34d72902",

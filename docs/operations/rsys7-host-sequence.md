@@ -4,7 +4,7 @@ Delta page over `rsys6-host-sequence.md`: the host already carries the
 Themis estate, the three keys, the demo Finding, and `rsys@6` ACTIVE
 (act `f9b2c80` on the host). `rsys@7` carries the L7 phase-framing
 amendment (`openspec/changes/l7-phase-framing/`, D-P-1..6): the L1
-phase rule, the derived `phase-state` slot, `remediate-dependency@5`.
+phase rule, the derived `phase-state` slot, capability-only completion (D-P-7), `remediate-dependency@6`.
 It is the deployment under which I-M5 steps 7–11 resume. Same rules:
 `$REPO=/opt/themis/themis-ai-runtime`, `$THEMIS=/opt/themis/themis-core`,
 `$DEPLOY=/srv/themis/rsys`; the two Governance acts are the owner's;
@@ -12,12 +12,12 @@ the host cannot push.
 
 | Item | Identity |
 |---|---|
-| Candidate anchor `rsys7.proposed.json` | `97599c96…` on the pushed tree with `rsys@6`'s ceiling and models; the host must reproduce it |
-| Delta from `rsys@6` | `deployment_version` 7; `instruction_root_system` `2377bcd8…` (adds `phases.md`); `skill_catalog` `62a05ac5…`; third bundle's `context_contract` `28e91112…` (`@5` declares `phase-state`); `skills: [@5]` (owner, 2026-09-27: a clean allowlist — no entry that is a known Gather refusal) |
+| Candidate anchor `rsys7.proposed.json` | `a5266c52…` on the pushed tree with `rsys@6`'s ceiling and models; the host must reproduce it |
+| Delta from `rsys@6` | `deployment_version` 7; `instruction_root_system` `bab56f4a…` (adds `phases.md` with the D-P-7 completion sentence); `skill_catalog` `3a23b23f…`; third bundle's `context_contract` `28e91112…` (`@6` declares `phase-state`); `skills: [@6]` (owner, 2026-09-27: a clean allowlist — no entry that is a known Gather refusal) |
 | Unchanged | both constitution pins; `themis_contract` `c6a95f49…`; registry-v5; ceiling; models |
-| `remediate-dependency@5` composition | `12463c8f…` (the value the commission carries) |
+| `remediate-dependency@6` composition | `a797261e…` (the value the commission carries) |
 
-`@1`..`@4` and `investigate-cve@1` stay in the catalog as history and
+`@1`..`@5` and `investigate-cve@1` stay in the catalog as history and
 are not admitted: under D-P-1 their contracts lack `phase-state`, so
 admitting them would admit known Gather refusals (owner, D-P-4
 amendment). `rsys@6` stays the authoritative evidence source for the
@@ -30,8 +30,8 @@ reclassified because `rsys@7` fixes the framing.
 cd $REPO && git pull -q --no-rebase && git log --oneline -4
 # expect: the merge of origin/main (carrying P-M1/P-M2) above f9b2c80 "Governance act: rsys@6 ACTIVE (I-M5)"
 git status --short                                        # expect: clean
-scripts/themis-status | grep -E "l6 |l7 |rsys@6|remediate-dependency@5|rsys7"
-# expect: l6 1df0e285…, l7 008be050…; rsys@6 active decision=rel-anchor-rsys-6; @5 active; rsys7.proposed.json inert
+scripts/themis-status | grep -E "l6 |l7 |rsys@6|remediate-dependency@6|rsys7"
+# expect: l6 1df0e285…, l7 008be050…; rsys@6 active decision=rel-anchor-rsys-6; @6 active; rsys7.proposed.json inert
 ```
 
 ## 2. The D-P-5 gate — three captures under the test anchor (no governance effect)
@@ -40,7 +40,7 @@ scripts/themis-status | grep -E "l6 |l7 |rsys@6|remediate-dependency@5|rsys7"
 cd $REPO/src/harness
 for m in gpt-oss:20b qwen2.5:7b cyberpal20b-v3; do
   d=/tmp/cap5-${m%%:*}; rm -rf "$d"; mkdir -p "$d"
-  LIVECAPTURE_DIR="$d" LIVECAPTURE_MODEL="$m" LIVECAPTURE_SKILL=remediate-dependency@5 \
+  LIVECAPTURE_DIR="$d" LIVECAPTURE_MODEL="$m" LIVECAPTURE_SKILL=remediate-dependency@6 \
     go test -count=1 -run 'TestLiveCapture$' -v ./integration/ 2>&1 | grep -E "result:|workflow-transition|l10-verification|artifact-bound" | cut -c1-160
 done
 ```
@@ -67,7 +67,7 @@ Same shape as act 1, with `7`, decision `rel-anchor-rsys-7`:
 
 ```bash
 cd $REPO
-export ANCHOR7=97599c9611b314ba3b07ae68a8df52e668263fd7947e275126806dbe4e145f58   # replace with the host's <sha> if skills differ
+export ANCHOR7=a5266c52398ea3ffcb7d25cd791320755b18f8a750e1edb285391395572fa7a4   # replace with the host's <sha> if skills differ
 cp policies/deployment/rsys7.proposed.json policies/deployment/rsys7.json
 cat >| policies/decisions/rel-anchor-rsys-7.json <<'JSON'
 {
@@ -76,10 +76,10 @@ cat >| policies/decisions/rel-anchor-rsys-7.json <<'JSON'
  "target": {
   "name": "rsys",
   "version": 7,
-  "hash": "97599c9611b314ba3b07ae68a8df52e668263fd7947e275126806dbe4e145f58"
+  "hash": "a5266c52398ea3ffcb7d25cd791320755b18f8a750e1edb285391395572fa7a4"
  },
  "evidence": [],
- "rationale": "rsys@7 minted on the host for the L7 phase-framing amendment (openspec/changes/l7-phase-framing, D-P-1..6): the L1 phase rule, the derived phase-state slot, skills [remediate-dependency@5] only — a clean allowlist: @1..@4 remain catalog history and cannot compose under D-P-1 (not a withdrawal). Everything else inherited from rsys@6. Gate: gpt-oss:20b COMPLETED remediate-dependency@5 under the test anchor on this host before the act.",
+ "rationale": "rsys@7 minted on the host for the L7 phase-framing amendment (openspec/changes/l7-phase-framing, D-P-1..6): the L1 phase rule, the derived phase-state slot, capability-only completion (D-P-7), skills [remediate-dependency@6] only — a clean allowlist: @1..@5 remain catalog history and cannot compose under D-P-1 (not a withdrawal). Everything else inherited from rsys@6. Gate: gpt-oss:20b COMPLETED remediate-dependency@6 under the test anchor on this host before the act.",
  "decided_at": "2026-09-27",
  "actor": {
   "kind": "commit",
@@ -106,22 +106,22 @@ cd src/harness && go run /tmp/rsys7check.go "$REPO" "$DEPLOY" | tail -1        #
 on. Withdrawals of `rsys@5` and `rsys@6` are separate acts after a
 Position exists under `rsys@7` (page 6 §10 shape).
 
-## 5. I-M5 steps 7–11 under `rsys@7`, skill `@5`
+## 5. I-M5 steps 7–11 under `rsys@7`, skill `@6`
 
 Exactly `rsys6-host-sequence.md` §7–§11 with these substitutions:
-`rsys@7` / `$ANCHOR7` / `rsys7.json`; skill `remediate-dependency@5`
+`rsys@7` / `$ANCHOR7` / `rsys7.json`; skill `remediate-dependency@6`
 (the commission's `composition_sha256` comes from the catalog entry for
-version 5); task ids `demo-remediate-0003`…; `-model gpt-oss:20b`. A new
+version 6); task ids `demo-remediate-0003`…; `-model gpt-oss:20b`. A new
 commission is required: the `rsys@6` commission names `rsys@6`'s hash
 and `@4`, and correspondence is equality (D-C-5 §4).
 
 ```bash
-COMP5=$(python3 -c "import json;print([e for e in json.load(open('$REPO/policies/skills/catalog.json'))['entries'] if e['name']=='remediate-dependency' and e['version']==5][0]['composition_sha256'])")
+COMP5=$(python3 -c "import json;print([e for e in json.load(open('$REPO/policies/skills/catalog.json'))['entries'] if e['name']=='remediate-dependency' and e['version']==6][0]['composition_sha256'])")
 export CID7=$(curl -s -H "X-API-Key: $THEMIS_API_KEY_WRITE" -H content-type:application/json "localhost:8083/api/v1/findings/$FID/commissions" \
-  -d "{\"skill\":\"remediate-dependency@5\",\"composition_sha256\":\"$COMP5\",\"anchor\":\"rsys@7\",\"artifact_sha256\":\"$ANCHOR7\",\"rationale\":\"I-M5 demo under the phase-framing amendment\"}" | jq -r .commission_id)
+  -d "{\"skill\":\"remediate-dependency@6\",\"composition_sha256\":\"$COMP5\",\"anchor\":\"rsys@7\",\"artifact_sha256\":\"$ANCHOR7\",\"rationale\":\"I-M5 demo under the phase-framing amendment\"}" | jq -r .commission_id)
 ```
 
-Then instantiate with `-skill remediate-dependency@5 -task demo-remediate-0003 -commission "$CID7" -model gpt-oss:20b`,
+Then instantiate with `-skill remediate-dependency@6 -task demo-remediate-0003 -commission "$CID7" -model gpt-oss:20b`,
 run with `-anchor "$REPO/policies/deployment/rsys7.json" -anchor-sha256 "$ANCHOR7"`,
 and continue with the seq helper, intake, proposal, decision, twins and
 the evidence bundle as written on page 6. The two `rsys@6` FAILED records

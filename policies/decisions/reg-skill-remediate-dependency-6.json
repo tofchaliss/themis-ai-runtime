@@ -1,0 +1,16 @@
+{
+ "id": "reg-skill-remediate-dependency-6",
+ "kind": "registration",
+ "target": {
+  "name": "remediate-dependency",
+  "version": 6,
+  "hash": "a797261e68323ae8050c604269746decc7dde9ca422150c73da5c9a3a6c1618a"
+ },
+ "evidence": [],
+ "rationale": "D-P-7 (openspec/changes/l7-phase-framing, 2026-09-27): phase completion is capability-only. v6 = v5 with every completion instruction naming the declare_done capability (ANALYZE, the non-correspondence exit, REMEDIATE); contract, workflow, ceiling and grant bytes identical to v5. Evidence: the host D-P-5 gate capture in which gpt-oss:20b wrote \"ANALYZE phase complete.\" as prose and never called declare_done. v5 stays active as history; rsys@7 admits v6 only.",
+ "decided_at": "2026-09-27",
+ "actor": {
+  "kind": "commit",
+  "id": "tofchaliss"
+ }
+}

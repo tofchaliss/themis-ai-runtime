@@ -39,8 +39,14 @@ host act is the owner's; no push without the owner's word.
       the D-P-5 gate, act 3, then I-M5 steps 7–11 under `rsys@7`);
       demo document regenerated; matrix and RESUME-HERE updated
 
+## P-M2b — D-P-7 (Class 2) — LANDED 2026-09-27
+- [x] `phases.md` completion sentence; `remediate-dependency@6` +
+      `reg-skill-remediate-dependency-6`; suites on `@6`; capture mirror
+      with a real `require`; candidate re-derived `a5266c52…` (inert);
+      full hermetic sweep green; pins unchanged
+
 ## P-M3 — Host gate and act (Class 4: host)
-- [ ] `TestLiveCapture` with `@5` on the host under the test anchor:
+- [ ] `TestLiveCapture` with `@6` on the host under the test anchor:
       gpt-oss:20b must COMPLETE; qwen2.5:7b and cyberpal20b-v3 captured
       as compatibility evidence (D-P-5); raw turns archived
 - [ ] Governance act 3: `rsys@7` ACTIVE (decision `rel-anchor-rsys-7`);

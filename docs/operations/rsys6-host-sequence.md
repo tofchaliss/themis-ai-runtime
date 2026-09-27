@@ -8,8 +8,10 @@ W-M1 constitution, the `themis_contract` pin and catalog @4, and a
 human decides a Position on a five-link, commissioned execution
 (D-I-5, D-I-6). This page runs on the host from the governed checkout
 at the commit that carries it. `$REPO` is the harness checkout,
-`$THEMIS` the Themis checkout (`/opt/themis`, a sibling of
-`/opt/themis-ai-runtime` — never nested under `src/`), `$DEPLOY` the
+`$THEMIS` the Themis checkout (`/opt/themis/themis-core`, a sibling of
+`/opt/themis/themis-ai-runtime` under the `/opt/themis` parent — the
+repository `themis` is cloned under the directory name `themis-core`;
+never nested under `src/`), `$DEPLOY` the
 deployment root (`/srv/themis/rsys` on this host). Topology: Option A,
 locked 2026-09-27 — the Themis estate runs on THIS VM over loopback;
 the enterprise's separate Themis VM is not on the demo path. **This page stops before every
@@ -47,7 +49,7 @@ the hash is recorded, never predicted.
 ## 0. Identity of this run — record everything this prints
 
 ```bash
-export REPO="/opt/themis-ai-runtime" THEMIS="/opt/themis" DEPLOY="/srv/themis/rsys"   # sibling checkouts (D-I-1 reaffirmed 2026-09-27); never $REPO/src/themis
+export REPO="/opt/themis/themis-ai-runtime" THEMIS="/opt/themis/themis-core" DEPLOY="/srv/themis/rsys"   # siblings under /opt/themis (D-I-1 reaffirmed 2026-09-27); never $REPO/src/themis
 export GIT_BIN="$(command -v git)"
 date -u; uname -a; id -un; go version                     # expect: go1.25.x (Themis needs 1.25)
 ```

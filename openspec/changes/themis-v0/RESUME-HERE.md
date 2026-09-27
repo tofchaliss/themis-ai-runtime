@@ -357,7 +357,8 @@ now RATIFIED):
   and the evidence/patch bundle to bring back.
 - **Topology locked for the host run (owner, 2026-09-27): Option A** —
   the Themis estate on the harness VM over loopback; Themis checkout at
-  `/opt/themis` beside `/opt/themis-ai-runtime`, never under `src/`.
+  `/opt/themis/themis-core` beside `/opt/themis/themis-ai-runtime`
+  (the VM's `/opt/themis` is a parent directory), never under `src/`.
   The two-VM topology is a post-I-M5 grill (D-I-1 amendment; TLS, key
   transport, contract re-pin). Recorded under D-I-1 in
   `themis-integration/design.md`.

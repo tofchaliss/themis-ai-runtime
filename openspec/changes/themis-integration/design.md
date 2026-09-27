@@ -46,8 +46,10 @@ another. For the host run the owner LOCKED Option A: the Themis estate
 (Registry, Evidence, Knowledge, Governance; PostgreSQL; auth) is
 installed on the harness VM and read over loopback, exactly as the
 contract pins (`governance_base_url` `127.0.0.1:8083`). The Themis
-checkout lives BESIDE the harness checkout — `/opt/themis` next to
-`/opt/themis-ai-runtime` — never under `src/themis` (the 2026-09-26
+checkout lives BESIDE the harness checkout under the `/opt/themis`
+parent — `/opt/themis/themis-core` (the `themis` repository cloned under
+that directory name) next to `/opt/themis/themis-ai-runtime` — never
+under `src/themis` (the 2026-09-26
 rule; Wall 1 and a foreign `.git` inside the governed root both forbid
 it). `themis-intake` is built there and runs where the record plane is.
 The second VM is not on the demo path.

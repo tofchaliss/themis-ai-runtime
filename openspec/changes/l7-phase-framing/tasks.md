@@ -26,16 +26,16 @@ host act is the owner's; no push without the owner's word.
       existing `@4` fixtures stay untouched (real records under the old
       loop; Themis intake tests keep reconstructing them)
 
-## P-M2 — remediate-dependency@5, rsys7 candidate, records (Class 2)
+## P-M2 — remediate-dependency@5, rsys7 candidate, records (Class 2) — LANDED 2026-09-27
 - [x] `policies/skills/remediate-dependency-5/`: contract declares
       `phase-state` (required, `[derived]`); phase-scoped procedure
       (D-P-4); workflow/ceiling/grant bytes identical to `@4`
 - [x] Catalog entry `@5` + `reg-skill-remediate-dependency-5` citing this
       grill and the two host records; `@4` stays active
-- [ ] `policies/deployment/rsys7.proposed.json` derived from `rsys6.json`
+- [x] `policies/deployment/rsys7.proposed.json` derived from `rsys6.json`
       + new `instruction_root_system`, `skill_catalog`, the `@5` bundle,
       `skills: [@1, @2, @5]`; parse-verified; admission refused (inert)
-- [ ] `docs/operations/rsys7-host-sequence.md`: delta page (checks,
+- [x] `docs/operations/rsys7-host-sequence.md`: delta page (checks,
       the D-P-5 gate, act 3, then I-M5 steps 7–11 under `rsys@7`);
       demo document regenerated; matrix and RESUME-HERE updated
 

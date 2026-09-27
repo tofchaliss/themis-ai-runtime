@@ -392,7 +392,19 @@ now RATIFIED):
   see `l7-phase-framing/tasks.md`. Owner call at the mint: `rsys@7`
   skills `[@1,@2,@5]` as locked, or `[@5]` (the only composable one).
 
+## Gate 1 — P-M2 (rsys@7 candidate and the host page, 2026-09-27)
+- `rsys7.proposed.json` = `rsys6` bytes + `instruction_root_system`
+  `2377bcd8…`, `skill_catalog` `62a05ac5…`, the `@5` bundle (context
+  contract `28e91112…`), `skills [@1,@2,@5]`: `89b21580…`, parse-verified,
+  admission refused. `docs/operations/rsys7-host-sequence.md` is the
+  delta page: D-P-5 gate (three captures), act 3, then I-M5 §7–§11 under
+  `rsys@7` with `@5` and a NEW commission (correspondence is equality).
+- Full hermetic sweep green (`go test ./... -skip Live`); evidence tools
+  build with `GOWORK=off`; both constitution pins asserted unchanged.
+
 ## Milestone log
+- [x] P-M1, P-M2 — green 2026-09-27
+- [ ] P-M3 — host gate and act (owner)
 - [ ] I-M5 — prepared 2026-09-27; host act pending (owner)
 - [x] I-M4 — green 2026-09-26 (integration suite; full hermetic harness; evidence tools)
 - [x] I-M3 — implemented 2026-09-26 in the Themis repo (all gates green there; commit and pin pending)

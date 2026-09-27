@@ -277,7 +277,7 @@ s.box(500, 70, 440, 330, "", fill="#ecfdf5", stroke="#065f46")
 s.text(720, 94, "Harness (/opt/themis/themis-ai-runtime checkout, themis-run)", fs=11, anchor="middle", bold=True)
 s.box(515, 110, 410, 56, ["Governed root: the checkout at the rsys@6 commit", "policies/ · instructions/ · policies/themis/contract.json"], fill="#fff", fs=10)
 s.box(515, 176, 410, 66, ["Deployment root /srv/themis/rsys", "anchor rsys@6 (ACTIVE) · anchors.json (append-only; rsys@5 withdrawn)", "state/ (record plane) · artifacts/ · provider/ · mirror"], fill="#fff", fs=10)
-s.box(515, 252, 410, 56, ["rsys@6 candidate 795b364a…: constitution.state 1df0e285… (W-M1) · registry-v5 · catalog v2 (@4)", "themis_contract c6a95f49… = sha256(contract.json): URLs, spec hashes, Themis commit b4dfaf0"], fill="#fef3c7", fs=10, stroke="#92400e")
+s.box(515, 252, 410, 56, ["rsys@7 candidate 89b21580…: constitution.state 1df0e285… (W-M1) · registry-v5 · catalog (@5, phase-state slot)", "themis_contract c6a95f49… = sha256(contract.json): URLs, spec hashes, Themis commit b4dfaf0"], fill="#fef3c7", fs=10, stroke="#92400e")
 s.box(515, 318, 410, 68, ["Mirror demo-xtext-app: golang.org/x/text@v0.3.7 (CVE-2022-32149, fixed v0.3.8)", "CycloneDX SBOM of the same module fed to Evidence", "themis-intake built from /opt/themis/themis-core (sibling checkout; harness pinned at 331d326)"], fill="#fff", fs=10)
 s.arrow(500, 206, 462, 206, "loopback", lx=481, ly=196, fs=9)
 s.text(490, 424, "Same host: the record plane is local to themis-intake; only the Proposal and the reads cross a socket, on loopback.", fs=11, anchor="middle", italic=True)
@@ -311,8 +311,8 @@ def fig(key, n, caption):
 
 doc = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>Themis AI Runtime — Demo Architecture and Use Cases</title><style>{css}</style></head><body>
 <h1>Themis AI Runtime — Demo Architecture and Use Cases</h1>
-<p class="meta">Themis at the core, the AI harness as bounded execution infrastructure. Prepared 2026-09-26, regenerated 2026-09-27 with the landed facts, from the locked decision records
-(<code>openspec/changes/themis-v0</code> D-T-1..8, <code>l5-witness-events</code> D-W-1..6, <code>themis-integration</code> D-I-1..9). Status: I-M0..I-M4 landed (harness <code>main</code> <code>1e8d948</code>; Themis <code>feat/harness-integration</code> <code>b4dfaf0</code>, pinning the harness at <code>331d326</code>); I-M5 prepared as <code>docs/operations/rsys6-host-sequence.md</code>; the host act is pending.</p>
+<p class="meta">Themis at the core, the AI harness as bounded execution infrastructure. Prepared 2026-09-26, regenerated 2026-09-27 (phase-framing amendment, rsys@7 candidate) from the locked decision records
+(<code>openspec/changes/themis-v0</code> D-T-1..8, <code>l5-witness-events</code> D-W-1..6, <code>themis-integration</code> D-I-1..9). Status: I-M0..I-M4 landed (harness <code>main</code> <code>1e8d948</code>; Themis <code>feat/harness-integration</code> <code>b4dfaf0</code>, pinning the harness at <code>331d326</code>); I-M5 host run reached step 8 under <code>rsys@6</code> (<code>f9b2c80</code> on the host): two governed FAILED walks exposed the phase-boundary gap, grilled and locked as D-P-1..6 (<code>openspec/changes/l7-phase-framing/</code>); P-M1/P-M2 landed; <code>rsys@7</code> (<code>89b21580…</code>, admits <code>remediate-dependency@5</code>) is the deployment the demo resumes under — <code>docs/operations/rsys7-host-sequence.md</code>.</p>
 
 <div class="callout"><strong>The claim the demo defends.</strong> Themis remains the authority for security truth while the harness remains bounded execution infrastructure.
 A real Finding in Themis is remediated by governed AI execution; the execution is verified and independently reconstructed; a human proposes and a different human decides; the model never touches the decision and the harness never writes security truth.</div>
@@ -339,8 +339,8 @@ They meet at exactly two doors: a <em>read door</em> (the harness reads a projec
 <table>
 <tr><th>UC</th><th>Actor</th><th>Goal</th><th>Enforced by</th><th>Locked in</th></tr>
 <tr><td>UC1</td><td>Operator, Themis pipeline</td><td>A real Finding exists for a real vulnerable Go module (no manual row)</td><td>Evidence → Knowledge → Governance</td><td>D-I-4, D-I-8</td></tr>
-<tr><td>UC2</td><td>Operator</td><td>Commission <code>remediate-dependency@4</code> with finding UUID, dependency, CVE, target version</td><td>L9 instantiation, catalog pin</td><td>D-I-4</td></tr>
-<tr><td>UC3</td><td>Harness, Model</td><td>Execute under rsys@6: read Finding as governed record, edit, report, L10 PASS, seal, egress, bind, COMPLETED</td><td>L1–L11, G1, L5 witnesses</td><td>D-I-3, D-W-2/3</td></tr>
+<tr><td>UC2</td><td>Operator</td><td>Commission <code>remediate-dependency@5</code> with finding UUID, dependency, CVE, target version</td><td>L9 instantiation, catalog pin</td><td>D-I-4</td></tr>
+<tr><td>UC3</td><td>Harness, Model</td><td>Execute under rsys@7: ANALYZE reads the Finding as governed record; REMEDIATE, told its phase by the derived <code>phase-state</code>, edits, reports, L10 PASS, seal, egress, bind, COMPLETED</td><td>L1–L11, G1, L5 witnesses, phase-state (D-P-1..3)</td><td>D-I-3, D-W-2/3</td></tr>
 <tr><td>UC4</td><td>Operator</td><td>Resolve the tuple: anchor registered, five-link production chain, reproducible PASS over egressed bytes; evidence view</td><td><code>themis-intake</code>, <code>intake.Resolve</code></td><td>D-T-1..6, D-W-5</td></tr>
 <tr><td>UC5</td><td>Operator</td><td>Raise a Proposal with immutable <code>harness-execution/v1</code> evidence, trust derived as inferred</td><td>Governance API, Business Verification</td><td>D-I-5</td></tr>
 <tr><td>UC6</td><td>Decider</td><td>Accept → Position vN with decider <code>key:&lt;KeyID&gt;</code></td><td><code>acceptProposal</code>, EDR-SECURITY-01 D10</td><td>D-I-6</td></tr>
@@ -360,7 +360,7 @@ They meet at exactly two doors: a <em>read door</em> (the harness reads a projec
 <table>
 <tr><th>Step</th><th>Command / act</th><th>Visible output</th><th>Durable record</th></tr>
 <tr><td>UC1</td><td><code>vm-verify.sh &lt;release&gt;</code>; <code>GET /findings?release=…&amp;faultline=…</code></td><td>Finding <code>id</code> (UUID), <code>cve: CVE-2022-32149</code>, <code>components[]</code> with <code>pkg:golang/golang.org/x/text@v0.3.7</code>, <code>stage: identified</code>, no positions, no commissions</td><td>Governance DB; runbook provenance (SBOM hash, release id, feed source)</td></tr>
-<tr><td>UC2</td><td><code>themis-instantiate remediate-dependency@4 …</code></td><td>Envelope path; composition hash; grant with <code>themis_scope: [uuid]</code></td><td>Envelope file; L6 CREATED event with governed hashes</td></tr>
+<tr><td>UC2</td><td><code>themis-instantiate remediate-dependency@5 …</code></td><td>Envelope path; composition hash; grant with <code>themis_scope: [uuid]</code></td><td>Envelope file; L6 CREATED event with governed hashes</td></tr>
 <tr><td>UC3</td><td><code>themis-run -deploy /srv/themis/rsys …</code></td><td><code>status=COMPLETED verdict=VERIFIED artifact=sha256:…</code>; audit lines for <code>get_finding authorized</code>, <code>verify_report authorized</code></td><td>events.log: l2-delivery, l4-audit, model-turn, l10-verification PASS, l5-transition ×N, l5-op ×N incl. egress acknowledged, artifact-bound, lifecycle COMPLETED</td></tr>
 <tr><td>UC4</td><td><code>themis-intake --anchor … --task … --seq …</code></td><td>Evidence view (below); <code>production_witness: l5-witnessed</code>; <code>reconstructed_outcome: PASS</code></td><td>None written by Themis at this step; the CLI's rendering is presentation</td></tr>
 <tr><td>UC5</td><td>same command with <code>--stance --rationale</code></td><td><code>proposal_id</code>; evidence echoed back by <code>GET /findings/{{id}}</code> with <code>proposer_kind: human</code>, <code>evidence_trust: inferred</code></td><td><code>finding_proposals</code> row with immutable <code>evidence</code> JSONB</td></tr>
@@ -427,7 +427,9 @@ They meet at exactly two doors: a <em>read door</em> (the harness reads a projec
 <tr><td>I-M2</td><td>harness</td><td>Real five-link record fixture with provenance metadata</td><td>landed <code>5ea73d9</code></td></tr>
 <tr><td>I-M3</td><td>Themis</td><td>EDR + phase3 change; evidence on proposals; <code>adapters/harness</code> with intake and five-link replay; <code>cmd/themis-intake</code>; walls; fixture tests; commission door (D-C-1..6)</td><td>landed <code>1414997</code> + <code>b4dfaf0</code> (three walls as tests, delegation decoder fix); <code>make check</code> green</td></tr>
 <tr><td>I-M4</td><td>harness</td><td><code>src/themis</code> dissolved; Wall 1 rewritten</td><td>landed <code>331d326</code>; contract re-pinned <code>d977720</code>, <code>1e8d948</code></td></tr>
-<tr><td>I-M5</td><td>host</td><td>Keys, Finding via pipeline, single rsys@6 mint, demo execution, two human acts, Addendum G, reviews, archive</td><td>prepared <code>dae55bf</code>: <code>rsys6-host-sequence.md</code>, candidate <code>795b364a…</code> (inert); host act pending</td></tr>
+<tr><td>I-M5</td><td>host</td><td>Keys, Finding via pipeline, rsys@6 mint, demo execution, two human acts, Addendum G, reviews, archive</td><td>steps 1–7 done on the host (keys, Finding CVE-2022-32149, rsys@6 ACTIVE <code>f9b2c80</code>, commission); step 8 produced two governed FAILED walks → the phase-framing finding</td></tr>
+<tr><td>P-M1/P-M2</td><td>harness</td><td>L1 phase rule; derived L2 <code>phase-state</code> slot (Plan ⊆ Contract); <code>remediate-dependency@5</code>; <code>rsys7.proposed.json</code></td><td>landed 2026-09-27; candidate <code>89b21580…</code> inert</td></tr>
+<tr><td>P-M3</td><td>host</td><td>D-P-5 gate (three captures under the test anchor), act 3 <code>rsys@7</code>, then I-M5 steps 7–11 under it</td><td>pending — <code>rsys7-host-sequence.md</code></td></tr>
 </table>
 <p class="meta">Source: <code>docs/demo/themis-demo-architecture.html</code> (generated); decisions in <code>openspec/changes/{{themis-v0,l5-witness-events,themis-integration}}/design.md</code>.</p>
 </body></html>"""

@@ -100,6 +100,9 @@ Branch `feat/harness-integration` in `~/code/themis` (commit only on the owner's
 - [x] Full hermetic harness suite green; evidence tools build
 
 ## I-M5 — Host acts, demo, reviews, archive (D-I-8, D-W-4; Class 4: host)
+Prepared 2026-09-27 (laptop side, all inert): `docs/operations/rsys6-host-sequence.md`;
+`policies/deployment/rsys6.proposed.json` (candidate `33217e06…`, parse-verified, admission refused);
+contract re-pinned to Themis `1414997` (`d977720`); Themis `go.mod` pins the harness at `331d326`.
 - [ ] Themis side: keys (three holders), auth required, contract commit
       check, demo module + SBOM + Finding through the pipeline (fixture
       feed if needed); provenance recorded

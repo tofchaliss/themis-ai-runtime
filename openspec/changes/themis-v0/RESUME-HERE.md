@@ -332,7 +332,40 @@ now RATIFIED):
   is the HTTP read door; the two surviving walls are tests in
   `src/harness/integration`.
 
+## Gate 1 — I-M5 prepared (2026-09-27; the host act itself is the owner's)
+- **Both repositories published and cross-pinned:** harness `main`
+  `d977720` (I-M4 `331d326` + the contract re-pin); Themis
+  `feat/harness-integration` `1414997` (I-M3 as one commit, 109 files
+  incl. the 75 fixture copies) requiring the harness at
+  `v0.0.0-20260926130325-331d326a4172`. Themis `make check` green with
+  the workspace off; coverage bars restored (domain 100, app 100, http
+  95.5) with tests over the commission door.
+- **Contract re-pinned** to Themis `1414997` (`67c458e4…`); only the
+  Governance spec hash moved (additive). Fixtures untouched (synthetic
+  contract).
+- **`rsys6.proposed.json`** is the candidate anchor derived from the
+  pushed tree plus `rsys@5`'s ceiling and models: `33217e06…` on the
+  laptop; parse-verified; admission refused (inert). The binary from
+  `d977720` refuses `rsys5.json` at parse (`themis_contract` not
+  defaulted), so the mint is mandatory. `skills` proposes @1, @2, @4.
+- **`docs/operations/rsys6-host-sequence.md`** carries I-M5 end to end:
+  tree/contract checks, the estate and three key holders, a real Finding
+  (`golang.org/x/text@v0.3.7`, CVE-2022-32149) through the pipeline,
+  candidate re-derivation with the W-M4 constitution check, the two
+  owner acts (rsys@6 ACTIVE; rsys@5 WITHDRAWN after validation),
+  commission → execution → intake → proposal → decision, hostile twins,
+  and the evidence/patch bundle to bring back.
+- **`themis-status`** renders `decision_ref` per anchor and registry
+  entry and the Themis contract line (the stand-in store lines are gone).
+- **Known, not from this work:** Register E `TestLiveWalkProof` fails on
+  the pushed tree — qwen2.5:7b answers no-action in the negative walk,
+  so no denial exists to record; model nondeterminism, test untouched.
+- **Open Themis-side tests** (listed in `themis-commissioning/tasks.md`,
+  `l8-themis-surface/tasks.md`): read key cannot commission; cold replay
+  UC9; refused-delegation record admitted with the refusal visible.
+
 ## Milestone log
+- [ ] I-M5 — prepared 2026-09-27; host act pending (owner)
 - [x] I-M4 — green 2026-09-26 (integration suite; full hermetic harness; evidence tools)
 - [x] I-M3 — implemented 2026-09-26 in the Themis repo (all gates green there; commit and pin pending)
 - [x] I-M2 — green 2026-09-26 (fixture generated and verified; no

@@ -17,4 +17,4 @@ tree and its loaders; the pin moves land with `rsys@6`. LANDED in I-M1
       loader; `ratchet`/`themis-ratchet` forbidden importers now name
       `skills` and `deployment`; no-side-effect test around a comparison
       package; no helper that drafts a door entry from an L11 result
-- [ ] `themis-status` / preflight print `decision_ref` per active entry (deferred to I-M5 host tooling)
+- [x] `themis-status` prints `decision_ref` per anchor and registry entry (2026-09-27; a v2 registry entry without one renders `decision=NONE`); preflight unchanged (it verifies pins, not provenance)

@@ -163,7 +163,8 @@ else:
 for e in ents:
     st=e.get("state","?")
     col="\033[32m" if st=="active" else "\033[33m"
-    print("  %s%-24s\033[0m %s@%s sha=%s steward=%s"%(col,st,e.get("name","?"),e.get("version","?"),str(e.get("artifact_sha256",""))[:16],e.get("steward","?")))
+    dref=e.get("decision_ref"); dtxt=(" decision=%s"%dref) if dref else (" decision=\033[31mNONE\033[0m" if d.get("version",1)>=2 else "")
+    print("  %s%-24s\033[0m %s@%s sha=%s steward=%s%s"%(col,st,e.get("name","?"),e.get("version","?"),str(e.get("artifact_sha256",""))[:16],e.get("steward","?"),dtxt))
 PY
 else
   warn "anchors.json" "absent — admission has no registry to resolve against"
@@ -196,7 +197,8 @@ sm=" ".join("%s=%d"%(k,v) for k,v in sorted(states.items())) or "-"
 print("  %-26s %d entr%s  %s"%(label,len(ents),"y" if len(ents)==1 else "ies",sm))
 for e in ents:
     if isinstance(e,dict) and e.get("name"):
-        print("        %s@%s  %s"%(e["name"],e.get("version","?"),e.get("state","")))
+        dref=e.get("decision_ref"); dtxt=("  decision=%s"%dref) if dref else ""
+        print("        %s@%s  %s%s"%(e["name"],e.get("version","?"),e.get("state",""),dtxt))
 PY
 }
 reg policies/skills/catalog.json          "skills catalog"
@@ -204,8 +206,16 @@ reg policies/verification/contracts.json  "L10 contracts"
 reg policies/ratchet/criteria.json        "L11 criteria"
 reg policies/ratchet/regression-sets.json "L11 regression sets"
 reg policies/delegation/registry.json     "L8 delegation templates"
-reg policies/themis/findings.json         "Themis findings"
-reg policies/themis/products.json         "Themis products"
+if [ -f "$REPO_ROOT/policies/themis/contract.json" ]; then
+  python3 - "$REPO_ROOT/policies/themis/contract.json" <<'PY2'
+import json,sys
+c=json.load(open(sys.argv[1]))
+print("  %-26s commit %s  governance %s"%("Themis contract",c.get("themis_commit","?")[:12],c.get("governance_base_url","?")))
+print("        Findings and Products are read live through the contract-pinned door (D-I-3); nothing is stored here.")
+PY2
+else
+  bad "Themis contract" "missing — an anchor may only declare themis_contract: absent"
+fi
 
 # ------------------------------------------------------ artifact pins
 sec "Artifact pins (diagnostic display only — not an anchor)"

@@ -105,4 +105,34 @@ mail with the model's report "for context" (model output would leave
 the sandbox as a message from Themis); per-user subscriptions (a
 separate product capability with its own grill).
 
-## Q-N-6 — Credentials and the acting key holder (OPEN)
+## D-N-6 — Credentials and acting identities (LOCKED 2026-09-27, owner: option 1, HMAC as transport variant)
+
+> Outbound credentials are environment-referenced secrets owned by the
+> Communication deployment; inbound CI callbacks use a dedicated
+> `delivery:callback` authorization scope. Jira, SMTP and CI trigger
+> credentials are referenced by destination name and never persisted
+> in Themis data or Governance records. The callback endpoint accepts
+> only `delivery:callback`. Governance write endpoints no longer treat
+> every non-read key as universally write-capable; they explicitly
+> require `admin` or `product:<id>`. Where a CI system cannot present a
+> Themis key, an HMAC-authenticated callback may be used as a transport
+> variant, its secret held in Communication's environment. External
+> actions carry service identities, not human decision-maker credentials.
+
+Scope table after this decision: `read` → reads; `product:<id>` →
+permitted product-scoped Governance writes; `admin` → administrative
+Governance writes; `delivery:callback` → the Communication callback
+only, never a Governance write. This is the closure of the row-14 gap's
+first half ("any non-read key → any write"). The second half —
+confining `product:<id>` to that product's Findings — stays the Themis
+security EDR item and is a prerequisite of N-M0 below. HMAC is
+transport authentication, not an alternative authorization
+architecture: the callback still enters only through the Communication
+boundary. Rejected: reusing an `admin` key for CI (a build system would
+hold the decider's power).
+
+## Grill state (2026-09-27)
+Q-N-1..6 LOCKED. Implementation is Themis-side under a new EDR
+(`EDR-DELIVERY-01`) and a `phase3-outward-actions` change; the harness
+tree is untouched by design (D-N-1). Milestones in `tasks.md`.
+

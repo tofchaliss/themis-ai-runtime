@@ -1,0 +1,49 @@
+{
+ "constitution": {
+  "orchestration": "008be050c29740ce8d863b3f7ae858fa6b63eb29ad853d563b358e2156662370",
+  "state": "1df0e28548a48b373e779dce8f00ea906c7f98afc009d573afccdf1009d77685"
+ },
+ "contract_registry": "4b3e043ef2a37a3acaa7257d9044246d4d134c8e71d3e2d317c8f743899146aa",
+ "criteria_registry": "d739002c16d9286712b8f7230f632de9faf66de5ba0564f19a614f171d13d2a4",
+ "delegation_template_registry": "82843f6aa671d45d686f0feea6a61d1cbec8765a7bb51c79740df9d382993997",
+ "deployment_version": 7,
+ "execution_ceiling": "fd8fcdc19e23d2833e2efb5c5323d1b68b16b647826e4baf88d430e31b696f13",
+ "instruction_policy": "2cfe5f336ba77a251cd2da2f0fc9ec5cd8a93de49f4aa5b7ea9a537e51324485",
+ "instruction_root_safety": "2accb7bfe3043617be1d82e98fe28d06a69dcfe559fd8b5b1a98a7bf103b9f28",
+ "instruction_root_system": "2377bcd81eb561cfd52e3f2877ed17f5c2858e9fde9616988d48385b5dc44946",
+ "instruction_root_themis": "c6efa6aa3d114981b01d318342d6315eaa75285855b3f4cd8cc8904201d3659b",
+ "model_registry": "absent",
+ "models": [
+  "qwen2.5:7b",
+  "gpt-oss:20b",
+  "cyberpal20b-v3"
+ ],
+ "name": "rsys",
+ "regression_set_registry": "d5fe3e245a37d3d2fda9b459a3e3f6e49ec095840caebdd13fcd68e741b7f09c",
+ "skill_catalog": "62a05ac5b947a479b8c5745b27fa1cc8408710c610ad6fa5db812f9588b076b0",
+ "skills": [
+  "remediate-dependency@1",
+  "remediate-dependency@2",
+  "remediate-dependency@5"
+ ],
+ "themis_contract": "c6a95f49590fba5276bcda86246e8dc70e0661541c6046af57cfa38c7e675b3a",
+ "tool_registry": "7c489f9941884a7d1cf0fde0624f4ea040e0045135867e9a523d49da34d72902",
+ "version": 1,
+ "workflows": [
+  {
+   "context_contract": "dfb4ade9c5fe1f2d6f8b285ec9099c407842fa16f7a48f87cea051e9d4ed8f96",
+   "workflow": "c10826f24c2612bb7c3135bec152f40a1b7941ffe09d5f735ebbaac536c731a9",
+   "workflow_ceiling": "06bf8c0a9f2c06f7297dcdab90f7b12618ad72224ad288e712c391012cbf0f0f"
+  },
+  {
+   "context_contract": "dfb4ade9c5fe1f2d6f8b285ec9099c407842fa16f7a48f87cea051e9d4ed8f96",
+   "workflow": "b87481573d73089459b5e59ac615edb6d5ac02faaa63b84960fbb7347159b0d5",
+   "workflow_ceiling": "44bba701c152d091e0185ca5eebf0ed4bea82b9b6290e39dbde715d41f2e5c6e"
+  },
+  {
+   "context_contract": "28e911120788abb1f41895e35c68e7cf1541bba2a0f8a0f3d72ed4867ba0f750",
+   "workflow": "32f66aceb34b117f35f66a5abff989fa3abbe6621fa476922236a9a0bca61b4f",
+   "workflow_ceiling": "5321e6d99dbb25b44e68d3b15faaa075deb7d076cc7380e9d9663662faa7c84f"
+  }
+ ]
+}

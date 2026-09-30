@@ -48,6 +48,9 @@ func TestLiveExecutionProof(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// W-M2: the environment must carry a witness handle before any
+	// governed work or seal; the record holds no gap.
+	mustWitness(t, env)
 	ws := env.Workspace()
 	tr := env.Trace()
 	if tr.Binary.Digest == "" || tr.Provider.ProcessIdentity != IdentityInherited {

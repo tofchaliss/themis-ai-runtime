@@ -159,8 +159,186 @@ auto-resolving F (resolution is a decision about exposure, not about the
 existence of a fix); the link typed into Jira (Jira is a projection; the
 authoritative relationship lives in Themis).
 
-## Grill state (2026-09-27)
-Q-N-1..7 LOCKED. Implementation is Themis-side under a new EDR
-(`EDR-DELIVERY-01`) and a `phase3-outward-actions` change; the harness
-tree is untouched by design (D-N-1). Milestones in `tasks.md`.
+## The remediation cycle (D-N-8..D-N-12, owner feedback 2026-10-01)
+
+The owner restated the workflow end to end: an SBOM is uploaded to
+Themis under Product / Project / Release / SBOM id; Themis lists its
+vulnerabilities; a Jira ticket tracks the fix; a Jenkins build produces
+a new image and a new SBOM uploaded to the same Product / Project /
+Release under a new SBOM id; Themis compares new against previous
+(closed vs still open) and updates the ticket; the result goes out by
+mail; the loop repeats until the vulnerabilities are fixed or a
+configured maximum number of rebuilds is reached, after which it stops
+and tells a person.
+
+D-N-1..7 already decide who may act and what an outward action carries.
+D-N-8..D-N-12 decide the shape of the LOOP those actions form. They are
+**documentation only**: no code, API, schema or generated handler
+changes with them, and nothing here is implemented yet.
+
+## D-N-8 — Valuation-complete gate and the Themis→harness notification (owner feedback 2026-10-01)
+
+> Outward actions fire only after Themis has finished evaluating the
+> uploaded SBOM. SBOM receipt is not the trigger; "release posture
+> evaluated" is. Jira creation and update, the CI rebuild intent and
+> mail are all held until Themis publishes that signal for the Release.
+> Themis owns and operates the notification: a Themis-side pub/sub
+> seam the harness MAY subscribe to. The harness is a subscriber only
+> — it still calls no Jira, no CI and no mail relay, and it still
+> initiates no Governance act.
+
+Ingestion is asynchronous: a document can be stored long before its
+vulnerabilities are known. A ticket written from a half-evaluated SBOM
+lists a subset and reads as truth, and a rebuild triggered on receipt
+rebuilds against nothing. Gating on evaluation makes every outward
+payload a projection of a settled posture, which is what D-N-1 already
+requires of Jira and mail.
+
+The notification is a new cross-repository seam and is therefore the
+one genuinely undecided thing in this section: event name(s), delivery
+semantics (at-least-once assumed), transport, subscriber
+authentication and whether it lives in Communication or Governance are
+NOT decided here. They need their own EDR and API change before any
+implementation. Until then the existing Governance events (notably
+`finding_opened`) remain the effective trigger in code — this section
+describes the target design, not current behaviour.
+
+What does not change: the harness read door stays the only
+harness-facing Themis seam for data, the harness stays networkless for
+external systems, and subscribing to a notification is not authority
+(D-N-1).
+
+## D-N-9 — Jira ticket semantics (owner feedback 2026-10-01)
+
+> One Jira ticket per Release, not one per Finding. The ticket body
+> carries the severity counts for Critical, High, Medium and Low, and
+> lists the CVE ids for **Critical and High only**; Medium and Low are
+> represented by their counts, with no CVE list. The ticket is updated
+> in place across the cycle's attempts — updates are idempotent, keyed
+> by delivery intent id and attempt index. Jira remains a projection
+> of Themis facts and never a source of security truth; no Themis
+> state follows from a Jira transition.
+
+This supersedes "a Jira defect per Finding" in the original owner ask
+(see `proposal.md`) for the remediation cycle: the unit a rebuild
+addresses is a Release, so the unit a tracking ticket addresses is a
+Release. Listing every CVE id at every severity makes the ticket
+unreadable at estate scale, and the two severities a rebuild is
+actually judged on are Critical and High.
+
+## D-N-10 — `ci_rebuild`, a new delivery kind (APPROVED 2026-10-01, owner)
+
+> A fourth delivery kind joins `jira_issue`, `ci_build` and `email`
+> (D-N-3): `ci_rebuild`. It is a policy-controlled rebuild of a
+> Release that does NOT require a fresh human proposal acceptance —
+> the cycle's authority comes from the policy that started it, bounded
+> by lineage and knobs. Its snapshot carries the destination pipeline
+> name, the Product / Project / Release identity, the prior SBOM id,
+> the targeted Finding set and the attempt index — and no credential,
+> no key, no model output. The callback MUST carry the new SBOM id and
+> the image digest alongside `{intent_id, build_id, git_ref}`. The
+> callback is governed-external evidence on the intent and changes no
+> Finding state: only the evaluation of the new SBOM can establish
+> that a fault is absent (D-N-4, D-N-7). Asserted trust — a build
+> system claiming a fix — is refused.
+
+`ci_build` (D-N-4) is unchanged and keeps its governance-controlled
+path: it carries an accepted change artifact and follows
+`proposal_accepted`. `ci_rebuild` carries no artifact; it asks the
+pipeline to rebuild the Release as configured, which is why it can be
+policy-gated rather than proposal-gated. The two must not be
+conflated: one materializes a human-accepted change, the other repeats
+a build.
+
+Approved here means approved as a decision of record. It is not
+implemented, and the knobs below are documentation until the Themis
+milestone that builds them.
+
+## D-N-11 — Loop control and the stop condition (owner feedback 2026-10-01)
+
+> After each `ci_rebuild` callback and the evaluation of the new SBOM,
+> Themis compares the new SBOM against the previous one for the same
+> Product / Project / Release: which of the targeted vulnerabilities
+> are closed and which are still open. The Jira ticket is updated with
+> that comparison and the mail is sent with it — both AFTER the
+> comparison, never from the callback alone. Success is the targeted
+> set closed, and the loop stops. Otherwise the loop repeats, bounded
+> by a maximum number of rebuild attempts per Release: **default 2**,
+> an operator-configurable policy knob on the Themis side (name and
+> locus to be fixed by the implementing milestone). On exhaustion the
+> loop stops and tells a person — mail to the governed audience plus a
+> Jira update saying the attempts are exhausted. Findings are never
+> auto-resolved: resolution stays a human decision (D-N-7).
+
+Two is deliberately low. An automated rebuild loop that cannot fix a
+Release in two attempts is not going to fix it in ten, and the failure
+mode of a high limit is a pipeline hammering itself while nobody
+reads the mail. The number is a knob precisely so it can rise when the
+loop has a reliability record.
+
+Failure here means "the targeted set is still open", which is an
+outcome, not an error: the attempt is recorded, the Finding stays as
+it is, and the original Release stays affected (D-N-7).
+
+## D-N-12 — Ownership recap and the invariants this cycle does not touch
+
+> **Themis owns** security truth and every outward effect: SBOM
+> intake and evaluation, the posture and the Findings, the comparison
+> of new against previous SBOM, the delivery intents and workers,
+> Jira, CI (`ci_build` and `ci_rebuild`), mail, the loop counter, the
+> stop condition and the valuation-complete notification it publishes.
+> **The harness owns** runtime execution and orchestration of its own
+> work, and MAY subscribe to the valuation-complete notification. It
+> calls no Jira, no CI and no mail relay, holds no outward credential,
+> and initiates no Governance act.
+
+Unchanged by D-N-8..D-N-12, and restated because a loop is exactly the
+place where they get eroded:
+
+- Model output is advisory; it never enters a delivery payload and
+  never leaves the sandbox as a message from Themis (D-N-5).
+- Delivery payloads derive only from the immutable snapshot of Themis
+  facts (D-N-3).
+- Secrets are never carried in an intent; destinations are governed
+  names (D-N-3, D-N-6).
+- Controls fail closed: no evaluation signal → no outward action.
+- External availability never blocks or changes Themis truth; outward
+  failure is dead-letter state, not a Finding change (D-N-2).
+- **N-M0 is unchanged.** Explicit per-route write-scope authorization
+  stands as implemented: `delivery:callback` is refused on every
+  Governance write, `product:<id>` is confined to its own product, and
+  the scope vocabulary stays closed. `ci_rebuild` and the
+  valuation-complete notification imply no new scope, no relaxation
+  and no new write path; a `ci_rebuild` callback enters through the
+  Communication boundary under `delivery:callback` exactly as D-N-6
+  requires.
+
+## Build steps for the cycle (each testable on its own)
+
+The implementing milestones are Themis-side (`phase3-outward-actions`,
+Group 5 onward). Each step is independently testable:
+
+1. Evaluation-complete event published for a Release — assert it fires
+   once per evaluated SBOM, after evaluation, never on receipt.
+2. The notification seam (own EDR first) — a subscriber receives the
+   signal; the harness subscribes and does nothing else.
+3. SBOM-to-SBOM comparison for one Release — closed vs still open,
+   from two stored SBOMs, no outward action involved.
+4. `jira_issue` per Release with the D-N-9 body rule — counts for four
+   severities, CVE ids for Critical and High only; update idempotent.
+5. `ci_rebuild` intent + callback — snapshot members, callback
+   requiring new SBOM id and image digest, no Finding change.
+6. Mail after comparison — one mail per intent, facts from the
+   snapshot, plain text.
+7. Loop control — attempt counter, max-attempts knob (default 2),
+   success stop, exhaustion stop with mail + Jira update, no
+   auto-resolution.
+
+## Grill state (2026-09-27, extended 2026-10-01)
+Q-N-1..7 LOCKED. D-N-8..D-N-12 recorded 2026-10-01 from owner feedback
+(documentation only; `ci_rebuild` approved, the notification seam
+approved in principle with its transport deferred to its own EDR).
+Implementation is Themis-side under `EDR-DELIVERY-01` and the
+`phase3-outward-actions` change; the harness tree is untouched by
+design (D-N-1, D-N-12). Milestones in `tasks.md`.
 

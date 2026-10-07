@@ -359,16 +359,18 @@ context. All five are now fixed:
   an id is a name, not a position. The sequence orders the stream, the
   id deduplicates a redelivered page — each does one job.
 
-Themis-side record: `EDR-DELIVERY-01` **Revision 5 (2026-10-07) — N-M2**
-(the plan's "Revision 3 — N-M2"), decisions M2-1..M2-9. Nothing in it is
-implemented yet; the harness-side step is the poller (N-M2j).
+Themis-side record: `EDR-DELIVERY-01`, the appended section
+**Revision 3 — N-M2 (2026-10-07)**, decisions M2-1..M2-9. Nothing in it
+is implemented yet; the harness-side step is the poller (N-M2j).
 
 ## Build steps for the cycle (renumbered N-M2a..N-M2j, each testable on its own)
 
 **Supersedes the seven-step sketch this section carried on 2026-10-01**
 (owner, 2026-10-07). All but the last are Themis-side
 (`phase3-outward-actions` Group 6). **API/schema** marks the steps that
-touch a published surface or the database.
+touch a published surface or the database: **N-M2d** (table + read API)
+and **N-M2h** (callback route), plus **N-M2g**, which is a constraint
+migration only (the intent-type CHECK widened to admit `ci_rebuild`).
 
 | Step | Repo | API/schema | What | Test |
 | --- | --- | --- | --- | --- |
@@ -390,7 +392,7 @@ approved in principle with its transport deferred). **D-N-13 LOCKED
 2026-10-07**: the seam is a polled Governance cursor read API, and
 D-N-8's deferral is closed — no open questions remain in the cycle's
 design. Implementation is Themis-side under `EDR-DELIVERY-01`
-Revision 5 and the `phase3-outward-actions` change; the only
+**Revision 3 — N-M2** and the `phase3-outward-actions` change; the only
 harness-side code is the poller of N-M2j, which reads and does nothing
 else (D-N-1, D-N-12). Milestones in `tasks.md`.
 

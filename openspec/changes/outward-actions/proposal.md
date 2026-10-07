@@ -73,9 +73,9 @@ nothing here relaxes it. Implementation remains Themis-side.
 ## What the owner decided (2026-10-07) — the seam, the loop and the steps
 
 Everything the 2026-10-01 entry left open is now decided; recorded as
-**D-N-13** in `design.md` and Themis-side as `EDR-DELIVERY-01`
-**Revision 5 (2026-10-07) — N-M2** (the plan's "Revision 3 — N-M2",
-M2-1..M2-9). Still documentation only — no code anywhere yet.
+**D-N-13** in `design.md` and Themis-side as the appended
+`EDR-DELIVERY-01` section **Revision 3 — N-M2 (2026-10-07)**
+(M2-1..M2-9). Still documentation only — no code anywhere yet.
 
 1. **Two events, in one direction.** Knowledge publishes
    `knowledge.release_correlation_completed.v1` **once per SBOM, after
@@ -117,7 +117,9 @@ M2-1..M2-9). Still documentation only — no code anywhere yet.
 
 The build plan is renumbered **N-M2a..N-M2j** (`design.md`), with the
 API/schema steps marked: **N-M2d** (Governance events table + cursor
-read API) and **N-M2h** (the Communication callback route). **N-M2j is
+read API), **N-M2h** (the Communication callback route) and **N-M2g**
+(a constraint migration only — the intent-type CHECK widened to admit
+`ci_rebuild`). **N-M2j is
 the only harness-side step** — the poller, which reads and does nothing
 else. **N-M0 is unchanged**: the cursor route is a read route under a
 read-scoped key, the callback enters through Communication under

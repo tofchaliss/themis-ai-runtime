@@ -112,8 +112,8 @@ follow it).
       500, events stored in a new Governance table; no SSE, no webhook.
       Event names: `knowledge.release_correlation_completed.v1` →
       `governance.release_evaluated.v1`; owning context **Governance**.
-      Recorded Themis-side as `EDR-DELIVERY-01` Revision 5 (N-M2); the
-      API change itself is N-M2d, Themis-side
+      Recorded Themis-side as the appended `EDR-DELIVERY-01` section
+      **Revision 3 — N-M2**; the API change itself is N-M2d, Themis-side
 - [x] 4.6 **Settled 2026-10-07.**
       `THEMIS_COMMUNICATION_REBUILD_MAX_ATTEMPTS`, default **2**,
       Communication-side, **no per-Release override**
@@ -122,9 +122,11 @@ follow it).
       window. The targeted Critical+High set is fixed at cycle start
       and does not grow mid-loop
 - [x] 4.8 `design.md` **D-N-13** + the renumbered build steps
-      **N-M2a..N-M2j** (API/schema steps marked: N-M2d, N-M2h);
-      `proposal.md` records the owner's six decisions. Themis side
-      mirrored: `EDR-DELIVERY-01` Revision 5 (M2-1..M2-9) and
+      **N-M2a..N-M2j** (API/schema steps marked: N-M2d, N-M2h, and
+      N-M2g as a constraint migration only); `proposal.md` records the
+      owner's six decisions. Themis side mirrored: the **appended**
+      `EDR-DELIVERY-01` section **Revision 3 — N-M2** (M2-1..M2-9 —
+      append-only, no earlier section amended) and
       `openspec/changes/phase3-outward-actions` (design acceptance
       block, proposal, tasks Group 6). Documentation only
 - [x] 4.9 Gates (no code touched): `gofmt -l src/harness` (empty),

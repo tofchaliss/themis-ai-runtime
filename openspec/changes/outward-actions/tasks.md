@@ -1,11 +1,15 @@
-# Tasks — outward actions (N-M0..N-M3)
+# Tasks — outward actions (N-M0..N-M4)
 
-Grill closed 2026-09-27 (D-N-1..7). All code lands in the Themis
-repository (`~/code/themis`, greenfield tree, EDR + `phase3-outward-
+Grill closed 2026-09-27 (D-N-1..7); extended 2026-10-01 with the
+remediation cycle (D-N-8..D-N-12, owner feedback). All code lands in the
+Themis repository (`~/code/themis`, greenfield tree, EDR + `phase3-outward-
 actions` change, `make check`, commit/push only on explicit ask). The
-harness repository changes nothing: no network tool, no new seam.
+harness repository changes nothing: no network tool, no new seam. The
+valuation-complete notification of D-N-8 does not change that — it is a
+Themis-owned pub/sub seam the harness subscribes to, never a harness
+call outward, and the read door stays the only harness-facing data seam.
 
-## N-M0 — Explicit scope authorization (Themis platform/auth; Class 3: security)
+## N-M0 — Explicit scope authorization (Themis platform/auth; Class 3: security) — **UNCHANGED by D-N-8..D-N-12**
 - [ ] `AuthorizeWrite` retired: Governance write endpoints require `admin`
       or `product:<id>` explicitly; a `delivery:callback` key is refused
       on every Governance write (tests: each write route × each scope)
@@ -13,6 +17,13 @@ harness repository changes nothing: no network tool, no new seam.
       writes (the row-14 gap, second half) — route resolves Finding →
       release → product before authorizing
 - [ ] `authadmin` mints `delivery:callback`; scope vocabulary closed
+
+N-M0 stands exactly as recorded. Implemented Themis-side 2026-09-30
+(`phase3-outward-actions` Group 1, `EDR-DELIVERY-01` D1–D7). The
+remediation cycle adds no scope, no relaxation and no new Governance
+write path: `delivery:callback` stays refused on every Governance
+write, `product:<id>` stays confined to its own product, and the
+`ci_rebuild` callback enters through the Communication boundary only.
 
 ## N-M1 — Delivery intents and workers (Themis Communication; Class 3)
 - [ ] Store: `delivery_intents` (event identity, lineage, snapshot,
@@ -62,3 +73,34 @@ harness repository changes nothing: no network tool, no new seam.
       Position → CI branch + image → mail; new image SBOM → Themis marks
       the part fixed; dead-letter drill (Jira down) visible and recovered
 - [ ] Addendum H; matrix row for outward actions; reviews; archive
+
+## N-M4 — Remediation cycle (documentation only in this change; Class 4: architecture)
+
+Recorded 2026-10-01 from owner feedback. Nothing here is code: the
+deliverable of this change is the decision record. Implementation is
+Themis-side (`phase3-outward-actions` Group 5 and the milestones that
+follow it).
+
+- [x] 4.1 `design.md` D-N-8..D-N-12: valuation-complete gate + the
+      Themis-owned pub/sub notification; Jira one per Release with CVE
+      ids for Critical/High only; `ci_rebuild` approved with its
+      callback members; default max-attempts 2; ownership recap and
+      the invariants the loop must not erode
+- [x] 4.2 `proposal.md`: the owner's six-step workflow and what it
+      settles; doc-only scope; N-M0 unchanged; what stays open
+- [x] 4.3 Themis side mirrored: `EDR-DELIVERY-01` Revision 2
+      (RC-1..RC-8) and `openspec/changes/phase3-outward-actions`
+      (design acceptance block, proposal, tasks Group 5)
+- [x] 4.4 Gates (no code touched — verifying cleanliness):
+      `gofmt -l src/harness` (empty), `go vet ./src/harness/...`,
+      `go test ./src/harness/...`, `go build ./src/harness/...`,
+      `.claude/hooks/doc-lint-guard --all`
+- [ ] 4.5 Dedicated EDR + API change for the notification seam before
+      any implementation: event name(s), at-least-once semantics,
+      transport, subscriber authentication, owning context
+      (Communication or Governance). Class 4 — owner approval first.
+- [ ] 4.6 Fix the configuration locus and name of the max-attempts
+      knob, and whether per-Release overrides are supported
+- [ ] 4.7 Confirm the comparison baseline: strictly the
+      immediately-previous SBOM id for the Release, or a configured
+      baseline window

@@ -70,9 +70,59 @@ explicit per-route write-scope authorization stands as implemented,
 `delivery:callback` is still refused on every Governance write, and
 nothing here relaxes it. Implementation remains Themis-side.
 
-Still open, deliberately: the notification seam's event names,
-delivery semantics, transport, subscriber authentication and owning
-context need their own EDR and API change before implementation; the
-configuration locus and name of the max-attempts knob; and whether the
-comparison baseline is strictly the immediately-previous SBOM id for
-the Release or a configured window.
+## What the owner decided (2026-10-07) — the seam, the loop and the steps
+
+Everything the 2026-10-01 entry left open is now decided; recorded as
+**D-N-13** in `design.md` and Themis-side as the appended
+`EDR-DELIVERY-01` section **Revision 3 — N-M2 (2026-10-07)**
+(M2-1..M2-9). Still documentation only — no code anywhere yet.
+
+1. **Two events, in one direction.** Knowledge publishes
+   `knowledge.release_correlation_completed.v1` **once per SBOM, after
+   all its other events for that SBOM**; the bus delivers in `seq`
+   order per source context, so every earlier event for that SBOM is
+   already processed when Governance handles it. Governance publishes
+   `governance.release_evaluated.v1` with product, project, release and
+   SBOM ids, the four severity counts and a `cause` of `new_sbom` or
+   `rediscovery`. **An SBOM with no matched vulnerabilities still emits
+   both events with zero counts — that is the success case.** The
+   re-discovery sweep sets `cause=rediscovery` and **never starts or
+   advances the loop**. This replaces the `finding_opened` proxy Themis
+   has been using (EDR M1a-3).
+2. **The harness subscribes by POLLING a Governance cursor read API** —
+   `GET /api/v1/governance/events/release-evaluated?after=<sequence>&limit=<n>`,
+   `X-API-Key` at **read** scope, at-least-once, **deduplicated by
+   event id**, events stored in a new Governance table. **No SSE, no
+   long-lived connection.** The harness **only subscribes**, filters
+   `cause=new_sbom`, and calls no Jira, no CI and no mail relay.
+3. **Max rebuilds per Release:**
+   `THEMIS_COMMUNICATION_REBUILD_MAX_ATTEMPTS`, default **2**, **no
+   per-Release override**.
+4. **Baseline:** each new SBOM is compared with the **previous SBOM of
+   the same Release by upload order** — no configured window. The
+   targeted Critical+High set is fixed at cycle start and does not grow.
+5. **`ci_rebuild` starts a Jenkins job** with `buildWithParameters`,
+   Basic auth (user + API token),
+   `THEMIS_COMMUNICATION_JENKINS_{ENABLED,URL,USER,API_TOKEN,JOB}`, the
+   URL required to be `https`. The job uploads the new SBOM under a
+   **`product:<id>`**-scoped key and calls back
+   `POST /api/v1/communication/callbacks/ci-rebuild` with a
+   **`delivery:callback`** key, sending intent id, build id, git ref,
+   image digest and the new SBOM id. **The callback is evidence on the
+   intent only and changes no Finding.** No HMAC variant now.
+6. **After the new SBOM is evaluated**, Themis compares, updates the
+   Release's Jira ticket and sends the mail; it stops when the targeted
+   set is closed or the maximum is reached, **telling a person**.
+   **Findings are never auto-resolved.**
+
+The build plan is renumbered **N-M2a..N-M2j** (`design.md`), with the
+API/schema steps marked: **N-M2d** (Governance events table + cursor
+read API), **N-M2h** (the Communication callback route) and **N-M2g**
+(a constraint migration only — the intent-type CHECK widened to admit
+`ci_rebuild`). **N-M2j is
+the only harness-side step** — the poller, which reads and does nothing
+else. **N-M0 is unchanged**: the cursor route is a read route under a
+read-scoped key, the callback enters through Communication under
+`delivery:callback`, and nothing relaxes a Governance write.
+
+**No open questions remain in the cycle's design.**

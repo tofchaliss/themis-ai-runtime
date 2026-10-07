@@ -313,32 +313,86 @@ place where they get eroded:
   Communication boundary under `delivery:callback` exactly as D-N-6
   requires.
 
-## Build steps for the cycle (each testable on its own)
+## D-N-13 — The subscriber seam is LOCKED: polling a Governance cursor read API (LOCKED 2026-10-07, owner)
 
-The implementing milestones are Themis-side (`phase3-outward-actions`,
-Group 5 onward). Each step is independently testable:
+> The valuation-complete signal reaches a subscriber by **polling a
+> Governance cursor read API**:
+> `GET /api/v1/governance/events/release-evaluated?after=<sequence>&limit=<n>`,
+> authenticated with **`X-API-Key` at READ scope**. Delivery is
+> **at-least-once** and a consumer **deduplicates by event id**. The
+> cursor is the event **sequence number**, never the event id; `limit`
+> defaults to **100** and is capped at **500**. The events are stored
+> server-side in a new Governance table (`release_evaluated_events`),
+> which is what makes a cursor answerable at all. **No SSE, no webhook
+> and no long-lived connection.** The harness **only subscribes**: it
+> calls no Jira, no CI and no mail relay, holds no outward credential,
+> and takes no Governance act. It filters for `cause: "new_sbom"` and
+> ignores `cause: "rediscovery"`.
 
-1. Evaluation-complete event published for a Release — assert it fires
-   once per evaluated SBOM, after evaluation, never on receipt.
-2. The notification seam (own EDR first) — a subscriber receives the
-   signal; the harness subscribes and does nothing else.
-3. SBOM-to-SBOM comparison for one Release — closed vs still open,
-   from two stored SBOMs, no outward action involved.
-4. `jira_issue` per Release with the D-N-9 body rule — counts for four
-   severities, CVE ids for Critical and High only; update idempotent.
-5. `ci_rebuild` intent + callback — snapshot members, callback
-   requiring new SBOM id and image digest, no Finding change.
-6. Mail after comparison — one mail per intent, facts from the
-   snapshot, plain text.
-7. Loop control — attempt counter, max-attempts knob (default 2),
-   success stop, exhaustion stop with mail + Jira update, no
-   auto-resolution.
+This closes D-N-8's one genuinely undecided thing — event names,
+delivery semantics, transport, subscriber authentication and owning
+context. All five are now fixed:
 
-## Grill state (2026-09-27, extended 2026-10-01)
+- **Event names.** Knowledge publishes
+  `knowledge.release_correlation_completed.v1` once per SBOM, after all
+  its other events for that SBOM; Governance consumes it and publishes
+  `governance.release_evaluated.v1` with `product_id`, `project_id`,
+  `release_id`, `sbom_id`, integer `severity_counts {critical, high,
+  medium, low}` and `cause` ∈ {`new_sbom`, `rediscovery`}. **Zero
+  counts still emit both events, and that is the success case.**
+- **Owning context: Governance.** Knowledge knows when correlation
+  finished; it does not know what the posture IS. A signal from the
+  context that cannot state the fact would force every subscriber to go
+  and ask, which is the asking the signal exists to remove.
+- **Transport: a poll.** A webhook would make Themis call OUT to the
+  harness — an inbound harness surface and a Themis credential for it,
+  the exact trade N-M0 exists to avoid. SSE adds a connection whose
+  liveness is an operational question separate from the data's. A poll
+  has one failure mode (the next poll) and keeps the subscriber's
+  progress in the subscriber's own state, so a down harness costs lag
+  and nothing else.
+- **Auth: a READ key.** The subscriber only reads, and a read-scoped
+  key can write nowhere in the estate — leaking it costs visibility,
+  never integrity. A write-capable key held to learn that an evaluation
+  finished would invert D-N-1.
+- **Cursor by sequence, identity by id.** A cursor must be ORDERED;
+  an id is a name, not a position. The sequence orders the stream, the
+  id deduplicates a redelivered page — each does one job.
+
+Themis-side record: `EDR-DELIVERY-01`, the appended section
+**Revision 3 — N-M2 (2026-10-07)**, decisions M2-1..M2-9. Nothing in it
+is implemented yet; the harness-side step is the poller (N-M2j).
+
+## Build steps for the cycle (renumbered N-M2a..N-M2j, each testable on its own)
+
+**Supersedes the seven-step sketch this section carried on 2026-10-01**
+(owner, 2026-10-07). All but the last are Themis-side
+(`phase3-outward-actions` Group 6). **API/schema** marks the steps that
+touch a published surface or the database: **N-M2d** (table + read API)
+and **N-M2h** (callback route), plus **N-M2g**, which is a constraint
+migration only (the intent-type CHECK widened to admit `ci_rebuild`).
+
+| Step | Repo | API/schema | What | Test |
+| --- | --- | --- | --- | --- |
+| N-M2a | themis | — | Knowledge publishes `knowledge.release_correlation_completed.v1` once per SBOM, after all its other events for that SBOM | `TestEventSchema_Knowledge_ReleaseCorrelationCompletedV1` — schema, ordering proof, zero-match case |
+| N-M2b | themis | — | Governance publishes `governance.release_evaluated.v1` (snake_case, integer counts, `cause`) | `TestReleaseEvaluatedEvent_ZeroCounts_AndCauseMapping` |
+| N-M2c | themis | — | Communication acts only on `release_evaluated` with `cause=new_sbom`; the `finding_opened` proxy is retired | `TestReleaseEvaluatedMapping_OnlyNewSBOM_CreatesIntents`, `TestFindingOpenedAndRediscovery_CreateNoIntents` |
+| N-M2d | themis | **API + schema** | `release_evaluated_events` table (migration up/down) + the cursor read API; `limit` default 100 / max 500 | `TestReleaseEvaluatedEventsCursorRead_AfterLimit_AuthMatrix` + migration reversibility |
+| N-M2e | themis | — | Baseline = the immediately-previous SBOM of the Release by upload order; closure detection | `TestSelectPreviousSBOM_ByUploadOrder`, `TestTargetedSetClosure_DoesNotGrowMidLoop` |
+| N-M2f | themis | — | Jira update + mail after the comparison only | `TestPostEvaluationOnly_ProducesTicketAndMail`, `TestCallbackAlone_NoSideEffects` |
+| N-M2g | themis | constraint only | `ci_rebuild` kind + the Jenkins `buildWithParameters` sender (Basic auth, https enforced) + `THEMIS_COMMUNICATION_REBUILD_MAX_ATTEMPTS` (default 2) | `TestCIBuildSender_BasicAuth_Params_HTTPSRefusal` + config defaulting |
+| N-M2h | themis | **API** | `POST /api/v1/communication/callbacks/ci-rebuild`, `delivery:callback` only, payload `{intent_id, build_id, git_ref, image_digest, sbom_id}` | `TestCIRebuildCallback_AuthAndBodySchema`, `TestCallback_NoFindingMutation` |
+| N-M2i | themis | — | Stop on success or exhaustion; no further intents after a stop; tell a person | `TestStopOnSuccessOrExhaustion_NoFurtherIntents`, `TestNotifyPersonOnExhaustion` |
+| **N-M2j** | **themis-ai-runtime** | — | The harness poller: `after=<sequence>` + `limit`, at-least-once, dedupe by event id, filter `cause=new_sbom`, local high-water mark. Subscribes only | `TestHarnessPoller_PollingWithCursor_AtLeastOnce_DedupeAndFilterNewSBOM` (`httptest` Governance stub: paging, a redelivered page, a `rediscovery` event ignored) |
+
+## Grill state (2026-09-27, extended 2026-10-01, 2026-10-07)
 Q-N-1..7 LOCKED. D-N-8..D-N-12 recorded 2026-10-01 from owner feedback
 (documentation only; `ci_rebuild` approved, the notification seam
-approved in principle with its transport deferred to its own EDR).
-Implementation is Themis-side under `EDR-DELIVERY-01` and the
-`phase3-outward-actions` change; the harness tree is untouched by
-design (D-N-1, D-N-12). Milestones in `tasks.md`.
+approved in principle with its transport deferred). **D-N-13 LOCKED
+2026-10-07**: the seam is a polled Governance cursor read API, and
+D-N-8's deferral is closed — no open questions remain in the cycle's
+design. Implementation is Themis-side under `EDR-DELIVERY-01`
+**Revision 3 — N-M2** and the `phase3-outward-actions` change; the only
+harness-side code is the poller of N-M2j, which reads and does nothing
+else (D-N-1, D-N-12). Milestones in `tasks.md`.
 

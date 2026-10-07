@@ -1,13 +1,17 @@
-# Tasks — outward actions (N-M0..N-M4)
+# Tasks — outward actions (N-M0..N-M5)
 
 Grill closed 2026-09-27 (D-N-1..7); extended 2026-10-01 with the
 remediation cycle (D-N-8..D-N-12, owner feedback). All code lands in the
 Themis repository (`~/code/themis`, greenfield tree, EDR + `phase3-outward-
 actions` change, `make check`, commit/push only on explicit ask). The
-harness repository changes nothing: no network tool, no new seam. The
-valuation-complete notification of D-N-8 does not change that — it is a
-Themis-owned pub/sub seam the harness subscribes to, never a harness
-call outward, and the read door stays the only harness-facing data seam.
+harness repository changes nothing through N-M4: no network tool, no new
+seam. The valuation-complete notification of D-N-8 does not change that —
+it is a Themis-owned seam the harness subscribes to, never a harness call
+outward, and the read door stays the only harness-facing data seam.
+**One exception, designed 2026-10-07 and not implemented:** the poller of
+N-M2j (section N-M5 below) reads the Governance cursor endpoint D-N-13
+locks. It subscribes and does nothing else — no Jira, no CI, no mail, no
+outward credential, no Governance act.
 
 ## N-M0 — Explicit scope authorization (Themis platform/auth; Class 3: security) — **UNCHANGED by D-N-8..D-N-12**
 - [ ] `AuthorizeWrite` retired: Governance write endpoints require `admin`
@@ -46,6 +50,11 @@ write, `product:<id>` stays confined to its own product, and the
       no model output / workspace content / key material can enter
 
 ## N-M2 — CI build delivery and callback (Themis Communication; Class 3)
+
+Numbering note: this is the `ci_build` milestone (an accepted artifact,
+the `proposal_accepted` path). The **N-M2a..N-M2j** steps of D-N-13 are
+a different N-M2 — the plan's rebuild cycle, whose kind is `ci_rebuild`
+and which carries no artifact. The two must not be conflated (D-N-10).
 - [ ] `ci_build` snapshot carries the recorded artifact members + hashes
       (read through Themis's own intake of the harness record — the
       evidence the proposal already cites), Finding/release lineage,
@@ -95,12 +104,53 @@ follow it).
       `gofmt -l src/harness` (empty), `go vet ./src/harness/...`,
       `go test ./src/harness/...`, `go build ./src/harness/...`,
       `.claude/hooks/doc-lint-guard --all`
-- [ ] 4.5 Dedicated EDR + API change for the notification seam before
-      any implementation: event name(s), at-least-once semantics,
-      transport, subscriber authentication, owning context
-      (Communication or Governance). Class 4 — owner approval first.
-- [ ] 4.6 Fix the configuration locus and name of the max-attempts
-      knob, and whether per-Release overrides are supported
-- [ ] 4.7 Confirm the comparison baseline: strictly the
-      immediately-previous SBOM id for the Release, or a configured
-      baseline window
+- [x] 4.5 **Settled 2026-10-07 (D-N-13).** The seam is a **polled
+      Governance cursor read API**:
+      `GET /api/v1/governance/events/release-evaluated?after=<sequence>&limit=<n>`,
+      `X-API-Key` **read** scope, at-least-once, **dedupe by event
+      id**, cursor = the sequence number, `limit` default 100 / max
+      500, events stored in a new Governance table; no SSE, no webhook.
+      Event names: `knowledge.release_correlation_completed.v1` →
+      `governance.release_evaluated.v1`; owning context **Governance**.
+      Recorded Themis-side as `EDR-DELIVERY-01` Revision 5 (N-M2); the
+      API change itself is N-M2d, Themis-side
+- [x] 4.6 **Settled 2026-10-07.**
+      `THEMIS_COMMUNICATION_REBUILD_MAX_ATTEMPTS`, default **2**,
+      Communication-side, **no per-Release override**
+- [x] 4.7 **Settled 2026-10-07.** Strictly the immediately-previous
+      SBOM of the same Release **by upload order**; no configured
+      window. The targeted Critical+High set is fixed at cycle start
+      and does not grow mid-loop
+- [x] 4.8 `design.md` **D-N-13** + the renumbered build steps
+      **N-M2a..N-M2j** (API/schema steps marked: N-M2d, N-M2h);
+      `proposal.md` records the owner's six decisions. Themis side
+      mirrored: `EDR-DELIVERY-01` Revision 5 (M2-1..M2-9) and
+      `openspec/changes/phase3-outward-actions` (design acceptance
+      block, proposal, tasks Group 6). Documentation only
+- [x] 4.9 Gates (no code touched): `gofmt -l src/harness` (empty),
+      `go vet ./src/harness/...`, `go test ./src/harness/...`,
+      `go build ./src/harness/...`
+
+## N-M5 — Harness poller (N-M2j; the ONLY harness-side code in the cycle)
+
+Designed 2026-10-07 (D-N-13), not implemented. A new outbound READ seam
+on the harness is an architecture decision — **owner approval before
+implementation**, and the class is set then. Everything else in the
+cycle stays Themis-side.
+
+- [ ] 5.1 Poll
+      `GET /api/v1/governance/events/release-evaluated?after=<sequence>&limit=<n>`
+      with `X-API-Key` at read scope; persist a local high-water mark
+      (the last `seq` consumed) so progress is the harness's own state
+- [ ] 5.2 At-least-once handling: **dedupe by event id**, and filter
+      `cause=new_sbom` (a `rediscovery` event is ignored — it starts and
+      advances nothing)
+- [ ] 5.3 Test:
+      `TestHarnessPoller_PollingWithCursor_AtLeastOnce_DedupeAndFilterNewSBOM`
+      against an `httptest` Governance stub — paging with the cursor, a
+      redelivered page proving dedupe is harmless, a `rediscovery`
+      event ignored
+- [ ] 5.4 **Subscribes only**: no network tool, no Jira / CI / mail
+      client, no outward credential, no Governance act (D-N-1, D-N-12).
+      The read door stays the only harness-facing seam for Themis DATA;
+      this endpoint carries a signal, not data the harness reasons over
